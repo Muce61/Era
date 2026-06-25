@@ -2,6 +2,12 @@ import pandas as pd
 import pytest
 
 from research_core.factor_analysis import assign_quintile, summarize_factor
+from research_core.event_table import FACTOR_COLUMNS, FACTOR_COMMON
+
+
+def test_each_factor_has_common_market_behavior_description():
+    missing = [factor for factor in FACTOR_COLUMNS if not FACTOR_COMMON.get(factor)]
+    assert missing == []
 
 
 def test_assign_quintile_marks_sparse_sample():
@@ -30,4 +36,3 @@ def test_summarize_factor_computes_q5_minus_q1_by_horizon():
     assert meta["sample_sufficient"] is True
     assert meta["q5_minus_q1"] > 0
     assert meta["candidate_status"] in {"weak_candidate", "candidate_for_validation"}
-

@@ -17,7 +17,7 @@ from research_core.common import (
     stable_hash,
     write_simple_yaml,
 )
-from research_core.event_table import FACTOR_COLUMNS, HORIZONS, build_event_candidates, load_ohlcv_1m
+from research_core.event_table import FACTOR_COLUMNS, FACTOR_COMMON, HORIZONS, build_event_candidates, load_ohlcv_1m
 
 
 LABEL_PREFIXES = ("fwd_ret_", "fwd_mfe_", "fwd_mae_", "plus_1atr_first_", "minus_1atr_first_", "ambiguous_touch_")
@@ -60,6 +60,7 @@ def write_factor_catalog() -> None:
             "role": "factor",
             "uses_future_data": False,
             "status": "active",
+            "common": FACTOR_COMMON.get(name, ""),
         })
     labels = []
     for h in HORIZONS:
@@ -103,7 +104,12 @@ def main() -> None:
     write_event_schema(list(events.columns))
     write_factor_catalog()
 
-    config_hash = stable_hash({"event_schema": list(events.columns), "factor_columns": FACTOR_COLUMNS, "horizons": HORIZONS})
+    config_hash = stable_hash({
+        "event_schema": list(events.columns),
+        "factor_columns": FACTOR_COLUMNS,
+        "factor_common": FACTOR_COMMON,
+        "horizons": HORIZONS,
+    })
     append_run_log({
         "run_id": "R1_EVENT_CANDIDATES",
         "stage": "R1",
@@ -140,4 +146,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -218,3 +218,24 @@ FACTOR_COLUMNS = [
     "pullback_depth_atr",
     "inside_bar_compression",
 ]
+
+
+FACTOR_COMMON = {
+    "ema_gap_atr": "Trend separation: EMA50 distance above EMA200 normalized by ATR.",
+    "ema200_slope_4h": "Slow trend slope: 4-hour change in EMA200 showing background trend acceleration.",
+    "ret_4h": "Short momentum: 4-hour price return before the signal.",
+    "ret_12h": "Intraday momentum: 12-hour price return before the signal.",
+    "ret_24h": "Daily momentum: 24-hour price return before the signal.",
+    "breakout_distance_atr": "Breakout extension: close distance beyond Donchian55 upper normalized by ATR.",
+    "atr_pct": "Absolute volatility: ATR as a percentage of close.",
+    "atr_percentile_200": "Local volatility regime: ATR percentile within the previous 200 15m bars.",
+    "range_atr": "Signal-bar range expansion: current 15m range normalized by ATR.",
+    "volatility_ratio_short_long": "Volatility expansion: short ATR level relative to its longer rolling average.",
+    "body_ratio": "Candle conviction: real body share of the full candle range.",
+    "upper_shadow_ratio": "Upper rejection: upper wick share of the full candle range.",
+    "lower_shadow_ratio": "Lower rejection: lower wick share of the full candle range.",
+    "close_location": "Close strength: close location within the 15m high-low range.",
+    "bars_after_breakout": "Trend age: number of 15m bars since the Donchian55 breakout state began.",
+    "pullback_depth_atr": "Pullback depth: distance from recent high to current close normalized by ATR.",
+    "inside_bar_compression": "Compression: current range relative to previous range for inside-bar style contraction.",
+}

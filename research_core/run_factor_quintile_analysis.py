@@ -17,7 +17,7 @@ from research_core.common import (
     file_sha256,
     stable_hash,
 )
-from research_core.event_table import FACTOR_COLUMNS, HORIZONS
+from research_core.event_table import FACTOR_COLUMNS, FACTOR_COMMON, HORIZONS
 from research_core.factor_analysis import summarize_factor
 
 
@@ -46,11 +46,20 @@ def main() -> None:
             meta_rows.append(meta)
     detail = pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
     meta_df = pd.DataFrame(meta_rows)
+    if not detail.empty:
+        detail.insert(1, "common", detail["factor"].map(FACTOR_COMMON).fillna(""))
+    if not meta_df.empty:
+        meta_df.insert(1, "common", meta_df["factor"].map(FACTOR_COMMON).fillna(""))
     detail.to_csv(RESEARCH_ROOT / "factor_analysis" / "factor_quintile_summary.csv", index=False)
     meta_df.to_csv(RESEARCH_ROOT / "factor_analysis" / "factor_monotonicity_summary.csv", index=False)
 
     data_hash = file_sha256(DISCOVERY_DATA_PATH) if DISCOVERY_DATA_PATH.exists() else ""
-    config_hash = stable_hash({"factors": FACTOR_COLUMNS, "horizons": HORIZONS, "method": "quintile_monotonicity_v1"})
+    config_hash = stable_hash({
+        "factors": FACTOR_COLUMNS,
+        "factor_common": FACTOR_COMMON,
+        "horizons": HORIZONS,
+        "method": "quintile_monotonicity_v1",
+    })
     append_run_log({
         "run_id": "R2_FACTOR_QUINTILE_ANALYSIS",
         "stage": "R2",

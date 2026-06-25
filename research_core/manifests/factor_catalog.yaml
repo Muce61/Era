@@ -5,86 +5,103 @@ factors:
       role: "factor"
       uses_future_data: False
       status: "active"
+      common: "Trend separation: EMA50 distance above EMA200 normalized by ATR."
   -
       name: "ema200_slope_4h"
       role: "factor"
       uses_future_data: False
       status: "active"
+      common: "Slow trend slope: 4-hour change in EMA200 showing background trend acceleration."
   -
       name: "ret_4h"
       role: "factor"
       uses_future_data: False
       status: "active"
+      common: "Short momentum: 4-hour price return before the signal."
   -
       name: "ret_12h"
       role: "factor"
       uses_future_data: False
       status: "active"
+      common: "Intraday momentum: 12-hour price return before the signal."
   -
       name: "ret_24h"
       role: "factor"
       uses_future_data: False
       status: "active"
+      common: "Daily momentum: 24-hour price return before the signal."
   -
       name: "breakout_distance_atr"
       role: "factor"
       uses_future_data: False
       status: "active"
+      common: "Breakout extension: close distance beyond Donchian55 upper normalized by ATR."
   -
       name: "atr_pct"
       role: "factor"
       uses_future_data: False
       status: "active"
+      common: "Absolute volatility: ATR as a percentage of close."
   -
       name: "atr_percentile_200"
       role: "factor"
       uses_future_data: False
       status: "active"
+      common: "Local volatility regime: ATR percentile within the previous 200 15m bars."
   -
       name: "range_atr"
       role: "factor"
       uses_future_data: False
       status: "active"
+      common: "Signal-bar range expansion: current 15m range normalized by ATR."
   -
       name: "volatility_ratio_short_long"
       role: "factor"
       uses_future_data: False
       status: "active"
+      common: "Volatility expansion: short ATR level relative to its longer rolling average."
   -
       name: "body_ratio"
       role: "factor"
       uses_future_data: False
       status: "active"
+      common: "Candle conviction: real body share of the full candle range."
   -
       name: "upper_shadow_ratio"
       role: "factor"
       uses_future_data: False
       status: "active"
+      common: "Upper rejection: upper wick share of the full candle range."
   -
       name: "lower_shadow_ratio"
       role: "factor"
       uses_future_data: False
       status: "active"
+      common: "Lower rejection: lower wick share of the full candle range."
   -
       name: "close_location"
       role: "factor"
       uses_future_data: False
       status: "active"
+      common: "Close strength: close location within the 15m high-low range."
   -
       name: "bars_after_breakout"
       role: "factor"
       uses_future_data: False
       status: "active"
+      common: "Trend age: number of 15m bars since the Donchian55 breakout state began."
   -
       name: "pullback_depth_atr"
       role: "factor"
       uses_future_data: False
       status: "active"
+      common: "Pullback depth: distance from recent high to current close normalized by ATR."
   -
       name: "inside_bar_compression"
       role: "factor"
       uses_future_data: False
       status: "active"
+      common: "Compression: current range relative to previous range for inside-bar style contraction."
 labels:
   -
       name: "fwd_ret_1"

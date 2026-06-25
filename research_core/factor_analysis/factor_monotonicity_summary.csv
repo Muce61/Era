@@ -1,86 +1,86 @@
-factor,horizon,q5_minus_q1,direction_consistency,monotonicity_violations,sample_sufficient,candidate_status
-ema_gap_atr,1,-0.0008203614363264953,0.5,2.0,True,weak_candidate
-ema_gap_atr,4,-0.0020041217781362145,0.5,2.0,True,weak_candidate
-ema_gap_atr,8,-0.003957989264584483,0.5,2.0,True,weak_candidate
-ema_gap_atr,16,-0.0037843202843361023,0.75,1.0,True,candidate_for_validation
-ema_gap_atr,32,-0.006590011340674485,0.75,1.0,True,candidate_for_validation
-ema200_slope_4h,1,0.0012523566287983281,0.75,1.0,True,candidate_for_validation
-ema200_slope_4h,4,0.0004339800655625368,0.75,1.0,True,candidate_for_validation
-ema200_slope_4h,8,-0.0016140341988789726,0.5,2.0,True,weak_candidate
-ema200_slope_4h,16,-0.002276913604802042,0.5,2.0,True,weak_candidate
-ema200_slope_4h,32,-0.004757640980899565,0.5,2.0,True,weak_candidate
-ret_4h,1,0.005978790933488232,1.0,0.0,True,candidate_for_validation
-ret_4h,4,0.006995920446201811,0.75,1.0,True,candidate_for_validation
-ret_4h,8,0.00722197363382187,1.0,0.0,True,candidate_for_validation
-ret_4h,16,0.008283776027828907,0.75,1.0,True,candidate_for_validation
-ret_4h,32,0.008739361240248732,0.75,1.0,True,candidate_for_validation
-ret_12h,1,0.004379713959853641,1.0,0.0,True,candidate_for_validation
-ret_12h,4,0.005915635247571627,1.0,0.0,True,candidate_for_validation
-ret_12h,8,0.005189867716874381,0.75,1.0,True,candidate_for_validation
-ret_12h,16,0.00462905991112296,0.5,2.0,True,weak_candidate
-ret_12h,32,0.004249074784076379,0.75,1.0,True,candidate_for_validation
-ret_24h,1,0.004603989540703763,1.0,0.0,True,candidate_for_validation
-ret_24h,4,0.004848610042667937,0.75,1.0,True,candidate_for_validation
-ret_24h,8,0.0036926946602230913,0.75,1.0,True,candidate_for_validation
-ret_24h,16,0.00507094578897676,0.75,1.0,True,candidate_for_validation
-ret_24h,32,0.005031309367625057,0.5,2.0,True,weak_candidate
-breakout_distance_atr,1,0.008443222013330854,1.0,0.0,True,candidate_for_validation
-breakout_distance_atr,4,0.00880655030066153,1.0,0.0,True,candidate_for_validation
-breakout_distance_atr,8,0.009434042400606198,1.0,0.0,True,candidate_for_validation
-breakout_distance_atr,16,0.00945663341135729,1.0,0.0,True,candidate_for_validation
-breakout_distance_atr,32,0.010333911432145597,0.75,1.0,True,candidate_for_validation
-atr_pct,1,0.005897710979957825,0.75,1.0,True,candidate_for_validation
-atr_pct,4,0.006936925800898596,0.75,1.0,True,candidate_for_validation
-atr_pct,8,0.0058174667590795495,0.75,1.0,True,candidate_for_validation
-atr_pct,16,0.007916989960454698,0.5,2.0,True,weak_candidate
-atr_pct,32,0.008331696948527584,0.5,2.0,True,weak_candidate
-atr_percentile_200,1,0.003944534346367323,1.0,0.0,True,candidate_for_validation
-atr_percentile_200,4,0.005293437770904725,1.0,0.0,True,candidate_for_validation
-atr_percentile_200,8,0.005853715815755684,0.75,1.0,True,candidate_for_validation
-atr_percentile_200,16,0.009346510158349438,1.0,0.0,True,candidate_for_validation
-atr_percentile_200,32,0.011390012017189827,1.0,0.0,True,candidate_for_validation
-range_atr,1,0.007688785459937033,1.0,0.0,True,candidate_for_validation
-range_atr,4,0.007752941239217213,0.75,1.0,True,candidate_for_validation
-range_atr,8,0.008978444811471895,1.0,0.0,True,candidate_for_validation
-range_atr,16,0.008737592413569166,0.75,1.0,True,candidate_for_validation
-range_atr,32,0.010884308332661144,0.75,1.0,True,candidate_for_validation
-volatility_ratio_short_long,1,0.005182980254533728,1.0,0.0,True,candidate_for_validation
-volatility_ratio_short_long,4,0.006443181419288582,1.0,0.0,True,candidate_for_validation
-volatility_ratio_short_long,8,0.0074574242234016945,1.0,0.0,True,candidate_for_validation
-volatility_ratio_short_long,16,0.009935366596536816,1.0,0.0,True,candidate_for_validation
-volatility_ratio_short_long,32,0.013509634914434809,0.75,1.0,True,candidate_for_validation
-body_ratio,1,0.007421442501837608,1.0,0.0,True,candidate_for_validation
-body_ratio,4,0.007372421108640422,1.0,0.0,True,candidate_for_validation
-body_ratio,8,0.007499455996830622,1.0,0.0,True,candidate_for_validation
-body_ratio,16,0.007388069231071385,1.0,0.0,True,candidate_for_validation
-body_ratio,32,0.00977001091559073,1.0,0.0,True,candidate_for_validation
-upper_shadow_ratio,1,-0.00495496214125362,1.0,0.0,True,candidate_for_validation
-upper_shadow_ratio,4,-0.004024980920441507,1.0,0.0,True,candidate_for_validation
-upper_shadow_ratio,8,-0.0037954047977149,1.0,0.0,True,candidate_for_validation
-upper_shadow_ratio,16,-0.004622932888350048,0.75,1.0,True,candidate_for_validation
-upper_shadow_ratio,32,-0.00786963871623575,0.75,1.0,True,candidate_for_validation
-lower_shadow_ratio,1,-0.003924682499606792,0.75,1.0,True,candidate_for_validation
-lower_shadow_ratio,4,-0.005018540352338547,0.75,1.0,True,candidate_for_validation
-lower_shadow_ratio,8,-0.006327203483504521,1.0,0.0,True,candidate_for_validation
-lower_shadow_ratio,16,-0.0050207455936521605,0.75,1.0,True,candidate_for_validation
-lower_shadow_ratio,32,-0.005153046715192745,0.75,1.0,True,candidate_for_validation
-close_location,1,0.00495496214125362,1.0,0.0,True,candidate_for_validation
-close_location,4,0.004024980920441507,1.0,0.0,True,candidate_for_validation
-close_location,8,0.0037954047977149,1.0,0.0,True,candidate_for_validation
-close_location,16,0.004622932888350048,0.75,1.0,True,candidate_for_validation
-close_location,32,0.00786963871623575,0.75,1.0,True,candidate_for_validation
-bars_after_breakout,1,,,,False,invalid_or_sparse
-bars_after_breakout,4,,,,False,invalid_or_sparse
-bars_after_breakout,8,,,,False,invalid_or_sparse
-bars_after_breakout,16,,,,False,invalid_or_sparse
-bars_after_breakout,32,,,,False,invalid_or_sparse
-pullback_depth_atr,1,0.0023030730923401877,0.75,1.0,True,candidate_for_validation
-pullback_depth_atr,4,0.0015342820743600005,0.5,2.0,True,weak_candidate
-pullback_depth_atr,8,0.0019291330513576625,0.5,2.0,True,weak_candidate
-pullback_depth_atr,16,0.002142686360906732,0.75,1.0,True,candidate_for_validation
-pullback_depth_atr,32,0.003781038388881444,0.75,1.0,True,candidate_for_validation
-inside_bar_compression,1,0.007041872061801811,1.0,0.0,True,candidate_for_validation
-inside_bar_compression,4,0.007501741227049744,1.0,0.0,True,candidate_for_validation
-inside_bar_compression,8,0.007636394663729187,1.0,0.0,True,candidate_for_validation
-inside_bar_compression,16,0.007250691528019054,1.0,0.0,True,candidate_for_validation
-inside_bar_compression,32,0.007495440269927593,1.0,0.0,True,candidate_for_validation
+factor,common,horizon,q5_minus_q1,direction_consistency,monotonicity_violations,sample_sufficient,candidate_status
+ema_gap_atr,Trend separation: EMA50 distance above EMA200 normalized by ATR.,1,-0.0008203614363264953,0.5,2.0,True,weak_candidate
+ema_gap_atr,Trend separation: EMA50 distance above EMA200 normalized by ATR.,4,-0.0020041217781362145,0.5,2.0,True,weak_candidate
+ema_gap_atr,Trend separation: EMA50 distance above EMA200 normalized by ATR.,8,-0.003957989264584483,0.5,2.0,True,weak_candidate
+ema_gap_atr,Trend separation: EMA50 distance above EMA200 normalized by ATR.,16,-0.0037843202843361023,0.75,1.0,True,candidate_for_validation
+ema_gap_atr,Trend separation: EMA50 distance above EMA200 normalized by ATR.,32,-0.006590011340674485,0.75,1.0,True,candidate_for_validation
+ema200_slope_4h,Slow trend slope: 4-hour change in EMA200 showing background trend acceleration.,1,0.0012523566287983281,0.75,1.0,True,candidate_for_validation
+ema200_slope_4h,Slow trend slope: 4-hour change in EMA200 showing background trend acceleration.,4,0.0004339800655625368,0.75,1.0,True,candidate_for_validation
+ema200_slope_4h,Slow trend slope: 4-hour change in EMA200 showing background trend acceleration.,8,-0.0016140341988789726,0.5,2.0,True,weak_candidate
+ema200_slope_4h,Slow trend slope: 4-hour change in EMA200 showing background trend acceleration.,16,-0.002276913604802042,0.5,2.0,True,weak_candidate
+ema200_slope_4h,Slow trend slope: 4-hour change in EMA200 showing background trend acceleration.,32,-0.004757640980899565,0.5,2.0,True,weak_candidate
+ret_4h,Short momentum: 4-hour price return before the signal.,1,0.005978790933488232,1.0,0.0,True,candidate_for_validation
+ret_4h,Short momentum: 4-hour price return before the signal.,4,0.006995920446201811,0.75,1.0,True,candidate_for_validation
+ret_4h,Short momentum: 4-hour price return before the signal.,8,0.00722197363382187,1.0,0.0,True,candidate_for_validation
+ret_4h,Short momentum: 4-hour price return before the signal.,16,0.008283776027828907,0.75,1.0,True,candidate_for_validation
+ret_4h,Short momentum: 4-hour price return before the signal.,32,0.008739361240248732,0.75,1.0,True,candidate_for_validation
+ret_12h,Intraday momentum: 12-hour price return before the signal.,1,0.004379713959853641,1.0,0.0,True,candidate_for_validation
+ret_12h,Intraday momentum: 12-hour price return before the signal.,4,0.005915635247571627,1.0,0.0,True,candidate_for_validation
+ret_12h,Intraday momentum: 12-hour price return before the signal.,8,0.005189867716874381,0.75,1.0,True,candidate_for_validation
+ret_12h,Intraday momentum: 12-hour price return before the signal.,16,0.00462905991112296,0.5,2.0,True,weak_candidate
+ret_12h,Intraday momentum: 12-hour price return before the signal.,32,0.004249074784076379,0.75,1.0,True,candidate_for_validation
+ret_24h,Daily momentum: 24-hour price return before the signal.,1,0.004603989540703763,1.0,0.0,True,candidate_for_validation
+ret_24h,Daily momentum: 24-hour price return before the signal.,4,0.004848610042667937,0.75,1.0,True,candidate_for_validation
+ret_24h,Daily momentum: 24-hour price return before the signal.,8,0.0036926946602230913,0.75,1.0,True,candidate_for_validation
+ret_24h,Daily momentum: 24-hour price return before the signal.,16,0.00507094578897676,0.75,1.0,True,candidate_for_validation
+ret_24h,Daily momentum: 24-hour price return before the signal.,32,0.005031309367625057,0.5,2.0,True,weak_candidate
+breakout_distance_atr,Breakout extension: close distance beyond Donchian55 upper normalized by ATR.,1,0.008443222013330854,1.0,0.0,True,candidate_for_validation
+breakout_distance_atr,Breakout extension: close distance beyond Donchian55 upper normalized by ATR.,4,0.00880655030066153,1.0,0.0,True,candidate_for_validation
+breakout_distance_atr,Breakout extension: close distance beyond Donchian55 upper normalized by ATR.,8,0.009434042400606198,1.0,0.0,True,candidate_for_validation
+breakout_distance_atr,Breakout extension: close distance beyond Donchian55 upper normalized by ATR.,16,0.00945663341135729,1.0,0.0,True,candidate_for_validation
+breakout_distance_atr,Breakout extension: close distance beyond Donchian55 upper normalized by ATR.,32,0.010333911432145597,0.75,1.0,True,candidate_for_validation
+atr_pct,Absolute volatility: ATR as a percentage of close.,1,0.005897710979957825,0.75,1.0,True,candidate_for_validation
+atr_pct,Absolute volatility: ATR as a percentage of close.,4,0.006936925800898596,0.75,1.0,True,candidate_for_validation
+atr_pct,Absolute volatility: ATR as a percentage of close.,8,0.0058174667590795495,0.75,1.0,True,candidate_for_validation
+atr_pct,Absolute volatility: ATR as a percentage of close.,16,0.007916989960454698,0.5,2.0,True,weak_candidate
+atr_pct,Absolute volatility: ATR as a percentage of close.,32,0.008331696948527584,0.5,2.0,True,weak_candidate
+atr_percentile_200,Local volatility regime: ATR percentile within the previous 200 15m bars.,1,0.003944534346367323,1.0,0.0,True,candidate_for_validation
+atr_percentile_200,Local volatility regime: ATR percentile within the previous 200 15m bars.,4,0.005293437770904725,1.0,0.0,True,candidate_for_validation
+atr_percentile_200,Local volatility regime: ATR percentile within the previous 200 15m bars.,8,0.005853715815755684,0.75,1.0,True,candidate_for_validation
+atr_percentile_200,Local volatility regime: ATR percentile within the previous 200 15m bars.,16,0.009346510158349438,1.0,0.0,True,candidate_for_validation
+atr_percentile_200,Local volatility regime: ATR percentile within the previous 200 15m bars.,32,0.011390012017189827,1.0,0.0,True,candidate_for_validation
+range_atr,Signal-bar range expansion: current 15m range normalized by ATR.,1,0.007688785459937033,1.0,0.0,True,candidate_for_validation
+range_atr,Signal-bar range expansion: current 15m range normalized by ATR.,4,0.007752941239217213,0.75,1.0,True,candidate_for_validation
+range_atr,Signal-bar range expansion: current 15m range normalized by ATR.,8,0.008978444811471895,1.0,0.0,True,candidate_for_validation
+range_atr,Signal-bar range expansion: current 15m range normalized by ATR.,16,0.008737592413569166,0.75,1.0,True,candidate_for_validation
+range_atr,Signal-bar range expansion: current 15m range normalized by ATR.,32,0.010884308332661144,0.75,1.0,True,candidate_for_validation
+volatility_ratio_short_long,Volatility expansion: short ATR level relative to its longer rolling average.,1,0.005182980254533728,1.0,0.0,True,candidate_for_validation
+volatility_ratio_short_long,Volatility expansion: short ATR level relative to its longer rolling average.,4,0.006443181419288582,1.0,0.0,True,candidate_for_validation
+volatility_ratio_short_long,Volatility expansion: short ATR level relative to its longer rolling average.,8,0.0074574242234016945,1.0,0.0,True,candidate_for_validation
+volatility_ratio_short_long,Volatility expansion: short ATR level relative to its longer rolling average.,16,0.009935366596536816,1.0,0.0,True,candidate_for_validation
+volatility_ratio_short_long,Volatility expansion: short ATR level relative to its longer rolling average.,32,0.013509634914434809,0.75,1.0,True,candidate_for_validation
+body_ratio,Candle conviction: real body share of the full candle range.,1,0.007421442501837608,1.0,0.0,True,candidate_for_validation
+body_ratio,Candle conviction: real body share of the full candle range.,4,0.007372421108640422,1.0,0.0,True,candidate_for_validation
+body_ratio,Candle conviction: real body share of the full candle range.,8,0.007499455996830622,1.0,0.0,True,candidate_for_validation
+body_ratio,Candle conviction: real body share of the full candle range.,16,0.007388069231071385,1.0,0.0,True,candidate_for_validation
+body_ratio,Candle conviction: real body share of the full candle range.,32,0.00977001091559073,1.0,0.0,True,candidate_for_validation
+upper_shadow_ratio,Upper rejection: upper wick share of the full candle range.,1,-0.00495496214125362,1.0,0.0,True,candidate_for_validation
+upper_shadow_ratio,Upper rejection: upper wick share of the full candle range.,4,-0.004024980920441507,1.0,0.0,True,candidate_for_validation
+upper_shadow_ratio,Upper rejection: upper wick share of the full candle range.,8,-0.0037954047977149,1.0,0.0,True,candidate_for_validation
+upper_shadow_ratio,Upper rejection: upper wick share of the full candle range.,16,-0.004622932888350048,0.75,1.0,True,candidate_for_validation
+upper_shadow_ratio,Upper rejection: upper wick share of the full candle range.,32,-0.00786963871623575,0.75,1.0,True,candidate_for_validation
+lower_shadow_ratio,Lower rejection: lower wick share of the full candle range.,1,-0.003924682499606792,0.75,1.0,True,candidate_for_validation
+lower_shadow_ratio,Lower rejection: lower wick share of the full candle range.,4,-0.005018540352338547,0.75,1.0,True,candidate_for_validation
+lower_shadow_ratio,Lower rejection: lower wick share of the full candle range.,8,-0.006327203483504521,1.0,0.0,True,candidate_for_validation
+lower_shadow_ratio,Lower rejection: lower wick share of the full candle range.,16,-0.0050207455936521605,0.75,1.0,True,candidate_for_validation
+lower_shadow_ratio,Lower rejection: lower wick share of the full candle range.,32,-0.005153046715192745,0.75,1.0,True,candidate_for_validation
+close_location,Close strength: close location within the 15m high-low range.,1,0.00495496214125362,1.0,0.0,True,candidate_for_validation
+close_location,Close strength: close location within the 15m high-low range.,4,0.004024980920441507,1.0,0.0,True,candidate_for_validation
+close_location,Close strength: close location within the 15m high-low range.,8,0.0037954047977149,1.0,0.0,True,candidate_for_validation
+close_location,Close strength: close location within the 15m high-low range.,16,0.004622932888350048,0.75,1.0,True,candidate_for_validation
+close_location,Close strength: close location within the 15m high-low range.,32,0.00786963871623575,0.75,1.0,True,candidate_for_validation
+bars_after_breakout,Trend age: number of 15m bars since the Donchian55 breakout state began.,1,,,,False,invalid_or_sparse
+bars_after_breakout,Trend age: number of 15m bars since the Donchian55 breakout state began.,4,,,,False,invalid_or_sparse
+bars_after_breakout,Trend age: number of 15m bars since the Donchian55 breakout state began.,8,,,,False,invalid_or_sparse
+bars_after_breakout,Trend age: number of 15m bars since the Donchian55 breakout state began.,16,,,,False,invalid_or_sparse
+bars_after_breakout,Trend age: number of 15m bars since the Donchian55 breakout state began.,32,,,,False,invalid_or_sparse
+pullback_depth_atr,Pullback depth: distance from recent high to current close normalized by ATR.,1,0.0023030730923401877,0.75,1.0,True,candidate_for_validation
+pullback_depth_atr,Pullback depth: distance from recent high to current close normalized by ATR.,4,0.0015342820743600005,0.5,2.0,True,weak_candidate
+pullback_depth_atr,Pullback depth: distance from recent high to current close normalized by ATR.,8,0.0019291330513576625,0.5,2.0,True,weak_candidate
+pullback_depth_atr,Pullback depth: distance from recent high to current close normalized by ATR.,16,0.002142686360906732,0.75,1.0,True,candidate_for_validation
+pullback_depth_atr,Pullback depth: distance from recent high to current close normalized by ATR.,32,0.003781038388881444,0.75,1.0,True,candidate_for_validation
+inside_bar_compression,Compression: current range relative to previous range for inside-bar style contraction.,1,0.007041872061801811,1.0,0.0,True,candidate_for_validation
+inside_bar_compression,Compression: current range relative to previous range for inside-bar style contraction.,4,0.007501741227049744,1.0,0.0,True,candidate_for_validation
+inside_bar_compression,Compression: current range relative to previous range for inside-bar style contraction.,8,0.007636394663729187,1.0,0.0,True,candidate_for_validation
+inside_bar_compression,Compression: current range relative to previous range for inside-bar style contraction.,16,0.007250691528019054,1.0,0.0,True,candidate_for_validation
+inside_bar_compression,Compression: current range relative to previous range for inside-bar style contraction.,32,0.007495440269927593,1.0,0.0,True,candidate_for_validation
