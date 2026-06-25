@@ -1,0 +1,17 @@
+{
+  "datasets": [
+    {
+      "dataset_name": "ethusdt_stage2_merged_1m",
+      "symbol": "ETHUSDT",
+      "timeframe": "1m",
+      "path": "/Users/muce/PycharmProjects/20260621/eth/backtest_results/stage2/data_audit/merged_ethusdt_1m.csv",
+      "start_utc": "2024-01-01 00:00:00+00:00",
+      "end_utc": "2026-06-24 12:05:00+00:00",
+      "row_count": 1303926,
+      "sha256": "fa3d0dd15bf29373981dda90d218532084e3d7562f0ef58c533aa527564ddcd1",
+      "data_layer": "discovery",
+      "oos_eligible": false,
+      "notes": "Observed repeatedly in Stage1-Stage4; not eligible for final OOS."
+    }
+  ]
+}

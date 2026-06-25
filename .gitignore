@@ -28,6 +28,12 @@ backtest/logs/
 data/raw/
 data/cache/
 
+# Research Core stores small derived audit artifacts in git; raw 1m data stays external.
+!research_core/events/
+!research_core/events/event_candidates.parquet
+!research_core/logs/
+!research_core/logs/run_log.csv
+
 # Keep only selected lightweight research summaries under backtest_results.
 backtest_results/**/*.png
 backtest_results/**/trades.csv

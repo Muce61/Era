@@ -1,0 +1,7 @@
+no_parameter_optimization: true
+current_data_is_discovery_only: true
+require_next_1m_open_execution: true
+require_config_hash: true
+require_data_hash: true
+require_run_log: true
+allowed_current_conclusion: "research_only_no_oos_no_paper_approval"

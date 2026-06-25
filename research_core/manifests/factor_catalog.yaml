@@ -1,0 +1,238 @@
+catalog_name: "research_core_factor_catalog_v1"
+factors:
+  -
+      name: "ema_gap_atr"
+      role: "factor"
+      uses_future_data: False
+      status: "active"
+  -
+      name: "ema200_slope_4h"
+      role: "factor"
+      uses_future_data: False
+      status: "active"
+  -
+      name: "ret_4h"
+      role: "factor"
+      uses_future_data: False
+      status: "active"
+  -
+      name: "ret_12h"
+      role: "factor"
+      uses_future_data: False
+      status: "active"
+  -
+      name: "ret_24h"
+      role: "factor"
+      uses_future_data: False
+      status: "active"
+  -
+      name: "breakout_distance_atr"
+      role: "factor"
+      uses_future_data: False
+      status: "active"
+  -
+      name: "atr_pct"
+      role: "factor"
+      uses_future_data: False
+      status: "active"
+  -
+      name: "atr_percentile_200"
+      role: "factor"
+      uses_future_data: False
+      status: "active"
+  -
+      name: "range_atr"
+      role: "factor"
+      uses_future_data: False
+      status: "active"
+  -
+      name: "volatility_ratio_short_long"
+      role: "factor"
+      uses_future_data: False
+      status: "active"
+  -
+      name: "body_ratio"
+      role: "factor"
+      uses_future_data: False
+      status: "active"
+  -
+      name: "upper_shadow_ratio"
+      role: "factor"
+      uses_future_data: False
+      status: "active"
+  -
+      name: "lower_shadow_ratio"
+      role: "factor"
+      uses_future_data: False
+      status: "active"
+  -
+      name: "close_location"
+      role: "factor"
+      uses_future_data: False
+      status: "active"
+  -
+      name: "bars_after_breakout"
+      role: "factor"
+      uses_future_data: False
+      status: "active"
+  -
+      name: "pullback_depth_atr"
+      role: "factor"
+      uses_future_data: False
+      status: "active"
+  -
+      name: "inside_bar_compression"
+      role: "factor"
+      uses_future_data: False
+      status: "active"
+labels:
+  -
+      name: "fwd_ret_1"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "fwd_mfe_1"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "fwd_mae_1"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "plus_1atr_first_1"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "minus_1atr_first_1"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "ambiguous_touch_1"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "fwd_ret_4"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "fwd_mfe_4"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "fwd_mae_4"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "plus_1atr_first_4"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "minus_1atr_first_4"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "ambiguous_touch_4"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "fwd_ret_8"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "fwd_mfe_8"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "fwd_mae_8"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "plus_1atr_first_8"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "minus_1atr_first_8"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "ambiguous_touch_8"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "fwd_ret_16"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "fwd_mfe_16"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "fwd_mae_16"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "plus_1atr_first_16"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "minus_1atr_first_16"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "ambiguous_touch_16"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "fwd_ret_32"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "fwd_mfe_32"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "fwd_mae_32"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "plus_1atr_first_32"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "minus_1atr_first_32"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
+  -
+      name: "ambiguous_touch_32"
+      role: "forward_label"
+      uses_future_data: True
+      status: "label_only"
