@@ -1,0 +1,13 @@
+{
+  "data_path": "/Users/muce/1m_data/new_backtest_data_1year_1m/ETHUSDT.csv",
+  "stage1_root": "backtest_results/stage1",
+  "start": "2024-12-01 00:00:00",
+  "end": "2025-12-12 20:00:00",
+  "horizons": [
+    1,
+    4,
+    8,
+    16,
+    32
+  ]
+}

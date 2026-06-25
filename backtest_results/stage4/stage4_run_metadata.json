@@ -1,0 +1,9 @@
+{
+  "data_start": "2024-01-01 00:00:00",
+  "data_end": "2026-06-24 12:05:00",
+  "data_file": "/Users/muce/PycharmProjects/20260621/eth/backtest_results/stage2/data_audit/merged_ethusdt_1m.csv",
+  "data_file_hash": "fa3d0dd15bf29373981dda90d218532084e3d7562f0ef58c533aa527564ddcd1",
+  "git_commit": "66dea51e969a477e48306587f786d39267c85583",
+  "run_timestamp": "2026-06-24T18:15:19.533564+00:00",
+  "data_coverage_status": "below_original_minimum"
+}

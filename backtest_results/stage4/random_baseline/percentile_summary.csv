@@ -1,0 +1,2 @@
+total_return,profit_factor,max_drawdown,calmar,avg_mae_atr,avg_mfe_atr,top5_profit_contribution,return_percentile,pf_percentile,drawdown_percentile,calmar_percentile,mfe_mae_percentile,c1_trade_count,candidate_count,random_runs,exact_trade_count_match_rate,low_sample_random_baseline
+-66.25580586320221,0.867645611732098,-77.76186338457399,-0.45647309312153167,-2.0797037378022356,4.677984925872647,0.0,94.58,99.46000000000001,12.879999999999999,96.1,100.0,371,18179,5000,1.0,False

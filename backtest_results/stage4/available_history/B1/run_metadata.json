@@ -1,0 +1,12 @@
+{
+  "label": "B1",
+  "config_path": "/Users/muce/PycharmProjects/20260621/eth/backtest_results/stage4/frozen_configs/B1",
+  "config_hash": "fee6f46594c89c13f89ed0a277862a4060c5f5c5185ab4e44b7f39f672e01ba1",
+  "git_commit": "66dea51e969a477e48306587f786d39267c85583",
+  "data_start": "2024-01-01 00:00:00+00:00",
+  "data_end": "2026-06-24 12:05:00+00:00",
+  "data_file": "/Users/muce/PycharmProjects/20260621/eth/backtest_results/stage2/data_audit/merged_ethusdt_1m.csv",
+  "data_file_hash": "fa3d0dd15bf29373981dda90d218532084e3d7562f0ef58c533aa527564ddcd1",
+  "run_timestamp": "2026-06-24T17:34:43.270642+00:00",
+  "data_coverage_status": "below_original_minimum"
+}

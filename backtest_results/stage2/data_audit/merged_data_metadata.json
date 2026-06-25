@@ -1,0 +1,24 @@
+{
+  "generated_at": "2026-06-24T14:46:32.386243+00:00",
+  "timezone": "UTC",
+  "data_coverage_status": "below_original_minimum",
+  "original_minimum_years": 3,
+  "available_years": 2.4808333333333334,
+  "source_files": [
+    "/Users/muce/1m_data/2024_validation_1m/ETHUSDT.csv",
+    "/Users/muce/1m_data/new_backtest_data_1year_1m/ETHUSDT.csv"
+  ],
+  "raw_rows": 1348566,
+  "duplicate_timestamps": 44640,
+  "dedup_rows": 1303926,
+  "start_utc": "2024-01-01 00:00:00+00:00",
+  "end_utc": "2026-06-24 12:05:00+00:00",
+  "expected_minutes": 1303926,
+  "missing_minutes": 0,
+  "invalid_ohlc_rows": 0,
+  "negative_volume_rows": 0,
+  "zero_price_rows": 0,
+  "outlier_rows": 59,
+  "valid_15m_bars": 86928,
+  "invalid_15m_bars": 1
+}

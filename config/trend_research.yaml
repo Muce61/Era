@@ -1,0 +1,23 @@
+data_path: /Users/muce/1m_data/new_backtest_data_1year_1m/ETHUSDT.csv
+symbol: ETHUSDT
+start_date: "2024-12-01 00:00:00"
+end_date: "2025-12-12 20:00:00"
+initial_balance: 1000.0
+leverage: 2.0
+signal_timeframe: 15min
+fee_rate: 0.0005
+slippage_rate: 0.0002
+ema_fast: 50
+ema_slow: 200
+donchian_entry: 55
+donchian_exit: 20
+atr_period: 14
+atr_stop_mult: 3.0
+er_windows: [20, 40]
+ema_slope_lag: 8
+atr_percentile_window: 2880
+volume_zscore_window: 96
+future_windows_minutes: [60, 120, 240, 480, 960]
+min_bucket_samples: 30
+output_dir: backtest_results/trend_research
+random_seed: 42

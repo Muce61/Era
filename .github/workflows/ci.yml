@@ -1,0 +1,23 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with: {python-version: '3.11'}
+    - run: pip install -r requirements.txt
+    - run: python scripts/download_sample_data.py
+    - run: python scripts/validate_data.py data/sample_eth.parquet data_spec/schema.yaml
+    - run: python -c "from features.pipeline import FeaturePipe; import yaml; cfg=yaml.safe_load(open('conf/experiment.yaml')); FeaturePipe(cfg).build_features().head()"
+    - run: python backtest/run_backtest.py --config conf/experiment.yaml
+    - run: python - <<'PY'
+import json
+m=json.load(open('reports/metrics.json'))
+assert m['trades']>=0
+print(m)
+PY
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with: {name: reports, path: reports/}

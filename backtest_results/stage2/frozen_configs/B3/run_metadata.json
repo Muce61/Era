@@ -1,0 +1,11 @@
+{
+  "label": "B3",
+  "entry_mode": "bullish_hikkake",
+  "config_path": "/Users/muce/PycharmProjects/20260621/eth/configs/stage2_b3_frozen.json",
+  "config_hash": "c44fc4b6e908c55c5ca3c22d9f4230c3afeb40a780cee0ec1d6a8bf61e0d8dec",
+  "git_commit": "66dea51e969a477e48306587f786d39267c85583",
+  "data_start": "2024-12-01 00:00:00+00:00",
+  "data_end": "2025-12-12 20:00:00+00:00",
+  "data_file_hash": "08c8b402f15404c6fc9cb07a5a1f396a84460aa27bcae8a305aad1364f4b7d14",
+  "run_timestamp": "2026-06-24T14:23:26.005626+00:00"
+}
