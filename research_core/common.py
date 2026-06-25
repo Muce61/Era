@@ -25,6 +25,7 @@ def ensure_research_dirs() -> None:
         "schemas",
         "events",
         "factor_analysis/plots",
+        "stability",
         "reports",
         "logs",
     ]:
@@ -123,4 +124,3 @@ def validate_data_manifest_record(record: dict[str, Any]) -> bool:
     if record.get("data_layer") == "discovery" and record.get("oos_eligible") is True:
         return False
     return True
-
