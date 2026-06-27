@@ -1,0 +1,4 @@
+symbol,start_utc,end_utc,row_count,coverage_days,monotonic_increasing,duplicate_timestamp_count,missing_range_count,missing_minute_count,invalid_ohlc_count,outlier_count
+BTCUSDT,2024-01-01T00:00:00+00:00,2026-06-27T01:52:00+00:00,1307633,908.0777777777778,True,0,0,0,0,0
+SOLUSDT,2024-01-01T00:00:00+00:00,2026-06-27T01:23:00+00:00,1307604,908.0576388888888,True,0,0,0,0,1
+BNBUSDT,2024-01-01T00:00:00+00:00,2026-06-27T01:26:00+00:00,1307607,908.0597222222223,True,0,0,0,0,0

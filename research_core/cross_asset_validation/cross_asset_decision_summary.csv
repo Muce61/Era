@@ -1,0 +1,5 @@
+prototype,tested_symbol_count,valid_symbol_count,positive_symbol_rate,pf_gt_1_symbol_rate,better_than_p1_symbol_rate,median_total_return,median_profit_factor,decision_status,allowed_next_step
+P3_MOMENTUM_TOP20,3,3,1.0,1.0,0.0,1.0584362095461821,1.9245325767052857,weak_cross_asset_support,needs_cost_and_asset_expansion
+P4_BREAKOUT_TOP20,3,3,1.0,1.0,1.0,29.076038142883682,2.9319682597819017,cross_asset_supported,eligible_for_deeper_cross_asset_validation
+P5_MOMENTUM_AND_BREAKOUT_TOP40,3,3,1.0,1.0,0.3333333333333333,3.1025915687034624,2.762234348608051,weak_cross_asset_support,needs_cost_and_asset_expansion
+P6_MOMENTUM_OR_BREAKOUT_TOP20,3,3,1.0,1.0,1.0,27.340420111871822,2.485338688672178,cross_asset_supported,eligible_for_deeper_cross_asset_validation

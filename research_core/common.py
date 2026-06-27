@@ -34,6 +34,7 @@ def ensure_research_dirs() -> None:
         "oos_data_audit",
         "oos_events",
         "oos_validation",
+        "cross_asset_validation",
         "reports",
         "logs",
     ]:
