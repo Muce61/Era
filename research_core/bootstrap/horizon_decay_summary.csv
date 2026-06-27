@@ -1,0 +1,9 @@
+family,role,horizons_available,direction_consistent,best_horizon,best_horizon_contribution,decay_pattern
+momentum_continuation,alpha,1;4;8;16;32,True,32.0,0.2757552691433337,stable_across_horizons
+breakout_conviction,alpha,1;4;8;16;32,True,32.0,0.25031520856553025,stable_across_horizons
+volatility_expansion,risk,1;4;8;16;32,True,32.0,0.3135984560158777,stable_across_horizons
+shadow_rejection,alpha_or_avoid,1;4;8;16;32,True,32.0,0.25679622112599326,stable_across_horizons
+compression_expansion,alpha,1;4;8;16;32,True,8.0,0.2068018676016654,stable_across_horizons
+bad_entry_avoidance,avoid,,False,,,invalid_or_sparse
+execution_risk,execution,,False,,,invalid_or_sparse
+state_risk_multiplier,risk,,False,,,invalid_or_sparse

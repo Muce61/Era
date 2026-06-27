@@ -1,0 +1,9 @@
+family,role,factor_count,factor_horizon_count,horizon_count,member_factors,mean_directional_edge,ordinary_same_direction_rate,monthly_same_direction_rate,quarterly_same_direction_rate,top_factor_contribution,top_horizon_contribution,family_bootstrap_status
+momentum_continuation,alpha,3,12,5,ret_12h;ret_24h;ret_4h,0.005910106603205016,0.9997999999999999,0.9987,0.99995,0.5248047226622121,0.25042083176088653,family_robust_candidate
+breakout_conviction,alpha,4,20,5,body_ratio;breakout_distance_atr;close_location;range_atr,0.007761787551646181,0.99976,0.99997,0.9999100000000001,0.2993792296482301,0.25031520856553025,family_robust_candidate
+volatility_expansion,risk,3,13,5,atr_pct;atr_percentile_200;volatility_ratio_short_long,0.007462223158207538,1.0,0.9999846153846155,0.9999692307692308,0.4383988164481841,0.2566738377653789,family_robust_candidate
+shadow_rejection,alpha_or_avoid,2,10,5,lower_shadow_ratio;upper_shadow_ratio,0.00507121381082902,0.9989399999999999,0.9995800000000001,0.9998000000000001,0.5017382345418204,0.25679622112599326,family_robust_candidate
+compression_expansion,alpha,1,5,5,inside_bar_compression,0.007385227950105421,0.9999600000000001,1.0,1.0,1.0,0.2068018676016654,family_concentrated
+bad_entry_avoidance,avoid,0,0,0,,,,,,,,family_invalid_or_sparse
+execution_risk,execution,0,0,0,,,,,,,,family_invalid_or_sparse
+state_risk_multiplier,risk,0,0,0,,,,,,,,family_invalid_or_sparse

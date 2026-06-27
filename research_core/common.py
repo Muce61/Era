@@ -27,6 +27,7 @@ def ensure_research_dirs() -> None:
         "factor_analysis/plots",
         "stability",
         "random_baseline",
+        "bootstrap",
         "reports",
         "logs",
     ]:

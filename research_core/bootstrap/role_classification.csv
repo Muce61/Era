@@ -1,0 +1,9 @@
+family,initial_role,r5_evidence,final_research_role,reason,allowed_next_step
+momentum_continuation,alpha,family_robust_candidate,alpha,Family survived R5 bootstrap and horizon decay is not single-horizon dependent.,eligible_for_R6_validation
+breakout_conviction,alpha,family_robust_candidate,alpha,Family survived R5 bootstrap and horizon decay is not single-horizon dependent.,eligible_for_R6_validation
+volatility_expansion,risk,family_robust_candidate,risk,Literature role is risk; preserve as monitor until alpha-vs-risk decomposition is stronger.,keep_as_risk_monitor
+shadow_rejection,alpha_or_avoid,family_robust_candidate,avoid,Evidence should be checked against MAE/tail loss before use as alpha.,keep_as_avoid_candidate
+compression_expansion,alpha,family_concentrated,alpha,Family evidence is concentrated in one factor or horizon.,needs_more_data
+bad_entry_avoidance,avoid,family_invalid_or_sparse,blocked,No usable current factor evidence or required data is unavailable.,needs_more_data
+execution_risk,execution,family_invalid_or_sparse,blocked,No usable current factor evidence or required data is unavailable.,blocked_missing_data
+state_risk_multiplier,risk,family_invalid_or_sparse,blocked,No usable current factor evidence or required data is unavailable.,blocked_missing_data
