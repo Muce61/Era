@@ -1,0 +1,57 @@
+# R8 Minimal Backtest Report
+
+data_layer: discovery
+data_coverage: 2024-01-01 00:00 UTC to 2026-06-24 12:05 UTC
+oos_status: not_oos
+simulation_approval: not_allowed
+
+R8 runs minimal trade accounting for fixed prototypes. It does not optimize thresholds and does not create deployable strategy rules.
+
+## Fixed 2x Summary
+
+| prototype                      | sizing_mode   |   trade_count |   total_return |   annualized_return |   max_drawdown |   calmar |   profit_factor |   win_rate |   avg_win |   avg_loss |   payoff_ratio |   avg_mae_atr |   avg_mfe_atr | longest_drawdown_duration   |   top1_profit_contribution |   top3_profit_contribution |   top5_profit_contribution |   top10_profit_contribution |   final_equity |
+|:-------------------------------|:--------------|--------------:|---------------:|--------------------:|---------------:|---------:|----------------:|-----------:|----------:|-----------:|---------------:|--------------:|--------------:|:----------------------------|---------------------------:|---------------------------:|---------------------------:|----------------------------:|---------------:|
+| P0_ALL_TREND_CONTEXT           | fixed_2x      |           379 |        90.0252 |             5.16965 |      -0.167611 | 30.8431  |         1.89849 |   0.427441 |  1174.21  |  -461.733  |        2.54304 |     -1.20114  |       6.86941 | 56 days 10:30:00            |                   0.132702 |                   0.311882 |                   0.458962 |                    0.7889   |        91025.2 |
+| P1_C1_FIRST_BREAKOUT           | fixed_2x      |           371 |        77.4631 |             4.81092 |      -0.188917 | 25.4658  |         1.8697  |   0.420485 |  1067.51  |  -414.273  |        2.57683 |     -1.21854  |       6.85872 | 68 days 06:30:00            |                   0.132938 |                   0.312438 |                   0.469858 |                    0.812934 |        78463.1 |
+| P2_STRONG_BREAKOUT             | fixed_2x      |           308 |       139.231  |             6.34456 |      -0.143255 | 44.2886  |         2.21933 |   0.474026 |  1735.74  |  -704.857  |        2.46254 |     -1.0687   |       7.25101 | 76 days 23:15:00            |                   0.128741 |                   0.273785 |                   0.413294 |                    0.715752 |       140231   |
+| P3_MOMENTUM_TOP20              | fixed_2x      |            83 |        10.1909 |             1.64897 |      -0.18485  |  8.92059 |         4.21466 |   0.566265 |   284.276 |   -88.0588 |        3.22825 |     -1.08351  |       6.18448 | 169 days 21:00:00           |                   0.129983 |                   0.312896 |                   0.468188 |                    0.718205 |        11190.9 |
+| P4_BREAKOUT_TOP20              | fixed_2x      |           179 |       118.174  |             5.878   |      -0.113089 | 51.9768  |         4.46411 |   0.564246 |  1507.8   |  -437.355  |        3.44753 |     -0.864514 |       8.40228 | 66 days 10:30:00            |                   0.107911 |                   0.2401   |                   0.353775 |                    0.605663 |       119174   |
+| P5_MOMENTUM_AND_BREAKOUT_TOP40 | fixed_2x      |           110 |        24.6662 |             2.70245 |      -0.186684 | 14.4761  |         3.98196 |   0.572727 |   522.825 |  -175.996  |        2.97067 |     -0.968349 |       7.03322 | 141 days 15:45:00           |                   0.121365 |                   0.290368 |                   0.42994  |                    0.743312 |        25666.2 |
+| P6_MOMENTUM_OR_BREAKOUT_TOP20  | fixed_2x      |           198 |       104.738  |             5.55403 |      -0.113089 | 49.112   |         3.38307 |   0.530303 |  1416.09  |  -472.592  |        2.99643 |     -0.936208 |       7.94281 | 66 days 10:30:00            |                   0.108027 |                   0.241252 |                   0.364171 |                    0.642153 |       105738   |
+
+## Event To Trade Consistency
+
+| prototype                      |   r7_event_count_h16 |   r8_trade_count |   signal_to_trade_conversion_rate |   r7_mean_ret_h16 |   r8_avg_trade_return |   r7_positive_month_rate_h16 |   r8_positive_month_rate | consistency_status   |
+|:-------------------------------|---------------------:|-----------------:|----------------------------------:|------------------:|----------------------:|-----------------------------:|-------------------------:|:---------------------|
+| P0_ALL_TREND_CONTEXT           |                 1278 |              379 |                          0.296557 |        0.0064257  |              0.237533 |                     0.9      |                 0.8      | consistent           |
+| P1_C1_FIRST_BREAKOUT           |                  371 |              371 |                          1        |        0.00793489 |              0.208795 |                     0.966667 |                 0.766667 | consistent           |
+| P2_STRONG_BREAKOUT             |                  777 |              308 |                          0.396396 |        0.00762957 |              0.452049 |                     0.966667 |                 0.866667 | consistent           |
+| P3_MOMENTUM_TOP20              |                  256 |               83 |                          0.324219 |        0.0115907  |              0.122781 |                     0.9      |                 0.769231 | consistent           |
+| P4_BREAKOUT_TOP20              |                  256 |              179 |                          0.699219 |        0.0133027  |              0.660188 |                     0.961538 |                 0.866667 | consistent           |
+| P5_MOMENTUM_AND_BREAKOUT_TOP40 |                  188 |              110 |                          0.585106 |        0.0133581  |              0.224238 |                     0.882353 |                 0.75     | consistent           |
+| P6_MOMENTUM_OR_BREAKOUT_TOP20  |                  454 |              198 |                          0.436123 |        0.011073   |              0.528982 |                     0.931034 |                 0.833333 | consistent           |
+
+## R8 Decisions
+
+| prototype                      |   fixed_2x_trade_count |   fixed_2x_total_return |   fixed_2x_max_drawdown |   fixed_2x_profit_factor |   fixed_risk_trade_count |   fixed_risk_total_return |   fixed_risk_max_drawdown |   fixed_risk_profit_factor |   walk_forward_positive_window_rate |   walk_forward_pf_gt_1_rate | tail_dependence_status   | decision_status                 | allowed_next_step      |
+|:-------------------------------|-----------------------:|------------------------:|------------------------:|-------------------------:|-------------------------:|--------------------------:|--------------------------:|---------------------------:|------------------------------------:|----------------------------:|:-------------------------|:--------------------------------|:-----------------------|
+| P0_ALL_TREND_CONTEXT           |                    379 |                 90.0252 |               -0.167611 |                  1.89849 |                      379 |                   1.33179 |                -0.0447363 |                    2.04225 |                                   1 |                           1 | top10pct_dependent       | explanatory_only                | keep_as_explanation    |
+| P1_C1_FIRST_BREAKOUT           |                    371 |                 77.4631 |               -0.188917 |                  1.8697  |                      371 |                   1.24654 |                -0.0486561 |                    1.99594 |                                   1 |                           1 | top10pct_dependent       | explanatory_only                | keep_as_explanation    |
+| P2_STRONG_BREAKOUT             |                    308 |                139.231  |               -0.143255 |                  2.21933 |                      308 |                   1.49771 |                -0.0329129 |                    2.53328 |                                   1 |                           1 | not_tail_dependent       | explanatory_only                | keep_as_explanation    |
+| P3_MOMENTUM_TOP20              |                     83 |                 10.1909 |               -0.18485  |                  4.21466 |                       83 |                   0.3319  |                -0.0271283 |                    3.65206 |                                   1 |                           1 | not_tail_dependent       | candidate_for_R9_oos_validation | R9_new_data_validation |
+| P4_BREAKOUT_TOP20              |                    179 |                118.174  |               -0.113089 |                  4.46411 |                      179 |                   1.23698 |                -0.031218  |                    3.81216 |                                   1 |                           1 | not_tail_dependent       | candidate_for_R9_oos_validation | R9_new_data_validation |
+| P5_MOMENTUM_AND_BREAKOUT_TOP40 |                    110 |                 24.6662 |               -0.186684 |                  3.98196 |                      110 |                   0.55997 |                -0.028868  |                    3.82033 |                                   1 |                           1 | not_tail_dependent       | candidate_for_R9_oos_validation | R9_new_data_validation |
+| P6_MOMENTUM_OR_BREAKOUT_TOP20  |                    198 |                104.738  |               -0.113089 |                  3.38307 |                      198 |                   1.20743 |                -0.0351325 |                    3.34251 |                                   1 |                           1 | not_tail_dependent       | candidate_for_R9_oos_validation | R9_new_data_validation |
+
+## Required Answers
+
+1. P3 是否在真实交易后仍优于 P0：False。
+2. P4 是否在真实交易后仍优于 P0：True。
+3. P5 是否在真实交易后优于 P3/P4 单因子：False。
+4. P6 是否更稳健：P6 决策 `candidate_for_R9_oos_validation`，需要结合 walk-forward 与尾部依赖判断。
+5. P3/P4/P5/P6 是否优于 C1/P1：['P4_BREAKOUT_TOP20', 'P6_MOMENTUM_OR_BREAKOUT_TOP20']。
+6. 执行层削弱：[{'prototype': 'P0_ALL_TREND_CONTEXT', 'consistency_status': 'consistent'}, {'prototype': 'P1_C1_FIRST_BREAKOUT', 'consistency_status': 'consistent'}, {'prototype': 'P2_STRONG_BREAKOUT', 'consistency_status': 'consistent'}, {'prototype': 'P3_MOMENTUM_TOP20', 'consistency_status': 'consistent'}, {'prototype': 'P4_BREAKOUT_TOP20', 'consistency_status': 'consistent'}, {'prototype': 'P5_MOMENTUM_AND_BREAKOUT_TOP40', 'consistency_status': 'consistent'}, {'prototype': 'P6_MOMENTUM_OR_BREAKOUT_TOP20', 'consistency_status': 'consistent'}]。
+7. 少数交易或月份依赖：[{'prototype': 'P0_ALL_TREND_CONTEXT', 'tail_dependence_status': 'top10pct_dependent'}, {'prototype': 'P1_C1_FIRST_BREAKOUT', 'tail_dependence_status': 'top10pct_dependent'}, {'prototype': 'P2_STRONG_BREAKOUT', 'tail_dependence_status': 'not_tail_dependent'}, {'prototype': 'P3_MOMENTUM_TOP20', 'tail_dependence_status': 'not_tail_dependent'}, {'prototype': 'P4_BREAKOUT_TOP20', 'tail_dependence_status': 'not_tail_dependent'}, {'prototype': 'P5_MOMENTUM_AND_BREAKOUT_TOP40', 'tail_dependence_status': 'not_tail_dependent'}, {'prototype': 'P6_MOMENTUM_OR_BREAKOUT_TOP20', 'tail_dependence_status': 'not_tail_dependent'}]。
+8. 固定风险后最大回撤是否下降：见 `prototype_backtest_summary.csv` 中 fixed_2x 与 fixed_risk_0_5pct 的 max_drawdown 对照。
+9. 可进入 R9 新数据验证：['P3_MOMENTUM_TOP20', 'P4_BREAKOUT_TOP20', 'P5_MOMENTUM_AND_BREAKOUT_TOP40', 'P6_MOMENTUM_OR_BREAKOUT_TOP20']。
+10. 是否仍然禁止称为 OOS / 模拟盘：是。R8 仍然只使用 discovery 数据。

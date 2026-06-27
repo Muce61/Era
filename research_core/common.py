@@ -30,6 +30,7 @@ def ensure_research_dirs() -> None:
         "bootstrap",
         "family_validation",
         "prototypes",
+        "minimal_backtest",
         "reports",
         "logs",
     ]:
