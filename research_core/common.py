@@ -29,6 +29,7 @@ def ensure_research_dirs() -> None:
         "random_baseline",
         "bootstrap",
         "family_validation",
+        "prototypes",
         "reports",
         "logs",
     ]:
