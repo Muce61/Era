@@ -31,6 +31,9 @@ def ensure_research_dirs() -> None:
         "family_validation",
         "prototypes",
         "minimal_backtest",
+        "oos_data_audit",
+        "oos_events",
+        "oos_validation",
         "reports",
         "logs",
     ]:

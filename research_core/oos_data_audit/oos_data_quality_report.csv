@@ -1,0 +1,3 @@
+path,full_start_utc,full_end_utc,oos_start_utc,oos_end_utc,oos_row_count,oos_coverage_days,timestamp_utc_assumed,monotonic_increasing,duplicate_timestamp_count,missing_range_count,missing_minute_count,invalid_ohlc_count,outlier_count,overlaps_discovery,coverage_status
+/Users/muce/1m_data/new_backtest_data_1year_1m/ETHUSDT.csv,2024-12-01T00:00:00+00:00,2026-06-27T01:51:00+00:00,2026-06-24T12:06:00+00:00,2026-06-27T01:51:00+00:00,3706,2.5729166666666665,True,True,0,0,0,0,0,True,insufficient
+/Users/muce/1m_data/new_backtest_data_1year_1m/NEIROETHUSDT.csv,2024-12-01T00:00:00+00:00,2026-06-27T01:16:00+00:00,2026-06-24T12:06:00+00:00,2026-06-27T01:16:00+00:00,3671,2.548611111111111,True,True,0,0,0,0,0,True,insufficient
