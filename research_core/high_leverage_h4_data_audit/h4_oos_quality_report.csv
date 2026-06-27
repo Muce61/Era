@@ -1,0 +1,2 @@
+status,reason,best_path,coverage_days,oos_start_utc,oos_end_utc,conclusion
+blocked,oos_data_unavailable_or_insufficient,/Users/muce/1m_data/new_backtest_data_1year_1m/ETHUSDT.csv,2.5729166666666665,2026-06-24T12:06:00+00:00,2026-06-27T01:51:00+00:00,E. OOS 数据不足，无法判断

@@ -1,0 +1,6 @@
+symbol,start_utc,end_utc,row_count,coverage_days,monotonic_increasing,duplicate_timestamp_count,missing_range_count,missing_minute_count,invalid_ohlc_count,outlier_count,data_layer,quality_status
+XRPUSDT,2024-01-01T00:00:00+00:00,2026-06-27T01:57:00+00:00,1307638,908.08125,True,0,0,0,0,5,cross_asset_holdout,pass
+ADAUSDT,2024-01-01T00:00:00+00:00,2026-06-27T01:57:00+00:00,1307638,908.08125,True,0,0,0,0,9,cross_asset_holdout,pass
+DOGEUSDT,2024-01-01T00:00:00+00:00,2026-06-27T01:11:00+00:00,1307592,908.0493055555555,True,0,0,0,0,4,cross_asset_holdout,pass
+AVAXUSDT,2024-01-01T00:00:00+00:00,2026-06-27T01:21:00+00:00,1307602,908.05625,True,0,0,0,0,6,cross_asset_holdout,pass
+LINKUSDT,2024-01-01T00:00:00+00:00,2026-06-27T01:22:00+00:00,1307603,908.0569444444444,True,0,0,0,0,5,cross_asset_holdout,pass
