@@ -1,0 +1,9 @@
+prototype,factor,keep_fraction,threshold_quantile,threshold,safe_direction,source_event_count,source_data_layer
+P4_BREAKOUT_TOP20,volatility_ratio_short_long,0.6,0.4,1.1317066954888664,high,735,h3_discovery_core_symbols
+P4_BREAKOUT_TOP20,volatility_ratio_short_long,0.7,0.30000000000000004,1.018966175389039,high,735,h3_discovery_core_symbols
+P6_MOMENTUM_OR_BREAKOUT_TOP20,volatility_ratio_short_long,0.6,0.4,1.1187680056545557,high,849,h3_discovery_core_symbols
+P6_MOMENTUM_OR_BREAKOUT_TOP20,volatility_ratio_short_long,0.7,0.30000000000000004,1.0094306520894867,high,849,h3_discovery_core_symbols
+P6_MOMENTUM_OR_BREAKOUT_TOP20,breakout_score_quantile,0.6,0.4,0.8737793798070148,high,852,h3_discovery_core_symbols
+P6_MOMENTUM_OR_BREAKOUT_TOP20,breakout_score_quantile,0.7,0.30000000000000004,0.8498119840687093,high,852,h3_discovery_core_symbols
+P6_MOMENTUM_OR_BREAKOUT_TOP20,atr_pct,0.6,0.4,0.00386989372860612,high,852,h3_discovery_core_symbols
+P6_MOMENTUM_OR_BREAKOUT_TOP20,atr_pct,0.7,0.30000000000000004,0.0032263175752910702,high,852,h3_discovery_core_symbols

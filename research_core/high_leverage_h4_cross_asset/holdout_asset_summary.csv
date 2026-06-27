@@ -1,6 +1,6 @@
 symbol,best_profit_factor,min_liquidation_count,worst_max_drawdown,best_validation,holdout_status
-ADAUSDT,4.468742983939913,0,-0.2690339253352394,validation_pass,cross_asset_holdout_pass
-AVAXUSDT,5.016248095594659,0,-0.286659570360948,validation_pass,cross_asset_holdout_pass
+ADAUSDT,4.231501463419519,0,-0.2690339253352394,validation_pass,cross_asset_holdout_pass
+AVAXUSDT,6.706490170257582,0,-0.286659570360948,validation_pass,cross_asset_holdout_pass
 DOGEUSDT,2.9926627058451536,0,-0.31107142490673845,validation_pass,cross_asset_holdout_pass
-LINKUSDT,3.348672803095091,0,-0.27376065892126555,validation_pass,cross_asset_holdout_pass
+LINKUSDT,3.8263494986370823,0,-0.26526508264800186,validation_pass,cross_asset_holdout_pass
 XRPUSDT,5.651886002844533,0,-0.35199433593219354,validation_pass,cross_asset_holdout_pass

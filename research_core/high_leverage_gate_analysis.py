@@ -124,6 +124,94 @@ def safe_mask_for_factor(events: pd.DataFrame, factors: pd.DataFrame, prototype:
     return ranks < keep_fraction
 
 
+def build_fixed_gate_thresholds(discovery_events: pd.DataFrame, factors: pd.DataFrame) -> pd.DataFrame:
+    rows = []
+    for _, row in factors.iterrows():
+        prototype = row["prototype"]
+        factor = row["factor"]
+        if factor not in discovery_events.columns:
+            continue
+        values = pd.to_numeric(
+            discovery_events.loc[discovery_events["prototype"] == prototype, factor],
+            errors="coerce",
+        ).dropna()
+        high_safe = factor_is_high_safe(factors, prototype, factor)
+        for keep_fraction in [0.60, 0.70]:
+            quantile = 1.0 - keep_fraction if high_safe else keep_fraction
+            threshold = float(values.quantile(quantile)) if len(values) else np.nan
+            rows.append({
+                "prototype": prototype,
+                "factor": factor,
+                "keep_fraction": keep_fraction,
+                "threshold_quantile": quantile,
+                "threshold": threshold,
+                "safe_direction": "high" if high_safe else "low",
+                "source_event_count": int(len(values)),
+                "source_data_layer": "h3_discovery_core_symbols",
+            })
+    return pd.DataFrame(rows)
+
+
+def safe_mask_for_factor_fixed(
+    events: pd.DataFrame,
+    thresholds: pd.DataFrame,
+    prototype: str,
+    factor: str,
+    keep_fraction: float,
+) -> pd.Series:
+    if factor not in events.columns:
+        return pd.Series(False, index=events.index)
+    part = thresholds[
+        (thresholds["prototype"] == prototype)
+        & (thresholds["factor"] == factor)
+        & (np.isclose(thresholds["keep_fraction"].astype(float), keep_fraction))
+    ]
+    if part.empty or not np.isfinite(float(part.iloc[0]["threshold"])):
+        return pd.Series(False, index=events.index)
+    threshold = float(part.iloc[0]["threshold"])
+    values = pd.to_numeric(events[factor], errors="coerce")
+    if part.iloc[0]["safe_direction"] == "high":
+        return values > threshold
+    return values < threshold
+
+
+def gate_mask_fixed(
+    events: pd.DataFrame,
+    factors: pd.DataFrame,
+    thresholds: pd.DataFrame,
+    prototype: str,
+    gate: str,
+) -> tuple[pd.Series, str]:
+    proto_factors = factors[factors["prototype"] == prototype]["factor"].tolist()
+    if gate == "G0_NO_PATH_GATE" or gate == "G4_RISK_MONITOR_DOWNSHIFT":
+        return pd.Series(True, index=events.index), "usable"
+    if gate == "G1_SINGLE_BEST_PATH_SAFETY":
+        if len(proto_factors) < 1:
+            return pd.Series(False, index=events.index), "gate_unavailable"
+        return safe_mask_for_factor_fixed(events, thresholds, prototype, proto_factors[0], 0.60), "usable"
+    if gate == "G2_CONSENSUS_TWO_FACTORS":
+        if len(proto_factors) < 2:
+            return pd.Series(False, index=events.index), "gate_unavailable"
+        mask = pd.Series(True, index=events.index)
+        for factor in proto_factors[:2]:
+            mask &= safe_mask_for_factor_fixed(events, thresholds, prototype, factor, 0.70)
+        return mask, "usable"
+    if gate == "G3_STRICT_CONSENSUS":
+        if len(proto_factors) < 3:
+            return pd.Series(False, index=events.index), "gate_unavailable"
+        masks = [safe_mask_for_factor_fixed(events, thresholds, prototype, factor, 0.60) for factor in proto_factors[:3]]
+        return (sum(m.astype(int) for m in masks) >= 2), "usable"
+    raise ValueError(f"Unknown gate: {gate}")
+
+
+def high_risk_mask_fixed(events: pd.DataFrame, factors: pd.DataFrame, thresholds: pd.DataFrame, prototype: str) -> pd.Series:
+    proto_factors = factors[factors["prototype"] == prototype]["factor"].tolist()
+    if not proto_factors:
+        return pd.Series(False, index=events.index)
+    safe, _ = gate_mask_fixed(events, factors, thresholds, prototype, "G1_SINGLE_BEST_PATH_SAFETY")
+    return ~safe
+
+
 def gate_mask(events: pd.DataFrame, factors: pd.DataFrame, prototype: str, gate: str) -> tuple[pd.Series, str]:
     proto_factors = factors[factors["prototype"] == prototype]["factor"].tolist()
     if gate == "G0_NO_PATH_GATE" or gate == "G4_RISK_MONITOR_DOWNSHIFT":
@@ -483,7 +571,10 @@ __all__ = [
     "SYMBOLS",
     "eligible_factors",
     "factor_ranks",
+    "build_fixed_gate_thresholds",
+    "gate_mask_fixed",
     "gate_mask",
+    "high_risk_mask_fixed",
     "high_risk_mask",
     "coverage_status",
     "load_h3_trade_inputs",

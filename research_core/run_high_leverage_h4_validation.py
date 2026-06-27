@@ -33,6 +33,7 @@ from research_core.high_leverage_h4_validation_analysis import (
     h4_gate_backtest_symbol,
     holdout_asset_decision,
 )
+from research_core.high_leverage_gate_analysis import build_fixed_gate_thresholds, unique_event_labels
 from research_core.leverage_research_analysis import plot_leverage_equity
 from research_core.minimal_backtest_analysis import load_params
 from research_core.oos_validation_analysis import build_data_inventory, candidate_csv_paths, coverage_decision
@@ -202,6 +203,8 @@ def main() -> None:
         discovery_scores = pd.read_parquet(RESEARCH_ROOT / "family_validation" / "family_scores.parquet")
         params = load_params(load_json(RESEARCH_ROOT.parent / "configs" / "stage4_c1_frozen.json"))
         gate_factors = pd.read_csv(RESEARCH_ROOT / "high_leverage_gate" / "h3_gate_factors.csv")
+        discovery_gate_events = unique_event_labels(pd.read_csv(RESEARCH_ROOT / "high_leverage_path_safety" / "path_safety_labels.csv"))
+        gate_thresholds = build_fixed_gate_thresholds(discovery_gate_events, gate_factors)
 
         quality_rows = []
         events_frames = []
@@ -238,8 +241,8 @@ def main() -> None:
                 proto_events.append(part)
             proto_events_df = pd.concat(proto_events, ignore_index=True) if proto_events else pd.DataFrame()
             proto_events_df["data_layer"] = "cross_asset_holdout"
-            gate_events = build_holdout_gate_events(proto_events_df, scores, gate_factors)
-            assignments = gate_assignments_for_symbol(gate_events, gate_factors)
+            gate_events = build_holdout_gate_events(proto_events_df, scores, gate_factors, discovery_scores)
+            assignments = gate_assignments_for_symbol(gate_events, gate_factors, gate_thresholds)
 
             summary, stress, liquidations, gate_audit, equity = h4_gate_backtest_symbol(
                 "cross_asset_holdout",
@@ -247,6 +250,7 @@ def main() -> None:
                 result["trades"],
                 gate_events,
                 gate_factors,
+                gate_thresholds,
             )
             events_frames.append(gate_events)
             scores_frames.append(scores.assign(symbol=symbol, data_layer="cross_asset_holdout"))
@@ -282,6 +286,7 @@ def main() -> None:
         scores_all.to_parquet(validation_dir / "h4_validation_scores.parquet", index=False)
         assignments_all.to_csv(validation_dir / "h4_gate_assignments.csv", index=False)
         thresholds_all.to_csv(validation_dir / "h4_thresholds_used.csv", index=False)
+        gate_thresholds.to_csv(validation_dir / "h4_gate_fixed_thresholds.csv", index=False)
         summary_all.to_csv(validation_dir / "h4_leverage_summary.csv", index=False)
         stress_all.to_csv(validation_dir / "h4_stress_summary.csv", index=False)
         liquidations_all.to_csv(validation_dir / "h4_liquidation_events.csv", index=False)

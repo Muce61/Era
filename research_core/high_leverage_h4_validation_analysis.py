@@ -13,9 +13,8 @@ from research_core.cross_asset_validation_analysis import audit_symbol_data, def
 from research_core.high_leverage_gate_analysis import (
     H3_LEVERAGE_MODES,
     enrich_trades_with_gate_metadata,
-    factor_ranks,
-    gate_mask,
-    high_risk_mask,
+    gate_mask_fixed,
+    high_risk_mask_fixed,
     simulate_gate_leverage_path,
 )
 from research_core.leverage_research_analysis import STRESS_CASES, stress_status, summarize_leverage
@@ -158,15 +157,36 @@ def final_h4_decision(has_time_oos: bool, holdout_status: str, has_finer: bool, 
     return "E", "数据不足，无法判断"
 
 
-def build_holdout_gate_events(events: pd.DataFrame, scores: pd.DataFrame, gate_factors: pd.DataFrame) -> pd.DataFrame:
+def discovery_percentile(values: pd.Series, discovery_values: pd.Series) -> pd.Series:
+    base = np.sort(pd.to_numeric(discovery_values, errors="coerce").dropna().to_numpy(float))
+    current = pd.to_numeric(values, errors="coerce").to_numpy(float)
+    if len(base) == 0:
+        return pd.Series(np.nan, index=values.index)
+    ranks = np.searchsorted(base, current, side="right") / len(base)
+    ranks[~np.isfinite(current)] = np.nan
+    return pd.Series(ranks, index=values.index)
+
+
+def build_holdout_gate_events(
+    events: pd.DataFrame,
+    scores: pd.DataFrame,
+    gate_factors: pd.DataFrame,
+    discovery_scores: pd.DataFrame,
+) -> pd.DataFrame:
     base = events.merge(scores[["event_id", "momentum_score", "breakout_score"]], on="event_id", how="left")
-    base["momentum_score_quantile"] = base.groupby("symbol")["momentum_score"].rank(method="first", pct=True)
-    base["breakout_score_quantile"] = base.groupby("symbol")["breakout_score"].rank(method="first", pct=True)
-    factor_cols = gate_factors["factor"].dropna().unique().tolist()
-    return factor_ranks(base, factor_cols)
+    base["momentum_score_quantile"] = discovery_percentile(
+        base["momentum_score"],
+        discovery_scores["momentum_continuation_score"],
+    )
+    base["breakout_score_quantile"] = discovery_percentile(
+        base["breakout_score"],
+        discovery_scores["breakout_conviction_score"],
+    )
+    base["gate_threshold_source"] = "fixed_h3_discovery_thresholds"
+    return base
 
 
-def gate_assignments_for_symbol(events: pd.DataFrame, gate_factors: pd.DataFrame) -> pd.DataFrame:
+def gate_assignments_for_symbol(events: pd.DataFrame, gate_factors: pd.DataFrame, gate_thresholds: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for prototype in H4_PROTOTYPES:
         part = events[events["prototype"] == prototype].copy()
@@ -175,7 +195,7 @@ def gate_assignments_for_symbol(events: pd.DataFrame, gate_factors: pd.DataFrame
         for gate in H4_GATES:
             if gate == "G2_CONSENSUS_TWO_FACTORS" and prototype != "P6_MOMENTUM_OR_BREAKOUT_TOP20":
                 continue
-            mask, status = gate_mask(part, gate_factors, prototype, gate)
+            mask, status = gate_mask_fixed(part, gate_factors, gate_thresholds, prototype, gate)
             rows.extend({
                 "data_layer": part.iloc[i]["data_layer"],
                 "symbol": part.iloc[i]["symbol"],
@@ -195,6 +215,7 @@ def h4_gate_backtest_symbol(
     trades: pd.DataFrame,
     events: pd.DataFrame,
     gate_factors: pd.DataFrame,
+    gate_thresholds: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     summary_rows = []
     stress_rows = []
@@ -206,13 +227,13 @@ def h4_gate_backtest_symbol(
         trade_part = trades[(trades["symbol"] == symbol) & (trades["prototype"] == prototype) & (trades["sizing_mode"] == "fixed_2x")].copy()
         if event_part.empty or trade_part.empty:
             continue
-        high_risk = high_risk_mask(event_part, gate_factors, prototype)
+        high_risk = high_risk_mask_fixed(event_part, gate_factors, gate_thresholds, prototype)
         event_with_risk = event_part.assign(gate_high_risk=high_risk)
         enriched_all = enrich_trades_with_gate_metadata(trade_part, event_with_risk)
         for gate in H4_GATES:
             if gate == "G2_CONSENSUS_TWO_FACTORS" and prototype != "P6_MOMENTUM_OR_BREAKOUT_TOP20":
                 continue
-            mask, gate_status = gate_mask(event_part, gate_factors, prototype, gate)
+            mask, gate_status = gate_mask_fixed(event_part, gate_factors, gate_thresholds, prototype, gate)
             accepted = set(event_part.loc[mask, "event_id"].astype(str))
             if gate == "G4_RISK_MONITOR_DOWNSHIFT":
                 enriched = enriched_all.copy()
