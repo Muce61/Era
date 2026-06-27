@@ -14,6 +14,16 @@ from research_core.minimal_backtest_analysis import max_drawdown, profit_factor,
 
 TARGET_PROTOTYPES = ["P4_BREAKOUT_TOP20", "P6_MOMENTUM_OR_BREAKOUT_TOP20"]
 LEVERAGE_MODES = ["baseline_fixed_2x", "fixed_10x", "fixed_20x", "adaptive_10x_20x_v1"]
+L2_LEVERAGE_MODES = [
+    "baseline_fixed_2x",
+    "fixed_3x",
+    "fixed_5x",
+    "fixed_8x",
+    "fixed_10x",
+    "adaptive_3x_8x_v1",
+    "adaptive_4x_10x_v1",
+    "adaptive_5x_12x_v1",
+]
 INITIAL_BALANCE = 1000.0
 FEE_RATE = 0.0005
 SLIPPAGE_RATE = 0.0002
@@ -104,6 +114,12 @@ def attach_metadata(trades: pd.DataFrame, metadata: pd.DataFrame) -> pd.DataFram
 def fixed_leverage_for_mode(mode: str) -> float:
     if mode == "baseline_fixed_2x":
         return 2.0
+    if mode == "fixed_3x":
+        return 3.0
+    if mode == "fixed_5x":
+        return 5.0
+    if mode == "fixed_8x":
+        return 8.0
     if mode == "fixed_10x":
         return 10.0
     if mode == "fixed_20x":
@@ -141,6 +157,74 @@ def adaptive_leverage(
     return 10.0, "default_10x"
 
 
+def adaptive_leverage_by_mode(
+    mode: str,
+    prototype: str,
+    breakout_score_quantile: float,
+    atr_pct_rank: float,
+    equity_drawdown: float,
+    recent_3_losses: int,
+) -> tuple[float, str, float]:
+    if mode == "adaptive_10x_20x_v1":
+        leverage, reason = adaptive_leverage(
+            prototype,
+            breakout_score_quantile,
+            atr_pct_rank,
+            equity_drawdown,
+            recent_3_losses,
+        )
+        return leverage, reason, 10.0
+    specs = {
+        "adaptive_3x_8x_v1": {
+            "base": 3.0,
+            "max": 8.0,
+            "high_atr": 2.0,
+            "dd10": 2.0,
+            "dd20": 1.0,
+            "losses": 2.0,
+            "default_reason": "default_3x",
+        },
+        "adaptive_4x_10x_v1": {
+            "base": 4.0,
+            "max": 10.0,
+            "high_atr": 3.0,
+            "dd10": 2.0,
+            "dd20": 1.0,
+            "losses": 2.0,
+            "default_reason": "default_4x",
+        },
+        "adaptive_5x_12x_v1": {
+            "base": 5.0,
+            "max": 12.0,
+            "high_atr": 3.0,
+            "dd10": 2.0,
+            "dd20": 1.0,
+            "losses": 2.0,
+            "default_reason": "default_5x",
+        },
+    }
+    if mode not in specs:
+        raise ValueError(f"Not an adaptive leverage mode: {mode}")
+    spec = specs[mode]
+    if equity_drawdown > 0.20:
+        return spec["dd20"], "drawdown_gt_20pct", spec["base"]
+    if equity_drawdown > 0.10:
+        return spec["dd10"], "drawdown_gt_10pct", spec["base"]
+    if recent_3_losses >= 3:
+        return spec["losses"], "recent_3_losses", spec["base"]
+    if atr_pct_rank > 0.80:
+        return spec["high_atr"], "atr_pct_rank_gt_80pct", spec["base"]
+    if (
+        prototype in TARGET_PROTOTYPES
+        and breakout_score_quantile >= 0.80
+        and atr_pct_rank <= 0.60
+        and equity_drawdown <= 0.05
+        and recent_3_losses < 3
+    ):
+        return spec["max"], "all_raise_conditions_met", spec["base"]
+    return spec["base"], spec["default_reason"], spec["base"]
+
+
 def apply_stress_prices(trade: pd.Series, stress: StressConfig) -> tuple[float, float]:
     entry = float(trade["entry_price"])
     exit_price = float(trade["exit_price"])
@@ -171,8 +255,9 @@ def simulate_leverage_path(
         peak = max(peak, equity_before)
         drawdown = 1 - equity_before / peak if peak else 0.0
         losses = recent_loss_count(pnl_history)
-        if leverage_mode == "adaptive_10x_20x_v1":
-            leverage, reason = adaptive_leverage(
+        if leverage_mode.startswith("adaptive_"):
+            leverage, reason, base_leverage = adaptive_leverage_by_mode(
+                leverage_mode,
                 prototype,
                 float(trade.get("breakout_score_quantile", np.nan)),
                 float(trade.get("atr_pct_rank", np.nan)),
@@ -184,7 +269,7 @@ def simulate_leverage_path(
                 "prototype": prototype,
                 "trade_id": trade_id,
                 "entry_time": trade["entry_time"],
-                "base_leverage": 10.0,
+                "base_leverage": base_leverage,
                 "final_leverage": leverage,
                 "atr_pct": trade.get("atr_pct", np.nan),
                 "atr_pct_rank": trade.get("atr_pct_rank", np.nan),
