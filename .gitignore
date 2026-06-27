@@ -33,6 +33,8 @@ data/cache/
 !research_core/events/event_candidates.parquet
 !research_core/logs/
 !research_core/logs/run_log.csv
+!research_core/family_validation/
+!research_core/family_validation/family_scores.parquet
 research_core/random_baseline/factor_random_baseline_runs.csv
 
 # Keep only selected lightweight research summaries under backtest_results.
