@@ -1,0 +1,2 @@
+time,equity,symbol,prototype,gate,leverage_mode
+,1000.0,BNBUSDT,P4_BREAKOUT_TOP20,G2_CONSENSUS_TWO_FACTORS,adaptive_4x_10x_v1
