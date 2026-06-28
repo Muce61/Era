@@ -1,0 +1,13 @@
+score,quantile,threshold,threshold_source,threshold_type,prototype,factor,keep_fraction,threshold_quantile,safe_direction,source_event_count,source_data_layer
+momentum,0.6,-0.006925457082390607,original_discovery_score_distribution,prototype_score,,,,,,,
+momentum,0.8,0.5796492128521206,original_discovery_score_distribution,prototype_score,,,,,,,
+breakout,0.6,0.16276703331456283,original_discovery_score_distribution,prototype_score,,,,,,,
+breakout,0.8,0.580797454548885,original_discovery_score_distribution,prototype_score,,,,,,,
+,,1.1317066954888664,,path_gate,P4_BREAKOUT_TOP20,volatility_ratio_short_long,0.6,0.4,high,735.0,h3_discovery_core_symbols
+,,1.018966175389039,,path_gate,P4_BREAKOUT_TOP20,volatility_ratio_short_long,0.7,0.3,high,735.0,h3_discovery_core_symbols
+,,1.1187680056545557,,path_gate,P6_MOMENTUM_OR_BREAKOUT_TOP20,volatility_ratio_short_long,0.6,0.4,high,849.0,h3_discovery_core_symbols
+,,1.009430652089487,,path_gate,P6_MOMENTUM_OR_BREAKOUT_TOP20,volatility_ratio_short_long,0.7,0.3,high,849.0,h3_discovery_core_symbols
+,,0.8737793798070148,,path_gate,P6_MOMENTUM_OR_BREAKOUT_TOP20,breakout_score_quantile,0.6,0.4,high,852.0,h3_discovery_core_symbols
+,,0.8498119840687093,,path_gate,P6_MOMENTUM_OR_BREAKOUT_TOP20,breakout_score_quantile,0.7,0.3,high,852.0,h3_discovery_core_symbols
+,,0.0038698937286061,,path_gate,P6_MOMENTUM_OR_BREAKOUT_TOP20,atr_pct,0.6,0.4,high,852.0,h3_discovery_core_symbols
+,,0.003226317575291,,path_gate,P6_MOMENTUM_OR_BREAKOUT_TOP20,atr_pct,0.7,0.3,high,852.0,h3_discovery_core_symbols
