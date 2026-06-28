@@ -112,7 +112,9 @@ def attach_metadata(trades: pd.DataFrame, metadata: pd.DataFrame) -> pd.DataFram
 
 
 def fixed_leverage_for_mode(mode: str) -> float:
-    if mode == "baseline_fixed_2x":
+    if mode == "fixed_1x":
+        return 1.0
+    if mode in {"baseline_fixed_2x", "fixed_2x"}:
         return 2.0
     if mode == "fixed_3x":
         return 3.0
@@ -175,6 +177,24 @@ def adaptive_leverage_by_mode(
         )
         return leverage, reason, 10.0
     specs = {
+        "adaptive_1x_3x_v1": {
+            "base": 1.0,
+            "max": 3.0,
+            "high_atr": 1.0,
+            "dd10": 1.0,
+            "dd20": 1.0,
+            "losses": 1.0,
+            "default_reason": "default_1x",
+        },
+        "adaptive_1x_5x_v1": {
+            "base": 1.0,
+            "max": 5.0,
+            "high_atr": 1.0,
+            "dd10": 1.0,
+            "dd20": 1.0,
+            "losses": 1.0,
+            "default_reason": "default_1x",
+        },
         "adaptive_3x_8x_v1": {
             "base": 3.0,
             "max": 8.0,
