@@ -22,7 +22,18 @@ from research_core.common import RESEARCH_ROOT, append_run_log, current_git_comm
 
 
 BINANCE_MONTHLY_URL = "https://data.binance.vision/data/futures/um/monthly/klines/{symbol}/1m/{symbol}-1m-{month}.zip"
-DEFAULT_SYMBOLS = ["ETHUSDT"]
+DEFAULT_SYMBOLS = [
+    "ETHUSDT",
+    "BTCUSDT",
+    "SOLUSDT",
+    "BNBUSDT",
+    "XRPUSDT",
+    "ADAUSDT",
+    "DOGEUSDT",
+    "AVAXUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+]
 DEFAULT_START_MONTH = "2020-01"
 DEFAULT_END_MONTH = "2023-12"
 LOCAL_1M_SOURCES = [
@@ -273,4 +284,11 @@ def write_report(downloads: pd.DataFrame, quality: pd.DataFrame, manifest: dict)
 
 
 if __name__ == "__main__":
-    build_long_history()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Download, merge, and audit long 1m Binance futures history.")
+    parser.add_argument("--symbols", nargs="*", default=DEFAULT_SYMBOLS, help="Symbols to build; defaults to the fixed 10-symbol research set.")
+    parser.add_argument("--start-month", default=DEFAULT_START_MONTH)
+    parser.add_argument("--end-month", default=DEFAULT_END_MONTH)
+    args = parser.parse_args()
+    build_long_history(args.symbols, args.start_month, args.end_month)
