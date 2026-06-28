@@ -1,0 +1,3 @@
+candidate,tested_neighborhoods,status,reason
+FB1_FAILED_BREAKOUT_REVERSION,not_run_in_v1,blocked_until_base_event_edge_is_positive,avoid parameter search before candidate shows robust event edge
+MR1_SHORT_TERM_DEVIATION_REVERSION,not_run_in_v1,blocked_until_base_event_edge_is_positive,avoid parameter search before candidate shows robust event edge
