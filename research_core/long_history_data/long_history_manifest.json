@@ -1,0 +1,24 @@
+{
+  "run_timestamp": "2026-06-28T06:30:30.417909+00:00",
+  "source": "Binance public futures monthly klines + local audited data",
+  "download_start_month": "2020-01",
+  "download_end_month": "2023-12",
+  "symbols": [
+    "ETHUSDT"
+  ],
+  "records": [
+    {
+      "dataset_name": "long_history_1m",
+      "symbol": "ETHUSDT",
+      "timeframe": "1m",
+      "path": "/Users/muce/1m_data/long_history_1m/merged/ETHUSDT.csv",
+      "start_utc": "2020-01-01T00:00:00+00:00",
+      "end_utc": "2026-06-28T01:05:00+00:00",
+      "row_count": 3412866,
+      "sha256": "477d3d26d4548d9a28613c254b9ba2330743231ab8fd8c0871520fb410e17cb1",
+      "data_layer": "expanded_discovery",
+      "oos_eligible": false,
+      "notes": "Merged Binance public monthly futures klines with existing local 2024-2026 data; not OOS."
+    }
+  ]
+}
