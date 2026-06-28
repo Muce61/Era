@@ -41,6 +41,7 @@ class BacktestParams:
 @dataclass(frozen=True)
 class MarketArrays:
     index_1m_ns: np.ndarray
+    open_1m: np.ndarray
     low_1m: np.ndarray
     high_1m: np.ndarray
     close_1m: np.ndarray
@@ -69,6 +70,7 @@ def prepare_market_data(data_path: Path | str) -> tuple[pd.DataFrame, pd.DataFra
 def market_arrays(data_1m: pd.DataFrame, data_15m: pd.DataFrame) -> MarketArrays:
     return MarketArrays(
         index_1m_ns=data_1m.index.view("int64"),
+        open_1m=data_1m["open"].to_numpy(float),
         low_1m=data_1m["low"].to_numpy(float),
         high_1m=data_1m["high"].to_numpy(float),
         close_1m=data_1m["close"].to_numpy(float),
@@ -114,16 +116,18 @@ def simulate_exit(
     mfe = 0.0
     last_checked = entry_time
     for bar_time, bar in after_15m.iterrows():
-        one_minute = data_1m.loc[(data_1m.index >= last_checked) & (data_1m.index <= bar_time)]
+        one_minute = data_1m.loc[(data_1m.index >= last_checked) & (data_1m.index < bar_time)]
         if not one_minute.empty:
             mae = min(mae, float(one_minute["low"].min()) / entry_price - 1.0)
             mfe = max(mfe, float(one_minute["high"].max()) / entry_price - 1.0)
             stop_hits = one_minute[one_minute["low"] <= stop_loss]
             if not stop_hits.empty:
                 return stop_hits.index[0], stop_loss, "atr_stop", mae / (atr / entry_price), mfe / (atr / entry_price)
-        last_checked = bar_time + pd.Timedelta(minutes=1)
+        last_checked = bar_time
         if float(bar["close"]) < float(bar["donchian20_lower"]):
-            return bar_time, float(bar["close"]), "donchian20_exit", mae / (atr / entry_price), mfe / (atr / entry_price)
+            if bar_time in data_1m.index:
+                return bar_time, float(data_1m.loc[bar_time, "open"]), "donchian20_exit", mae / (atr / entry_price), mfe / (atr / entry_price)
+            return bar_time, float(bar["close"]), "end_of_backtest", mae / (atr / entry_price), mfe / (atr / entry_price)
     tail = data_1m.loc[data_1m.index >= entry_time]
     if tail.empty:
         return entry_time, entry_price, "no_data", 0.0, 0.0
@@ -150,7 +154,7 @@ def simulate_exit_arrays(
     denom = atr / entry_price
     for i in range(pos_15m, len(arrays.index_15m_ns)):
         end_ns = arrays.index_15m_ns[i]
-        end_1m = int(np.searchsorted(arrays.index_1m_ns, end_ns, side="right"))
+        end_1m = int(np.searchsorted(arrays.index_1m_ns, end_ns, side="left"))
         if end_1m > cursor:
             lows = arrays.low_1m[cursor:end_1m]
             highs = arrays.high_1m[cursor:end_1m]
@@ -162,7 +166,10 @@ def simulate_exit_arrays(
                 return pd.Timestamp(arrays.index_1m_ns[hit_pos], tz="UTC"), stop_loss, "atr_stop", mae / denom, mfe / denom
             cursor = end_1m
         if arrays.close_15m[i] < arrays.lower_15m[i]:
-            return pd.Timestamp(arrays.index_15m_ns[i], tz="UTC"), float(arrays.close_15m[i]), "donchian20_exit", mae / denom, mfe / denom
+            exit_pos = int(np.searchsorted(arrays.index_1m_ns, arrays.index_15m_ns[i], side="left"))
+            if exit_pos >= len(arrays.index_1m_ns) or arrays.index_1m_ns[exit_pos] != arrays.index_15m_ns[i]:
+                return pd.Timestamp(arrays.index_1m_ns[-1], tz="UTC"), float(arrays.close_1m[-1]), "end_of_backtest", mae / denom, mfe / denom
+            return pd.Timestamp(arrays.index_1m_ns[exit_pos], tz="UTC"), float(arrays.open_1m[exit_pos]), "donchian20_exit", mae / denom, mfe / denom
     if pos_1m >= len(arrays.index_1m_ns):
         return pd.Timestamp(entry_ns, tz="UTC"), entry_price, "no_data", 0.0, 0.0
     lows = arrays.low_1m[pos_1m:]

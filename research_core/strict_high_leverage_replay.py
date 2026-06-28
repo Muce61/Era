@@ -38,9 +38,11 @@ def downside_exit_from_bar(low: float, stop_loss: float, liquidation_price: floa
     trigger = max(stop_loss, liquidation_price)
     if low > trigger:
         return None
-    if liquidation_price >= stop_loss:
+    if low <= liquidation_price:
         return "liquidation_price", liquidation_price
-    return "atr_stop", stop_loss
+    if low <= stop_loss:
+        return "atr_stop", stop_loss
+    return None
 
 
 def _event_signal_time(event: pd.Series) -> pd.Timestamp:
@@ -141,10 +143,8 @@ def strict_replay_events(
         cursor = entry_pos
         start_15m = int(np.searchsorted(index_15m_ns, signal_time.value, side="right"))
         trigger = max(stop_loss, liq_price)
-        downside_reason = "liquidation_price" if liq_price >= stop_loss else "atr_stop"
-        downside_price = liq_price if downside_reason == "liquidation_price" else stop_loss
         for i in range(start_15m, len(index_15m_ns)):
-            end_pos = int(np.searchsorted(index_1m_ns, index_15m_ns[i], side="right"))
+            end_pos = int(np.searchsorted(index_1m_ns, index_15m_ns[i], side="left"))
             if end_pos > cursor:
                 lows = low_1m[cursor:end_pos]
                 highs = high_1m[cursor:end_pos]
@@ -154,6 +154,11 @@ def strict_replay_events(
                     hits = np.flatnonzero(lows <= trigger)
                     if len(hits):
                         hit_pos = cursor + int(hits[0])
+                        hit_low = float(lows[int(hits[0])])
+                        downside = downside_exit_from_bar(hit_low, stop_loss, liq_price)
+                        if downside is None:
+                            continue
+                        downside_reason, downside_price = downside
                         exit_reason = downside_reason
                         raw_exit = downside_price
                         exit_time = pd.Timestamp(index_1m_ns[hit_pos], tz="UTC")
@@ -161,10 +166,27 @@ def strict_replay_events(
                         break
                 cursor = end_pos
             if close_15m[i] < lower_15m[i]:
-                exit_reason = "donchian20_exit"
                 exit_time = pd.Timestamp(index_15m_ns[i], tz="UTC")
-                exit_raw = float(close_15m[i])
-                exit_price = exit_raw * (1 - SLIPPAGE_RATE)
+                exit_pos = int(np.searchsorted(index_1m_ns, index_15m_ns[i], side="left"))
+                if exit_pos >= len(index_1m_ns) or index_1m_ns[exit_pos] != index_15m_ns[i]:
+                    exit_reason = "end_of_backtest"
+                    exit_time = pd.Timestamp(index_1m_ns[-1], tz="UTC")
+                    exit_raw = float(close_1m[-1])
+                    exit_price = exit_raw * (1 - SLIPPAGE_RATE)
+                    break
+                exit_raw = float(open_1m[exit_pos])
+                if exit_raw <= trigger:
+                    downside = downside_exit_from_bar(exit_raw, stop_loss, liq_price)
+                    if downside is None:
+                        exit_reason = "donchian20_exit"
+                        raw_exit = exit_raw
+                        exit_price = exit_raw * (1 - SLIPPAGE_RATE)
+                        break
+                    exit_reason, raw_exit = downside
+                    exit_price = raw_exit if exit_reason == "liquidation_price" else raw_exit * (1 - SLIPPAGE_RATE)
+                else:
+                    exit_reason = "donchian20_exit"
+                    exit_price = exit_raw * (1 - SLIPPAGE_RATE)
                 break
         else:
             if entry_pos < len(index_1m_ns):
