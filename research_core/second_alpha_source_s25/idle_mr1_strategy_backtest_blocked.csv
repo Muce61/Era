@@ -1,0 +1,2 @@
+status,data_layer,oos_status,deployable_strategy_generated,reason
+blocked_event_research_only,expanded_discovery,not_oos,False,S2.5 is descriptive state breakdown only; no strategy backtest is allowed
