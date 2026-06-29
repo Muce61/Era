@@ -350,6 +350,8 @@ def build_market_state_pool_s2(
                 "trend_strength_bucket": row["trend_strength_bucket"],
                 "volatility_regime": row["volatility_regime"],
                 "p4_state_bucket": row["p4_state_bucket"],
+                "bars_since_p4_exit": row["bars_since_p4_exit"],
+                "bars_since_p4_exit_bucket": row["p4_state_bucket"],
                 "is_candidate_event": False,
                 f"fwd_ret_{horizon}": labels[f"fwd_ret_{horizon}"],
             })
@@ -504,4 +506,3 @@ def stability_summary_s2(events: pd.DataFrame, horizon: int = 16) -> pd.DataFram
             "worst_year_mean": float(yearly.min()) if len(yearly) else np.nan,
         })
     return pd.DataFrame(rows)
-
