@@ -1,0 +1,4 @@
+bars_since_p4_exit,p4_exit_reason,p4_trade_return_before_exit,p4_trade_duration_bars,p4_exit_drawdown_from_peak,event_count,post_exit_trend_restart_within_16,post_exit_range_bound_within_16,mean_fwd_ret_16
+13_16,donchian20_exit_proxy,,,,1655,0.08519637462235649,0.9148036253776435,0.0008230429359437155
+5_8,donchian20_exit_proxy,,,,2048,0.0908203125,0.9091796875,0.0015673734460327623
+9_12,donchian20_exit_proxy,,,,1655,0.07613293051359517,0.9238670694864048,0.000343998921769412
