@@ -1,0 +1,2 @@
+bootstrap_type,event_count,p05,p50,p95,positive_rate,bootstrap_status
+ordinary,1556,0.0012030924619601715,0.001953109980404049,0.002718849231860268,1.0,robust

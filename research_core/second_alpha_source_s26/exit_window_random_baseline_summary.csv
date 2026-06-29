@@ -1,0 +1,2 @@
+candidate,horizon,event_count,observed_mean,random_mean,random_p05,random_p50,random_p95,percentile_vs_random,matched_event_count,fallback_match_rate,random_runs,pool_source
+IDLE_MR1_P4_IDLE_REVERSION,16,1562,0.0019145152258236917,0.0007850628448589034,0.000378237374418476,0.0007785647099434476,0.0012070996998342104,1.0,1562,0.0019206145966709346,1000,full_market_state_pool

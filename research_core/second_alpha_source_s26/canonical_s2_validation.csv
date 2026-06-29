@@ -1,0 +1,2 @@
+s2_source_path,source_status,event_count_total,idle_mr1_event_count,p4_held_event_count,idle_mr1_p4_held_count,after_exit_5_16_count,canonical_validation_status
+/Users/muce/PycharmProjects/20260625/Era/research_core/second_alpha_source_s2,canonical,64501,24067,6856,0,1562,pass
