@@ -1,0 +1,5 @@
+symbol,p4_negative_month_count,p4_weak_month_count,s28_positive_in_p4_negative_month_rate,s28_positive_in_p4_weak_month_rate,both_negative_month_count,overlap_status
+BNBUSDT,37,38,0.5675675675675675,0.5526315789473685,16,complementary
+BTCUSDT,38,40,0.5263157894736842,0.525,18,complementary
+ETHUSDT,37,38,0.6756756756756757,0.6842105263157895,12,complementary
+SOLUSDT,31,34,0.6129032258064516,0.6176470588235294,12,complementary
