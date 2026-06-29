@@ -1,0 +1,2 @@
+s29_exists,s29_decision,events_available,event_count,symbols_available,symbol_count,candidate,p4_state_bucket,input_validation_status,data_layer,oos_status
+True,A,True,5358,"ETHUSDT,BTCUSDT,SOLUSDT,BNBUSDT",4,IDLE_MR1_P4_IDLE_REVERSION,after_p4_exit_5_16_bars,pass,expanded_discovery_long_history,not_oos
