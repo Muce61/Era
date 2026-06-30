@@ -26,14 +26,14 @@ def main():
     out = Path("research_core/carry_research")
     out.mkdir(parents=True, exist_ok=True)
 
-    print("=== Carry Research Orchestrator (Grok Build - validity fix round) ===")
-    print("Step 1: Funding Event Study (known-at-time, next settled rate semantics)...")
+    print("=== Carry Research Orchestrator (Grok Build - restricted final validity-fix) ===")
+    print("Step 1: Funding Event Study...")
     ev = run_funding_event_study(data_dir, symbols, out)
 
-    print("Step 2: FRC1 Multi-period Execution (real prices two-leg where aligned)...")
+    print("Step 2: FRC1 (legacy 0.5bp + next-bar exec + qty PnL + cost coverage gate)...")
     run_execution()
 
-    print("Step 3: Carry Accounting / Decomposition...")
+    print("Step 3: Accounting - explicit per-leg cost recompute (base/high/stress)...")
     run_accounting()
 
     print("Step 4: Margin stress stub...")
@@ -42,8 +42,8 @@ def main():
     print("Step 5: P4 combo stub (read-only)...")
     run_p4()
 
-    print("Pipeline complete. Delivery Basis Carry: data_unavailable.")
-    print("See carry_research_report.md + outputs in research_core/carry_research/ .")
+    print("Pipeline complete (4 validity fixes applied, no optimization).")
+    print("See carry_research_report.md + carry_backtest_*.csv + *_audit.csv")
 
 if __name__ == "__main__":
     main()

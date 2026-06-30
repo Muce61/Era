@@ -1,4 +1,4 @@
-scenario,roundtrip_fee_pct,slippage_pct
-base_cost,0.0004,0.0001
-high_cost,0.0008,0.0003
-stress_cost,0.0015,0.0005
+scenario,spot_entry_fee_rate,spot_exit_fee_rate,perp_entry_fee_rate,perp_exit_fee_rate,spot_entry_slippage_rate,spot_exit_slippage_rate,perp_entry_slippage_rate,perp_exit_slippage_rate,borrow_daily_rate,rebalance_cost_rate,transfer_cost_rate,legacy_total_cost_rate
+base_cost,0.0002,0.0002,0.0002,0.0002,5e-05,5e-05,5e-05,5e-05,0.0,0.0,0.0,0.001
+high_cost,0.0004,0.0004,0.0004,0.0004,0.00015,0.00015,0.00015,0.00015,0.0001,0.0,0.0,0.0022
+stress_cost,0.00075,0.00075,0.00075,0.00075,0.0003,0.0003,0.0003,0.0003,0.0005,0.0001,0.0,0.0046

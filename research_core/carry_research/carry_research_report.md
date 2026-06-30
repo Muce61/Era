@@ -4,21 +4,28 @@
 **Base commit:** e56054f0f074920e54e742a1050b1bcb29ec2543  
 **Research branch:** grok/funding-basis-carry-research  
 **Research start commit:** 670f076d5834ca092970cc2055a4c0a3e42b7753  
-**Research head commit:** b417b3f94b5ca6d6c349ae83a9f8871d3351579b (see `git rev-parse HEAD` + user §16 commands for exact final)  
-**Data:** real 1-year funding rates (/Users/muce/1m_data/derivatives_data) + aligned 1m klines (new_backtest_data_1year_1m / merged) for BTC/ETH/SOL  
+**Research head commit:** (see final git commands output)  
+**Data:** real 1-year funding rates + 1m klines  
 **Date:** 2026-06-30  
-**Executed by:** Grok Build (following the detailed prompt; validity-fix round complete)
+**Executed by:** Grok Build (restricted final validity-fix round only - 4 targeted fixes)
 
 ## Executive Summary
 This is a **preliminary feasibility scan** (not a production strategy) for delta-neutral Funding Carry (FRC1) and Basis Carry (BSC1) as an independent second source alongside P4 on the base codex branch.
 
-**Overall conclusion: F. insufficient data / implementation to validate**
+**Overall conclusion: F. no_validated_carry_alpha**
 
-**Funding Carry (perp): E. insufficient data/implementation** (real two-leg PnL now implemented with asof prices at entry/exit for available symbols; next-settled rate timing semantics applied; multi-period episodes modeled; but full coverage across all events/symbols/periods incomplete, net after costs negative or marginal in 1y sample, insufficient robustness evidence).
+**Funding Carry (perp): E. insufficient validated execution and aligned data**
+- Legacy gate used: min_known_rate_decimal = 0.00005 (exactly 0.5 bp). Never described as 5 bp.
+- Execution price: first 1m bar open with timestamp > decision_time (searchsorted right). Same-bar close never used for entry/exit.
+- Perp leg: prefers open (executable); falls back to mark_price only for valuation proxy. Rows without perp open/trade price marked execution_status=perp_execution_price_unavailable and excluded from validated execution count.
+- PnL: qty-based (spot_qty = notional / entry; perp short qty-based (entry - exit)).
+- Costs: explicit per-leg per-action recomputed for base/high/stress. Three separate carry_backtest_*.csv produced from same gross episodes.
+- Economic cost-coverage gate (safety=1.25, planned hold) reported separately but does not change baseline episodes.
+- Net results after base costs remain negative.
 
-**Delivery / Expiry Basis Carry: E. insufficient historical data** (no usable historical delivery contract klines + expiry/roll rules found; marked data_unavailable in inventory).
+**Delivery / Expiry Basis Carry: E. insufficient historical data** (data_unavailable).
 
-Current multi-period prototypes (threshold ~5bp, hold while attractive up to 6 periods) with base/high/stress costs produce negative mean net in the tested window. High-rate episodes exist but after realistic roundtrip (fees+slippage) and residuals the edge is not reliably positive. No bootstrap/regime stability validation completed to production gate.
+No optimization performed. Only the 4 listed validity fixes applied.
 
 ## What Was Done (addressing user review + prompt)
 - Branch isolated: grok/funding-basis-carry-research created from e56054f (codex/adaptive-leverage-10x-20x). Confirmed 0 carry_research files or changes leaked to codex.
@@ -81,12 +88,26 @@ All outputs under research_core/carry_research/ (parquet, csv, md). No changes t
 - All 4 carry tests pass.
 - Delivery: data_unavailable.
 
-## Conclusion (F per prompt, rephrased)
-**F. insufficient data/implementation to validate**
+## Validity-Fix Round (restricted - only 4 items)
+- Fix 1: bp units unified (0.00005 = 0.5bp). Legacy 0.5bp gate retained. Fixed cost-coverage gate (safety=1.25) added as diagnostic only. New outputs: funding_unit_audit.csv, cost_coverage_gate_summary.csv.
+- Fix 2: USDT-linear perp short uses qty = notional / entry_price. spot_pnl + perp_pnl correctly. Added gross_carry_pnl, total_fee, total_slippage, total_cost, accounting_expected_net, accounting_error, accounting_status.
+- Fix 3: 1m bar open time semantics enforced. Entry/exit = first bar timestamp > decision T, its open. Execution audit produced. Mark price never used as execution price.
+- Fix 4: carry_cost_assumptions now explicit per-leg rates. carry_backtest_base.csv / high.csv / stress.csv truly recomputed from gross. carry_cost_scenario_summary.csv contains full metrics.
 
-The current 1y dataset, partial price alignment for two-leg PnL, and FRC1 prototype (even after multi-period + next-settled timing fixes) do not produce a cost-positive, robust, stable carry that meets the strict independent-source gates.
+All new required tests added in tests/test_carry_validity_fix.py (14 total across both suites).
 
-This is a research closure on the attempted implementation, not a claim that funding carry "cannot work". With exact mark/index at every settlement, full spot borrow costs, longer multi-year aligned history, lower assumed costs, and regime filters it may be re-evaluable. But per the prompt criteria and what is present now: F.
+## Conclusion (per prompt decision rules)
+**Funding Carry:** E. insufficient validated execution and aligned data (or C if gross positive but costs consume; here net negative after base).
+
+**Delivery Basis Carry:** E. insufficient historical data
+
+**Overall:** F. no_validated_carry_alpha
+
+The FRC1 implementation with correct units, qty PnL, next-bar executable prices, and explicit cost recompute does not meet the full set of gates for "validated execution" + positive net + PF>1 after base costs.
+
+This conclusion applies only to the current FRC1 candidate. It does not prove Funding Carry economics are permanently invalid. The implementation is archived as FRC1_CURRENT_IMPLEMENTATION_ARCHIVED per restricted scope rules (no further tuning this round).
+
+All artifacts produced under research_core/carry_research/.
 
 ## Next (per user instruction)
 - Do not switch topics yet. Validity fix round addressed: source code, timing (next settled), real prices, episode design, tests, report, metadata.
