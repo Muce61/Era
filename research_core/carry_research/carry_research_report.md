@@ -1,13 +1,17 @@
-# Carry Research Report (Funding / Basis Carry)
+# Carry Research Report (Funding / Basis Carry) — ARCHIVED
+
+**Status:** CLOSED AND ARCHIVED (failed research archive)  
+**Archive marker:** FRC1_CURRENT_IMPLEMENTATION_ARCHIVED  
+**See also:** [ARCHIVE.md](ARCHIVE.md)
 
 **Base branch:** codex/adaptive-leverage-10x-20x  
 **Base commit:** e56054f0f074920e54e742a1050b1bcb29ec2543  
-**Research branch:** grok/funding-basis-carry-research  
+**Research branch:** grok/funding-basis-carry-research (retained, never merged)  
 **Research start commit:** 670f076d5834ca092970cc2055a4c0a3e42b7753  
-**Research head commit:** (see final git commands output)  
+**Research head commit:** (see final git commands)  
 **Data:** real 1-year funding rates + 1m klines  
-**Date:** 2026-06-30  
-**Executed by:** Grok Build (restricted final validity-fix round only - 4 targeted fixes)
+**Date:** 2026-06-30 (final closure)  
+**Executed by:** Grok Build (restricted validity-fix only; then formally archived)
 
 ## Executive Summary
 This is a **preliminary feasibility scan** (not a production strategy) for delta-neutral Funding Carry (FRC1) and Basis Carry (BSC1) as an independent second source alongside P4 on the base codex branch.
@@ -96,18 +100,29 @@ All outputs under research_core/carry_research/ (parquet, csv, md). No changes t
 
 All new required tests added in tests/test_carry_validity_fix.py (14 total across both suites).
 
-## Conclusion (per prompt decision rules)
-**Funding Carry:** E. insufficient validated execution and aligned data (or C if gross positive but costs consume; here net negative after base).
+## Final Archived Conclusions (fixed, no further changes allowed)
 
-**Delivery Basis Carry:** E. insufficient historical data
+Funding Carry:
+E. insufficient validated perpetual execution data
 
-**Overall:** F. no_validated_carry_alpha
+Delivery Basis Carry:
+E. insufficient historical delivery data
 
-The FRC1 implementation with correct units, qty PnL, next-bar executable prices, and explicit cost recompute does not meet the full set of gates for "validated execution" + positive net + PF>1 after base costs.
+Overall:
+F. no_validated_carry_alpha
 
-This conclusion applies only to the current FRC1 candidate. It does not prove Funding Carry economics are permanently invalid. The implementation is archived as FRC1_CURRENT_IMPLEMENTATION_ARCHIVED per restricted scope rules (no further tuning this round).
+Archive:
+FRC1_CURRENT_IMPLEMENTATION_ARCHIVED
 
-All artifacts produced under research_core/carry_research/.
+---
+
+**Permanent rules for this archive:**
+- Branch `grok/funding-basis-carry-research` is retained as historical record.
+- **Not merged** into P4, codex, or any production code.
+- No further modifications to threshold, holding periods (max_hold_periods), fee/slippage assumptions, hysteresis, or any parameters.
+- This is treated purely as a failed research archive.
+
+See [ARCHIVE.md](ARCHIVE.md) for full statement.
 
 ## Next (per user instruction)
 - Do not switch topics yet. Validity fix round addressed: source code, timing (next settled), real prices, episode design, tests, report, metadata.
