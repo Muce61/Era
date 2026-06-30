@@ -1,0 +1,13 @@
+dataset,exchange,market_type,symbol,start_time,end_time,row_count,timestamp_frequency,funding_available,funding_known_time_available,mark_price_available,index_price_available,bid_ask_available,fee_available,margin_rule_available,data_status,missing_fields,note
+spot_1m,binance (assumed),spot,ETHUSDT,2024-12-01,2026-06-28,large,1min,False,False,False,False,False,True,False,available,,
+perp_funding,binance (assumed),perp,ETHUSDT,recent,recent,multi-year,8h,True,True,False,False,False,True,True,available (calc_time as known proxy),full mark/index at exact funding times; delivery rules,
+spot_1m,binance (assumed),spot,BTCUSDT,2024-12-01,2026-06-28,large,1min,False,False,False,False,False,True,False,available,,
+perp_funding,binance (assumed),perp,BTCUSDT,recent,recent,multi-year,8h,True,True,False,False,False,True,True,available (calc_time as known proxy),full mark/index at exact funding times; delivery rules,
+spot_1m,binance (assumed),spot,SOLUSDT,2024-12-01,2026-06-28,large,1min,False,False,False,False,False,True,False,available,,
+perp_funding,binance (assumed),perp,SOLUSDT,recent,recent,multi-year,8h,True,True,False,False,False,True,True,available (calc_time as known proxy),full mark/index at exact funding times; delivery rules,
+spot_1m,binance (assumed),spot,BNBUSDT,2024-12-01,2026-06-28,large,1min,False,False,False,False,False,True,False,available,,
+perp_funding,binance (assumed),perp,BNBUSDT,,,0,8h,False,True,False,False,False,True,True,missing,file,
+delivery_futures,binance (assumed),delivery,ETHUSDT,,,0,various,False,False,False,False,False,True,True,data_unavailable,historical delivery contract prices by expiry + rules + rollover times,no delivery data discovered; focus on funding + perp-spot basis only
+delivery_futures,binance (assumed),delivery,BTCUSDT,,,0,various,False,False,False,False,False,True,True,data_unavailable,historical delivery contract prices by expiry + rules + rollover times,no delivery data discovered; focus on funding + perp-spot basis only
+delivery_futures,binance (assumed),delivery,SOLUSDT,,,0,various,False,False,False,False,False,True,True,data_unavailable,historical delivery contract prices by expiry + rules + rollover times,no delivery data discovered; focus on funding + perp-spot basis only
+delivery_futures,binance (assumed),delivery,BNBUSDT,,,0,various,False,False,False,False,False,True,True,data_unavailable,historical delivery contract prices by expiry + rules + rollover times,no delivery data discovered; focus on funding + perp-spot basis only
