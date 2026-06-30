@@ -1,0 +1,5 @@
+symbol,ohlcv_source,market_type,shorting_supported,funding_status,funding_rows,borrow_cost_status,instrument_audit_status
+ETHUSDT,/Users/muce/1m_data/long_history_1m/merged/ETHUSDT.csv,USDT perpetual inferred from Binance USDT-M filename/source,True,cached,7111,not_applicable_for_usdt_m_perpetual,complete_with_funding
+BTCUSDT,/Users/muce/1m_data/long_history_1m/merged/BTCUSDT.csv,USDT perpetual inferred from Binance USDT-M filename/source,True,cached,7111,not_applicable_for_usdt_m_perpetual,complete_with_funding
+SOLUSDT,/Users/muce/1m_data/long_history_1m/merged/SOLUSDT.csv,USDT perpetual inferred from Binance USDT-M filename/source,True,cached,6416,not_applicable_for_usdt_m_perpetual,complete_with_funding
+BNBUSDT,/Users/muce/1m_data/long_history_1m/merged/BNBUSDT.csv,USDT perpetual inferred from Binance USDT-M filename/source,True,cached,6990,not_applicable_for_usdt_m_perpetual,complete_with_funding

@@ -1,0 +1,6 @@
+long_rule,short_rule,mirror_type,parameter_changed,reason
+close > previous Donchian55 upper,close < previous Donchian55 lower,comparison_and_band,False,mechanical downside breakout mirror
+EMA50 > EMA200,EMA50 < EMA200,comparison,False,mechanical bearish trend mirror
+Donchian20 exit: close < previous lower,Donchian20 exit: close > previous upper,comparison_and_band,False,mechanical trend invalidation mirror
+ATR stop: entry - 3*ATR,ATR stop: entry + 3*ATR,direction,False,same stop distance opposite direction
+next valid 1m open after 15m signal completion,next valid 1m open after 15m signal completion,execution,False,same realistic execution timing
