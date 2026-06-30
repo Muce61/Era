@@ -1,0 +1,7 @@
+candidate_id,symbol_or_portfolio,prototype,gate,leverage_mode,capital_weight,candidate_role,selection_status
+C1,BTCUSDT,P4_BREAKOUT_TOP20,P4_G1_GATE,fixed_1x,BTC 100%,final_candidate,eligible_for_gate_check
+C2,ETHUSDT,P4_BREAKOUT_TOP20,P4_G1_GATE,fixed_1x,ETH 100%,final_candidate,eligible_for_gate_check
+C3,ETHUSDT+BTCUSDT,P4_BREAKOUT_TOP20,P4_G1_GATE,fixed_1x,ETH 50%; BTC 50%,final_candidate,eligible_for_gate_check
+D1,BTCUSDT,P4_BREAKOUT_TOP20,P4_NO_GATE,fixed_1x,BTC 100%,diagnostic_only,not_selectable
+D2,ETHUSDT,P4_BREAKOUT_TOP20,P4_NO_GATE,fixed_1x,ETH 100%,diagnostic_only,not_selectable
+D3,ETHUSDT+BTCUSDT,P4_BREAKOUT_TOP20,P4_NO_GATE,fixed_1x,ETH 50%; BTC 50%,diagnostic_only,not_selectable

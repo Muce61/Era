@@ -1,0 +1,7 @@
+reproduction_status,rb2_trade_count,current_trade_count,mismatch_count,candidate_id
+matched,349.0,349,0,C1
+matched,488.0,488,0,D1
+matched,341.0,341,0,C2
+matched,488.0,488,0,D2
+no_rb2_reference,,690,0,C3
+no_rb2_reference,,976,0,D3

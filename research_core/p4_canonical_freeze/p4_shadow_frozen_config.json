@@ -1,0 +1,97 @@
+{
+  "shadow_status": "eligible_for_future_shadow",
+  "candidate_id": "C1",
+  "strategy_rules": {
+    "strategy_family": "time_series_trend_breakout",
+    "prototype": "P4_BREAKOUT_TOP20",
+    "symbols": [
+      "BTCUSDT",
+      "ETHUSDT"
+    ],
+    "gate": "P4_G1_GATE",
+    "signal_timeframe": "15m",
+    "execution_timeframe": "1m",
+    "donchian_entry_window": 55,
+    "donchian_exit_window": 20,
+    "ema_fast": 50,
+    "ema_slow": 200,
+    "atr_window": 14,
+    "atr_stop_multiple": 3.0,
+    "entry_conditions": [
+      "15m close > prior Donchian55 upper",
+      "EMA50 > EMA200",
+      "P4_BREAKOUT_TOP20 discovery threshold",
+      "P4_G1_GATE fixed H3/H4 discovery thresholds"
+    ],
+    "exit_conditions": [
+      "ATR stop",
+      "15m close < prior Donchian20 lower"
+    ],
+    "signal_timestamp_semantics": "15m candle close time; completed candle only",
+    "execution_timestamp_semantics": "signal_time corresponding valid 1m open",
+    "fee_model": {
+      "entry_fee_rate": 0.0005,
+      "exit_fee_rate": 0.0005
+    },
+    "slippage_model": {
+      "entry_slippage_rate": 0.0002,
+      "exit_slippage_rate": 0.0002
+    },
+    "funding_accounting": "audited separately; unavailable history downgrades realism",
+    "position_sizing": "fixed notional 1x",
+    "leverage_mode": "fixed_1x",
+    "concurrent_position_policy": "one position per symbol",
+    "capital_allocation": {
+      "C1": "BTC 100%",
+      "C2": "ETH 100%",
+      "C3": "ETH 50%, BTC 50%"
+    },
+    "initial_balance": 1000.0,
+    "data_start": "2020-01-01 00:00:00+00:00",
+    "data_cutoff": "2026-06-28 01:05:00+00:00",
+    "data_layer": "expanded_discovery",
+    "oos_status": "not_oos",
+    "source_commit": "e56054f0f074920e54e742a1050b1bcb29ec2543"
+  },
+  "symbols": [
+    "BTCUSDT"
+  ],
+  "gate": "P4_G1_GATE",
+  "leverage": "fixed_1x",
+  "capital_allocation": {
+    "BTCUSDT": "100%"
+  },
+  "fee_model": {
+    "entry_fee_rate": 0.0005,
+    "exit_fee_rate": 0.0005
+  },
+  "slippage_model": {
+    "entry_slippage_rate": 0.0002,
+    "exit_slippage_rate": 0.0002
+  },
+  "funding_model": "audited separately; unavailable history downgrades realism",
+  "data_cutoff": "2026-06-28T01:05:00+00:00",
+  "freeze_timestamp": "2026-06-30T08:03:58.248345+00:00",
+  "freeze_source_commit": "e56054f0f074920e54e742a1050b1bcb29ec2543",
+  "shadow_start_time": "2026-07-01T00:00:00+00:00",
+  "minimum_shadow_duration": "6 months",
+  "minimum_completed_trades": 30,
+  "no_change_policy": "no parameter, symbol, gate, cost, or allocation changes during shadow",
+  "invalidating_conditions": [
+    "rule change after freeze",
+    "accounting identity failure",
+    "execution completeness failure",
+    "data rewrite without audit"
+  ],
+  "promotion_criteria": [
+    "net_return > 0",
+    "profit_factor > 1",
+    "no_liquidation",
+    "accounting_identity_pass",
+    "execution_completeness_pass",
+    "cost_model_not_underestimated",
+    "no_rule_changes_since_freeze"
+  ],
+  "deployable_strategy_generated": false,
+  "oos_status": "not_oos"
+}

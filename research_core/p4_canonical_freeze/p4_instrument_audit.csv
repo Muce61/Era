@@ -1,0 +1,3 @@
+symbol,ohlcv_source,market_type,price_type,leverage_supported,funding_required,funding_data_available,funding_coverage_start,funding_coverage_end,fee_source,slippage_assumption,execution_completeness,instrument_status
+BTCUSDT,/Users/muce/1m_data/long_history_1m/merged/BTCUSDT.csv,USDT perpetual assumed from Binance futures long-history source,1m OHLCV,True,True,False,,,project default frozen assumptions,project default frozen assumptions,1m open/high/low/close available,funding_incomplete
+ETHUSDT,/Users/muce/1m_data/long_history_1m/merged/ETHUSDT.csv,USDT perpetual assumed from Binance futures long-history source,1m OHLCV,True,True,False,,,project default frozen assumptions,project default frozen assumptions,1m open/high/low/close available,funding_incomplete

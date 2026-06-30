@@ -1,0 +1,4 @@
+scenario,entry_fee_rate,exit_fee_rate,entry_slippage_rate,exit_slippage_rate,funding_rate_source,liquidation_fee_rate
+base_cost,0.0005,0.0005,0.0002,0.0002,unavailable,0.0
+high_cost,0.001,0.001,0.0004,0.0004,unavailable,0.0
+stress_cost,0.0015,0.0015,0.0008,0.0008,unavailable,0.0

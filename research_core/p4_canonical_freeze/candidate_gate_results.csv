@@ -1,0 +1,4 @@
+candidate_id,gate_base_cost_profit_factor,gate_base_cost_total_return,gate_max_drawdown,gate_liquidation_count,gate_top1_profit_contribution,gate_remove_top3_return,gate_positive_valid_year_rate,gate_positive_walk_forward_window_rate,gate_pf_gt_1_walk_forward_window_rate,gate_block_bootstrap_positive_probability,gate_instrument_status,gate_reproduction_status,hard_gate_pass,selection_rank,freeze_decision,rejection_reason,gate_portfolio_max_drawdown,gate_portfolio_profit_factor,gate_longest_drawdown_duration
+C1,True,True,True,True,True,True,True,True,True,True,True,True,True,1,frozen_candidate,,,,
+C2,True,True,False,True,False,True,False,False,False,True,True,True,False,,rejected,max_drawdown;top1_profit_contribution;positive_valid_year_rate;positive_walk_forward_window_rate;pf_gt_1_walk_forward_window_rate,,,
+C3,,True,,True,,True,,False,,,,True,False,,rejected,positive_walk_forward_window_rate,True,True,True
