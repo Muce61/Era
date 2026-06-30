@@ -4,7 +4,7 @@
 **Base commit:** e56054f0f074920e54e742a1050b1bcb29ec2543  
 **Research branch:** grok/funding-basis-carry-research  
 **Research start commit:** 670f076d5834ca092970cc2055a4c0a3e42b7753  
-**Research head commit:** e64a7ec34f49f03b4077159f376cd4e361d4ed5b  
+**Research head commit:** b417b3f94b5ca6d6c349ae83a9f8871d3351579b (see `git rev-parse HEAD` + user §16 commands for exact final)  
 **Data:** real 1-year funding rates (/Users/muce/1m_data/derivatives_data) + aligned 1m klines (new_backtest_data_1year_1m / merged) for BTC/ETH/SOL  
 **Date:** 2026-06-30  
 **Executed by:** Grok Build (following the detailed prompt; validity-fix round complete)
