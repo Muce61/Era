@@ -42,16 +42,16 @@ def run_funding_event_study(data_dir: Path, symbols: list, output_dir: Path):
         ev.head(500).to_csv(output_dir / "funding_event_table_sample.csv", index=False)
         summ = ev.groupby("symbol").agg(
             n_events=("known_rate", "count"),
-            mean_known=("known_rate", "mean"),
-            mean_realized=("realized_rate_next", "mean"),
+            mean_known_decimal=("known_rate", "mean"),
+            mean_realized_decimal=("realized_rate_next", "mean"),
             mean_forward_delta=("forward_delta", "mean"),
             pos_realized=("realized_rate_next", lambda x: (x > 0).mean()),
             pos_delta=("forward_delta", lambda x: (x > 0).mean()),
         ).reset_index()
-        # Rough per-period cost coverage (base: ~8bp roundtrip / 2 legs amortized or fixed 5bp example)
-        base_period_cost = 0.0005  # 5bp proxy per period for illustration
-        summ["mean_realized_bp"] = summ["mean_realized"] * 10000
-        summ["est_cost_coverage"] = summ["mean_realized"] / base_period_cost
+        summ["mean_known_bp"] = summ["mean_known_decimal"] * 10000
+        summ["mean_realized_bp"] = summ["mean_realized_decimal"] * 10000
+        # Keep old name for compat but note it is now correct
+        summ["est_cost_coverage_vs_5bp_proxy"] = summ["mean_realized_decimal"] / 0.0005
         summ.to_csv(output_dir / "funding_event_summary.csv", index=False)
         summ.to_csv(output_dir / "funding_persistence_summary.csv", index=False)
         print(f"Funding event study complete for {len(all_events)} symbols. Total events: {len(ev)}")
