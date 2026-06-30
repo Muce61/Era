@@ -95,4 +95,6 @@ This is a research closure on the attempted implementation, not a claim that fun
 
 All artifacts committed to research_core/carry_research/ on grok/funding-basis-carry-research.
 
+**Autonomous push record:** Latest commits (incl. this note + metadata) pushed autonomously via `git push origin grok/funding-basis-carry-research` (ssh auth successful, branch now in sync). HEAD at time of last push: e23e5fb (see `git log` on remote for exact). Per user instruction: every R&D completion will auto-commit + push.
+
 (End of report)
