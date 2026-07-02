@@ -1,0 +1,2 @@
+data_dir,output_dir,symbols,horizons_minutes,signal_timeframe,atr_period,discovery_end,validation_start,validation_end,oos_start
+/Users/muce/1m_data/long_history_1m/merged,/Users/muce/PycharmProjects/20260621/Era/research_core/dual_alpha_regime/outputs,"['ETHUSDT', 'BTCUSDT', 'SOLUSDT', 'BNBUSDT']","[15, 30, 60, 120, 240, 480]",15min,14,2023-12-31 23:59:00+00:00,2024-01-01 00:00:00+00:00,2024-12-31 23:59:00+00:00,2025-01-01 00:00:00+00:00
