@@ -1,0 +1,2 @@
+event_count,top1_positive_contribution,top3_positive_contribution,top5_positive_contribution,remove_top1_mean_fwd_ret,remove_top3_mean_fwd_ret,remove_top5_mean_fwd_ret
+1562,0.025729888460722546,0.07575396820761561,0.12276817575750713,0.0017751874470416922,0.0015038467222923664,0.0012482911536781055

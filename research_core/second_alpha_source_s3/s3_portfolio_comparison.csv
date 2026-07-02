@@ -1,0 +1,5 @@
+portfolio_mode,trade_count,total_return,annualized_return,max_drawdown,profit_factor,win_rate,longest_drawdown_duration,top1_profit_contribution,monthly_corr_between_components,p4_weak_month_improvement_rate,decision_note
+A_P4_only_proxy,3931,1.9037842634017963,,,,,,,0.2019241995572834,0.1794871794871795,P4 monthly proxy only
+B_S3_only,2642,-0.6507678123445304,,-0.6535807293371052,0.7121422037105501,0.33383800151400456,2368 days 22:44:00,,0.2019241995572834,0.1794871794871795,S3 standalone realized trades
+C_P4_priority_proxy,2642,0.6143978834688633,,,,,,,0.2019241995572834,0.1794871794871795,Proxy: P4 priority approximated by monthly component blend
+D_P4_S3_independent_equal_risk_proxy,2642,0.6143978834688633,,,,,,,0.2019241995572834,0.1794871794871795,Proxy: no position-level P4 replay generated in S3

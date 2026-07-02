@@ -1,0 +1,11 @@
+stress_case,event_count,mean_fwd_ret_16,positive_symbol_count,stress_status
+original,1562,0.0019145152258236917,4,stress_pass
+remove_best_1_event,1561,0.0017751874470416922,4,stress_pass
+remove_best_3_events,1559,0.0015038467222923664,4,stress_pass
+remove_best_5_events,1557,0.0012482911536781049,4,stress_pass
+remove_best_1_month,1508,0.0011506411550290785,4,stress_pass
+remove_best_quarter,1308,0.001221663623129028,3,stress_pass
+only_ETH_BTC,811,0.0010553064340657898,2,stress_pass
+only_SOL_BNB,751,0.0028426445088990727,2,stress_pass
+only_long,1485,0.0020667149629971546,4,stress_pass
+only_short,77,-0.0010089056998847685,2,insufficient_sample

@@ -1,0 +1,2 @@
+time,equity,symbol,prototype,gate,leverage_mode
+,1000.0,ETHUSDT,P4_BREAKOUT_TOP20,G3_STRICT_CONSENSUS,fixed_20x

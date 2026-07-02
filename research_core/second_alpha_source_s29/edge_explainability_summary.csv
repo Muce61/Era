@@ -1,0 +1,8 @@
+question,answer,evidence_file,evidence_metric,interpretation
+BTC 为什么弱,BTC mean 为负，优先归因为 negative_mean；不是随机基线缺失问题时仍需降级。,symbol_failure_attribution.csv,negative_mean,BTC 是当前候选不能直接进 S3 的核心拖累之一。
+ETH 为什么不稳,ETH 若 remove_top3 后接近 0 或为负，说明稳定性不足。,symbol_failure_attribution.csv,positive_but_top_trade_dependent,ETH 可保留观察，但不能单独证明 edge。
+SOL/BNB 为什么强,SOL/BNB 的均值、随机基线和 P4 弱月互补性更好。,symbol_failure_attribution.csv,SOL=positive_and_stable;BNB=positive_and_stable,优势有标的集中风险，不能直接删掉 ETH/BTC 后策略化。
+失败年份原因,失败年份若不是全标的同时失败，则更像状态/标的混合问题。,year_failure_attribution.csv,broad_symbol_failure_years=0,需要先做状态分类，而不是直接回测。
+是否真回归,由 mean_reversion_rate 与 continuation_breakout_rate 判断。,reversion_vs_continuation_diagnostics.csv,mixed_state,如果 mixed_state 为主，下一阶段应转向 P4 exit 后状态分类。
+是否与 P4 互补,P4 弱/亏损月份中 S2.8 正收益比例接近或高于门槛。,s28_p4_weak_month_overlap.csv,neg=0.596;weak=0.595,互补性初步成立，但还不是策略准入证据。
+是否值得进入 S3,explainable_edge_candidate_for_S3,s29_decision_summary.csv,explainable_edge_candidate_for_S3,S2.9 不生成策略回测。

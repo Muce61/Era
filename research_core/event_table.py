@@ -40,7 +40,11 @@ def strict_resample_15m(data_1m: pd.DataFrame) -> pd.DataFrame:
         volume=("volume", "sum"),
         minute_count=("close", "count"),
     )
-    return grouped[grouped["minute_count"] == 15].drop(columns=["minute_count"]).dropna()
+    out = grouped[grouped["minute_count"] == 15].drop(columns=["minute_count"]).dropna()
+    # 1m bars are timestamped at their open. The 15m candle starting at 00:00
+    # contains 00:00..00:14 and is only tradable at 00:15.
+    out.index = out.index + pd.Timedelta(minutes=15)
+    return out
 
 
 def add_base_indicators(df: pd.DataFrame) -> pd.DataFrame:
@@ -61,7 +65,7 @@ def add_base_indicators(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def next_1m_open(data_1m: pd.DataFrame, signal_time: pd.Timestamp) -> tuple[pd.Timestamp, float] | tuple[None, None]:
-    future = data_1m.loc[data_1m.index > signal_time]
+    future = data_1m.loc[data_1m.index >= signal_time]
     if future.empty:
         return None, None
     ts = future.index[0]

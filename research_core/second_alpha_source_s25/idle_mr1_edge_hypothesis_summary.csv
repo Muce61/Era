@@ -1,0 +1,6 @@
+dimension,best_bucket,event_count,mean_fwd_ret_16,hypothesis_status
+side,short,10906,-7.518446339287757e-05,no_positive_bucket
+symbol,BTCUSDT,6611,0.0001388939912542582,weak_positive_bucket
+p4_phase,after_p4_exit_5_16_bars,1562,0.0019145152258236917,weak_positive_bucket
+volatility,unknown,3,0.00762977545222147,no_positive_bucket
+trend_strength,0_0.5,5926,8.686937860125677e-05,weak_positive_bucket

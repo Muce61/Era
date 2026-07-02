@@ -1,0 +1,13 @@
+group,event_count,matched_sample_count,unmatched_event_count,fallback_match_rate,observed_mean,baseline_mean,percentile,note
+overall,26752,26746,6,0.02235346889952153,-0.00013106807408795555,,,diagnostic only; baseline values require full market-state pool
+symbol:BNBUSDT,7074,7073,1,0.019225332202431437,0.00013335207216373825,,,diagnostic only; baseline values require full market-state pool
+symbol:BTCUSDT,6611,6610,1,0.024050824383603085,0.0001388939912542582,,,diagnostic only; baseline values require full market-state pool
+symbol:ETHUSDT,6327,6326,1,0.024972340761814447,-0.0004977366313999081,,,diagnostic only; baseline values require full market-state pool
+symbol:SOLUSDT,6740,6737,3,0.021513353115727003,-0.0003293673409923225,,,diagnostic only; baseline values require full market-state pool
+side:long,15846,15846,0,0.021456518995330052,-0.00016956881055292837,,,diagnostic only; baseline values require full market-state pool
+side:short,10906,10900,6,0.02365670273244086,-7.518446339287757e-05,,,diagnostic only; baseline values require full market-state pool
+p4_phase:after_p4_exit_0_4_bars,1032,1029,3,0.08914728682170543,0.0003175101813482271,,,diagnostic only; baseline values require full market-state pool
+p4_phase:after_p4_exit_17_64_bars,5006,5006,0,0.043747502996404314,0.0003394954165542285,,,diagnostic only; baseline values require full market-state pool
+p4_phase:after_p4_exit_5_16_bars,1562,1562,0,0.07234314980793854,0.0019145152258236917,,,diagnostic only; baseline values require full market-state pool
+p4_phase:deep_idle,14996,14994,2,0.004867964790610829,-0.0003910376721709992,,,diagnostic only; baseline values require full market-state pool
+p4_phase:p4_held,4156,4155,1,0.02430221366698749,-0.0006373567519939932,,,diagnostic only; baseline values require full market-state pool

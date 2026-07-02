@@ -1,0 +1,17 @@
+metric,value
+data_start_utc,2020-01-01T00:00:00+00:00
+data_end_utc,2026-06-28T01:05:00+00:00
+rows_1m,3412866
+rows_15m_complete,227524
+trend_context_events,3553
+events_2020,708
+events_2021,793
+events_2022,402
+events_2023,373
+events_2024,568
+events_2025,518
+events_2026,191
+first_breakout_after_flat,1001
+strong_breakout,2170
+bullish_hikkake,1490
+pullback_engulfing,460

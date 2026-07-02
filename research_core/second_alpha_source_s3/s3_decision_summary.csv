@@ -1,0 +1,2 @@
+decision_letter,decision_status,all_fixed_1x_profit_factor,all_fixed_1x_max_drawdown,all_fixed_1x_trade_count,funding_status,strategy_backtest_generated,data_layer,oos_status
+C,event_edge_consumed_by_execution_cost_or_exits,0.7121422037105501,-0.6535807293371052,2642,unavailable,True,expanded_discovery_long_history,not_oos

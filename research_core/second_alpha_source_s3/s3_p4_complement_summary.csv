@@ -1,0 +1,6 @@
+symbol,overlap_month_count,monthly_corr_with_p4,p4_negative_month_count,s3_positive_in_p4_negative_month_rate,p4_weak_month_count,s3_positive_in_p4_weak_month_rate,both_negative_month_count,complement_status
+BNBUSDT,77,0.14706003723083666,37,0.24324324324324326,38,0.23684210526315788,28,not_complementary
+BTCUSDT,78,0.16756056180119586,38,0.2631578947368421,40,0.25,28,not_complementary
+ETHUSDT,78,0.03758138204537973,37,0.3783783783783784,38,0.3684210526315789,23,weak_complementary
+SOLUSDT,69,-0.047275048912317985,31,0.3548387096774194,34,0.35294117647058826,20,weak_complementary
+ALL,78,0.20192419955728344,64,0.1875,65,0.18461538461538463,29,not_complementary
