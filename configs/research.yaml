@@ -1,0 +1,47 @@
+version: "v1.0-research"
+mode: research
+venue: OKX
+instruments:
+  - BTC-USDT-SWAP
+  - ETH-USDT-SWAP
+direction: long_only
+
+risk:
+  isolated_margin_only: true
+  ticket_equity_usdt: "10"
+  max_margin_usdt: "8"
+  fee_and_slippage_reserve_usdt: "2"
+  leverage: 100
+  max_concurrent_positions: 1
+  max_daily_stops: 2
+  stop_cooldown_seconds: 900
+  min_initial_stop_bps: "15"
+  max_initial_stop_bps: "35"
+  activation_net_roe_pct: "20"
+  target_equity_multiple: "2"
+  protection_ladder:
+    - mfe_net_roe_pct: "20"
+      lock_net_roe_pct: "0"
+    - mfe_net_roe_pct: "50"
+      lock_net_roe_pct: "35"
+    - mfe_net_roe_pct: "70"
+      lock_net_roe_pct: "50"
+    - mfe_net_roe_pct: "85"
+      lock_net_roe_pct: "65"
+
+execution_assumptions:
+  entry_fee_rate: "0.0005"
+  exit_fee_rate: "0.0005"
+  entry_slippage_bps: "1.0"
+  exit_slippage_bps: "1.5"
+  use_reduce_only_exits: true
+  require_exchange_native_stop: true
+
+research:
+  path_horizon_seconds: 1800
+  activation_barrier_net_roe_pct: "20"
+  target_barrier_net_roe_pct: "110"
+  adverse_barriers_net_roe_pct: ["-15", "-20", "-25", "-35"]
+  report_horizons_seconds: [10, 30, 60, 180, 300, 480, 900, 1500]
+  purge_seconds: 1800
+  embargo_seconds: 300

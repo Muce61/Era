@@ -1,0 +1,9 @@
+version: "v1.0-okx-demo"
+mode: demo
+base_config: configs/research.yaml
+environment: demo
+api_key_env: OKX_API_KEY
+api_secret_env: OKX_API_SECRET
+api_passphrase_env: OKX_API_PASSPHRASE
+trade_enabled: false
+kill_switch_enabled: true
