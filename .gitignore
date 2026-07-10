@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Secrets and local config
+.env
+.env.*
+!*.example
+configs/okx_demo.yaml
+configs/okx_live.yaml
+
+# Data and runtime artifacts
+data/raw/
+data/normalized/
+data/catalog/
+data/features/
+artifacts/
+reports/
+logs/
+*.parquet
+*.feather
+*.arrow
