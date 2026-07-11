@@ -4,7 +4,7 @@ Allowed statuses: `DRAFT`, `READY_FOR_APPROVAL`, `APPROVED`, `IN_PROGRESS`, `REV
 
 | Stage | Plan Version | Status | Dependencies | Baseline | Validity | Notes |
 | ----- | ------------ | ------ | ------------ | -------- | -------- | ----- |
-| Stage 0 | 1.0 | DRAFT | NONE | NONE | NOT_EXECUTED | 规格、工程地基与执行能力前置冻结; human approval required |
+| Stage 0 | 1.0 | APPROVED | NONE | NONE | NOT_EXECUTED | 规格、工程地基与执行能力前置冻结; approved 2026-07-12; no Task approved |
 | Stage 1 | 0.1 | DRAFT | Stage 0 | NONE | NOT_EXECUTED | 历史数据基础; human approval required |
 | Stage 2 | 0.1 | DRAFT | Stage 1 | NONE | NOT_EXECUTED | 事件研究; human approval required |
 | Stage 3 | 0.1 | DRAFT | Stage 2 | NONE | NOT_EXECUTED | H3 成本与执行压力代理; human approval required |

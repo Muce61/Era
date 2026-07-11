@@ -1,10 +1,10 @@
 # Current Development State
 
 ```text
-Current Stage: NONE
-Current Plan: NONE
+Current Stage: Stage 0
+Current Plan: stage_0_plan_v1.0
 Current Task: NONE
-Status: WAITING_FOR_STAGE_0_APPROVAL
+Status: WAITING_FOR_TASK_APPROVAL
 ```
 
-All Stage and Task artifacts are DRAFT. Business development is prohibited until Stage 0 Plan and its first Task receive explicit human approval. No automatic Stage transition is permitted.
+Stage 0 Plan v1.0 is APPROVED. All Tasks remain DRAFT, so business development is prohibited until a specific Task receives explicit human approval. Stage 1～Stage 9 remain DRAFT. No automatic Task start or Stage transition is permitted.
