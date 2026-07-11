@@ -4,15 +4,15 @@
 
 - task_id: S0-T01
 - task_version: 1.0
-- status: DRAFT
+- status: DONE
 - stage_id: S0
 - stage_plan_version: 1.0
 - created_from_spec_version: V1.3.4
 - created_from_commit: cfd19ed3c9c76e8ef7fdada776bfb47cbcd50c9a
 - dependencies: spec-v1.3.4-final
 - supersedes: task_version 0.1
-- approved_by: NONE
-- approved_at: NONE
+- approved_by: Muce
+- approved_at: 2026-07-12
 
 ## 1. 目标
 
@@ -104,3 +104,4 @@ python3.12 -m unittest tests/test_package_import.py
 
 - 2026-07-12：v0.1，初始泛化草案。
 - 2026-07-12：v1.0，精确规格、依赖、路径、命令和验收边界；状态仍为DRAFT。
+- 2026-07-12：经用户单独批准执行；允许范围内产物与规定测试完成，状态DONE，等待人工验收；未启动下一Task。

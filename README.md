@@ -8,3 +8,16 @@ This repository is the governed research and engineering workspace for the syste
 - Current status: specification imported; governance initialized; business development not started.
 
 The next authorized activity is generation and human approval of Stage and Task artifacts. Do not run this repository against testnet or real funds, and do not treat any historical scenario as live execution evidence.
+
+## Development status
+
+Stage 0 Plan v1.0 is approved. S0-T01 establishes only the Python 3.12 project skeleton under `src/era100x/`; no data, research, strategy, risk, state-machine, execution, Binance, testnet, or live-trading capability exists.
+
+From the repository root, the S0-T01 checks are:
+
+```bash
+python3.12 -m compileall -q src tests
+python3.12 -m unittest tests/test_package_import.py
+```
+
+On this workstation, `/opt/homebrew/anaconda3/bin` must be present on `PATH` for the `python3.12` executable.
