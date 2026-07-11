@@ -4,4 +4,6 @@ This directory controls planning, execution, acceptance, freezing, invalidation,
 
 Codex may update registries, traceability, validation evidence, and approved plan/task records only inside an authorized Task. Human approval is mandatory for Stage approval, Stage transition, acceptance, baseline promotion/invalidation, L3/L4 decisions, real API use, and any move toward forward or live operation.
 
-Flow: draft plan → human approval → scoped Task execution → validation and review → acceptance → baseline. New facts use a Change Request and impact analysis; affected baselines are invalidated before reopening and regression. No Stage or Task exists yet.
+Flow: draft plan → human approval → scoped Task execution → validation and review → acceptance → baseline. New facts use a Change Request and impact analysis; affected baselines are invalidated before reopening and regression.
+
+V1.3.4 Stage 0～9 Plan v0.1 and their Task files now exist as `DRAFT`. They are planning artifacts only. `CURRENT_STAGE.md` remains the authoritative indicator that no Stage, Plan, or Task is active, and Stage 0 requires human review and approval before any implementation.

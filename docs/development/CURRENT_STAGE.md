@@ -1,8 +1,10 @@
 # Current Development State
 
-Current Stage: NOT_INITIALIZED  
-Current Plan: NONE  
-Current Task: NONE  
-Status: WAITING_FOR_STAGE_GENERATION
+```text
+Current Stage: NONE
+Current Plan: NONE
+Current Task: NONE
+Status: WAITING_FOR_STAGE_0_APPROVAL
+```
 
-Business development is prohibited until a Stage plan receives explicit human approval. Transition from one Stage to another must never happen automatically.
+All Stage and Task artifacts are DRAFT. Business development is prohibited until Stage 0 Plan and its first Task receive explicit human approval. No automatic Stage transition is permitted.

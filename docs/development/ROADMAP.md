@@ -1,22 +1,20 @@
-# Roadmap Template
+# V1.3.4 Development Roadmap v0.1
 
-## Purpose
+Status: DRAFT. This roadmap authorizes no implementation.
 
-Define the versioned Stage sequence after explicit human authorization. This file currently contains no Stage.
+| Stage | Name | Status | Primary Dependency | Gate |
+| --- | --- | --- | --- | --- |
+| Stage 0 | 规格、工程地基与执行能力前置冻结 | DRAFT | NONE | 人工审批后方可执行 |
+| Stage 1 | 历史数据基础 | DRAFT | Stage 0 | 人工审批后方可执行 |
+| Stage 2 | 事件研究 | DRAFT | Stage 1 | 人工审批后方可执行 |
+| Stage 3 | H3 成本与执行压力代理 | DRAFT | Stage 2 | 人工审批后方可执行 |
+| Stage 4 | LOCKED_HISTORICAL_REPLAY | DRAFT | Stage 3 | 人工审批后方可执行 |
+| Stage 5 | 前向数据与影子运行 | DRAFT | Stage 4 | 人工审批后方可执行 |
+| Stage 6 | 测试网协议验证 | DRAFT | Stage 5 | 人工审批后方可执行 |
+| Stage 7 | 极小资金执行校准 | DRAFT | Stage 6 | 人工审批后方可执行 |
+| Stage 8 | 10 USDT 单轮实验 | DRAFT | Stage 7 | 人工审批后方可执行 |
+| Stage 9 | 复利实验评估 | DRAFT | Stage 8 | 人工审批后方可执行 |
 
-## Stage Lifecycle
+Stage lifecycle: `DRAFT → READY_FOR_APPROVAL → APPROVED → IN_PROGRESS → REVIEW → PASSED`; exceptional states are `BLOCKED`, `INVALIDATED`, `REOPENED`, `SUPERSEDED`. Every Stage begins only after current-code and prior-acceptance review, a versioned Plan, and explicit human approval. Future drafts may advance v0.1→v0.2 without changing completed stages. Upstream reopening invalidates affected downstream evidence. Stage 9 only evaluates whether a separate compounding protocol is worth proposing; it does not implement automatic compounding.
 
-`DRAFT → READY_FOR_APPROVAL → APPROVED → IN_PROGRESS → REVIEW → PASSED`
-
-Exceptional states: `BLOCKED`, `INVALIDATED`, `REOPENED`, `SUPERSEDED`.
-
-## Stage Record Template
-
-- Stage identifier and title
-- Plan version and dependencies
-- In-scope and out-of-scope work
-- Rule IDs and required baselines
-- Deliverables, tests, acceptance gates, and rollback conditions
-- Human approver and approval timestamp
-
-Create a Stage only from an approved Stage-generation activity. Version plans immutably; supersede rather than overwrite approved versions. New facts invalidate affected baselines before a Stage is reopened and fully regressed.
+Global stop rules: event edge failure, H3 turning negative, tick-path direction collapse, naked/duplicate risk, F1 cost outside approved stress, locked replay failure, or reports/features improving while the registered core metric does not. Stopping does not authorize parameter rescue.

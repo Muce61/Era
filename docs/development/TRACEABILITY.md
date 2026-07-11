@@ -1,8 +1,42 @@
 # Specification Traceability
 
-Model: formal rule → Stage → Task → implementation file → test → acceptance → current validity.
+Model: formal rule → Stage → Task → implementation → tests → validation → current validity. The machine-readable complete catalogue is [`traceability/rules.yaml`](traceability/rules.yaml); every implementation/test path is explicitly PLANNED, not implemented.
 
-Rule IDs may be catalogued before planning, but no Stage or Task may be assigned until approved artifacts exist.
+## Formal Rule Registry Coverage
 
-| Rule ID | Rule Status | Source Section | Stage | Task | Implementation | Tests | Validation | State |
-| ------- | ----------- | -------------- | ----- | ---- | -------------- | ----- | ---------- | ----- |
+| Rule ID | Rule Status | Source | Stage | Task | Implementation | Tests | State |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| EXEC-NATIVE-STOP-IMMUTABLE | FROZEN | Appendix A; Binance B01-B05 + ADR-V13-001 | S6 | S6-T01 | PLANNED | PLANNED | PLANNED |
+| EXEC-EXIT-COORDINATOR-ONLY | FROZEN | Appendix A; 审计A002/A030 | S6 | S6-T01 | PLANNED | PLANNED | PLANNED |
+| EXEC-UNKNOWN-NO-BLIND-RETRY | FROZEN | Appendix A; Binance B06 | S6 | S6-T01 | PLANNED | PLANNED | PLANNED |
+| RISK-PROTECTION-SUFFICIENT | FROZEN | Appendix A; Binance B05 + ADR-V13-002 | S7 | S7-T01 | PLANNED | PLANNED | PLANNED |
+| RISK-LIQUIDATION-BUFFER | FROZEN | Appendix A; Binance B09 + 审计A010 | S7 | S7-T01 | PLANNED | PLANNED | PLANNED |
+| ACCOUNT-DEDICATED-SUBACCOUNT | FROZEN | Appendix A; 审计A027/A028 | S7 | S7-T01 | PLANNED | PLANNED | PLANNED |
+| ROUND-ONE-NONZERO-FILL | FROZEN | Appendix A; 审计A006 | S8 | S8-T01 | PLANNED | PLANNED | PLANNED |
+| ROUND-SUCCESS-FLAT-EQUITY | FROZEN | Appendix A; 审计A020 | S9 | S9-T01 | PLANNED | PLANNED | PLANNED |
+| EVENT-CONSUME-MARKET-EPISODE | FROZEN | Appendix A; 审计A014 | S2 | S2-T01 | PLANNED | PLANNED | PLANNED |
+| FILL-FIRST-NONZERO-PROTECT | FROZEN | Appendix A; 审计A015 | S7 | S7-T01 | PLANNED | PLANNED | PLANNED |
+| FILL-CONTINUE-BY-REACHABILITY | FROZEN | Appendix A; 审计A007 | S3 | S3-T01 | PLANNED | PLANNED | PLANNED |
+| PNL-NO-DOUBLE-SLIPPAGE | FROZEN | Appendix A; 审计A004 | S3 | S3-T01 | PLANNED | PLANNED | PLANNED |
+| DATA-HISTORICAL-NO-FAKE-EXECUTION | FROZEN | Appendix A; 数据能力边界 | S5 | S5-T01 | PLANNED | PLANNED | PLANNED |
+| RESEARCH-LOCKED-REPLAY-ONCE | FROZEN | Appendix A; 审计A008 | S4 | S4-T01 | PLANNED | PLANNED | PLANNED |
+| STATE-BREAKER-PERSIST | FROZEN | Appendix A; 审计A005/A046 | S8 | S8-T01 | PLANNED | PLANNED | PLANNED |
+| STRATEGY-V1-PRICE-ONLY-HISTORICAL | FROZEN | Appendix A; 数据能力边界 | S2 | S2-T01 | PLANNED | PLANNED | PLANNED |
+| RESEARCH-H3-CONDITIONAL-ROUND-PROB | FROZEN | Appendix A; V1.3.1验收修复F1 | S9 | S9-T01 | PLANNED | PLANNED | PLANNED |
+| STATE-POSITION-INSTANCE-REVISION | FROZEN | Appendix A; V1.3.1验收修复F2 | S6 | S6-T01 | PLANNED | PLANNED | PLANNED |
+| STATE-FLAT-CONFIRMATION-PROTOCOL | FROZEN | Appendix A; V1.3.1验收修复F3 | S6 | S6-T01 | PLANNED | PLANNED | PLANNED |
+| EXEC-EXIT-RACE-OWNERSHIP | FROZEN | Appendix A; V1.3.1验收修复F4 | S6 | S6-T01 | PLANNED | PLANNED | PLANNED |
+| RISK-RESIZING-FULL-REVALIDATION | FROZEN | Appendix A; V1.3.1验收修复F5 | S7 | S7-T01 | PLANNED | PLANNED | PLANNED |
+| CLOSE-THREE-STAGE | FROZEN | Appendix A; V1.3.2补丁P1 | S6 | S6-T01 | PLANNED | PLANNED | PLANNED |
+| EXIT-EPOCH-ATOMIC-CREATE | FROZEN | Appendix A; V1.3.2补丁P2 | S6 | S6-T01 | PLANNED | PLANNED | PLANNED |
+| EXIT-LEG-SINGLE-ACTIVE-LOCAL | FROZEN | Appendix A; V1.3.2补丁P3 | S6 | S6-T01 | PLANNED | PLANNED | PLANNED |
+| CLOSE-FINAL-FLAT-BEFORE-ROUND | FROZEN | Appendix A; V1.3.3冻结F1/F2 | S8 | S8-T01 | PLANNED | PLANNED | PLANNED |
+| EXIT-EPOCH-BOOTSTRAP-ATOMIC | FROZEN | Appendix A; V1.3.3冻结F3 | S6 | S6-T01 | PLANNED | PLANNED | PLANNED |
+| EXIT-LEG-CREATION-ATOMIC | FROZEN | Appendix A; V1.3.3冻结F4 | S6 | S6-T01 | PLANNED | PLANNED | PLANNED |
+| EXIT-LEG-DB-UNIQUE-GUARD | FROZEN | Appendix A; V1.3.3冻结F4 | S6 | S6-T01 | PLANNED | PLANNED | PLANNED |
+| EXIT-BOOTSTRAP-MODE | FROZEN | Appendix A; V1.3.4定稿F1 | S6 | S6-T01 | PLANNED | PLANNED | PLANNED |
+| EXIT-TRANSACTION-FIELD-COMPLETE | FROZEN | Appendix A; V1.3.4定稿F2 | S6 | S6-T01 | PLANNED | PLANNED | PLANNED |
+| INVARIANT-ID-GLOBAL-UNIQUE | FROZEN | Appendix A; V1.3.4定稿F3 | S0 | S0-T01 | PLANNED | PLANNED | PLANNED |
+| CLOSURE-STAGE-SINGLE-RESPONSIBILITY | FROZEN | Appendix A; V1.3.4定稿F4 | S6 | S6-T01 | PLANNED | PLANNED | PLANNED |
+
+Additional machine entries cover INV-001～INV-041, Appendix C/D/E/J contracts, Appendix I Reason Codes and all ten Appendix L Stage gates. DEPRECATED behavior is represented only by prevention/regression coverage and must not be implemented. BASELINE, RESEARCH and BLOCKED_BY_FORWARD_VALIDATION statuses remain unchanged.
