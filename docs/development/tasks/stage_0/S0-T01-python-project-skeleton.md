@@ -4,7 +4,7 @@
 
 - task_id: S0-T01
 - task_version: 1.0
-- status: DONE
+- status: PASSED
 - stage_id: S0
 - stage_plan_version: 1.0
 - created_from_spec_version: V1.3.4
@@ -105,3 +105,4 @@ python3.12 -m unittest tests/test_package_import.py
 - 2026-07-12：v0.1，初始泛化草案。
 - 2026-07-12：v1.0，精确规格、依赖、路径、命令和验收边界；状态仍为DRAFT。
 - 2026-07-12：经用户单独批准执行；允许范围内产物与规定测试完成，状态DONE，等待人工验收；未启动下一Task。
+- 2026-07-12：严格自检和验收收口完成，结论PASS，状态更新为PASSED；未启动下一Task。
