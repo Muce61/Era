@@ -25,6 +25,7 @@ class PackageImportTest(unittest.TestCase):
     def test_top_level_package_imports_with_expected_metadata(self) -> None:
         package = importlib.import_module("era100x")
 
+        self.assertEqual(sys.version_info[:2], (3, 12))
         self.assertEqual(package.__version__, "0.0.0")
         self.assertEqual(package.SPECIFICATION_VERSION, "V1.3.4")
         self.assertTrue(Path(package.__file__).resolve().is_relative_to(SOURCE_ROOT))
@@ -35,7 +36,24 @@ class PackageImportTest(unittest.TestCase):
 
         self.assertEqual(discovered, [])
 
+    def test_unapproved_business_packages_cannot_be_imported(self) -> None:
+        forbidden_modules = (
+            "era100x.adapters",
+            "era100x.analytics",
+            "era100x.data",
+            "era100x.domain",
+            "era100x.execution",
+            "era100x.research",
+            "era100x.risk",
+            "era100x.state",
+            "era100x.strategy",
+        )
+
+        for module_name in forbidden_modules:
+            with self.subTest(module_name=module_name):
+                with self.assertRaises(ModuleNotFoundError):
+                    importlib.import_module(module_name)
+
 
 if __name__ == "__main__":
     unittest.main()
-

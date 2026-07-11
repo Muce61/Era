@@ -5,7 +5,3 @@ description = "Governed research and engineering workspace for the V1.3.4 specif
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = []
-
-[project.urls]
-Specification = "docs/spec/system_manual_v1.3.4_final.md"
-

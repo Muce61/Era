@@ -7,7 +7,7 @@ This repository is the governed research and engineering workspace for the syste
 - Development governance: `docs/development/README.md`
 - Current status: specification imported; governance initialized; business development not started.
 
-The next authorized activity is generation and human approval of Stage and Task artifacts. Do not run this repository against testnet or real funds, and do not treat any historical scenario as live execution evidence.
+Stage and Task planning exists under `docs/development/`. Only explicitly approved Tasks may be executed, one at a time. Do not run this repository against testnet or real funds, and do not treat any historical scenario as live execution evidence.
 
 ## Development status
 
