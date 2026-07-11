@@ -3,98 +3,104 @@
 ## Metadata
 
 - task_id: S0-T04
-- task_version: 0.1
+- task_version: 1.0
 - status: DRAFT
 - stage_id: S0
-- stage_plan_version: 0.1
+- stage_plan_version: 1.0
 - created_from_spec_version: V1.3.4
-- created_from_commit: 28bfb764f8286d2b4f23568a81f1233bb2b57b15
-- dependencies: S0-T03
-- supersedes: NONE
+- created_from_commit: cfd19ed3c9c76e8ef7fdada776bfb47cbcd50c9a
+- dependencies: S0-T05
+- supersedes: task_version 0.1
 - approved_by: NONE
 - approved_at: NONE
 
 ## 1. 目标
 
-规划并交付“Rule Metadata”这一单一能力，使其可独立测试、审查和回滚。
+交付并验证“Rule Metadata”这一单一能力，使其可独立提交、审查和回滚。
 
 ## 2. 背景
 
-该能力属于 Stage 0“规格、工程地基与执行能力前置冻结”，必须保持 V1.3.4 的证据等级、状态语义和人工阶段门。
+Stage 0只建立可审计工程地基、契约和能力验证前置边界。延后Stage的行为在本Task只能登记或建立schema，不得提前实现。
 
 ## 3. 规格来源
 
-- 手册章节：§4-8、§17-27、附录A/B/E/F/G/H/I/J/K/N
-- rule_id：INVARIANT-ID-GLOBAL-UNIQUE, PNL-NO-DOUBLE-SLIPPAGE, STATE-BREAKER-PERSIST, EXIT-TRANSACTION-FIELD-COMPLETE
-- 数据契约：RuleMetadata, EffectiveConfigSnapshot, identifiers, timestamps, Manifest, AuditLog
-- 系统不变量与 Reason Code：执行前从 `traceability/rules.yaml` 解析本 Task 的精确映射
+- 手册章节：§4-5、附录A
+- rule_id：全部32条正式 rule_id；INVARIANT-ID-GLOBAL-UNIQUE
+- 数据契约：RuleMetadata: rule_id/status/source/owner/tests/effective_version/live_override/inputs/check_timing/failure_action
+- 精确INV、Reason和测试映射以 `traceability/rules.yaml` 的本Task条目为准。
 
 ## 4. 前置条件
 
-Stage 0 Plan 0.1 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和基线已核验。
+Stage 0 Plan v1.0和本Task均获人工批准；依赖Task有真实validation；规格基线有效；开始前复核适用OPEN问题。
 
 ## 5. 允许范围
 
-只实现并验证“Rule Metadata”及其直接契约、测试和追踪；允许为该单一能力增加最小审计证据。
+建立规则元数据模式与32条正式规则注册表；本任务只登记、验证和防漂移，不实现延后Stage的业务行为。
 
 ## 6. 禁止事项
 
-禁止越过 Stage、扩大交易风险、连接未授权 API、写入密钥、修改正式规格、把 BASELINE/RESEARCH 宣称最优或 FROZEN、自动批准或继续下一 Task。
+禁止修改 `docs/spec/**`；禁止数据下载、事件研究、回测、完整状态机/交易事务、Binance连接、API Key、测试网、真实资金、自动复利和自动进入下一Task。
 
 ## 7. 允许修改的路径
 
-src/foundation/, tests/foundation/, configs/ (all paths PLANNED; final paths require approved Stage review)
+`src/<root_package>/foundation/rules/`、`configs/rules/`、`tests/foundation/rules/`
 
 ## 8. 禁止修改的路径
 
-`docs/spec/**`、其他未批准 Stage 的实现路径、真实密钥/账户文件、历史基线和已通过的不可覆盖验证产物。
+除第7节列出的路径和本Task validation/traceability更新外，其他路径均禁止；尤其禁止 Stage 1～9 Plan/Task、正式规格、密钥和基线历史。
 
 ## 9. 输入
 
-规格基线、Stage Plan、依赖 Task 的已验证产物、适用配置/manifest/hash；执行时记录精确版本。
+`spec-v1.3.4-final`、Stage 0 Plan v1.0、依赖Task产物与validation、适用的附录表和OPEN问题。
 
 ## 10. 交付物
 
-该能力的最小实现或研究产物、对应测试、validation/manifest、TRACEABILITY 与 `rules.yaml` 状态更新；本 DRAFT 本身不产生实现。
+第5节能力的最小产物、对应测试、`docs/development/validations/stage_0/S0-T04.md`和精确追踪更新；不得捆绑下一Task。
 
 ## 11. 实现要求
 
-先列出适用 rule_id、允许/禁止路径和计划；使用 Decimal/时间/证据字段等已批准契约；失败动作必须唯一且可审计；不得引入未来能力。
+保持FROZEN原义；BASELINE只作起始配置；RESEARCH和BLOCKED项不得启用；失败必须返回非0并产生可审计说明；实现不得跨越本Task路径边界。
 
 ## 12. 测试要求
 
-覆盖正常、边界、失败和确定性场景；涉及 FROZEN/INV 时必须运行其映射测试；历史、代理、测试网与真实证据必须分级报告。
+32条rule_id唯一；状态合法；FROZEN字段完整；live_override=false；DEPRECATED不得映射实现；源测试ID可追踪。
 
 ## 13. 验收标准
 
-目标单一完成；测试真实运行且通过；无未解释追踪缺口；回滚可执行；未完成项和未运行测试如实报告；由人工验收。
+32/32规则加载成功且唯一；与附录A逐字段一致；任何缺失、重复或状态改变使测试失败。
 
 ## 14. 必须运行的命令
 
-TO_BE_DEFINED_IN_STAGE_0
+```bash
+python3.12 -m pytest tests/foundation/rules -q
+```
+```bash
+python3.12 scripts/run_quality_gate.py
+```
 
-不得虚构不存在的命令。Stage 0 冻结工具链后，Task 新版本必须替换为实际命令并重新审批。
+命令必须在仓库根目录运行并在validation中记录真实退出码；若命令尚不存在，本Task不得宣称完成。
 
 ## 15. 完成报告格式
 
-规则/范围 → 修改文件 → 实际命令与结果 → 追踪更新 → 未完成/开放问题 → Go/No-Go 建议；不得自动继续。
+适用规则与范围；实际修改文件；逐条命令/退出码；测试结果；追踪更新；未完成与OPEN问题；本Task Go/No-Go。不得自动继续。
 
 ## 16. 回滚方式
 
-按独立提交撤销本 Task 的实现与注册引用，保留 manifest、审计和失败证据；若契约已被下游消费，先执行失效传播。
+使用本Task独立提交反向提交；保留validation和失败证据。若共享契约已被消费，先标记消费者INVALIDATED再回滚。
 
 ## 17. 开放问题
 
-只记录影响本 Task 的 U/CR/ADR；需要改变风险、数据边界、执行语义或 Binance 能力判断时停止并请求人工决定。
+需要改变风险、数据边界、执行语义或Binance能力判断时停止并登记。现有相关问题不得在本Task内自行关闭。
 
 ## 18. 变化触发器
 
-schema、标签、成本模型、事件定义、数据/配置哈希、git commit 或聚类方式变化；或发现与 V1.3.4/Binance 官方事实冲突。 触发 task_version 递增和重新审批。
+规格、schema、枚举、公式、依赖锁、命令、输入hash或官方Binance事实变化时递增task_version并重新审批。
 
 ## 19. 失效条件
 
-依赖 Task/Stage 重开、输入哈希变化、映射规则变化、验收测试被推翻或产物不可复现时标记 INVALIDATED，不得继续作为有效证据。
+依赖Task重开、输入hash变化、测试被推翻、命令不可复现、追踪映射变化或越界实现时标记INVALIDATED。
 
 ## 20. 变更历史
 
-- 2026-07-12：v0.1，依据 Stage 0 Plan 0.1 创建，状态 DRAFT，未执行。
+- 2026-07-12：v0.1，初始泛化草案。
+- 2026-07-12：v1.0，精确规格、依赖、路径、命令和验收边界；状态仍为DRAFT。

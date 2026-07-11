@@ -2,2044 +2,2220 @@ spec_version: V1.3.4
 created_from_commit: 28bfb764f8286d2b4f23568a81f1233bb2b57b15
 state: PLANNED
 rules:
-  - rule_id: "EXEC-NATIVE-STOP-IMMUTABLE"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; Binance B01-B05 + ADR-V13-001"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-ALG-001, FI-02, FI-03"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "EXEC-EXIT-COORDINATOR-ONLY"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; 审计A002/A030"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); UT-EXIT-001, FI-04"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "EXEC-UNKNOWN-NO-BLIND-RETRY"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; Binance B06"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); FI-03, FI-18"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "RISK-PROTECTION-SUFFICIENT"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; Binance B05 + ADR-V13-002"
-    planned_stage: "S7"
-    planned_tasks:
-      - "S7-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_7/ (PLANNED); T-ALG-002, FI-06"
-    validation_paths:
-      - "docs/development/validations/stage_7/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "RISK-LIQUIDATION-BUFFER"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; Binance B09 + 审计A010"
-    planned_stage: "S7"
-    planned_tasks:
-      - "S7-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_7/ (PLANNED); T-LIQ-001, FI-16"
-    validation_paths:
-      - "docs/development/validations/stage_7/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "ACCOUNT-DEDICATED-SUBACCOUNT"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; 审计A027/A028"
-    planned_stage: "S7"
-    planned_tasks:
-      - "S7-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_7/ (PLANNED); T-ACC-001, T-ACC-002"
-    validation_paths:
-      - "docs/development/validations/stage_7/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "ROUND-ONE-NONZERO-FILL"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; 审计A006"
-    planned_stage: "S8"
-    planned_tasks:
-      - "S8-T01"
-    implementation_paths:
-      - "src/round/, tests/round/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_8/ (PLANNED); T-RND-001"
-    validation_paths:
-      - "docs/development/validations/stage_8/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "ROUND-SUCCESS-FLAT-EQUITY"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; 审计A020"
-    planned_stage: "S9"
-    planned_tasks:
-      - "S9-T01"
-    implementation_paths:
-      - "src/research/sequence/, tests/research/sequence/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_9/ (PLANNED); FI-11, INV-012"
-    validation_paths:
-      - "docs/development/validations/stage_9/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "EVENT-CONSUME-MARKET-EPISODE"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; 审计A014"
-    planned_stage: "S2"
-    planned_tasks:
-      - "S2-T01"
-    implementation_paths:
-      - "src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)"
-    test_paths:
-      - "tests/stage_2/ (PLANNED); UT-EVT-011, FI-14"
-    validation_paths:
-      - "docs/development/validations/stage_2/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "FILL-FIRST-NONZERO-PROTECT"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; 审计A015"
-    planned_stage: "S7"
-    planned_tasks:
-      - "S7-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_7/ (PLANNED); FI-01, FI-02"
-    validation_paths:
-      - "docs/development/validations/stage_7/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "FILL-CONTINUE-BY-REACHABILITY"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; 审计A007"
-    planned_stage: "S3"
-    planned_tasks:
-      - "S3-T01"
-    implementation_paths:
-      - "src/replay/, tests/replay/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_3/ (PLANNED); T-FILL-001, FI-10"
-    validation_paths:
-      - "docs/development/validations/stage_3/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "PNL-NO-DOUBLE-SLIPPAGE"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; 审计A004"
-    planned_stage: "S3"
-    planned_tasks:
-      - "S3-T01"
-    implementation_paths:
-      - "src/replay/, tests/replay/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_3/ (PLANNED); UT-PNL-015"
-    validation_paths:
-      - "docs/development/validations/stage_3/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "DATA-HISTORICAL-NO-FAKE-EXECUTION"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; 数据能力边界"
-    planned_stage: "S5"
-    planned_tasks:
-      - "S5-T01"
-    implementation_paths:
-      - "src/forward/, tests/forward/, artifacts/manifests/ (PLANNED)"
-    test_paths:
-      - "tests/stage_5/ (PLANNED); UT-DATA-013"
-    validation_paths:
-      - "docs/development/validations/stage_5/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "RESEARCH-LOCKED-REPLAY-ONCE"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; 审计A008"
-    planned_stage: "S4"
-    planned_tasks:
-      - "S4-T01"
-    implementation_paths:
-      - "src/replay/, tests/replay/, artifacts/experiments/ (PLANNED)"
-    test_paths:
-      - "tests/stage_4/ (PLANNED); T-RES-001"
-    validation_paths:
-      - "docs/development/validations/stage_4/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "STATE-BREAKER-PERSIST"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; 审计A005/A046"
-    planned_stage: "S8"
-    planned_tasks:
-      - "S8-T01"
-    implementation_paths:
-      - "src/round/, tests/round/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_8/ (PLANNED); FI-15"
-    validation_paths:
-      - "docs/development/validations/stage_8/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "STRATEGY-V1-PRICE-ONLY-HISTORICAL"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; 数据能力边界"
-    planned_stage: "S2"
-    planned_tasks:
-      - "S2-T01"
-    implementation_paths:
-      - "src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)"
-    test_paths:
-      - "tests/stage_2/ (PLANNED); T-EVT-002"
-    validation_paths:
-      - "docs/development/validations/stage_2/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "RESEARCH-H3-CONDITIONAL-ROUND-PROB"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; V1.3.1验收修复F1"
-    planned_stage: "S9"
-    planned_tasks:
-      - "S9-T01"
-    implementation_paths:
-      - "src/research/sequence/, tests/research/sequence/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_9/ (PLANNED); T-PROB-001, T-PROB-002"
-    validation_paths:
-      - "docs/development/validations/stage_9/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "STATE-POSITION-INSTANCE-REVISION"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; V1.3.1验收修复F2"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-POS-001~003"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "STATE-FLAT-CONFIRMATION-PROTOCOL"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; V1.3.1验收修复F3"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-FLAT-001~004"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "EXEC-EXIT-RACE-OWNERSHIP"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; V1.3.1验收修复F4"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-EXIT-RACE-001~004"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "RISK-RESIZING-FULL-REVALIDATION"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; V1.3.1验收修复F5"
-    planned_stage: "S7"
-    planned_tasks:
-      - "S7-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_7/ (PLANNED); T-SIZE-001~004"
-    validation_paths:
-      - "docs/development/validations/stage_7/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CLOSE-THREE-STAGE"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; V1.3.2补丁P1"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-CLOSE-001~005"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "EXIT-EPOCH-ATOMIC-CREATE"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; V1.3.2补丁P2"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-EPOCH-001~005"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "EXIT-LEG-SINGLE-ACTIVE-LOCAL"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; V1.3.2补丁P3"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-LEG-001~008"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CLOSE-FINAL-FLAT-BEFORE-ROUND"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; V1.3.3冻结F1/F2"
-    planned_stage: "S8"
-    planned_tasks:
-      - "S8-T01"
-    implementation_paths:
-      - "src/round/, tests/round/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_8/ (PLANNED); T-FREEZE-001~004"
-    validation_paths:
-      - "docs/development/validations/stage_8/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "EXIT-EPOCH-BOOTSTRAP-ATOMIC"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; V1.3.3冻结F3"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-BOOTSTRAP-001~005"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "EXIT-LEG-CREATION-ATOMIC"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; V1.3.3冻结F4"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-LEG-TX-001~007"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "EXIT-LEG-DB-UNIQUE-GUARD"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; V1.3.3冻结F4"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-LEG-TX-001, T-LEG-TX-003"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "EXIT-BOOTSTRAP-MODE"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; V1.3.4定稿F1"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-BOOT-MODE-001~005"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "EXIT-TRANSACTION-FIELD-COMPLETE"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; V1.3.4定稿F2"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-CONTRACT-001~005"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INVARIANT-ID-GLOBAL-UNIQUE"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; V1.3.4定稿F3"
-    planned_stage: "S0"
-    planned_tasks:
-      - "S0-T01"
-    implementation_paths:
-      - "src/foundation/, tests/foundation/, configs/ (PLANNED)"
-    test_paths:
-      - "tests/stage_0/ (PLANNED); T-INV-ID-001~004"
-    validation_paths:
-      - "docs/development/validations/stage_0/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CLOSURE-STAGE-SINGLE-RESPONSIBILITY"
-    rule_status: "FROZEN"
-    source_section: "Appendix A; V1.3.4定稿F4"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-STAGE-001~005"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-001"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); UT-INV-001"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-002"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); FI-02, FI-06"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-003"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); UT-INV-003"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-004"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); UT-EXIT-001"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-005"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S2"
-    planned_tasks:
-      - "S2-T15"
-    implementation_paths:
-      - "src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)"
-    test_paths:
-      - "tests/stage_2/ (PLANNED); FI-14"
-    validation_paths:
-      - "docs/development/validations/stage_2/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-006"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); UT-INV-006"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-007"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); FI-05"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-008"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); FI-12"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-009"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); FI-04"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-010"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); FI-02"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-011"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S2"
-    planned_tasks:
-      - "S2-T15"
-    implementation_paths:
-      - "src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)"
-    test_paths:
-      - "tests/stage_2/ (PLANNED); UT-EVT-011"
-    validation_paths:
-      - "docs/development/validations/stage_2/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-012"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S8"
-    planned_tasks:
-      - "S8-T09"
-    implementation_paths:
-      - "src/round/, tests/round/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_8/ (PLANNED); FI-11"
-    validation_paths:
-      - "docs/development/validations/stage_8/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-013"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S2"
-    planned_tasks:
-      - "S2-T15"
-    implementation_paths:
-      - "src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)"
-    test_paths:
-      - "tests/stage_2/ (PLANNED); UT-DATA-013"
-    validation_paths:
-      - "docs/development/validations/stage_2/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-014"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S8"
-    planned_tasks:
-      - "S8-T09"
-    implementation_paths:
-      - "src/round/, tests/round/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_8/ (PLANNED); FI-15"
-    validation_paths:
-      - "docs/development/validations/stage_8/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-015"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); UT-PNL-015"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-016"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); FI-03, FI-18"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-017"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-CLOSE-001~004"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-018"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-CLOSE-002, T-CLOSE-005"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-019"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-EPOCH-001~003"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-020"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-EPOCH-001"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-021"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-LEG-002~003, T-LEG-008"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-022"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-LEG-001~002, T-LEG-007"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-023"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-LEG-005"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-024"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-LEG-004, T-EXIT-RACE-001~004"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-025"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-POS-001~003"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-026"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-SIZE-001~004"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-027"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S8"
-    planned_tasks:
-      - "S8-T09"
-    implementation_paths:
-      - "src/round/, tests/round/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_8/ (PLANNED); T-FREEZE-002~004"
-    validation_paths:
-      - "docs/development/validations/stage_8/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-028"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-FREEZE-001~003"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-029"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-BOOTSTRAP-001~003"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-030"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-BOOTSTRAP-004"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-031"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-BOOTSTRAP-005"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-032"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-LEG-TX-001, T-LEG-TX-003"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-033"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-LEG-TX-002, T-LEG-TX-005"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-034"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-LEG-TX-004"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-035"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S8"
-    planned_tasks:
-      - "S8-T09"
-    implementation_paths:
-      - "src/round/, tests/round/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_8/ (PLANNED); T-FREEZE-002~004"
-    validation_paths:
-      - "docs/development/validations/stage_8/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-036"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-BOOT-MODE-001~005"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-037"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-BOOT-MODE-003, T-CONTRACT-001"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-038"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-BOOT-MODE-001~005"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-039"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-CONTRACT-001~005"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-040"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-INV-ID-001~004"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "INV-041"
-    rule_status: "FROZEN"
-    source_section: "Appendix H"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T15"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED); T-STAGE-001~005"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CONTRACT-RULE-METADATA"
-    rule_status: "FROZEN"
-    source_section: "Appendix C/D/E/J"
-    planned_stage: "S0"
-    planned_tasks:
-      - "S0-T08"
-    implementation_paths:
-      - "src/foundation/, tests/foundation/, configs/ (PLANNED)"
-    test_paths:
-      - "tests/stage_0/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_0/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CONTRACT-EFFECTIVE-CONFIG-SNAPSHOT"
-    rule_status: "FROZEN"
-    source_section: "Appendix C/D/E/J"
-    planned_stage: "S0"
-    planned_tasks:
-      - "S0-T08"
-    implementation_paths:
-      - "src/foundation/, tests/foundation/, configs/ (PLANNED)"
-    test_paths:
-      - "tests/stage_0/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_0/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CONTRACT-CANONICAL-KEY-LEVEL"
-    rule_status: "RESEARCH"
-    source_section: "Appendix C/D/E/J"
-    planned_stage: "S2"
-    planned_tasks:
-      - "S2-T01"
-    implementation_paths:
-      - "src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)"
-    test_paths:
-      - "tests/stage_2/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_2/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CONTRACT-MARKET-EPISODE"
-    rule_status: "RESEARCH"
-    source_section: "Appendix C/D/E/J"
-    planned_stage: "S2"
-    planned_tasks:
-      - "S2-T01"
-    implementation_paths:
-      - "src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)"
-    test_paths:
-      - "tests/stage_2/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_2/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CONTRACT-ENTRY-INTENT"
-    rule_status: "RESEARCH"
-    source_section: "Appendix C/D/E/J"
-    planned_stage: "S2"
-    planned_tasks:
-      - "S2-T01"
-    implementation_paths:
-      - "src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)"
-    test_paths:
-      - "tests/stage_2/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_2/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CONTRACT-POSITION-STATE"
-    rule_status: "FROZEN"
-    source_section: "Appendix C/D/E/J"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CONTRACT-POSITION-SNAPSHOT"
-    rule_status: "FROZEN"
-    source_section: "Appendix C/D/E/J"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CONTRACT-ALGO-PROTECTION-STATE"
-    rule_status: "FROZEN"
-    source_section: "Appendix C/D/E/J"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CONTRACT-EXIT-INTENT"
-    rule_status: "FROZEN"
-    source_section: "Appendix C/D/E/J"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CONTRACT-EXIT-BOOTSTRAP-MODE"
-    rule_status: "FROZEN"
-    source_section: "Appendix C/D/E/J"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CONTRACT-EXIT-EPOCH"
-    rule_status: "FROZEN"
-    source_section: "Appendix C/D/E/J"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CONTRACT-EXIT-ORDER-LEG"
-    rule_status: "FROZEN"
-    source_section: "Appendix C/D/E/J"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CONTRACT-ACTIVE-LOCAL-EXIT-LEG"
-    rule_status: "FROZEN"
-    source_section: "Appendix C/D/E/J"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CONTRACT-STATE-TRANSITION"
-    rule_status: "FROZEN"
-    source_section: "Appendix C/D/E/J"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CONTRACT-INCIDENT-BUNDLE"
-    rule_status: "FROZEN"
-    source_section: "Appendix C/D/E/J"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CONTRACT-ROUND-STATE"
-    rule_status: "FROZEN"
-    source_section: "Appendix C/D/E/J"
-    planned_stage: "S8"
-    planned_tasks:
-      - "S8-T01"
-    implementation_paths:
-      - "src/round/, tests/round/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_8/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_8/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CONTRACT-CIRCUIT-BREAKER-STATE"
-    rule_status: "FROZEN"
-    source_section: "Appendix C/D/E/J"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T01"
-    implementation_paths:
-      - "src/execution/, tests/execution/, artifacts/reports/ (PLANNED)"
-    test_paths:
-      - "tests/stage_6/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "CONTRACT-EXPERIMENT-MANIFEST"
-    rule_status: "FROZEN"
-    source_section: "Appendix C/D/E/J"
-    planned_stage: "S0"
-    planned_tasks:
-      - "S0-T08"
-    implementation_paths:
-      - "src/foundation/, tests/foundation/, configs/ (PLANNED)"
-    test_paths:
-      - "tests/stage_0/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_0/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-ACCOUNT_MODE_INVALID"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-ACTIVE_EXIT_EPOCH_WITHOUT_LEG"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-ACTIVE_LOCAL_LEG_EXISTS"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-ALGO_STATE_UNKNOWN"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-BOOTSTRAP_MODE_MISMATCH"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-COST_SCENARIO_FAIL"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-DATA_CONTRACT_INCOMPLETE"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-DATA_STALE"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-DUPLICATE_LEG_FILL"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-EXIT_ACCOUNTING_CONFLICT"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-EXIT_EPOCH_CREATED"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-EXIT_EPOCH_REVISION_CONFLICT"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-EXIT_LEG_CREATED"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-EXIT_LEG_FALLBACK_CREATED"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-EXIT_LEG_REVISION_CONFLICT"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-EXIT_LEG_UNKNOWN"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-EXIT_OWNER_TRANSITION"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-EXIT_RACE_RECONCILE"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-EXIT_STATE_UNKNOWN"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-FINAL_FLAT_VALIDATION_FAILED"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-FINAL_TICKET_EQUITY_BEFORE_FLAT"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-FLAT_CONFIRMATION_RESET"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-LATE_FILL_NEW_INSTANCE"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-LIQUIDATION_BUFFER_FAIL"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-LOCAL_ACTIVE_LEG_UNIQUE_CONFLICT"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-NO_KEY_LEVEL"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-ORDER_STATE_UNKNOWN"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-PERSISTENCE_FAILURE"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-POSITION_FLAT_CONFIRMED"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-POSITION_QTY_ZERO_CONFIRMED"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-POSITION_REVISION_STALE"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-PRIVATE_STREAM_STALE"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-PROTECTION_MISSING"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-QUOTE_STALE"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-REBREAK"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-RECLAIM_TIMEOUT"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-RECOVERY_CONFLICT"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-RESIDUAL_ORDER_CLEANUP_COMPLETED"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-RESIDUAL_ORDER_CLEANUP_STARTED"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-RESIDUAL_ORDER_CLEANUP_UNKNOWN"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-RESIDUAL_ORDER_UNKNOWN"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-RESIZING_REVALIDATION_FAILED"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-REST_UNAVAILABLE"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-ROUND_FAILED"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-ROUND_SUCCESS"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-SEQUENCE_GAP"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-STAGE_C_CLEANUP_ACTION_FORBIDDEN"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-SWEEP_RANGE"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-TARGET_UNREACHABLE"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-VENUE_STOP_OBSERVED"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-WRONG_SUBACCOUNT"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "REASON-ZERO_QTY_CONFIRMATION_STARTED"
-    rule_status: "FROZEN"
-    source_section: "Appendix I"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S0-T09"
-      - "S6-T15"
-    implementation_paths:
-      - "src/foundation/ and src/execution/ (PLANNED)"
-    test_paths:
-      - "tests/foundation/ and tests/execution/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "GATE-STAGE-0"
-    rule_status: "FROZEN"
-    source_section: "§28; Appendix L"
-    planned_stage: "S0"
-    planned_tasks:
-      - "S0-T13"
-    implementation_paths:
-      - "NONE (governance gate)"
-    test_paths:
-      - "docs/development/validations/stage_0/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_0/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "GATE-STAGE-1"
-    rule_status: "FROZEN"
-    source_section: "§29; Appendix L"
-    planned_stage: "S1"
-    planned_tasks:
-      - "S1-T13"
-    implementation_paths:
-      - "NONE (governance gate)"
-    test_paths:
-      - "docs/development/validations/stage_1/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_1/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "GATE-STAGE-2"
-    rule_status: "FROZEN"
-    source_section: "§30; Appendix L"
-    planned_stage: "S2"
-    planned_tasks:
-      - "S2-T20"
-    implementation_paths:
-      - "NONE (governance gate)"
-    test_paths:
-      - "docs/development/validations/stage_2/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_2/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "GATE-STAGE-3"
-    rule_status: "FROZEN"
-    source_section: "§31; Appendix L"
-    planned_stage: "S3"
-    planned_tasks:
-      - "S3-T16"
-    implementation_paths:
-      - "NONE (governance gate)"
-    test_paths:
-      - "docs/development/validations/stage_3/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_3/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "GATE-STAGE-4"
-    rule_status: "FROZEN"
-    source_section: "§32; Appendix L"
-    planned_stage: "S4"
-    planned_tasks:
-      - "S4-T07"
-    implementation_paths:
-      - "NONE (governance gate)"
-    test_paths:
-      - "docs/development/validations/stage_4/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_4/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "GATE-STAGE-5"
-    rule_status: "FROZEN"
-    source_section: "§33; Appendix L"
-    planned_stage: "S5"
-    planned_tasks:
-      - "S5-T15"
-    implementation_paths:
-      - "NONE (governance gate)"
-    test_paths:
-      - "docs/development/validations/stage_5/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_5/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "GATE-STAGE-6"
-    rule_status: "FROZEN"
-    source_section: "§34; Appendix L"
-    planned_stage: "S6"
-    planned_tasks:
-      - "S6-T16"
-    implementation_paths:
-      - "NONE (governance gate)"
-    test_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_6/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "GATE-STAGE-7"
-    rule_status: "FROZEN"
-    source_section: "§35; Appendix L"
-    planned_stage: "S7"
-    planned_tasks:
-      - "S7-T13"
-    implementation_paths:
-      - "NONE (governance gate)"
-    test_paths:
-      - "docs/development/validations/stage_7/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_7/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "GATE-STAGE-8"
-    rule_status: "FROZEN"
-    source_section: "§36; Appendix L"
-    planned_stage: "S8"
-    planned_tasks:
-      - "S8-T09"
-    implementation_paths:
-      - "NONE (governance gate)"
-    test_paths:
-      - "docs/development/validations/stage_8/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_8/ (PLANNED)"
-    state: PLANNED
-  - rule_id: "GATE-STAGE-9"
-    rule_status: "FROZEN"
-    source_section: "§37; Appendix L"
-    planned_stage: "S9"
-    planned_tasks:
-      - "S9-T07"
-    implementation_paths:
-      - "NONE (governance gate)"
-    test_paths:
-      - "docs/development/validations/stage_9/ (PLANNED)"
-    validation_paths:
-      - "docs/development/validations/stage_9/ (PLANNED)"
-    state: PLANNED
+- rule_id: EXEC-NATIVE-STOP-IMMUTABLE
+  rule_status: FROZEN
+  source_section: Appendix A; Binance B01-B05 + ADR-V13-001
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-ALG-001, FI-02, FI-03
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: EXEC-EXIT-COORDINATOR-ONLY
+  rule_status: FROZEN
+  source_section: Appendix A; 审计A002/A030
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); UT-EXIT-001, FI-04
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: EXEC-UNKNOWN-NO-BLIND-RETRY
+  rule_status: FROZEN
+  source_section: Appendix A; Binance B06
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); FI-03, FI-18
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: RISK-PROTECTION-SUFFICIENT
+  rule_status: FROZEN
+  source_section: Appendix A; Binance B05 + ADR-V13-002
+  planned_stage: S7
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S7-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_7/ (PLANNED); T-ALG-002, FI-06
+  validation_paths:
+  - docs/development/validations/stage_7/ (PLANNED)
+  state: PLANNED
+- rule_id: RISK-LIQUIDATION-BUFFER
+  rule_status: FROZEN
+  source_section: Appendix A; Binance B09 + 审计A010
+  planned_stage: S7
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S7-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_7/ (PLANNED); T-LIQ-001, FI-16
+  validation_paths:
+  - docs/development/validations/stage_7/ (PLANNED)
+  state: PLANNED
+- rule_id: ACCOUNT-DEDICATED-SUBACCOUNT
+  rule_status: FROZEN
+  source_section: Appendix A; 审计A027/A028
+  planned_stage: S7
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S7-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_7/ (PLANNED); T-ACC-001, T-ACC-002
+  validation_paths:
+  - docs/development/validations/stage_7/ (PLANNED)
+  state: PLANNED
+- rule_id: ROUND-ONE-NONZERO-FILL
+  rule_status: FROZEN
+  source_section: Appendix A; 审计A006
+  planned_stage: S8
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S8-T01
+  implementation_paths:
+  - src/round/, tests/round/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_8/ (PLANNED); T-RND-001
+  validation_paths:
+  - docs/development/validations/stage_8/ (PLANNED)
+  state: PLANNED
+- rule_id: ROUND-SUCCESS-FLAT-EQUITY
+  rule_status: FROZEN
+  source_section: Appendix A; 审计A020
+  planned_stage: S9
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S9-T01
+  implementation_paths:
+  - src/research/sequence/, tests/research/sequence/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_9/ (PLANNED); FI-11, INV-012
+  validation_paths:
+  - docs/development/validations/stage_9/ (PLANNED)
+  state: PLANNED
+- rule_id: EVENT-CONSUME-MARKET-EPISODE
+  rule_status: FROZEN
+  source_section: Appendix A; 审计A014
+  planned_stage: S2
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S2-T01
+  implementation_paths:
+  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  test_paths:
+  - tests/stage_2/ (PLANNED); UT-EVT-011, FI-14
+  validation_paths:
+  - docs/development/validations/stage_2/ (PLANNED)
+  state: PLANNED
+- rule_id: FILL-FIRST-NONZERO-PROTECT
+  rule_status: FROZEN
+  source_section: Appendix A; 审计A015
+  planned_stage: S7
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S7-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_7/ (PLANNED); FI-01, FI-02
+  validation_paths:
+  - docs/development/validations/stage_7/ (PLANNED)
+  state: PLANNED
+- rule_id: FILL-CONTINUE-BY-REACHABILITY
+  rule_status: FROZEN
+  source_section: Appendix A; 审计A007
+  planned_stage: S3
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S3-T01
+  implementation_paths:
+  - src/replay/, tests/replay/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_3/ (PLANNED); T-FILL-001, FI-10
+  validation_paths:
+  - docs/development/validations/stage_3/ (PLANNED)
+  state: PLANNED
+- rule_id: PNL-NO-DOUBLE-SLIPPAGE
+  rule_status: FROZEN
+  source_section: Appendix A; 审计A004
+  planned_stage: S3
+  planned_tasks:
+  - S0-T07
+  - S0-T10
+  - S0-T04
+  - S3-T01
+  implementation_paths:
+  - src/replay/, tests/replay/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_3/ (PLANNED); UT-PNL-015
+  validation_paths:
+  - docs/development/validations/stage_3/ (PLANNED)
+  state: PLANNED
+- rule_id: DATA-HISTORICAL-NO-FAKE-EXECUTION
+  rule_status: FROZEN
+  source_section: Appendix A; 数据能力边界
+  planned_stage: S5
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S5-T01
+  implementation_paths:
+  - src/forward/, tests/forward/, artifacts/manifests/ (PLANNED)
+  test_paths:
+  - tests/stage_5/ (PLANNED); UT-DATA-013
+  validation_paths:
+  - docs/development/validations/stage_5/ (PLANNED)
+  state: PLANNED
+- rule_id: RESEARCH-LOCKED-REPLAY-ONCE
+  rule_status: FROZEN
+  source_section: Appendix A; 审计A008
+  planned_stage: S4
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S4-T01
+  implementation_paths:
+  - src/replay/, tests/replay/, artifacts/experiments/ (PLANNED)
+  test_paths:
+  - tests/stage_4/ (PLANNED); T-RES-001
+  validation_paths:
+  - docs/development/validations/stage_4/ (PLANNED)
+  state: PLANNED
+- rule_id: STATE-BREAKER-PERSIST
+  rule_status: FROZEN
+  source_section: Appendix A; 审计A005/A046
+  planned_stage: S8
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S8-T01
+  implementation_paths:
+  - src/round/, tests/round/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_8/ (PLANNED); FI-15
+  validation_paths:
+  - docs/development/validations/stage_8/ (PLANNED)
+  state: PLANNED
+- rule_id: STRATEGY-V1-PRICE-ONLY-HISTORICAL
+  rule_status: FROZEN
+  source_section: Appendix A; 数据能力边界
+  planned_stage: S2
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S2-T01
+  implementation_paths:
+  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  test_paths:
+  - tests/stage_2/ (PLANNED); T-EVT-002
+  validation_paths:
+  - docs/development/validations/stage_2/ (PLANNED)
+  state: PLANNED
+- rule_id: RESEARCH-H3-CONDITIONAL-ROUND-PROB
+  rule_status: FROZEN
+  source_section: Appendix A; V1.3.1验收修复F1
+  planned_stage: S9
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S9-T01
+  implementation_paths:
+  - src/research/sequence/, tests/research/sequence/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_9/ (PLANNED); T-PROB-001, T-PROB-002
+  validation_paths:
+  - docs/development/validations/stage_9/ (PLANNED)
+  state: PLANNED
+- rule_id: STATE-POSITION-INSTANCE-REVISION
+  rule_status: FROZEN
+  source_section: Appendix A; V1.3.1验收修复F2
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-POS-001~003
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: STATE-FLAT-CONFIRMATION-PROTOCOL
+  rule_status: FROZEN
+  source_section: Appendix A; V1.3.1验收修复F3
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-FLAT-001~004
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: EXEC-EXIT-RACE-OWNERSHIP
+  rule_status: FROZEN
+  source_section: Appendix A; V1.3.1验收修复F4
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-EXIT-RACE-001~004
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: RISK-RESIZING-FULL-REVALIDATION
+  rule_status: FROZEN
+  source_section: Appendix A; V1.3.1验收修复F5
+  planned_stage: S7
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S7-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_7/ (PLANNED); T-SIZE-001~004
+  validation_paths:
+  - docs/development/validations/stage_7/ (PLANNED)
+  state: PLANNED
+- rule_id: CLOSE-THREE-STAGE
+  rule_status: FROZEN
+  source_section: Appendix A; V1.3.2补丁P1
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-CLOSE-001~005
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: EXIT-EPOCH-ATOMIC-CREATE
+  rule_status: FROZEN
+  source_section: Appendix A; V1.3.2补丁P2
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-EPOCH-001~005
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: EXIT-LEG-SINGLE-ACTIVE-LOCAL
+  rule_status: FROZEN
+  source_section: Appendix A; V1.3.2补丁P3
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-LEG-001~008
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: CLOSE-FINAL-FLAT-BEFORE-ROUND
+  rule_status: FROZEN
+  source_section: Appendix A; V1.3.3冻结F1/F2
+  planned_stage: S8
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S8-T01
+  implementation_paths:
+  - src/round/, tests/round/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_8/ (PLANNED); T-FREEZE-001~004
+  validation_paths:
+  - docs/development/validations/stage_8/ (PLANNED)
+  state: PLANNED
+- rule_id: EXIT-EPOCH-BOOTSTRAP-ATOMIC
+  rule_status: FROZEN
+  source_section: Appendix A; V1.3.3冻结F3
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-BOOTSTRAP-001~005
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: EXIT-LEG-CREATION-ATOMIC
+  rule_status: FROZEN
+  source_section: Appendix A; V1.3.3冻结F4
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-LEG-TX-001~007
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: EXIT-LEG-DB-UNIQUE-GUARD
+  rule_status: FROZEN
+  source_section: Appendix A; V1.3.3冻结F4
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-LEG-TX-001, T-LEG-TX-003
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: EXIT-BOOTSTRAP-MODE
+  rule_status: FROZEN
+  source_section: Appendix A; V1.3.4定稿F1
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-BOOT-MODE-001~005
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: EXIT-TRANSACTION-FIELD-COMPLETE
+  rule_status: FROZEN
+  source_section: Appendix A; V1.3.4定稿F2
+  planned_stage: S6
+  planned_tasks:
+  - S0-T08
+  - S0-T10
+  - S0-T04
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-CONTRACT-001~005
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INVARIANT-ID-GLOBAL-UNIQUE
+  rule_status: FROZEN
+  source_section: Appendix A; V1.3.4定稿F3
+  planned_stage: S0
+  planned_tasks:
+  - S0-T04
+  - S0-T10
+  implementation_paths:
+  - src/foundation/, tests/foundation/, configs/ (PLANNED)
+  test_paths:
+  - tests/stage_0/ (PLANNED); T-INV-ID-001~004
+  validation_paths:
+  - docs/development/validations/stage_0/ (PLANNED)
+  state: PLANNED
+- rule_id: CLOSURE-STAGE-SINGLE-RESPONSIBILITY
+  rule_status: FROZEN
+  source_section: Appendix A; V1.3.4定稿F4
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T04
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-STAGE-001~005
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-001
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); UT-INV-001
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-002
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); FI-02, FI-06
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-003
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); UT-INV-003
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-004
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); UT-EXIT-001
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-005
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S2
+  planned_tasks:
+  - S0-T10
+  - S2-T15
+  implementation_paths:
+  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  test_paths:
+  - tests/stage_2/ (PLANNED); FI-14
+  validation_paths:
+  - docs/development/validations/stage_2/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-006
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); UT-INV-006
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-007
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); FI-05
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-008
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); FI-12
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-009
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); FI-04
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-010
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); FI-02
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-011
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S2
+  planned_tasks:
+  - S0-T10
+  - S2-T15
+  implementation_paths:
+  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  test_paths:
+  - tests/stage_2/ (PLANNED); UT-EVT-011
+  validation_paths:
+  - docs/development/validations/stage_2/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-012
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S8
+  planned_tasks:
+  - S0-T10
+  - S8-T09
+  implementation_paths:
+  - src/round/, tests/round/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_8/ (PLANNED); FI-11
+  validation_paths:
+  - docs/development/validations/stage_8/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-013
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S2
+  planned_tasks:
+  - S0-T10
+  - S2-T15
+  implementation_paths:
+  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  test_paths:
+  - tests/stage_2/ (PLANNED); UT-DATA-013
+  validation_paths:
+  - docs/development/validations/stage_2/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-014
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S8
+  planned_tasks:
+  - S0-T10
+  - S8-T09
+  implementation_paths:
+  - src/round/, tests/round/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_8/ (PLANNED); FI-15
+  validation_paths:
+  - docs/development/validations/stage_8/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-015
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); UT-PNL-015
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-016
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); FI-03, FI-18
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-017
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-CLOSE-001~004
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-018
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-CLOSE-002, T-CLOSE-005
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-019
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-EPOCH-001~003
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-020
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-EPOCH-001
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-021
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-LEG-002~003, T-LEG-008
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-022
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-LEG-001~002, T-LEG-007
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-023
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-LEG-005
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-024
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-LEG-004, T-EXIT-RACE-001~004
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-025
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-POS-001~003
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-026
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-SIZE-001~004
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-027
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S8
+  planned_tasks:
+  - S0-T10
+  - S8-T09
+  implementation_paths:
+  - src/round/, tests/round/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_8/ (PLANNED); T-FREEZE-002~004
+  validation_paths:
+  - docs/development/validations/stage_8/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-028
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-FREEZE-001~003
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-029
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-BOOTSTRAP-001~003
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-030
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-BOOTSTRAP-004
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-031
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-BOOTSTRAP-005
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-032
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-LEG-TX-001, T-LEG-TX-003
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-033
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-LEG-TX-002, T-LEG-TX-005
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-034
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-LEG-TX-004
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-035
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S8
+  planned_tasks:
+  - S0-T10
+  - S8-T09
+  implementation_paths:
+  - src/round/, tests/round/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_8/ (PLANNED); T-FREEZE-002~004
+  validation_paths:
+  - docs/development/validations/stage_8/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-036
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-BOOT-MODE-001~005
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-037
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-BOOT-MODE-003, T-CONTRACT-001
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-038
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-BOOT-MODE-001~005
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-039
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-CONTRACT-001~005
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-040
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-INV-ID-001~004
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: INV-041
+  rule_status: FROZEN
+  source_section: Appendix H
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S6-T15
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED); T-STAGE-001~005
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: CONTRACT-RULE-METADATA
+  rule_status: FROZEN
+  source_section: Appendix C/D/E/J
+  planned_stage: S0
+  planned_tasks:
+  - S0-T04
+  - S0-T08
+  implementation_paths:
+  - src/foundation/, tests/foundation/, configs/ (PLANNED)
+  test_paths:
+  - tests/stage_0/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_0/ (PLANNED)
+  state: PLANNED
+- rule_id: CONTRACT-EFFECTIVE-CONFIG-SNAPSHOT
+  rule_status: FROZEN
+  source_section: Appendix C/D/E/J
+  planned_stage: S0
+  planned_tasks:
+  - S0-T03
+  - S0-T08
+  implementation_paths:
+  - src/foundation/, tests/foundation/, configs/ (PLANNED)
+  test_paths:
+  - tests/stage_0/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_0/ (PLANNED)
+  state: PLANNED
+- rule_id: CONTRACT-CANONICAL-KEY-LEVEL
+  rule_status: RESEARCH
+  source_section: Appendix C/D/E/J
+  planned_stage: S2
+  planned_tasks:
+  - S0-T08
+  - S2-T01
+  implementation_paths:
+  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  test_paths:
+  - tests/stage_2/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_2/ (PLANNED)
+  state: PLANNED
+- rule_id: CONTRACT-MARKET-EPISODE
+  rule_status: RESEARCH
+  source_section: Appendix C/D/E/J
+  planned_stage: S2
+  planned_tasks:
+  - S0-T08
+  - S2-T01
+  implementation_paths:
+  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  test_paths:
+  - tests/stage_2/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_2/ (PLANNED)
+  state: PLANNED
+- rule_id: CONTRACT-ENTRY-INTENT
+  rule_status: RESEARCH
+  source_section: Appendix C/D/E/J
+  planned_stage: S2
+  planned_tasks:
+  - S0-T08
+  - S2-T01
+  implementation_paths:
+  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  test_paths:
+  - tests/stage_2/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_2/ (PLANNED)
+  state: PLANNED
+- rule_id: CONTRACT-POSITION-STATE
+  rule_status: FROZEN
+  source_section: Appendix C/D/E/J
+  planned_stage: S6
+  planned_tasks:
+  - S0-T08
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: CONTRACT-POSITION-SNAPSHOT
+  rule_status: FROZEN
+  source_section: Appendix C/D/E/J
+  planned_stage: S6
+  planned_tasks:
+  - S0-T08
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: CONTRACT-ALGO-PROTECTION-STATE
+  rule_status: FROZEN
+  source_section: Appendix C/D/E/J
+  planned_stage: S6
+  planned_tasks:
+  - S0-T08
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: CONTRACT-EXIT-INTENT
+  rule_status: FROZEN
+  source_section: Appendix C/D/E/J
+  planned_stage: S6
+  planned_tasks:
+  - S0-T08
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: CONTRACT-EXIT-BOOTSTRAP-MODE
+  rule_status: FROZEN
+  source_section: Appendix C/D/E/J
+  planned_stage: S6
+  planned_tasks:
+  - S0-T08
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: CONTRACT-EXIT-EPOCH
+  rule_status: FROZEN
+  source_section: Appendix C/D/E/J
+  planned_stage: S6
+  planned_tasks:
+  - S0-T08
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: CONTRACT-EXIT-ORDER-LEG
+  rule_status: FROZEN
+  source_section: Appendix C/D/E/J
+  planned_stage: S6
+  planned_tasks:
+  - S0-T08
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: CONTRACT-ACTIVE-LOCAL-EXIT-LEG
+  rule_status: FROZEN
+  source_section: Appendix C/D/E/J
+  planned_stage: S6
+  planned_tasks:
+  - S0-T08
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: CONTRACT-STATE-TRANSITION
+  rule_status: FROZEN
+  source_section: Appendix C/D/E/J
+  planned_stage: S6
+  planned_tasks:
+  - S0-T08
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: CONTRACT-INCIDENT-BUNDLE
+  rule_status: FROZEN
+  source_section: Appendix C/D/E/J
+  planned_stage: S6
+  planned_tasks:
+  - S0-T08
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: CONTRACT-ROUND-STATE
+  rule_status: FROZEN
+  source_section: Appendix C/D/E/J
+  planned_stage: S8
+  planned_tasks:
+  - S0-T08
+  - S8-T01
+  implementation_paths:
+  - src/round/, tests/round/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_8/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_8/ (PLANNED)
+  state: PLANNED
+- rule_id: CONTRACT-CIRCUIT-BREAKER-STATE
+  rule_status: FROZEN
+  source_section: Appendix C/D/E/J
+  planned_stage: S6
+  planned_tasks:
+  - S0-T08
+  - S6-T01
+  implementation_paths:
+  - src/execution/, tests/execution/, artifacts/reports/ (PLANNED)
+  test_paths:
+  - tests/stage_6/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: CONTRACT-EXPERIMENT-MANIFEST
+  rule_status: FROZEN
+  source_section: Appendix C/D/E/J
+  planned_stage: S0
+  planned_tasks:
+  - S0-T06
+  - S0-T08
+  implementation_paths:
+  - src/foundation/, tests/foundation/, configs/ (PLANNED)
+  test_paths:
+  - tests/stage_0/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_0/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-ACCOUNT_MODE_INVALID
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-ACTIVE_EXIT_EPOCH_WITHOUT_LEG
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-ACTIVE_LOCAL_LEG_EXISTS
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-ALGO_STATE_UNKNOWN
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-BOOTSTRAP_MODE_MISMATCH
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-COST_SCENARIO_FAIL
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-DATA_CONTRACT_INCOMPLETE
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-DATA_STALE
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-DUPLICATE_LEG_FILL
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-EXIT_ACCOUNTING_CONFLICT
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-EXIT_EPOCH_CREATED
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-EXIT_EPOCH_REVISION_CONFLICT
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-EXIT_LEG_CREATED
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-EXIT_LEG_FALLBACK_CREATED
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-EXIT_LEG_REVISION_CONFLICT
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-EXIT_LEG_UNKNOWN
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-EXIT_OWNER_TRANSITION
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-EXIT_RACE_RECONCILE
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-EXIT_STATE_UNKNOWN
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-FINAL_FLAT_VALIDATION_FAILED
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-FINAL_TICKET_EQUITY_BEFORE_FLAT
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-FLAT_CONFIRMATION_RESET
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-LATE_FILL_NEW_INSTANCE
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-LIQUIDATION_BUFFER_FAIL
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-LOCAL_ACTIVE_LEG_UNIQUE_CONFLICT
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-NO_KEY_LEVEL
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-ORDER_STATE_UNKNOWN
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-PERSISTENCE_FAILURE
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-POSITION_FLAT_CONFIRMED
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-POSITION_QTY_ZERO_CONFIRMED
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-POSITION_REVISION_STALE
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-PRIVATE_STREAM_STALE
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-PROTECTION_MISSING
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-QUOTE_STALE
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-REBREAK
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-RECLAIM_TIMEOUT
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-RECOVERY_CONFLICT
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-RESIDUAL_ORDER_CLEANUP_COMPLETED
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-RESIDUAL_ORDER_CLEANUP_STARTED
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-RESIDUAL_ORDER_CLEANUP_UNKNOWN
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-RESIDUAL_ORDER_UNKNOWN
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-RESIZING_REVALIDATION_FAILED
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-REST_UNAVAILABLE
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-ROUND_FAILED
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-ROUND_SUCCESS
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-SEQUENCE_GAP
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-STAGE_C_CLEANUP_ACTION_FORBIDDEN
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-SWEEP_RANGE
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-TARGET_UNREACHABLE
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-VENUE_STOP_OBSERVED
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-WRONG_SUBACCOUNT
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: REASON-ZERO_QTY_CONFIRMATION_STARTED
+  rule_status: FROZEN
+  source_section: Appendix I
+  planned_stage: S6
+  planned_tasks:
+  - S0-T10
+  - S0-T09
+  - S6-T15
+  implementation_paths:
+  - src/foundation/ and src/execution/ (PLANNED)
+  test_paths:
+  - tests/foundation/ and tests/execution/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: GATE-STAGE-0
+  rule_status: FROZEN
+  source_section: §28; Appendix L
+  planned_stage: S0
+  planned_tasks:
+  - S0-T13
+  implementation_paths:
+  - NONE (governance gate)
+  test_paths:
+  - docs/development/validations/stage_0/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_0/ (PLANNED)
+  state: PLANNED
+- rule_id: GATE-STAGE-1
+  rule_status: FROZEN
+  source_section: §29; Appendix L
+  planned_stage: S1
+  planned_tasks:
+  - S1-T13
+  implementation_paths:
+  - NONE (governance gate)
+  test_paths:
+  - docs/development/validations/stage_1/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_1/ (PLANNED)
+  state: PLANNED
+- rule_id: GATE-STAGE-2
+  rule_status: FROZEN
+  source_section: §30; Appendix L
+  planned_stage: S2
+  planned_tasks:
+  - S2-T20
+  implementation_paths:
+  - NONE (governance gate)
+  test_paths:
+  - docs/development/validations/stage_2/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_2/ (PLANNED)
+  state: PLANNED
+- rule_id: GATE-STAGE-3
+  rule_status: FROZEN
+  source_section: §31; Appendix L
+  planned_stage: S3
+  planned_tasks:
+  - S3-T16
+  implementation_paths:
+  - NONE (governance gate)
+  test_paths:
+  - docs/development/validations/stage_3/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_3/ (PLANNED)
+  state: PLANNED
+- rule_id: GATE-STAGE-4
+  rule_status: FROZEN
+  source_section: §32; Appendix L
+  planned_stage: S4
+  planned_tasks:
+  - S4-T07
+  implementation_paths:
+  - NONE (governance gate)
+  test_paths:
+  - docs/development/validations/stage_4/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_4/ (PLANNED)
+  state: PLANNED
+- rule_id: GATE-STAGE-5
+  rule_status: FROZEN
+  source_section: §33; Appendix L
+  planned_stage: S5
+  planned_tasks:
+  - S5-T15
+  implementation_paths:
+  - NONE (governance gate)
+  test_paths:
+  - docs/development/validations/stage_5/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_5/ (PLANNED)
+  state: PLANNED
+- rule_id: GATE-STAGE-6
+  rule_status: FROZEN
+  source_section: §34; Appendix L
+  planned_stage: S6
+  planned_tasks:
+  - S6-T16
+  implementation_paths:
+  - NONE (governance gate)
+  test_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_6/ (PLANNED)
+  state: PLANNED
+- rule_id: GATE-STAGE-7
+  rule_status: FROZEN
+  source_section: §35; Appendix L
+  planned_stage: S7
+  planned_tasks:
+  - S7-T13
+  implementation_paths:
+  - NONE (governance gate)
+  test_paths:
+  - docs/development/validations/stage_7/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_7/ (PLANNED)
+  state: PLANNED
+- rule_id: GATE-STAGE-8
+  rule_status: FROZEN
+  source_section: §36; Appendix L
+  planned_stage: S8
+  planned_tasks:
+  - S8-T09
+  implementation_paths:
+  - NONE (governance gate)
+  test_paths:
+  - docs/development/validations/stage_8/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_8/ (PLANNED)
+  state: PLANNED
+- rule_id: GATE-STAGE-9
+  rule_status: FROZEN
+  source_section: §37; Appendix L
+  planned_stage: S9
+  planned_tasks:
+  - S9-T07
+  implementation_paths:
+  - NONE (governance gate)
+  test_paths:
+  - docs/development/validations/stage_9/ (PLANNED)
+  validation_paths:
+  - docs/development/validations/stage_9/ (PLANNED)
+  state: PLANNED
