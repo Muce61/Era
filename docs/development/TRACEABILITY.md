@@ -60,5 +60,6 @@ Additional machine entries cover INV-001～INV-041, Appendix C/D/E/J contracts, 
 | S0-T08 | Appendix C-E strict schema skeletons | §18-20, §25-26, Appendix C-E | `src/era100x/contracts/` | `tests/contracts/`, `tests/test_package_import.py` | `validations/stage_0/S0-T08.md` | PASSED |
 | S0-T10 | Strict traceability integrity checker | §27, Appendix A/C-E/G-H/I/K/L | `scripts/check_traceability.py` | `tests/governance/` | `validations/stage_0/S0-T10.md` | PASSED |
 | S0-T11 | Read-only locked CI quality gate | §23, §27, §28 | `.github/workflows/quality.yml`, `scripts/run_quality_gate.py` | local gate and static workflow audit | `validations/stage_0/S0-T11.md` | PASSED |
+| S0-T12 | Offline execution capability port and hard network denial | §17-18, §22-28, Appendix E/K/N | `src/era100x/spike/ports/`, `configs/spike/example.yaml` | `tests/spike/offline/` | `validations/stage_0/S0-T12.md` | PASSED |
 
 S0-T01 carries no business `rule_id` and does not mark any FROZEN rule or INV as implemented. It provides only the package boundary required by later individually approved Stage 0 Tasks.
