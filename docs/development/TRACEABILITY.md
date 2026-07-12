@@ -53,5 +53,6 @@ Additional machine entries cover INV-001～INV-041, Appendix C/D/E/J contracts, 
 | S0-T02 | Locked Python toolchain and deterministic quality gate | §23, §27, §28 | `pyproject.toml`, `uv.lock`, `scripts/run_quality_gate.py` | collection, Ruff, mypy, pytest | `validations/stage_0/S0-T02.md` | PASSED |
 | S0-T05 | Decimal, timestamp-source and stable-ID primitives | §6, §19.1, §25, Appendix C-E | `src/era100x/foundation/types/` | `tests/foundation/types/` | `validations/stage_0/S0-T05.md` | PASSED |
 | S0-T03 | Effective configuration resolution and deterministic snapshot | §5, Appendix B | `src/era100x/foundation/config/`, `configs/` | `tests/foundation/config/` | `validations/stage_0/S0-T03.md` | PASSED |
+| S0-T04 | 32-rule metadata registry and status guard | Appendix A | `src/era100x/foundation/rules/`, `configs/rules/` | `tests/foundation/rules/` | `validations/stage_0/S0-T04.md` | PASSED |
 
 S0-T01 carries no business `rule_id` and does not mark any FROZEN rule or INV as implemented. It provides only the package boundary required by later individually approved Stage 0 Tasks.
