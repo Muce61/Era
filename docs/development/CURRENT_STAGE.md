@@ -1,10 +1,10 @@
 # Current Development State
 
 ```text
-Current Stage: NONE
-Current Plan: NONE
+Current Stage: Stage 1
+Current Plan: stage_1_plan_v1.0
 Current Task: NONE
-Status: WAITING_FOR_STAGE_1_PLAN_APPROVAL
+Status: APPROVED_FOR_CONTINUOUS_EXECUTION
 ```
 
-Stage 0 Plan v1.0 and S0-T01～S0-T13 are PASSED. The Stage 0 baseline is frozen from validated implementation commit `692dd29` under local tag `stage-0-v1.0-passed`. Stage 1 Plan v1.0 and all S1 Tasks are DRAFT and await separate human approval; OQ-S1-001/002 must be resolved before the full-data run. Stage 2～Stage 9 remain DRAFT. No automatic Stage transition is permitted.
+Stage 0 remains PASSED. Stage 1 Plan v1.0 is APPROVED for continuous execution; all unstarted S1 Tasks remain DRAFT. OQ-S1-001/002 are RESOLVED. Stage 2～Stage 9 remain DRAFT and no automatic Stage transition is permitted.

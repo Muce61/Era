@@ -4,13 +4,13 @@
 
 - stage_id: S1
 - plan_version: 1.0
-- status: DRAFT
+- status: APPROVED
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: Stage 0 v1.0 PASSED baseline (`stage-0-v1.0-passed`)
 - supersedes: `stage_1_plan_v0.1.md`
-- approved_by: NONE
-- approved_at: NONE
+- approved_by: Muce
+- approved_at: 2026-07-12
 
 ## 1. 目标
 
