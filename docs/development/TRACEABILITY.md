@@ -78,6 +78,7 @@ Stage 1 remains DRAFT. Planned implementation lives under `src/era100x/data/` wi
 | Existing local asset/path audit | S1-T01 | read-only asset report, path/permission/capacity record | PLANNED |
 | S1-T01 delivered evidence | S1-T01 | `scripts/audit_stage1_assets.py`, `reviews/stage_1_asset_audit.md`, `tests/data/audit/` | PASSED |
 | Schema Registry and sample fixtures | S1-T02 | schema/nullable/unit tests and committed minimal fixtures | PLANNED |
+| S1-T02 delivered evidence | S1-T02 | `src/era100x/data/schema/`, `tests/data/schema/`, `tests/fixtures/stage_1/` | PASSED |
 | 1s Contract Price H1 input | S1-T03, S1-T07, S1-T09 | reader, integrity/gap and deterministic aggregation tests | PLANNED |
 | Binance Trades raw lineage | S1-T04 | immutable raw manifest, source/coverage/hash and idempotency tests | PLANNED |
 | Trade normalization and aggressor side | S1-T05, S1-T06 | Decimal/time/ID mapping and maker-side tests | PLANNED |

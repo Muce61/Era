@@ -3,15 +3,15 @@
 ## Metadata
 - task_id: S1-T02
 - task_version: 1.0
-- status: DRAFT
+- status: PASSED
 - stage_id: S1
 - stage_plan_version: 1.0
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: S1-T01 PASS
 - supersedes: task_version 0.1
-- approved_by: NONE
-- approved_at: NONE
+- approved_by: Muce
+- approved_at: 2026-07-12
 
 ## 1. 目标
 冻结ContractPrice1s、RawTrade、NormalizedTrade、HistoricalEvidenceRow、ContractBar、DataQuality与DataManifest的Stage 1 schema及最小fixture规范。

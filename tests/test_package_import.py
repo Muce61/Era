@@ -11,7 +11,7 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOT = REPOSITORY_ROOT / "src"
-APPROVED_STAGE_ZERO_TOP_LEVEL_PACKAGES = frozenset({"contracts", "foundation", "spike"})
+APPROVED_STAGE_ZERO_TOP_LEVEL_PACKAGES = frozenset({"contracts", "data", "foundation", "spike"})
 
 
 def assert_only_approved_top_level_packages(discovered: set[str]) -> None:
@@ -55,7 +55,6 @@ class PackageImportTest(unittest.TestCase):
         forbidden_modules = (
             "era100x.adapters",
             "era100x.analytics",
-            "era100x.data",
             "era100x.domain",
             "era100x.execution",
             "era100x.research",
