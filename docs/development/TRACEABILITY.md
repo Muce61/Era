@@ -68,3 +68,24 @@ Additional machine entries cover INV-001～INV-041, Appendix C/D/E/J contracts, 
 S0-T01 carries no business `rule_id` and does not mark any FROZEN rule or INV as implemented. It provides only the package boundary required by later individually approved Stage 0 Tasks.
 
 Stage 0 baseline validity: **VALID / PASSED**. Any later change to its code, configuration contracts, dependency lock, traceability catalogue, or validation evidence requires explicit invalidation or reopening under `CHANGE_POLICY.md`.
+
+## Stage 1 v1.0 Planned Coverage
+
+Stage 1 remains DRAFT. Planned implementation lives under `src/era100x/data/` with tests under `tests/data/`; adding the approved `data` top-level package must update, not remove, the Stage 0 explicit package allow-list regression. No row below claims implementation.
+
+| Requirement | Planned Tasks | Planned Evidence | State |
+| --- | --- | --- | --- |
+| Existing local asset/path audit | S1-T01 | read-only asset report, path/permission/capacity record | PLANNED |
+| Schema Registry and sample fixtures | S1-T02 | schema/nullable/unit tests and committed minimal fixtures | PLANNED |
+| 1s Contract Price H1 input | S1-T03, S1-T07, S1-T09 | reader, integrity/gap and deterministic aggregation tests | PLANNED |
+| Binance Trades raw lineage | S1-T04 | immutable raw manifest, source/coverage/hash and idempotency tests | PLANNED |
+| Trade normalization and aggressor side | S1-T05, S1-T06 | Decimal/time/ID mapping and maker-side tests | PLANNED |
+| Duplicates, anomalies, rollback and gaps | S1-T07 | issue classification, deterministic dedup and gap segments | PLANNED |
+| Parquet catalog and checksum | S1-T08 | partition/catalog/logical-hash/atomic-publish tests | PLANNED |
+| Historical execution fields remain NULL | S1-T02, S1-T10 | UT-DATA-013 and illegal-zero/false-evidence regression | PLANNED |
+| Purge and embargo/no leakage | S1-T11 | interval/property tests and manifest fields | PLANNED |
+| Small-sample capability acceptance | S1-T12 | fixture quality report marked NOT_RUN_FULL_DATA | PLANNED |
+| Full-data preflight and build | S1-T13, S1-T14 | approved paths/source/coverage, full catalog, repeat-build hash | BLOCKED_BY_OQ-S1-001/002 |
+| Stage 1 gate | S1-T15 | Stage 1 validation; BTC/ETH separate conclusions | PLANNED |
+
+`DATA-HISTORICAL-NO-FAKE-EXECUTION` is enforced at the Stage 1 historical boundary by S1-T02/T10/T12/T14 and remains planned for Stage 5 forward-field separation. `STRATEGY-V1-PRICE-ONLY-HISTORICAL` is enforced at the Stage 1 input/source boundary by S1-T03/T09/T10; event behavior remains Stage 2. This does not promote either later behavioral implementation to PASSED.

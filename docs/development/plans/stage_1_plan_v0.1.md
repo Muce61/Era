@@ -4,7 +4,7 @@
 
 - stage_id: S1
 - plan_version: 0.1
-- status: DRAFT
+- status: SUPERSEDED
 - created_from_spec_version: V1.3.4
 - created_from_commit: 28bfb764f8286d2b4f23568a81f1233bb2b57b15
 - dependencies: Stage 0 PASSED
@@ -46,19 +46,9 @@ V1.3.4 规格基线 `spec-v1.3.4-final`、依赖 Stage 的 PASSED 基线及其 v
 
 ## 8. Task 清单
 
-- [S1-T01](../tasks/stage_1/S1-T01-task.md)：数据目录与现有资产审计
-- [S1-T02](../tasks/stage_1/S1-T02-schema-registry.md)：Schema Registry
-- [S1-T03](../tasks/stage_1/S1-T03-1-contract-price.md)：1 秒 Contract Price 读取与校验
-- [S1-T04](../tasks/stage_1/S1-T04-binance-trades.md)：Binance Trades 原始导入
-- [S1-T05](../tasks/stage_1/S1-T05-trades.md)：Trades 标准化
-- [S1-T06](../tasks/stage_1/S1-T06-task.md)：主动买卖方向解析
-- [S1-T07](../tasks/stage_1/S1-T07-task.md)：去重、时间倒退和异常值检查
-- [S1-T08](../tasks/stage_1/S1-T08-parquet-checksum.md)：Parquet 分区与 checksum
-- [S1-T09](../tasks/stage_1/S1-T09-k.md)：确定性 K 线聚合
-- [S1-T10](../tasks/stage_1/S1-T10-task.md)：数据质量报告
-- [S1-T11](../tasks/stage_1/S1-T11-null.md)：历史 NULL 字段边界测试
-- [S1-T12](../tasks/stage_1/S1-T12-purge-embargo.md)：时间切分、purge 和 embargo
-- [S1-T13](../tasks/stage_1/S1-T13-stage-1.md)：Stage 1 集成验收
+Task v0.1文件已由下列v1.0替代；Git历史保留原内容：
+
+- [S1-T01](../tasks/stage_1/S1-T01-asset-path-audit.md)～[S1-T15](../tasks/stage_1/S1-T15-stage-1-acceptance.md)：以Stage 1 Plan v1.0为准。
 
 ## 9. 测试策略
 
@@ -103,3 +93,4 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 ## 19. 变更历史
 
 - 2026-07-12：v0.1，依据 V1.3.4 创建，状态 DRAFT，未执行。
+- 2026-07-12：由 `stage_1_plan_v1.0.md` 取代；状态 SUPERSEDED，未执行。

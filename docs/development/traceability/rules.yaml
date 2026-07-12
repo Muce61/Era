@@ -190,11 +190,18 @@ rules:
   planned_tasks:
   - S0-T10
   - S0-T04
+  - S1-T02
+  - S1-T10
+  - S1-T12
+  - S1-T14
+  - S1-T15
   - S5-T01
   implementation_paths:
-  - src/forward/, tests/forward/, artifacts/manifests/ (PLANNED)
+  - src/era100x/data/evidence/, tests/data/evidence/, artifacts/manifests/stage_1/ (PLANNED Stage 1 boundary)
+  - src/forward/, tests/forward/, artifacts/manifests/ (PLANNED Stage 5 forward fields)
   test_paths:
-  - tests/stage_5/ (PLANNED); UT-DATA-013
+  - tests/data/evidence/ (PLANNED); UT-DATA-013
+  - tests/stage_5/ (PLANNED forward regression)
   validation_paths:
   - docs/development/validations/stage_5/ (PLANNED)
   state: PLANNED
@@ -235,9 +242,14 @@ rules:
   planned_tasks:
   - S0-T10
   - S0-T04
+  - S1-T03
+  - S1-T09
+  - S1-T10
+  - S1-T15
   - S2-T01
   implementation_paths:
-  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  - src/era100x/data/readers/, src/era100x/data/aggregate/, tests/data/ (PLANNED Stage 1 input boundary)
+  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED Stage 2 behavior)
   test_paths:
   - tests/stage_2/ (PLANNED); T-EVT-002
   validation_paths:
@@ -2107,7 +2119,9 @@ rules:
   source_section: §29; Appendix L
   planned_stage: S1
   planned_tasks:
-  - S1-T13
+  - S1-T12
+  - S1-T14
+  - S1-T15
   implementation_paths:
   - NONE (governance gate)
   test_paths:
