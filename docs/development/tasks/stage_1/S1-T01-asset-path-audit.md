@@ -3,15 +3,15 @@
 ## Metadata
 - task_id: S1-T01
 - task_version: 1.0
-- status: DRAFT
+- status: PASSED
 - stage_id: S1
 - stage_plan_version: 1.0
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: Stage 0 v1.0 PASSED; Stage 1 Plan v1.0 APPROVED
 - supersedes: task_version 0.1
-- approved_by: NONE
-- approved_at: NONE
+- approved_by: Muce
+- approved_at: 2026-07-12
 
 ## 1. 目标
 只读盘点现有BTC/ETH秒级、分钟级及Trades资产，形成路径、格式、时间范围、大小、权限、重复候选和容量报告。
