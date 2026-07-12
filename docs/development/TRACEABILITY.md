@@ -84,6 +84,7 @@ Stage 1 remains DRAFT. Planned implementation lives under `src/era100x/data/` wi
 | Binance Trades raw lineage | S1-T04 | immutable raw manifest, source/coverage/hash and idempotency tests | PLANNED |
 | S1-T04 delivered evidence | S1-T04 | `src/era100x/data/ingest/`, `scripts/import_stage1_trades.py`, `tests/data/ingest/` | PASSED |
 | Trade normalization and aggressor side | S1-T05, S1-T06 | Decimal/time/ID mapping and maker-side tests | PLANNED |
+| S1-T05 delivered evidence | S1-T05 | `src/era100x/data/normalize/`, `tests/data/normalize/` | PASSED |
 | Duplicates, anomalies, rollback and gaps | S1-T07 | issue classification, deterministic dedup and gap segments | PLANNED |
 | Parquet catalog and checksum | S1-T08 | partition/catalog/logical-hash/atomic-publish tests | PLANNED |
 | Historical execution fields remain NULL | S1-T02, S1-T10 | UT-DATA-013 and illegal-zero/false-evidence regression | PLANNED |
