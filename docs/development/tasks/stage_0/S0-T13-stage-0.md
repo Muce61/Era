@@ -4,15 +4,15 @@
 
 - task_id: S0-T13
 - task_version: 1.0
-- status: DRAFT
+- status: PASSED
 - stage_id: S0
 - stage_plan_version: 1.0
 - created_from_spec_version: V1.3.4
 - created_from_commit: cfd19ed3c9c76e8ef7fdada776bfb47cbcd50c9a
 - dependencies: S0-T01, S0-T02, S0-T03, S0-T04, S0-T05, S0-T06, S0-T07, S0-T08, S0-T09, S0-T10, S0-T11, S0-T12
 - supersedes: task_version 0.1
-- approved_by: NONE
-- approved_at: NONE
+- approved_by: Muce
+- approved_at: 2026-07-12
 
 ## 1. 目标
 
@@ -107,3 +107,4 @@ python3.12 -m pytest -q
 
 - 2026-07-12：v0.1，初始泛化草案。
 - 2026-07-12：v1.0，精确规格、依赖、路径、命令和验收边界；状态仍为DRAFT。
+- 2026-07-12：全部前置 Task 与 Stage 0 集成门禁通过；状态 PASSED，等待 Stage 人工最终批准。
