@@ -11,6 +11,16 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOT = REPOSITORY_ROOT / "src"
+APPROVED_STAGE_ZERO_TOP_LEVEL_PACKAGES = frozenset({"contracts", "foundation"})
+
+
+def assert_only_approved_top_level_packages(discovered: set[str]) -> None:
+    unexpected = discovered - APPROVED_STAGE_ZERO_TOP_LEVEL_PACKAGES
+    if unexpected:
+        raise AssertionError(f"unapproved top-level packages: {sorted(unexpected)}")
+    missing = APPROVED_STAGE_ZERO_TOP_LEVEL_PACKAGES - discovered
+    if missing:
+        raise AssertionError(f"missing approved top-level packages: {sorted(missing)}")
 
 
 class PackageImportTest(unittest.TestCase):
@@ -32,9 +42,14 @@ class PackageImportTest(unittest.TestCase):
 
     def test_package_contains_only_approved_stage_zero_submodules(self) -> None:
         package = importlib.import_module("era100x")
-        discovered = sorted(module.name for module in pkgutil.iter_modules(package.__path__))
+        discovered = {module.name for module in pkgutil.iter_modules(package.__path__)}
+        assert_only_approved_top_level_packages(discovered)
 
-        self.assertEqual(discovered, ["foundation"])
+    def test_unknown_top_level_package_is_rejected(self) -> None:
+        with self.assertRaisesRegex(AssertionError, "unapproved top-level packages"):
+            assert_only_approved_top_level_packages(
+                {*APPROVED_STAGE_ZERO_TOP_LEVEL_PACKAGES, "unapproved_package"}
+            )
 
     def test_unapproved_business_packages_cannot_be_imported(self) -> None:
         forbidden_modules = (

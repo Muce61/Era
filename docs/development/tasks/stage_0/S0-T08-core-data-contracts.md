@@ -3,16 +3,16 @@
 ## Metadata
 
 - task_id: S0-T08
-- task_version: 1.0
-- status: DRAFT
+- task_version: 0.2
+- status: PASSED
 - stage_id: S0
 - stage_plan_version: 1.0
 - created_from_spec_version: V1.3.4
 - created_from_commit: cfd19ed3c9c76e8ef7fdada776bfb47cbcd50c9a
 - dependencies: S0-T03, S0-T04, S0-T05, S0-T09
 - supersedes: task_version 0.1
-- approved_by: NONE
-- approved_at: NONE
+- approved_by: Muce
+- approved_at: 2026-07-12
 
 ## 1. 目标
 
@@ -43,7 +43,7 @@ Stage 0 Plan v1.0和本Task均获人工批准；依赖Task有真实validation；
 
 ## 7. 允许修改的路径
 
-`src/<root_package>/contracts/`、`tests/contracts/`
+`src/<root_package>/contracts/`、`tests/contracts/`、`tests/test_package_import.py`、`scripts/check_contract_coverage.py`
 
 ## 8. 禁止修改的路径
 
@@ -95,6 +95,8 @@ python3.12 scripts/run_quality_gate.py
 
 需要改变风险、数据边界、执行语义或Binance能力判断时停止并登记。现有相关问题不得在本Task内自行关闭。
 
+- `OQ-S0-001`：RESOLVED。人工批准显式允许 `foundation`、`contracts` 两个顶层包，并批准覆盖检查脚本路径。
+
 ## 18. 变化触发器
 
 规格、schema、枚举、公式、依赖锁、命令、输入hash或官方Binance事实变化时递增task_version并重新审批。
@@ -107,3 +109,6 @@ python3.12 scripts/run_quality_gate.py
 
 - 2026-07-12：v0.1，初始泛化草案。
 - 2026-07-12：v1.0，精确规格、依赖、路径、命令和验收边界；状态仍为DRAFT。
+- 2026-07-12：执行中发现 `OQ-S0-001` 范围冲突；停止实现并标记 BLOCKED。
+- 2026-07-12：v0.2，按人工决定修正允许路径并恢复 IN_PROGRESS；不改变 V1.3.4 正式规格。
+- 2026-07-12：全部定向与全量验证通过；验收结论 PASS，状态更新为 PASSED。

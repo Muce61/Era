@@ -70,4 +70,3 @@ class StableId:
             raise ValueError("identifier cannot be empty or a zero sentinel")
         if self.value != self.value.strip():
             raise ValueError("identifier cannot contain surrounding whitespace")
-

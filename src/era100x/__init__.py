@@ -11,4 +11,3 @@ __version__: Final[str] = "0.0.0"
 SPECIFICATION_VERSION: Final[str] = "V1.3.4"
 
 __all__ = ["SPECIFICATION_VERSION", "__version__"]
-

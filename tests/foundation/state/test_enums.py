@@ -16,7 +16,12 @@ def test_three_closure_phases_are_distinct() -> None:
 
 def test_exit_decision_is_pure_output_vocabulary() -> None:
     assert {item.value for item in ExitDecision} == {
-        "HOLD", "EXIT_TARGET", "EXIT_PROTECTION", "EXIT_TIME", "EXIT_STRUCTURE", "EXIT_EMERGENCY"
+        "HOLD",
+        "EXIT_TARGET",
+        "EXIT_PROTECTION",
+        "EXIT_TIME",
+        "EXIT_STRUCTURE",
+        "EXIT_EMERGENCY",
     }
 
 
