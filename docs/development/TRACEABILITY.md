@@ -87,6 +87,7 @@ Stage 1 remains DRAFT. Planned implementation lives under `src/era100x/data/` wi
 | S1-T05 delivered evidence | S1-T05 | `src/era100x/data/normalize/`, `tests/data/normalize/` | PASSED |
 | S1-T06 delivered evidence | S1-T06 | `src/era100x/data/trades/`, `tests/data/trades/` | PASSED |
 | Duplicates, anomalies, rollback and gaps | S1-T07 | issue classification, deterministic dedup and gap segments | PLANNED |
+| S1-T07 delivered evidence | S1-T07 | `src/era100x/data/quality/`, `tests/data/quality/` | PASSED |
 | Parquet catalog and checksum | S1-T08 | partition/catalog/logical-hash/atomic-publish tests | PLANNED |
 | Historical execution fields remain NULL | S1-T02, S1-T10 | UT-DATA-013 and illegal-zero/false-evidence regression | PLANNED |
 | Purge and embargo/no leakage | S1-T11 | interval/property tests and manifest fields | PLANNED |

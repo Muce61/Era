@@ -3,15 +3,15 @@
 ## Metadata
 - task_id: S1-T07
 - task_version: 1.0
-- status: DRAFT
+- status: PASSED
 - stage_id: S1
 - stage_plan_version: 1.0
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: S1-T03 PASS; S1-T06 PASS
 - supersedes: task_version 0.1
-- approved_by: NONE
-- approved_at: NONE
+- approved_by: Muce
+- approved_at: 2026-07-12
 
 ## 1. 目标
 对Contract Price和NormalizedTrade执行去重、异常值、时间倒退、Trade ID连续性和时间缺口检测，输出质量标记而非静默修复。
