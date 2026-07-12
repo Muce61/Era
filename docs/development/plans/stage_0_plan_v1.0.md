@@ -4,13 +4,17 @@
 
 - stage_id: S0
 - plan_version: 1.0
-- status: APPROVED
+- status: PASSED
 - created_from_spec_version: V1.3.4
 - created_from_commit: cfd19ed3c9c76e8ef7fdada776bfb47cbcd50c9a
 - dependencies: `spec-v1.3.4-final`
 - supersedes: `stage_0_plan_v0.1.md`
 - approved_by: Muce
 - approved_at: 2026-07-12
+- final_accepted_by: Muce
+- final_accepted_at: 2026-07-12
+- validation: `docs/development/validations/stage_0_validation.md`
+- validated_commit: `692dd29`
 
 ## 1. 目标
 
@@ -116,9 +120,10 @@ Python/工具链不可用、包边界冲突、规格或Binance官方事实变化
 
 ## 18. 预期基线标签
 
-`stage-0-v1.0-passed`，仅全部真实验收和人工PASSED后创建；本次不得创建。
+`stage-0-v1.0-passed`，在全部真实验收和人工最终批准后创建。该条件已于2026-07-12满足。
 
 ## 19. 变更历史
 
 - 2026-07-12：v0.1，初始泛化草案。
 - 2026-07-12：v1.0，完成规格/测试分配、依赖重排、路径隔离、实际命令和可执行验收修订；状态DRAFT。
+- 2026-07-12：S0-T01～S0-T13全部PASSED，集成验收PASS，用户最终批准；v1.0冻结为最终已验收版本。

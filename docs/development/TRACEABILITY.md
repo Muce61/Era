@@ -6,6 +6,8 @@ Model: formal rule → Stage → Task → implementation → tests → validatio
 
 Stage 0 uses S0-T04 to catalogue all 32 formal rules and S0-T10 to enforce uniqueness/status/test ownership. S0-T07 owns the PnL foundation; S0-T08 owns Appendix C-E schema completeness; S0-T09 owns states and Reason Codes. Execution behavior remains assigned to later Stages and is not marked implemented by Stage 0. INV-001～INV-041 all include S0-T10 for registry/test-reference validation while retaining their behavioral Stage owner.
 
+Stage 0 v1.0 is a valid PASSED baseline at validated implementation commit `692dd29`, with acceptance evidence in [`validations/stage_0_validation.md`](validations/stage_0_validation.md). The Stage 0 delivery rows below are effective. Entries assigned to Stage 1～9 remain PLANNED and are not promoted by this baseline. U-001～U-003 remain OPEN for their downstream scopes and do not invalidate the offline Stage 0 foundation baseline.
+
 ## Formal Rule Registry Coverage
 
 | Rule ID | Rule Status | Source | Stage | Task | Implementation | Tests | State |
@@ -64,3 +66,5 @@ Additional machine entries cover INV-001～INV-041, Appendix C/D/E/J contracts, 
 | S0-T13 | Stage 0 evidence integration and final-approval gate | §27-28, §38, §46, Appendix A/L/N | governance validations only | full quality, scope and prerequisite audits | `validations/stage_0/S0-T13.md`, `validations/stage_0_validation.md` | PASSED |
 
 S0-T01 carries no business `rule_id` and does not mark any FROZEN rule or INV as implemented. It provides only the package boundary required by later individually approved Stage 0 Tasks.
+
+Stage 0 baseline validity: **VALID / PASSED**. Any later change to its code, configuration contracts, dependency lock, traceability catalogue, or validation evidence requires explicit invalidation or reopening under `CHANGE_POLICY.md`.

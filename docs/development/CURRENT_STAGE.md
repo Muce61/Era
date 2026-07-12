@@ -1,10 +1,10 @@
 # Current Development State
 
 ```text
-Current Stage: Stage 0
-Current Plan: stage_0_plan_v1.0
+Current Stage: NONE
+Current Plan: NONE
 Current Task: NONE
-Status: READY_FOR_STAGE_0_FINAL_APPROVAL
+Status: WAITING_FOR_STAGE_1_REPLANNING
 ```
 
-Stage 0 Plan v1.0 is APPROVED and all S0-T01～S0-T13 Tasks are PASSED. Stage 0 integration validation is PASS, but Stage 0 itself remains READY_FOR_FINAL_APPROVAL until explicit human approval. No final Stage baseline or tag exists. Stage 1～Stage 9 remain DRAFT and no automatic Stage transition is permitted.
+Stage 0 Plan v1.0 and S0-T01～S0-T13 are PASSED. The Stage 0 baseline is frozen from validated implementation commit `692dd29` under local tag `stage-0-v1.0-passed`. Stage 1～Stage 9 remain DRAFT; Stage 1 must be replanned and separately approved before execution. No automatic Stage transition is permitted.
