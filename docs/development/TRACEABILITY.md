@@ -50,5 +50,6 @@ Additional machine entries cover INV-001～INV-041, Appendix C/D/E/J contracts, 
 | Task | Capability | Specification | Implementation | Tests | Validation | State |
 | --- | --- | --- | --- | --- | --- | --- |
 | S0-T01 | Python 3.12 project skeleton and import boundary | §23, §24, §28 | `pyproject.toml`, `src/era100x/__init__.py`, README development entry | `tests/test_package_import.py` | `validations/stage_0/S0-T01.md` | PASSED |
+| S0-T02 | Locked Python toolchain and deterministic quality gate | §23, §27, §28 | `pyproject.toml`, `uv.lock`, `scripts/run_quality_gate.py` | collection, Ruff, mypy, pytest | `validations/stage_0/S0-T02.md` | PASSED |
 
 S0-T01 carries no business `rule_id` and does not mark any FROZEN rule or INV as implemented. It provides only the package boundary required by later individually approved Stage 0 Tasks.
