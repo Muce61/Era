@@ -3,15 +3,15 @@
 ## Metadata
 - task_id: S1-T12
 - task_version: 1.0
-- status: DRAFT
+- status: PASSED
 - stage_id: S1
 - stage_plan_version: 1.0
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: S1-T07, S1-T09, S1-T10, S1-T11 PASS
 - supersedes: former S1-T10 v0.1
-- approved_by: NONE
-- approved_at: NONE
+- approved_by: Muce
+- approved_at: 2026-07-12
 
 ## 1. 目标
 汇总fixture级schema、完整性、聚合、能力标签和split证据，证明Stage 1能力可在小样本确定性验收。
