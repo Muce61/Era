@@ -3,15 +3,15 @@
 ## Metadata
 - task_id: S1-T11
 - task_version: 1.0
-- status: DRAFT
+- status: PASSED
 - stage_id: S1
 - stage_plan_version: 1.0
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: S1-T02 PASS
 - supersedes: former S1-T12 v0.1
-- approved_by: NONE
-- approved_at: NONE
+- approved_by: Muce
+- approved_at: 2026-07-12
 
 ## 1. 目标
 定义并验证按时间的train/validation/locked区间、purge与embargo纯契约，防止未来泄漏。
