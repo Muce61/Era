@@ -97,7 +97,8 @@ Stage 1 remains DRAFT. Planned implementation lives under `src/era100x/data/` wi
 | S1-T11 delivered evidence | S1-T11 | `src/era100x/data/splits/`, `tests/data/splits/` | PASSED |
 | Small-sample capability acceptance | S1-T12 | fixture quality report marked NOT_RUN_FULL_DATA | PLANNED |
 | S1-T12 delivered evidence | S1-T12 | `src/era100x/data/reporting/`, `tests/data/reporting/`, sample report CLI | PASSED |
-| Full-data preflight and build | S1-T13, S1-T14 | approved paths/source/coverage, full catalog, repeat-build hash | BLOCKED_BY_OQ-S1-001/002 |
+| Full-data preflight and build | S1-T13, S1-T14 | approved paths/source/coverage, full catalog, repeat-build hash | BLOCKED_BY_OQ-S1-003 |
+| S1-T13 actual preflight | S1-T13 | 162/162 official archives; disk estimate and safety calculation | BLOCKED_BY_OQ-S1-003 |
 | Stage 1 gate | S1-T15 | Stage 1 validation; BTC/ETH separate conclusions | PLANNED |
 
 `DATA-HISTORICAL-NO-FAKE-EXECUTION` is enforced at the Stage 1 historical boundary by S1-T02/T10/T12/T14 and remains planned for Stage 5 forward-field separation. `STRATEGY-V1-PRICE-ONLY-HISTORICAL` is enforced at the Stage 1 input/source boundary by S1-T03/T09/T10; event behavior remains Stage 2. This does not promote either later behavioral implementation to PASSED.

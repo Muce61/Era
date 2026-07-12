@@ -5,7 +5,7 @@ Allowed statuses: `DRAFT`, `READY_FOR_APPROVAL`, `APPROVED`, `IN_PROGRESS`, `REV
 | Stage | Plan Version | Status | Dependencies | Baseline | Validity | Notes |
 | ----- | ------------ | ------ | ------------ | -------- | -------- | ----- |
 | Stage 0 | 1.0 | PASSED | NONE | `stage-0-v1.0-passed` | VALID | Final human approval 2026-07-12; validated implementation commit `692dd29`; 13 Tasks PASSED |
-| Stage 1 | 1.0 | APPROVED | Stage 0 PASSED | NONE | NOT_EXECUTED | Approved 2026-07-12 for continuous execution; final PASSED remains human-only |
+| Stage 1 | 1.0 | BLOCKED | Stage 0 PASSED | NONE | PARTIALLY_EXECUTED | S1-T01～T12 PASSED; T13 disk gate needs 545.74GiB vs 197.07GiB available; T14/T15 not executed |
 | Stage 2 | 0.1 | DRAFT | Stage 1 | NONE | NOT_EXECUTED | 事件研究; human approval required |
 | Stage 3 | 0.1 | DRAFT | Stage 2 | NONE | NOT_EXECUTED | H3 成本与执行压力代理; human approval required |
 | Stage 4 | 0.1 | DRAFT | Stage 3 | NONE | NOT_EXECUTED | LOCKED_HISTORICAL_REPLAY; human approval required |

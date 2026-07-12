@@ -21,6 +21,7 @@ These questions are inherited from V1.3.4 Appendix N. They do not block planning
 | OQ-S0-001 | S0-T08 要求新增顶层 `era100x/contracts`，但 S0-T01 验收测试仅允许顶层 `foundation`；同时强制命令要求 `scripts/check_contract_coverage.py`，而该路径未列入 S0-T08 允许修改范围。 | RESOLVED | Stage 0 | NONE | 2026-07-12 Muce 人工批准：顶层显式允许清单为 `foundation`、`contracts`；保留未知顶层包阻断测试；允许 S0-T08 修改 `tests/test_package_import.py` 并新增覆盖检查脚本。Task 范围修正，不改变正式规格；无需 CR。 |
 | OQ-S1-001 | Stage 1数据路径、容量与保留策略 | RESOLVED | Stage 1 | NONE | 2026-07-12人工决定：Contract根`/Users/muce/1m_data/klines_data_usdm_1s_agg`永久只读；工作根`/Users/muce/1m_data/era100x_stage1`；raw/published不可覆盖，不自动清理；T14要求可用空间不少于峰值估算×1.20。 |
 | OQ-S1-002 | Binance Trades来源、授权和覆盖 | RESOLVED | Stage 1 | NONE | 2026-07-12人工决定：仅官方公开USDⓈ-M Trades归档，无账户/API Key/私有接口；BTCUSDT/ETHUSDT目标为本地Contract实际覆盖与官方可用区间交集，候选`[2020-01-01,2026-07-04)`；缺口如实记录。 |
+| OQ-S1-003 | 如何满足Stage 1全量构建磁盘安全门？ | BLOCKING | Stage 1 T13 | S1-T13～T15 | 真实HEAD预检：需545.74GiB，可用197.07GiB，缺口348.67GiB。需人工扩容，或另行批准不降低不可变/安全约束的新存储设计；不得自动清理。 |
 
 New questions must record discovery/source, affected rules/contracts/baselines, evidence required, owner, status, and linked ADR/CR. No unresolved question may be answered by assumption.
 
