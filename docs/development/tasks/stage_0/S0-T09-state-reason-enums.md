@@ -4,15 +4,15 @@
 
 - task_id: S0-T09
 - task_version: 1.0
-- status: DRAFT
+- status: PASSED
 - stage_id: S0
 - stage_plan_version: 1.0
 - created_from_spec_version: V1.3.4
 - created_from_commit: cfd19ed3c9c76e8ef7fdada776bfb47cbcd50c9a
 - dependencies: S0-T05
 - supersedes: task_version 0.1
-- approved_by: NONE
-- approved_at: NONE
+- approved_by: Muce
+- approved_at: 2026-07-12
 
 ## 1. 目标
 
@@ -107,3 +107,4 @@ python3.12 scripts/run_quality_gate.py
 
 - 2026-07-12：v0.1，初始泛化草案。
 - 2026-07-12：v1.0，精确规格、依赖、路径、命令和验收边界；状态仍为DRAFT。
+- 2026-07-12：状态、closure phase、ExitDecision、事故等级和Reason Code覆盖通过，验收PASS。
