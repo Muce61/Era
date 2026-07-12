@@ -58,5 +58,6 @@ Additional machine entries cover INV-001～INV-041, Appendix C/D/E/J contracts, 
 | S0-T06 | Deterministic manifests and append-only audit records | §16, §26, §45, Appendix J | `src/era100x/foundation/audit/` | `tests/foundation/audit/` | `validations/stage_0/S0-T06.md` | PASSED |
 | S0-T07 | Decimal-only Appendix F PnL contracts | §6, §10.4, §14.1, Appendix F | `src/era100x/foundation/accounting/` | `tests/foundation/accounting/` | `validations/stage_0/S0-T07.md` | PASSED |
 | S0-T08 | Appendix C-E strict schema skeletons | §18-20, §25-26, Appendix C-E | `src/era100x/contracts/` | `tests/contracts/`, `tests/test_package_import.py` | `validations/stage_0/S0-T08.md` | PASSED |
+| S0-T10 | Strict traceability integrity checker | §27, Appendix A/C-E/G-H/I/K/L | `scripts/check_traceability.py` | `tests/governance/` | `validations/stage_0/S0-T10.md` | PASSED |
 
 S0-T01 carries no business `rule_id` and does not mark any FROZEN rule or INV as implemented. It provides only the package boundary required by later individually approved Stage 0 Tasks.
