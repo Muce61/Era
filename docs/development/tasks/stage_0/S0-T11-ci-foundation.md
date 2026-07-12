@@ -4,15 +4,15 @@
 
 - task_id: S0-T11
 - task_version: 1.0
-- status: DRAFT
+- status: PASSED
 - stage_id: S0
 - stage_plan_version: 1.0
 - created_from_spec_version: V1.3.4
 - created_from_commit: cfd19ed3c9c76e8ef7fdada776bfb47cbcd50c9a
 - dependencies: S0-T02, S0-T07, S0-T08, S0-T09, S0-T10
 - supersedes: task_version 0.1
-- approved_by: NONE
-- approved_at: NONE
+- approved_by: Muce
+- approved_at: 2026-07-12
 
 ## 1. 目标
 
@@ -104,3 +104,4 @@ python3.12 scripts/check_traceability.py --strict
 
 - 2026-07-12：v0.1，初始泛化草案。
 - 2026-07-12：v1.0，精确规格、依赖、路径、命令和验收边界；状态仍为DRAFT。
+- 2026-07-12：最小权限 CI 与本地统一质量门验证通过；状态 PASSED。

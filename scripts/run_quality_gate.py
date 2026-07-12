@@ -8,8 +8,10 @@ import sys
 
 
 COMMANDS = (
+    ("ruff", "format", "--check", "."),
     ("ruff", "check", "."),
     ("mypy", "src", "scripts"),
+    (sys.executable, "scripts/check_traceability.py", "--strict"),
     (sys.executable, "-m", "pytest", "-q"),
 )
 
