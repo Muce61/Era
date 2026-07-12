@@ -3,15 +3,15 @@
 ## Metadata
 - task_id: S1-T10
 - task_version: 1.0
-- status: DRAFT
+- status: PASSED
 - stage_id: S1
 - stage_plan_version: 1.0
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: S1-T03 PASS; S1-T05 PASS; S1-T06 PASS
 - supersedes: former S1-T11 v0.1
-- approved_by: NONE
-- approved_at: NONE
+- approved_by: Muce
+- approved_at: 2026-07-12
 
 ## 1. 目标
 以schema和回归门禁止历史数据伪造Quote、接收时间、部分成交或真实执行字段，并正确标记H1/H2能力。

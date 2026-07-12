@@ -92,6 +92,7 @@ Stage 1 remains DRAFT. Planned implementation lives under `src/era100x/data/` wi
 | Parquet catalog and checksum | S1-T08 | partition/catalog/logical-hash/atomic-publish tests | PLANNED |
 | S1-T08 delivered evidence | S1-T08 | `src/era100x/data/storage/`, `tests/data/storage/`, catalog verifier | PASSED |
 | Historical execution fields remain NULL | S1-T02, S1-T10 | UT-DATA-013 and illegal-zero/false-evidence regression | PLANNED |
+| S1-T10 delivered evidence | S1-T10 | `src/era100x/data/evidence/`, `tests/data/evidence/` | PASSED |
 | Purge and embargo/no leakage | S1-T11 | interval/property tests and manifest fields | PLANNED |
 | Small-sample capability acceptance | S1-T12 | fixture quality report marked NOT_RUN_FULL_DATA | PLANNED |
 | Full-data preflight and build | S1-T13, S1-T14 | approved paths/source/coverage, full catalog, repeat-build hash | BLOCKED_BY_OQ-S1-001/002 |
