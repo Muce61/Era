@@ -30,11 +30,11 @@ class PackageImportTest(unittest.TestCase):
         self.assertEqual(package.SPECIFICATION_VERSION, "V1.3.4")
         self.assertTrue(Path(package.__file__).resolve().is_relative_to(SOURCE_ROOT))
 
-    def test_skeleton_contains_no_business_submodules(self) -> None:
+    def test_package_contains_only_approved_stage_zero_submodules(self) -> None:
         package = importlib.import_module("era100x")
         discovered = sorted(module.name for module in pkgutil.iter_modules(package.__path__))
 
-        self.assertEqual(discovered, [])
+        self.assertEqual(discovered, ["foundation"])
 
     def test_unapproved_business_packages_cannot_be_imported(self) -> None:
         forbidden_modules = (
