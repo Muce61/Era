@@ -53,6 +53,35 @@ def test_streaming_archive_splits_dates_and_is_deterministic(tmp_path: Path) -> 
     assert table.num_rows == 2
 
 
+def test_cross_date_interleaving_routes_without_weakening_daily_order(tmp_path: Path) -> None:
+    interleaved = make_zip(
+        tmp_path / "interleaved.zip",
+        [
+            "1,100,1,100,1577836800000,true",
+            "3,102,1,102,1577923200000,true",
+            "2,101,1,101,1577836801000,false",
+            "4,103,1,103,1577923201000,false",
+        ],
+    )
+    grouped = make_zip(
+        tmp_path / "grouped.zip",
+        [
+            "1,100,1,100,1577836800000,true",
+            "2,101,1,101,1577836801000,false",
+            "3,102,1,102,1577923200000,true",
+            "4,103,1,103,1577923201000,false",
+        ],
+    )
+    routed = process_archive(interleaved, tmp_path / "routed", "BTCUSDT")
+    reference = process_archive(grouped, tmp_path / "reference", "BTCUSDT")
+    assert [entry["date"] for entry in routed] == ["2020-01-01", "2020-01-02"]
+    assert routed[0]["archive_date_reversal_count"] == 1
+    assert routed[0]["archive_interleaved_dates"] == ["2020-01-01", "2020-01-02"]
+    assert [entry["logical_sha256"] for entry in routed] == [
+        entry["logical_sha256"] for entry in reference
+    ]
+
+
 def test_exact_duplicates_are_audited_and_deterministically_removed(tmp_path: Path) -> None:
     exact = make_zip(
         tmp_path / "exact.zip",
@@ -80,6 +109,20 @@ def test_conflicting_duplicate_does_not_leave_output(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="conflicting duplicate"):
         process_archive(conflict, output, "BTCUSDT")
     assert not output.exists()
+
+
+def test_within_date_time_reversal_is_stably_sorted_and_audited(tmp_path: Path) -> None:
+    reversal = make_zip(
+        tmp_path / "reversal.zip",
+        [
+            "1,100,1,100,1577836801000,true",
+            "2,101,1,101,1577836800000,false",
+        ],
+    )
+    output = tmp_path / "reversal-output"
+    entries = process_archive(reversal, output, "BTCUSDT")
+    assert entries[0]["source_timestamp_reversal_count"] == 1
+    assert entries[0]["rows"] == 2
 
 
 def test_checkpoint_is_atomic_and_run_identity_is_fixed(tmp_path: Path) -> None:

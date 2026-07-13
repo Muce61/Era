@@ -7,9 +7,11 @@ import json
 import os
 import shutil
 import stat
+import subprocess
 import time
 import zipfile
 from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
+from contextlib import suppress
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -159,7 +161,14 @@ def download_archive(url: str, destination: Path, expected_sha256: str) -> Path:
 
 
 class PartitionWriter:
-    def __init__(self, root: Path, symbol: Symbol, partition_date: date) -> None:
+    def __init__(
+        self,
+        root: Path,
+        symbol: Symbol,
+        partition_date: date,
+        *,
+        permit_trade_id_reversal: bool = False,
+    ) -> None:
         self.symbol = symbol
         self.partition_date = partition_date
         self.directory = root / f"date={partition_date.isoformat()}"
@@ -174,6 +183,9 @@ class PartitionWriter:
         self.last_ts_ns: int | None = None
         self.gap_count = 0
         self.gap_examples: list[str] = []
+        self.trade_id_reversal_count = 0
+        self.trade_id_reversal_examples: list[str] = []
+        self.permit_trade_id_reversal = permit_trade_id_reversal
         self.input_rows = 0
         self.duplicate_exact_count = 0
         self.last_signature: tuple[object, ...] | None = None
@@ -210,7 +222,11 @@ class PartitionWriter:
                     return
                 raise ValueError(f"conflicting duplicate trade_id: {trade_id}")
             if trade_id < self.last_trade_id:
-                raise ValueError(f"trade_id reversal: {trade_id}")
+                if not self.permit_trade_id_reversal:
+                    raise ValueError(f"trade_id reversal: {trade_id}")
+                self.trade_id_reversal_count += 1
+                if len(self.trade_id_reversal_examples) < 100:
+                    self.trade_id_reversal_examples.append(f"{self.last_trade_id}->{trade_id}")
             if trade_id > self.last_trade_id + 1:
                 self.gap_count += trade_id - self.last_trade_id - 1
                 if len(self.gap_examples) < 100:
@@ -240,7 +256,7 @@ class PartitionWriter:
         self.last_ts_ns = ts_event_ns
         self.last_signature = signature
         self.rows += 1
-        if len(self.batch) >= 100_000:
+        if len(self.batch) >= 25_000:
             self.flush()
 
     def flush(self) -> None:
@@ -267,12 +283,42 @@ class PartitionWriter:
             "last_ts_ns": self.last_ts_ns,
             "trade_id_gap_count": self.gap_count,
             "trade_id_gap_examples": self.gap_examples,
+            "trade_id_reversal_count": self.trade_id_reversal_count,
+            "trade_id_reversal_examples": self.trade_id_reversal_examples,
             "byte_sha256": sha256_file(self.path),
             "logical_sha256": self.logical_hash.hexdigest(),
             "bytes": self.path.stat().st_size,
         }
         atomic_json(self.directory / "partition.json", result)
         return result
+
+
+def _external_sort(source: Path, destination: Path, keys: tuple[str, ...], temp: Path) -> None:
+    environment = dict(os.environ)
+    environment["LC_ALL"] = "C"
+    with destination.open("wb") as output:
+        completed = subprocess.run(
+            ["sort", "-t", "\t", "-T", str(temp), *keys, str(source)],
+            stdout=output,
+            stderr=subprocess.PIPE,
+            env=environment,
+            check=False,
+        )
+    if completed.returncode:
+        raise RuntimeError(completed.stderr.decode("utf-8", errors="replace"))
+
+
+def _assert_no_conflicting_trade_ids(path: Path) -> None:
+    previous_id: str | None = None
+    previous_line: bytes | None = None
+    with path.open("rb") as stream:
+        for line in stream:
+            fields = line.rstrip(b"\n").split(b"\t")
+            trade_id = fields[1].decode()
+            if trade_id == previous_id and line != previous_line:
+                raise ValueError(f"conflicting duplicate trade_id: {trade_id}")
+            previous_id = trade_id
+            previous_line = line
 
 
 def process_archive(
@@ -285,9 +331,16 @@ def process_archive(
     if output_root.exists():
         raise FileExistsError(output_root)
     output_root.mkdir(parents=True)
-    entries: list[dict[str, object]] = []
-    writer: PartitionWriter | None = None
-    current_date: date | None = None
+    sort_root = output_root / "_sort"
+    sort_root.mkdir()
+    spools: dict[date, io.TextIOWrapper] = {}
+    raw_hashes: dict[date, Any] = {}
+    input_rows: dict[date, int] = {}
+    source_reversals: dict[date, dict[str, int]] = {}
+    source_previous: dict[date, tuple[int, int]] = {}
+    previous_source_date: date | None = None
+    date_reversal_count = 0
+    interleaved_dates: set[date] = set()
     try:
         with zipfile.ZipFile(archive) as bundle:
             members = [name for name in bundle.namelist() if name.lower().endswith(".csv")]
@@ -304,23 +357,114 @@ def process_archive(
                         continue
                     if selected_dates is not None and row_date not in selected_dates:
                         continue
-                    if current_date != row_date:
-                        if current_date is not None and row_date < current_date:
-                            raise ValueError("archive date reversal")
-                        if writer is not None:
-                            entries.append(writer.close())
-                        writer = PartitionWriter(output_root, symbol, row_date)
-                        current_date = row_date
-                    assert writer is not None
-                    writer.append(values, row_date, timestamp_ms)
-        if writer is not None:
-            entries.append(writer.close())
+                    if len(values) != 6:
+                        raise ValueError(f"unexpected Trades column count: {len(values)}")
+                    trade_id = int(values[0])
+                    _, price_text = canonical_decimal(values[1])
+                    price = Decimal(price_text)
+                    _, quantity_text = canonical_decimal(values[2])
+                    quantity = Decimal(quantity_text)
+                    _, quote_text = canonical_decimal(values[3])
+                    quote_quantity = Decimal(quote_text)
+                    maker_text = values[5].strip().lower()
+                    if price <= 0 or quantity <= 0 or quote_quantity < 0:
+                        raise ValueError("trade price/quantity must be positive")
+                    if maker_text not in {"true", "false"}:
+                        raise ValueError(f"invalid isBuyerMaker: {values[5]}")
+                    if previous_source_date is not None and row_date < previous_source_date:
+                        date_reversal_count += 1
+                        interleaved_dates.update((previous_source_date, row_date))
+                    previous_source_date = row_date
+                    previous = source_previous.get(row_date)
+                    counters = source_reversals.setdefault(
+                        row_date, {"timestamp": 0, "trade_id": 0}
+                    )
+                    if previous is not None:
+                        counters["timestamp"] += int(timestamp_ms < previous[0])
+                        counters["trade_id"] += int(trade_id < previous[1])
+                    source_previous[row_date] = (timestamp_ms, trade_id)
+                    spool = spools.get(row_date)
+                    if spool is None:
+                        spool = (sort_root / f"{row_date.isoformat()}.input.tsv").open("w")
+                        spools[row_date] = spool
+                        raw_hashes[row_date] = hashlib.sha256()
+                        input_rows[row_date] = 0
+                    canonical_line = (
+                        f"{timestamp_ms}\t{trade_id}\t{price_text}\t{quantity_text}\t"
+                        f"{quote_text}\t{maker_text}\n"
+                    )
+                    spool.write(canonical_line)
+                    raw_hashes[row_date].update(canonical_line.encode())
+                    input_rows[row_date] += 1
+        for spool in spools.values():
+            spool.close()
+        entries = []
+        for partition_date in sorted(spools):
+            source = sort_root / f"{partition_date.isoformat()}.input.tsv"
+            by_id = sort_root / f"{partition_date.isoformat()}.by-id.tsv"
+            ordered = sort_root / f"{partition_date.isoformat()}.ordered.tsv"
+            _external_sort(
+                source,
+                by_id,
+                ("-k2,2n", "-k1,1n", "-k3,3", "-k4,4", "-k5,5", "-k6,6"),
+                sort_root,
+            )
+            _assert_no_conflicting_trade_ids(by_id)
+            _external_sort(
+                by_id,
+                ordered,
+                ("-k1,1n", "-k2,2n", "-k3,3", "-k4,4", "-k5,5", "-k6,6"),
+                sort_root,
+            )
+            writer = PartitionWriter(
+                output_root,
+                symbol,
+                partition_date,
+                permit_trade_id_reversal=True,
+            )
+            with ordered.open() as stream:
+                for line in stream:
+                    (
+                        timestamp_text,
+                        sorted_trade_id,
+                        sorted_price,
+                        sorted_quantity,
+                        sorted_quote,
+                        sorted_maker,
+                    ) = line.rstrip("\n").split("\t")
+                    writer.append(
+                        [
+                            sorted_trade_id,
+                            sorted_price,
+                            sorted_quantity,
+                            sorted_quote,
+                            timestamp_text,
+                            sorted_maker,
+                        ],
+                        partition_date,
+                        int(timestamp_text),
+                    )
+            entry = writer.close()
+            entry["source_input_rows"] = input_rows[partition_date]
+            entry["source_order_sha256"] = raw_hashes[partition_date].hexdigest()
+            entry["source_timestamp_reversal_count"] = source_reversals[partition_date]["timestamp"]
+            entry["source_trade_id_reversal_count"] = source_reversals[partition_date]["trade_id"]
+            entry["archive_date_reversal_count"] = date_reversal_count
+            entry["archive_interleaved_dates"] = [
+                value.isoformat() for value in sorted(interleaved_dates)
+            ]
+            entries.append(entry)
+            source.unlink()
+            by_id.unlink()
+            ordered.unlink()
+        sort_root.rmdir()
         if not entries:
             raise ValueError("archive produced no target rows")
         return entries
     except Exception:
-        if writer is not None:
-            writer.writer.close()
+        for spool in spools.values():
+            with suppress(Exception):
+                spool.close()
         shutil.rmtree(output_root, ignore_errors=True)
         raise
 

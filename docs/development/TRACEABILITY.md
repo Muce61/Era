@@ -71,7 +71,7 @@ Stage 0 baseline validity: **VALID / PASSED**. Any later change to its code, con
 
 ## Stage 1 v1.0 Execution Coverage
 
-Stage 1 is `IN_PROGRESS` under approved Plan v1.0. S1-T01～S1-T13 are PASSED; S1-T14 v1.2 is the explicitly approved full-data run and remains `IN_PROGRESS` until both symbols are published and deterministic verification passes. The v1.1 run is INVALIDATED after official BTCUSDT 2022-04 data exposed an exact-duplicate handling defect; its immutable raw inputs remain reusable by checksum, while its staging evidence cannot be promoted. S1-T15 remains DRAFT.
+Stage 1 is `IN_PROGRESS` under approved Plan v1.0. S1-T01～S1-T13 are PASSED; S1-T14 v1.4 is the explicitly approved full-data run and remains `IN_PROGRESS` until both symbols are published and deterministic verification passes. Prior runs are INVALIDATED and unpublished; immutable raw inputs remain reusable by checksum. v1.4 routes by UTC date and uses audited disk-backed stable ordering for within-date source reversals. S1-T15 remains DRAFT.
 
 | Requirement | Planned Tasks | Planned Evidence | State |
 | --- | --- | --- | --- |
@@ -98,7 +98,7 @@ Stage 1 is `IN_PROGRESS` under approved Plan v1.0. S1-T01～S1-T13 are PASSED; S
 | Small-sample capability acceptance | S1-T12 | fixture quality report marked NOT_RUN_FULL_DATA | PLANNED |
 | S1-T12 delivered evidence | S1-T12 | `src/era100x/data/reporting/`, `tests/data/reporting/`, sample report CLI | PASSED |
 | Full-data preflight and build | S1-T13, S1-T14 | approved paths/source/coverage, resumable builder, full catalog, repeat-build hash | T13_PASSED_T14_IN_PROGRESS |
-| S1-T14 builder implementation | S1-T14 | `src/era100x/data/full_build/`, `scripts/run_stage1_full_build.py`, `tests/data/full_build/` | V1.2_IN_PROGRESS_V1.1_RUN_INVALIDATED |
+| S1-T14 builder implementation | S1-T14 | `src/era100x/data/full_build/`, `scripts/run_stage1_full_build.py`, `tests/data/full_build/` | V1.4_IN_PROGRESS_PRIOR_RUNS_INVALIDATED |
 | S1-T13 actual preflight | S1-T13 | 162/162 official archives; write probe; 20% disk safety calculation | PASSED |
 | Stage 1 gate | S1-T15 | Stage 1 validation; BTC/ETH separate conclusions | PLANNED |
 
