@@ -43,6 +43,11 @@ UNAVAILABLE_FIELDS = (
     "order_book_depth",
 )
 
+
+class ArchiveOrderingError(ValueError):
+    """The official archive requires the audited external-sort path."""
+
+
 ARROW_SCHEMA = pa.schema(
     [
         ("instrument", pa.string()),
@@ -223,7 +228,7 @@ class PartitionWriter:
                 raise ValueError(f"conflicting duplicate trade_id: {trade_id}")
             if trade_id < self.last_trade_id:
                 if not self.permit_trade_id_reversal:
-                    raise ValueError(f"trade_id reversal: {trade_id}")
+                    raise ArchiveOrderingError(f"trade_id reversal: {trade_id}")
                 self.trade_id_reversal_count += 1
                 if len(self.trade_id_reversal_examples) < 100:
                     self.trade_id_reversal_examples.append(f"{self.last_trade_id}->{trade_id}")
@@ -232,7 +237,7 @@ class PartitionWriter:
                 if len(self.gap_examples) < 100:
                     self.gap_examples.append(f"{self.last_trade_id + 1}-{trade_id - 1}")
         if self.last_ts_ns is not None and ts_event_ns < self.last_ts_ns:
-            raise ValueError(f"timestamp reversal at trade_id {trade_id}")
+            raise ArchiveOrderingError(f"timestamp reversal at trade_id {trade_id}")
         maker = maker_text == "true"
         canonical = (
             f"{self.symbol}|{trade_id}|{price_text}|{quantity_text}|{quote_text}|"
@@ -321,7 +326,62 @@ def _assert_no_conflicting_trade_ids(path: Path) -> None:
             previous_line = line
 
 
-def process_archive(
+def _process_archive_streaming(
+    archive: Path,
+    output_root: Path,
+    symbol: Symbol,
+    *,
+    selected_dates: set[date] | None = None,
+) -> list[dict[str, object]]:
+    if output_root.exists():
+        raise FileExistsError(output_root)
+    output_root.mkdir(parents=True)
+    entries: list[dict[str, object]] = []
+    writer: PartitionWriter | None = None
+    current_date: date | None = None
+    try:
+        with zipfile.ZipFile(archive) as bundle:
+            members = [name for name in bundle.namelist() if name.lower().endswith(".csv")]
+            if len(members) != 1:
+                raise ValueError("archive must contain exactly one CSV")
+            with bundle.open(members[0]) as raw_stream:
+                rows = csv.reader(io.TextIOWrapper(raw_stream, encoding="utf-8", newline=""))
+                for values in rows:
+                    if not values or not values[0].strip().lstrip("-").isdigit():
+                        continue
+                    timestamp_ms = int(values[4])
+                    row_date = datetime.fromtimestamp(timestamp_ms / 1000, tz=UTC).date()
+                    if not (TARGET_START <= row_date < TARGET_END):
+                        continue
+                    if selected_dates is not None and row_date not in selected_dates:
+                        continue
+                    if current_date != row_date:
+                        if current_date is not None and row_date < current_date:
+                            raise ArchiveOrderingError("archive date reversal")
+                        if writer is not None:
+                            entry = writer.close()
+                            entry["ordering_mode"] = "SOURCE_ORDER"
+                            entries.append(entry)
+                        writer = PartitionWriter(output_root, symbol, row_date)
+                        current_date = row_date
+                    assert writer is not None
+                    writer.append(values, row_date, timestamp_ms)
+        if writer is not None:
+            entry = writer.close()
+            entry["ordering_mode"] = "SOURCE_ORDER"
+            entries.append(entry)
+        if not entries:
+            raise ValueError("archive produced no target rows")
+        return entries
+    except Exception:
+        if writer is not None:
+            with suppress(Exception):
+                writer.writer.close()
+        shutil.rmtree(output_root, ignore_errors=True)
+        raise
+
+
+def _process_archive_sorted(
     archive: Path,
     output_root: Path,
     symbol: Symbol,
@@ -450,6 +510,7 @@ def process_archive(
             entry["source_timestamp_reversal_count"] = source_reversals[partition_date]["timestamp"]
             entry["source_trade_id_reversal_count"] = source_reversals[partition_date]["trade_id"]
             entry["archive_date_reversal_count"] = date_reversal_count
+            entry["ordering_mode"] = "EXTERNAL_STABLE_SORT"
             entry["archive_interleaved_dates"] = [
                 value.isoformat() for value in sorted(interleaved_dates)
             ]
@@ -467,6 +528,29 @@ def process_archive(
                 spool.close()
         shutil.rmtree(output_root, ignore_errors=True)
         raise
+
+
+def process_archive(
+    archive: Path,
+    output_root: Path,
+    symbol: Symbol,
+    *,
+    selected_dates: set[date] | None = None,
+) -> list[dict[str, object]]:
+    try:
+        return _process_archive_streaming(
+            archive,
+            output_root,
+            symbol,
+            selected_dates=selected_dates,
+        )
+    except ArchiveOrderingError:
+        return _process_archive_sorted(
+            archive,
+            output_root,
+            symbol,
+            selected_dates=selected_dates,
+        )
 
 
 def expected_dates() -> set[str]:
