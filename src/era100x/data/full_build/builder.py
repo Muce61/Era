@@ -9,7 +9,7 @@ import shutil
 import stat
 import time
 import zipfile
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -427,32 +427,35 @@ class FullBuild:
             for symbol in SYMBOLS
         }
         with ProcessPoolExecutor(max_workers=len(SYMBOLS)) as executor:
-            while any(pending_by_symbol.values()):
+            active: dict[Future[tuple[str, list[dict[str, object]]]], Symbol] = {}
+
+            def submit_next(symbol: Symbol) -> None:
+                if not pending_by_symbol[symbol]:
+                    return
                 self.assert_disk()
-                futures = []
-                for symbol in SYMBOLS:
-                    if not pending_by_symbol[symbol]:
-                        continue
-                    item = pending_by_symbol[symbol].pop(0)
-                    futures.append(
-                        (
-                            symbol,
-                            executor.submit(
-                                build_one_archive,
-                                str(self.work_root),
-                                self.run_id,
-                                item[0],
-                                item[1],
-                                item[2],
-                            ),
-                        )
-                    )
-                for symbol, future in futures:
+                item = pending_by_symbol[symbol].pop(0)
+                future = executor.submit(
+                    build_one_archive,
+                    str(self.work_root),
+                    self.run_id,
+                    item[0],
+                    item[1],
+                    item[2],
+                )
+                active[future] = symbol
+
+            for symbol in SYMBOLS:
+                submit_next(symbol)
+            while active:
+                done, _ = wait(active, return_when=FIRST_COMPLETED)
+                for future in done:
+                    symbol = active.pop(future)
                     key, entries = future.result()
                     checkpoint["symbols"][symbol]["entries"].extend(entries)
                     checkpoint["completed_archives"].append(key)
                     completed.add(key)
                     atomic_json(self.checkpoint_path, checkpoint)
+                    submit_next(symbol)
         self._finalize(checkpoint)
         return checkpoint
 

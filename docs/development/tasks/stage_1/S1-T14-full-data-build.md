@@ -55,3 +55,4 @@ BTC/ETH完整catalog、quality report、coverage/gap表、checksums、manifest�
 - 2026-07-12：v1.0，新增全量数据执行与重现门；状态DRAFT。
 - 2026-07-13：v1.1，人工批准全量编排、流式解析、checkpoint/manifest及测试扩围；状态IN_PROGRESS。
 - 2026-07-13：v1.2，人工批准修复官方归档完全重复处理并进行受控提速；冲突重复仍为硬失败。旧v1.1 run因代码变更标记INVALIDATED，raw归档继续按checksum复用，staging不得混用。
+- 2026-07-13：v1.2预运行完成2/162归档后发现首版双worker采用月度锁步等待，已标记该预运行INVALIDATED；调度修正为每个symbol独立连续推进，逻辑契约和版本号不变。
