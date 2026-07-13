@@ -9,6 +9,7 @@ import shutil
 import stat
 import time
 import zipfile
+from concurrent.futures import ProcessPoolExecutor
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -173,27 +174,41 @@ class PartitionWriter:
         self.last_ts_ns: int | None = None
         self.gap_count = 0
         self.gap_examples: list[str] = []
+        self.input_rows = 0
+        self.duplicate_exact_count = 0
+        self.last_signature: tuple[object, ...] | None = None
+        self.hash_batch = bytearray()
 
-    def append(self, values: list[str]) -> None:
+    def append(self, values: list[str], row_date: date, timestamp_ms: int) -> None:
         if len(values) != 6:
             raise ValueError(f"unexpected Trades column count: {len(values)}")
+        self.input_rows += 1
         trade_id = int(values[0])
         price, price_text = canonical_decimal(values[1])
         quantity, quantity_text = canonical_decimal(values[2])
         quote_quantity, quote_text = canonical_decimal(values[3])
-        timestamp_ms = int(values[4])
         maker_text = values[5].strip().lower()
         if price <= 0 or quantity <= 0 or quote_quantity < 0:
             raise ValueError("trade price/quantity must be positive")
         if maker_text not in {"true", "false"}:
             raise ValueError(f"invalid isBuyerMaker: {values[5]}")
-        event_date = datetime.fromtimestamp(timestamp_ms / 1000, tz=UTC).date()
-        if event_date != self.partition_date:
-            raise ValueError(f"trade falls outside partition date: {event_date}")
+        if row_date != self.partition_date:
+            raise ValueError(f"trade falls outside partition date: {row_date}")
         ts_event_ns = timestamp_ms * 1_000_000
+        signature = (
+            trade_id,
+            price_text,
+            quantity_text,
+            quote_text,
+            ts_event_ns,
+            maker_text,
+        )
         if self.last_trade_id is not None:
             if trade_id == self.last_trade_id:
-                raise ValueError(f"duplicate trade_id: {trade_id}")
+                if signature == self.last_signature:
+                    self.duplicate_exact_count += 1
+                    return
+                raise ValueError(f"conflicting duplicate trade_id: {trade_id}")
             if trade_id < self.last_trade_id:
                 raise ValueError(f"trade_id reversal: {trade_id}")
             if trade_id > self.last_trade_id + 1:
@@ -207,7 +222,7 @@ class PartitionWriter:
             f"{self.symbol}|{trade_id}|{price_text}|{quantity_text}|{quote_text}|"
             f"{ts_event_ns}|{maker_text}|{'SELL' if maker else 'BUY'}\n"
         ).encode()
-        self.logical_hash.update(canonical)
+        self.hash_batch.extend(canonical)
         self.batch.append(
             {
                 "instrument": self.symbol,
@@ -223,12 +238,15 @@ class PartitionWriter:
         self.first_trade_id = trade_id if self.first_trade_id is None else self.first_trade_id
         self.last_trade_id = trade_id
         self.last_ts_ns = ts_event_ns
+        self.last_signature = signature
         self.rows += 1
         if len(self.batch) >= 100_000:
             self.flush()
 
     def flush(self) -> None:
         if self.batch:
+            self.logical_hash.update(self.hash_batch)
+            self.hash_batch.clear()
             self.writer.write_table(pa.Table.from_pylist(self.batch, schema=ARROW_SCHEMA))
             self.batch.clear()
 
@@ -242,6 +260,8 @@ class PartitionWriter:
             "date": self.partition_date.isoformat(),
             "relative_path": str(self.directory.name + "/" + self.path.name),
             "rows": self.rows,
+            "input_rows": self.input_rows,
+            "duplicate_exact_count": self.duplicate_exact_count,
             "first_trade_id": self.first_trade_id,
             "last_trade_id": self.last_trade_id,
             "last_ts_ns": self.last_ts_ns,
@@ -292,7 +312,7 @@ def process_archive(
                         writer = PartitionWriter(output_root, symbol, row_date)
                         current_date = row_date
                     assert writer is not None
-                    writer.append(values)
+                    writer.append(values, row_date, timestamp_ms)
         if writer is not None:
             entries.append(writer.close())
         if not entries:
@@ -308,6 +328,50 @@ def process_archive(
 def expected_dates() -> set[str]:
     days = (TARGET_END - TARGET_START).days
     return {(TARGET_START + timedelta(days=offset)).isoformat() for offset in range(days)}
+
+
+def build_one_archive(
+    work_root_text: str,
+    run_id: str,
+    symbol: Symbol,
+    period: str,
+    frequency: Frequency,
+) -> tuple[str, list[dict[str, object]]]:
+    """Download, validate and build one immutable archive in an isolated path."""
+    work_root = Path(work_root_text)
+    key = f"{symbol}/{frequency}/{period}"
+    url = archive_url(symbol, period, frequency)
+    filename = url.rsplit("/", 1)[-1]
+    checksum_text = fetch_text(url + ".CHECKSUM")
+    expected = parse_checksum(checksum_text, filename)
+    raw_dir = work_root / "raw/trades" / symbol / frequency
+    checksum_path = raw_dir / (filename + ".CHECKSUM")
+    checksum_path.parent.mkdir(parents=True, exist_ok=True)
+    if checksum_path.exists() and checksum_path.read_text() != checksum_text:
+        raise FileExistsError(f"immutable checksum sidecar conflict: {checksum_path}")
+    if not checksum_path.exists():
+        checksum_path.write_text(checksum_text)
+        os.chmod(checksum_path, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+    archive = download_archive(url, raw_dir / filename, expected)
+    archive_root = work_root / "staging" / run_id / symbol / f"archive={period}"
+    if archive_root.exists():
+        archive_summary = json.loads((archive_root / "archive.json").read_text())
+        return key, cast(list[dict[str, object]], archive_summary["entries"])
+    temporary = archive_root.with_name(archive_root.name + ".tmp")
+    shutil.rmtree(temporary, ignore_errors=True)
+    entries = process_archive(archive, temporary, symbol)
+    atomic_json(
+        temporary / "archive.json",
+        {
+            "archive": key,
+            "url": url,
+            "official_sha256": expected,
+            "archive_bytes": archive.stat().st_size,
+            "entries": entries,
+        },
+    )
+    os.replace(temporary, archive_root)
+    return key, entries
 
 
 class FullBuild:
@@ -354,47 +418,41 @@ class FullBuild:
     def run(self) -> dict[str, Any]:
         checkpoint = self.load_or_create()
         completed = set(checkpoint["completed_archives"])
-        for symbol, period, frequency in archive_inventory():
-            key = f"{symbol}/{frequency}/{period}"
-            if key in completed:
-                continue
-            self.assert_disk()
-            url = archive_url(symbol, period, frequency)
-            filename = url.rsplit("/", 1)[-1]
-            checksum_text = fetch_text(url + ".CHECKSUM")
-            expected = parse_checksum(checksum_text, filename)
-            raw_dir = self.work_root / "raw/trades" / symbol / frequency
-            checksum_path = raw_dir / (filename + ".CHECKSUM")
-            checksum_path.parent.mkdir(parents=True, exist_ok=True)
-            if checksum_path.exists() and checksum_path.read_text() != checksum_text:
-                raise FileExistsError(f"immutable checksum sidecar conflict: {checksum_path}")
-            if not checksum_path.exists():
-                checksum_path.write_text(checksum_text)
-                os.chmod(checksum_path, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
-            archive = download_archive(url, raw_dir / filename, expected)
-            archive_root = self.work_root / "staging" / self.run_id / symbol / f"archive={period}"
-            if archive_root.exists():
-                archive_summary = json.loads((archive_root / "archive.json").read_text())
-                entries = archive_summary["entries"]
-            else:
-                temporary = archive_root.with_name(archive_root.name + ".tmp")
-                shutil.rmtree(temporary, ignore_errors=True)
-                entries = process_archive(archive, temporary, symbol)
-                atomic_json(
-                    temporary / "archive.json",
-                    {
-                        "archive": key,
-                        "url": url,
-                        "official_sha256": expected,
-                        "archive_bytes": archive.stat().st_size,
-                        "entries": entries,
-                    },
-                )
-                os.replace(temporary, archive_root)
-            checkpoint["symbols"][symbol]["entries"].extend(entries)
-            checkpoint["completed_archives"].append(key)
-            atomic_json(self.checkpoint_path, checkpoint)
-            completed.add(key)
+        pending_by_symbol = {
+            symbol: [
+                item
+                for item in archive_inventory()
+                if item[0] == symbol and f"{item[0]}/{item[2]}/{item[1]}" not in completed
+            ]
+            for symbol in SYMBOLS
+        }
+        with ProcessPoolExecutor(max_workers=len(SYMBOLS)) as executor:
+            while any(pending_by_symbol.values()):
+                self.assert_disk()
+                futures = []
+                for symbol in SYMBOLS:
+                    if not pending_by_symbol[symbol]:
+                        continue
+                    item = pending_by_symbol[symbol].pop(0)
+                    futures.append(
+                        (
+                            symbol,
+                            executor.submit(
+                                build_one_archive,
+                                str(self.work_root),
+                                self.run_id,
+                                item[0],
+                                item[1],
+                                item[2],
+                            ),
+                        )
+                    )
+                for symbol, future in futures:
+                    key, entries = future.result()
+                    checkpoint["symbols"][symbol]["entries"].extend(entries)
+                    checkpoint["completed_archives"].append(key)
+                    completed.add(key)
+                    atomic_json(self.checkpoint_path, checkpoint)
         self._finalize(checkpoint)
         return checkpoint
 
@@ -427,6 +485,10 @@ class FullBuild:
                     "date_start": min(dates),
                     "date_end_inclusive": max(dates),
                     "rows": sum(int(entry["rows"]) for entry in entries),
+                    "input_rows": sum(int(entry["input_rows"]) for entry in entries),
+                    "duplicate_exact_count": sum(
+                        int(entry["duplicate_exact_count"]) for entry in entries
+                    ),
                     "partitions": len(entries),
                     "logical_data_hash": logical.hexdigest(),
                     "count_outlier_review": outliers,
@@ -466,6 +528,10 @@ class FullBuild:
                 "symbols": {
                     symbol: {
                         "rows": checkpoint["symbols"][symbol]["rows"],
+                        "input_rows": checkpoint["symbols"][symbol]["input_rows"],
+                        "duplicate_exact_count": checkpoint["symbols"][symbol][
+                            "duplicate_exact_count"
+                        ],
                         "partitions": checkpoint["symbols"][symbol]["partitions"],
                         "count_outlier_review": checkpoint["symbols"][symbol][
                             "count_outlier_review"

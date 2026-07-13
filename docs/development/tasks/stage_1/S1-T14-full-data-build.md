@@ -2,14 +2,14 @@
 
 ## Metadata
 - task_id: S1-T14
-- task_version: 1.1
+- task_version: 1.2
 - status: IN_PROGRESS
 - stage_id: S1
 - stage_plan_version: 1.0
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: S1-T13 PASS and explicit full-data execution approval
-- supersedes: task_version 1.0
+- supersedes: task_version 1.1
 - approved_by: Muce
 - approved_at: 2026-07-13
 
@@ -26,7 +26,7 @@ T13 PASS；用户明确批准网络/路径/区间；磁盘充足；输入只读�
 ## 6. 禁止事项
 账户API/API Key、Quote/Mark/L2、事件研究、覆盖旧run、删除源数据或自动扩展区间。
 ## 7. 允许修改路径
-批准的外置工作根、`src/era100x/data/full_build/`、`tests/data/full_build/`、`scripts/run_stage1_full_build.py`、轻量Manifest/Catalog摘要、Task Validation/Traceability。
+批准的外置工作根、`src/era100x/data/full_build/`、`tests/data/full_build/`、`scripts/run_stage1_full_build.py`、轻量Manifest/Catalog摘要、Task Validation/Traceability。v1.2允许完全重复的可审计确定性去重、BTC/ETH双worker隔离并行与不改变逻辑hash语义的热路径优化。
 ## 8. 禁止修改路径
 除第7节明确扩围路径外的`src/**`、`tests/**`、`docs/spec/**`；不得修改S1-T01～T13既有契约语义。
 ## 9. 输入
@@ -54,3 +54,4 @@ BTC/ETH完整catalog、quality report、coverage/gap表、checksums、manifest�
 ## 20. 变更历史
 - 2026-07-12：v1.0，新增全量数据执行与重现门；状态DRAFT。
 - 2026-07-13：v1.1，人工批准全量编排、流式解析、checkpoint/manifest及测试扩围；状态IN_PROGRESS。
+- 2026-07-13：v1.2，人工批准修复官方归档完全重复处理并进行受控提速；冲突重复仍为硬失败。旧v1.1 run因代码变更标记INVALIDATED，raw归档继续按checksum复用，staging不得混用。

@@ -53,8 +53,23 @@ def test_streaming_archive_splits_dates_and_is_deterministic(tmp_path: Path) -> 
     assert table.num_rows == 2
 
 
-def test_duplicate_conflict_and_wrong_date_do_not_leave_output(tmp_path: Path) -> None:
-    duplicate = make_zip(
+def test_exact_duplicates_are_audited_and_deterministically_removed(tmp_path: Path) -> None:
+    exact = make_zip(
+        tmp_path / "exact.zip",
+        [
+            "2126346263,39915.9,0.55,21953.74,1649980800061,true",
+            "2126346263,39915.9,0.55,21953.74,1649980800061,true",
+            "2126346263,39915.9,0.55,21953.74,1649980800061,true",
+        ],
+    )
+    entries = process_archive(exact, tmp_path / "exact-output", "BTCUSDT")
+    assert entries[0]["input_rows"] == 3
+    assert entries[0]["rows"] == 1
+    assert entries[0]["duplicate_exact_count"] == 2
+
+
+def test_conflicting_duplicate_does_not_leave_output(tmp_path: Path) -> None:
+    conflict = make_zip(
         tmp_path / "duplicate.zip",
         [
             "1,100,1,100,1577836800000,true",
@@ -62,8 +77,8 @@ def test_duplicate_conflict_and_wrong_date_do_not_leave_output(tmp_path: Path) -
         ],
     )
     output = tmp_path / "output"
-    with pytest.raises(ValueError, match="duplicate"):
-        process_archive(duplicate, output, "BTCUSDT")
+    with pytest.raises(ValueError, match="conflicting duplicate"):
+        process_archive(conflict, output, "BTCUSDT")
     assert not output.exists()
 
 
