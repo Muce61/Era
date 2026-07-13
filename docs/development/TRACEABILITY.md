@@ -69,9 +69,9 @@ S0-T01 carries no business `rule_id` and does not mark any FROZEN rule or INV as
 
 Stage 0 baseline validity: **VALID / PASSED**. Any later change to its code, configuration contracts, dependency lock, traceability catalogue, or validation evidence requires explicit invalidation or reopening under `CHANGE_POLICY.md`.
 
-## Stage 1 v1.0 Planned Coverage
+## Stage 1 v1.0 Execution Coverage
 
-Stage 1 remains DRAFT. Planned implementation lives under `src/era100x/data/` with tests under `tests/data/`; adding the approved `data` top-level package must update, not remove, the Stage 0 explicit package allow-list regression. No row below claims implementation.
+Stage 1 is `IN_PROGRESS` under approved Plan v1.0. S1-T01～S1-T13 are PASSED; S1-T14 v1.1 is the explicitly approved full-data run and remains `IN_PROGRESS` until both symbols are published and deterministic verification passes. S1-T15 remains DRAFT. Implementation lives under `src/era100x/data/` with tests under `tests/data/`; the approved `data` top-level package remains covered by the Stage 0 explicit package allow-list regression.
 
 | Requirement | Planned Tasks | Planned Evidence | State |
 | --- | --- | --- | --- |
@@ -97,7 +97,8 @@ Stage 1 remains DRAFT. Planned implementation lives under `src/era100x/data/` wi
 | S1-T11 delivered evidence | S1-T11 | `src/era100x/data/splits/`, `tests/data/splits/` | PASSED |
 | Small-sample capability acceptance | S1-T12 | fixture quality report marked NOT_RUN_FULL_DATA | PLANNED |
 | S1-T12 delivered evidence | S1-T12 | `src/era100x/data/reporting/`, `tests/data/reporting/`, sample report CLI | PASSED |
-| Full-data preflight and build | S1-T13, S1-T14 | approved paths/source/coverage, full catalog, repeat-build hash | T13_PASSED_T14_DRAFT |
+| Full-data preflight and build | S1-T13, S1-T14 | approved paths/source/coverage, resumable builder, full catalog, repeat-build hash | T13_PASSED_T14_IN_PROGRESS |
+| S1-T14 builder implementation | S1-T14 | `src/era100x/data/full_build/`, `scripts/run_stage1_full_build.py`, `tests/data/full_build/` | IN_PROGRESS_NOT_VALIDATED |
 | S1-T13 actual preflight | S1-T13 | 162/162 official archives; write probe; 20% disk safety calculation | PASSED |
 | Stage 1 gate | S1-T15 | Stage 1 validation; BTC/ETH separate conclusions | PLANNED |
 
