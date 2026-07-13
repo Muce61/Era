@@ -74,12 +74,14 @@ def main() -> int:
     p.add_argument("--contract-root", type=Path, required=True)
     p.add_argument("--work-root", type=Path, required=True)
     a = p.parse_args()
-    if a.work_root.exists():
-        raise FileExistsError("work root must not exist before passing preflight")
+    if not a.work_root.is_dir():
+        raise FileNotFoundError("approved work root must exist")
+    if any(a.work_root.iterdir()):
+        raise FileExistsError("approved work root must be empty before passing preflight")
     with ThreadPoolExecutor(max_workers=12) as pool:
         results = list(pool.map(head_size, periods()))
     sizes = [size for _, size in results if size is not None]
-    disk = shutil.disk_usage(a.work_root.parent)
+    disk = shutil.disk_usage(a.work_root)
     contract_bytes = sum(
         p.stat().st_size
         for s in ("BTCUSDT", "ETHUSDT")

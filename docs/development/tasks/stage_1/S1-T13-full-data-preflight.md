@@ -2,14 +2,14 @@
 
 ## Metadata
 - task_id: S1-T13
-- task_version: 1.0
-- status: BLOCKED
+- task_version: 1.1
+- status: PASSED
 - stage_id: S1
 - stage_plan_version: 1.0
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: S1-T01, S1-T12 PASS; OQ-S1-001/002 RESOLVED
-- supersedes: NONE
+- supersedes: task_version 1.0
 - approved_by: Muce
 - approved_at: 2026-07-12
 
@@ -48,7 +48,7 @@ fixture验证空间不足、同根输入输出、未授权路径、已有run_id�
 ## 17. 开放问题
 OQ未解决则本Task BLOCKED，不得条件通过。
 
-- OQ-S1-003：当前磁盘未满足预计峰值×1.20安全余量；等待人工扩容或批准新的存储/保留设计。
+- OQ-S1-003：RESOLVED。外置工作根写探针、空间门、路径/恢复/保留方案均通过。
 ## 18. 变化触发器
 路径、来源、区间、空间或run命令变化。
 ## 19. 失效条件
@@ -56,3 +56,5 @@ OQ未解决则本Task BLOCKED，不得条件通过。
 ## 20. 变更历史
 - 2026-07-12：v1.0，新增全量运行前人工门；状态DRAFT。
 - 2026-07-12：真实预检发现约348.67GiB安全空间缺口；状态BLOCKED，未创建工作根。
+- 2026-07-13：v1.1，人工批准外置工作根；恢复IN_PROGRESS，仅重跑T13。
+- 2026-07-13：外盘预检PASS；状态PASSED，未启动T14。

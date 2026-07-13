@@ -1,0 +1,16 @@
+contract_price_root: /Users/muce/1m_data/klines_data_usdm_1s_agg
+work_root: /Volumes/FuckingLife/era100x_stage1
+superseded_work_roots:
+  - /Users/muce/1m_data/era100x_stage1
+layout:
+  raw_trades: raw/trades
+  staging: staging
+  published: published
+  catalog: catalog
+  temporary: tmp
+retention:
+  contract_price_read_only: true
+  raw_archives_immutable: true
+  published_runs_immutable: true
+  automatic_cleanup: false
+disk_safety_multiplier: 1.20

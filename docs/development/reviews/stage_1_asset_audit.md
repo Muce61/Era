@@ -6,4 +6,4 @@
 - CSV uses decimal text and millisecond `ts_sec`; Parquet uses timestamp[ns] and float64 OHLCV. Parquet-only evidence must be marked `SOURCE_FLOAT64` and converted through stable string representation.
 - Each daily file contains 86,400 rows in inspected boundary/overlap samples. Zero-volume seconds exist and must not be mistaken for missing executable quotes.
 - Total BTC directory size is approximately 9.1 GiB; ETH approximately 9.0 GiB. The broader root contains unrelated instruments and must not be scanned as Stage 1 input beyond these two approved subdirectories.
-- Writable root `/Users/muce/1m_data/era100x_stage1` did not exist at planning audit time. Creation is deferred until a passing full-data preflight.
+- Current writable root is `/Volumes/FuckingLife/era100x_stage1` (approved 2026-07-13). `/Users/muce/1m_data/era100x_stage1` is SUPERSEDED and must not be used as a write target.
