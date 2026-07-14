@@ -5,12 +5,19 @@ import hashlib
 import io
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
 import time
 import zipfile
-from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
+from concurrent.futures import (
+    FIRST_COMPLETED,
+    Future,
+    ProcessPoolExecutor,
+    ThreadPoolExecutor,
+    wait,
+)
 from contextlib import suppress
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
@@ -32,6 +39,7 @@ TARGET_START = date(2020, 1, 1)
 TARGET_END = date(2026, 7, 4)
 DETERMINISM_DATES = {date(2020, 1, 1), date(2023, 4, 2), date(2026, 7, 3)}
 MINIMUM_FREE_BYTES = 585_983_717_541
+DOWNLOAD_WORKERS = 6
 UNAVAILABLE_FIELDS = (
     "ts_recv",
     "bid",
@@ -146,15 +154,32 @@ def download_archive(url: str, destination: Path, expected_sha256: str) -> Path:
             with urlopen(request, timeout=60) as response:
                 status_code = getattr(response, "status", 200)
                 if offset and status_code != 206:
-                    partial.unlink(missing_ok=True)
-                    raise OSError("server refused Range resume; partial reset")
+                    raise OSError("server refused Range resume; partial preserved")
+                content_range = response.headers.get("Content-Range")
+                content_length = response.headers.get("Content-Length")
+                expected_size: int | None = None
+                if content_range:
+                    match = re.fullmatch(r"bytes \d+-\d+/(\d+)", content_range.strip())
+                    if match:
+                        expected_size = int(match.group(1))
+                elif content_length:
+                    expected_size = offset + int(content_length)
                 with partial.open("ab" if offset else "wb") as output:
                     for block in iter(lambda: response.read(4 * 1024 * 1024), b""):
                         output.write(block)
+            if expected_size is not None and partial.stat().st_size < expected_size:
+                raise OSError(
+                    "truncated response; partial preserved for Range resume: "
+                    f"{partial.stat().st_size}/{expected_size}"
+                )
+            if expected_size is not None and partial.stat().st_size > expected_size:
+                partial_size = partial.stat().st_size
+                raise ValueError(
+                    f"partial exceeds official object length: {partial_size}/{expected_size}"
+                )
             actual = sha256_file(partial)
             if actual != expected_sha256:
-                partial.unlink(missing_ok=True)
-                raise ValueError(f"archive checksum mismatch: {actual}")
+                raise ValueError(f"archive checksum mismatch; partial preserved: {actual}")
             os.chmod(partial, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
             os.replace(partial, destination)
             return destination
@@ -163,6 +188,8 @@ def download_archive(url: str, destination: Path, expected_sha256: str) -> Path:
                 raise FileNotFoundError(url) from exc
             if attempt == 7:
                 raise
+        except ValueError:
+            raise
         except Exception:
             if attempt == 7:
                 raise
@@ -746,14 +773,13 @@ def expected_dates() -> set[str]:
     return {(TARGET_START + timedelta(days=offset)).isoformat() for offset in range(days)}
 
 
-def build_one_archive(
+def prepare_archive(
     work_root_text: str,
-    run_id: str,
     symbol: Symbol,
     period: str,
     frequency: Frequency,
-) -> tuple[str, list[dict[str, object]]]:
-    """Download, validate and build one immutable archive in an isolated path."""
+) -> tuple[str, str]:
+    """Prefetch one immutable official archive and return its key and checksum."""
     work_root = Path(work_root_text)
     key = f"{symbol}/{frequency}/{period}"
     url = archive_url(symbol, period, frequency)
@@ -768,7 +794,26 @@ def build_one_archive(
     if not checksum_path.exists():
         checksum_path.write_text(checksum_text)
         os.chmod(checksum_path, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
-    archive = download_archive(url, raw_dir / filename, expected)
+    download_archive(url, raw_dir / filename, expected)
+    return key, expected
+
+
+def build_prepared_archive(
+    work_root_text: str,
+    run_id: str,
+    symbol: Symbol,
+    period: str,
+    frequency: Frequency,
+    expected: str,
+) -> tuple[str, list[dict[str, object]]]:
+    """Build one previously checksummed raw archive in an isolated staging path."""
+    work_root = Path(work_root_text)
+    key = f"{symbol}/{frequency}/{period}"
+    url = archive_url(symbol, period, frequency)
+    filename = url.rsplit("/", 1)[-1]
+    archive = work_root / "raw/trades" / symbol / frequency / filename
+    if not archive.exists():
+        raise FileNotFoundError(f"prefetched archive missing: {archive}")
     archive_root = work_root / "staging" / run_id / symbol / f"archive={period}"
     if archive_root.exists():
         archive_summary = json.loads((archive_root / "archive.json").read_text())
@@ -798,6 +843,31 @@ def build_one_archive(
     return key, entries
 
 
+def build_one_archive(
+    work_root_text: str,
+    run_id: str,
+    symbol: Symbol,
+    period: str,
+    frequency: Frequency,
+) -> tuple[str, list[dict[str, object]]]:
+    """Compatibility wrapper for one-shot download and build."""
+    _, expected = prepare_archive(work_root_text, symbol, period, frequency)
+    return build_prepared_archive(work_root_text, run_id, symbol, period, frequency, expected)
+
+
+def round_robin_inventory(
+    pending_by_symbol: dict[Symbol, list[tuple[Symbol, str, Frequency]]],
+) -> list[tuple[Symbol, str, Frequency]]:
+    """Interleave BTC and ETH downloads without changing per-symbol chronology."""
+    ordered: list[tuple[Symbol, str, Frequency]] = []
+    longest = max((len(items) for items in pending_by_symbol.values()), default=0)
+    for index in range(longest):
+        for symbol in SYMBOLS:
+            if index < len(pending_by_symbol[symbol]):
+                ordered.append(pending_by_symbol[symbol][index])
+    return ordered
+
+
 class FullBuild:
     def __init__(self, work_root: Path, run_id: str, code_commit: str, config_hash: str) -> None:
         self.work_root = work_root
@@ -817,6 +887,8 @@ class FullBuild:
             "status": "IN_PROGRESS",
             "created_at": datetime.now(tz=UTC).isoformat(),
             "completed_archives": [],
+            "prefetched_archives": [],
+            "download_workers": DOWNLOAD_WORKERS,
             "symbols": {symbol: {"status": "PENDING", "entries": []} for symbol in SYMBOLS},
             "errors": [],
         }
@@ -829,6 +901,8 @@ class FullBuild:
                 or checkpoint["config_hash"] != self.config_hash
             ):
                 raise ValueError("run identity does not match code/config")
+            checkpoint.setdefault("prefetched_archives", [])
+            checkpoint.setdefault("download_workers", DOWNLOAD_WORKERS)
             return checkpoint
         checkpoint = self.initial_checkpoint()
         atomic_json(self.checkpoint_path, checkpoint)
@@ -850,36 +924,120 @@ class FullBuild:
             ]
             for symbol in SYMBOLS
         }
-        with ProcessPoolExecutor(max_workers=len(SYMBOLS)) as executor:
-            active: dict[Future[tuple[str, list[dict[str, object]]]], Symbol] = {}
+        download_queue = iter(round_robin_inventory(pending_by_symbol))
+        ready: dict[str, str] = {}
+        prefetched = set(cast(list[str], checkpoint["prefetched_archives"]))
+        with (
+            ThreadPoolExecutor(
+                max_workers=DOWNLOAD_WORKERS, thread_name_prefix="stage1-download"
+            ) as download_executor,
+            ProcessPoolExecutor(max_workers=len(SYMBOLS)) as build_executor,
+        ):
+            active_downloads: dict[Future[tuple[str, str]], tuple[Symbol, str, Frequency]] = {}
+            active_builds: dict[
+                Future[tuple[str, list[dict[str, object]]]],
+                tuple[Symbol, str, Frequency],
+            ] = {}
+            download_exhausted = False
 
-            def submit_next(symbol: Symbol) -> None:
-                if not pending_by_symbol[symbol]:
-                    return
-                self.assert_disk()
-                item = pending_by_symbol[symbol].pop(0)
-                future = executor.submit(
-                    build_one_archive,
-                    str(self.work_root),
-                    self.run_id,
-                    item[0],
-                    item[1],
-                    item[2],
-                )
-                active[future] = symbol
+            def fill_download_pool() -> None:
+                nonlocal download_exhausted
+                while not download_exhausted and len(active_downloads) < DOWNLOAD_WORKERS:
+                    try:
+                        item = next(download_queue)
+                    except StopIteration:
+                        download_exhausted = True
+                        return
+                    self.assert_disk()
+                    future = download_executor.submit(
+                        prepare_archive,
+                        str(self.work_root),
+                        item[0],
+                        item[1],
+                        item[2],
+                    )
+                    active_downloads[future] = item
 
-            for symbol in SYMBOLS:
-                submit_next(symbol)
-            while active:
-                done, _ = wait(active, return_when=FIRST_COMPLETED)
+            def submit_ready_builds() -> None:
+                busy_symbols = {item[0] for item in active_builds.values()}
+                for symbol in SYMBOLS:
+                    if symbol in busy_symbols or not pending_by_symbol[symbol]:
+                        continue
+                    item = pending_by_symbol[symbol][0]
+                    key = f"{item[0]}/{item[2]}/{item[1]}"
+                    expected = ready.get(key)
+                    if expected is None:
+                        continue
+                    self.assert_disk()
+                    future = build_executor.submit(
+                        build_prepared_archive,
+                        str(self.work_root),
+                        self.run_id,
+                        item[0],
+                        item[1],
+                        item[2],
+                        expected,
+                    )
+                    active_builds[future] = item
+
+            def record_failure(kind: str, key: str, exc: BaseException) -> None:
+                checkpoint["last_error"] = {
+                    "at": datetime.now(tz=UTC).isoformat(),
+                    "kind": kind,
+                    "archive": key,
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+                checkpoint["errors"].append(checkpoint["last_error"])
+                atomic_json(self.checkpoint_path, checkpoint)
+
+            fill_download_pool()
+            while active_downloads or active_builds:
+                submit_ready_builds()
+                all_active: set[Future[Any]] = set(active_downloads) | set(active_builds)
+                if not all_active:
+                    raise RuntimeError("pipeline stalled with pending archives")
+                done, _ = wait(all_active, return_when=FIRST_COMPLETED)
                 for future in done:
-                    symbol = active.pop(future)
-                    key, entries = future.result()
-                    checkpoint["symbols"][symbol]["entries"].extend(entries)
-                    checkpoint["completed_archives"].append(key)
-                    completed.add(key)
-                    atomic_json(self.checkpoint_path, checkpoint)
-                    submit_next(symbol)
+                    if future in active_downloads:
+                        item = active_downloads.pop(cast(Future[tuple[str, str]], future))
+                        key = f"{item[0]}/{item[2]}/{item[1]}"
+                        try:
+                            prepared_key, expected = future.result()
+                        except BaseException as exc:
+                            record_failure("DOWNLOAD", key, exc)
+                            for download_pending in active_downloads:
+                                download_pending.cancel()
+                            for build_pending in active_builds:
+                                build_pending.cancel()
+                            raise
+                        ready[prepared_key] = expected
+                        if prepared_key not in prefetched:
+                            checkpoint["prefetched_archives"].append(prepared_key)
+                            prefetched.add(prepared_key)
+                            atomic_json(self.checkpoint_path, checkpoint)
+                    else:
+                        typed_future = cast(Future[tuple[str, list[dict[str, object]]]], future)
+                        item = active_builds.pop(typed_future)
+                        key = f"{item[0]}/{item[2]}/{item[1]}"
+                        try:
+                            built_key, entries = typed_future.result()
+                        except BaseException as exc:
+                            record_failure("BUILD", key, exc)
+                            for download_pending in active_downloads:
+                                download_pending.cancel()
+                            for build_pending in active_builds:
+                                build_pending.cancel()
+                            raise
+                        symbol = item[0]
+                        if built_key != key or pending_by_symbol[symbol][0] != item:
+                            raise RuntimeError("pipeline archive ordering invariant failed")
+                        pending_by_symbol[symbol].pop(0)
+                        ready.pop(built_key, None)
+                        checkpoint["symbols"][symbol]["entries"].extend(entries)
+                        checkpoint["completed_archives"].append(built_key)
+                        completed.add(built_key)
+                        atomic_json(self.checkpoint_path, checkpoint)
+                fill_download_pool()
         self._finalize(checkpoint)
         return checkpoint
 

@@ -98,7 +98,7 @@ Stage 1 is `IN_PROGRESS` under approved Plan v1.1 and CR-2026-001. S1-T02/T05/T0
 | Small-sample capability acceptance | S1-T12 | fixture quality report marked NOT_RUN_FULL_DATA | PLANNED |
 | S1-T12 v1.1 delivered evidence | S1-T12 | v2 identity/conflict gates plus existing report/null/split regression | PASSED_V2 |
 | Full-data preflight and build | S1-T13, S1-T14 | approved paths/source/coverage, resumable builder, full catalog, repeat-build hash | T13_PASSED_T14_IN_PROGRESS |
-| S1-T14 v1.5 builder implementation | S1-T14 | `stage1-trades-v2`, official conflict cross-validation, `src/era100x/data/full_build/`, `tests/data/full_build/` | IN_PROGRESS_PRIOR_134_OF_162_RUN_INVALIDATED |
+| S1-T14 v1.5 builder implementation | S1-T14 | `stage1-trades-v2`, official conflict cross-validation, six-worker immutable raw prefetch overlapped with two-symbol build workers, resumable `.part`, `src/era100x/data/full_build/`, `tests/data/full_build/` | IN_PROGRESS_PRIOR_134_OF_162_RUN_INVALIDATED_PIPELINE_TESTED_NOT_FULL_RUN |
 | S1-T13 actual preflight | S1-T13 | 162/162 official archives; write probe; 20% disk safety calculation | PASSED |
 | Stage 1 gate | S1-T15 | Stage 1 validation; BTC/ETH separate conclusions | PLANNED |
 
