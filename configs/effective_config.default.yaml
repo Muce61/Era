@@ -1,0 +1,8 @@
+manual_version: V1.3.4
+mode: research
+venue: BINANCE_USDM
+direction: LONG_ONLY
+margin_mode: ISOLATED
+position_mode: ONE_WAY
+max_leverage: 100
+# BASELINE and RESEARCH values are starting points, never claims of optimality.
