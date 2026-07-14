@@ -129,11 +129,14 @@ rules:
   planned_tasks:
   - S0-T10
   - S0-T04
-  - S2-T01
+  - S2-T09
+  - S2-T10
+  - S2-T21
+  - S2-T20
   implementation_paths:
-  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/, src/era100x/research/stage_2/reporting/event_explainer/ (PLANNED)
   test_paths:
-  - tests/stage_2/ (PLANNED); UT-EVT-011, FI-14
+  - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/, tests/research/stage_2/reporting/event_explainer/ (PLANNED); UT-EVT-011, FI-14
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   state: PLANNED
@@ -195,12 +198,15 @@ rules:
   - S1-T12
   - S1-T14
   - S1-T15
+  - S2-T21
   - S5-T01
   implementation_paths:
   - src/era100x/data/evidence/, tests/data/evidence/, artifacts/manifests/stage_1/ (PLANNED Stage 1 boundary)
+  - src/era100x/research/stage_2/reporting/event_explainer/ (PLANNED Stage 2 evidence visualization boundary)
   - src/forward/, tests/forward/, artifacts/manifests/ (PLANNED Stage 5 forward fields)
   test_paths:
   - tests/data/evidence/ (PLANNED); UT-DATA-013
+  - tests/research/stage_2/reporting/event_explainer/ (PLANNED historical field and illustration/evidence isolation regression)
   - tests/stage_5/ (PLANNED forward regression)
   validation_paths:
   - docs/development/validations/stage_5/ (PLANNED)
@@ -247,11 +253,15 @@ rules:
   - S1-T10
   - S1-T15
   - S2-T01
+  - S2-T07
+  - S2-T08
+  - S2-T21
+  - S2-T20
   implementation_paths:
   - src/era100x/data/readers/, src/era100x/data/aggregate/, tests/data/ (PLANNED Stage 1 input boundary)
-  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED Stage 2 behavior)
+  - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/gates/, src/era100x/research/stage_2/reporting/event_explainer/ (PLANNED Stage 2 behavior/report separation)
   test_paths:
-  - tests/stage_2/ (PLANNED); T-EVT-002
+  - tests/research/stage_2/contracts/, tests/research/stage_2/gates/ (PLANNED); T-EVT-002
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   state: PLANNED
@@ -557,11 +567,14 @@ rules:
   planned_stage: S2
   planned_tasks:
   - S0-T10
-  - S2-T15
+  - S2-T09
+  - S2-T10
+  - S2-T21
+  - S2-T20
   implementation_paths:
-  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/, src/era100x/research/stage_2/reporting/event_explainer/ (PLANNED)
   test_paths:
-  - tests/stage_2/ (PLANNED); FI-14
+  - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); FI-14
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   state: PLANNED
@@ -641,11 +654,14 @@ rules:
   planned_stage: S2
   planned_tasks:
   - S0-T10
-  - S2-T15
+  - S2-T09
+  - S2-T10
+  - S2-T21
+  - S2-T20
   implementation_paths:
-  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/, src/era100x/research/stage_2/reporting/event_explainer/ (PLANNED)
   test_paths:
-  - tests/stage_2/ (PLANNED); UT-EVT-011
+  - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); UT-EVT-011
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   state: PLANNED
@@ -669,11 +685,16 @@ rules:
   planned_stage: S2
   planned_tasks:
   - S0-T10
-  - S2-T15
+  - S2-T01
+  - S2-T07
+  - S2-T08
+  - S2-T10
+  - S2-T21
+  - S2-T20
   implementation_paths:
-  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/gates/, src/era100x/research/stage_2/pipelines/candidates/, src/era100x/research/stage_2/reporting/event_explainer/ (PLANNED)
   test_paths:
-  - tests/stage_2/ (PLANNED); UT-DATA-013
+  - tests/research/stage_2/ (PLANNED); UT-DATA-013
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   state: PLANNED
@@ -1104,10 +1125,12 @@ rules:
   planned_tasks:
   - S0-T08
   - S2-T01
+  - S2-T02
+  - S2-T03
   implementation_paths:
-  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/key_levels/ (PLANNED)
   test_paths:
-  - tests/stage_2/ (PLANNED)
+  - tests/research/stage_2/contracts/, tests/research/stage_2/key_levels/ (PLANNED)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   state: PLANNED
@@ -1118,10 +1141,14 @@ rules:
   planned_tasks:
   - S0-T08
   - S2-T01
+  - S2-T04
+  - S2-T05
+  - S2-T06
+  - S2-T09
   implementation_paths:
-  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/episodes/ (PLANNED)
   test_paths:
-  - tests/stage_2/ (PLANNED)
+  - tests/research/stage_2/contracts/, tests/research/stage_2/episodes/ (PLANNED)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   state: PLANNED
@@ -1132,10 +1159,13 @@ rules:
   planned_tasks:
   - S0-T08
   - S2-T01
+  - S2-T07
+  - S2-T09
+  - S2-T10
   implementation_paths:
-  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/gates/, src/era100x/research/stage_2/pipelines/candidates/ (PLANNED)
   test_paths:
-  - tests/stage_2/ (PLANNED)
+  - tests/research/stage_2/ (PLANNED)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   state: PLANNED

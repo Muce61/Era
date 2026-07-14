@@ -103,3 +103,26 @@ Stage 1 is `IN_PROGRESS` under approved Plan v1.1 and CR-2026-001. S1-T02/T05/T0
 | Stage 1 gate | S1-T15 | Stage 1 validation; BTC/ETH separate conclusions | PLANNED |
 
 `DATA-HISTORICAL-NO-FAKE-EXECUTION` is enforced at the Stage 1 historical boundary by S1-T02/T10/T12/T14 and remains planned for Stage 5 forward-field separation. `STRATEGY-V1-PRICE-ONLY-HISTORICAL` is enforced at the Stage 1 input/source boundary by S1-T03/T09/T10; event behavior remains Stage 2. This does not promote either later behavioral implementation to PASSED.
+
+## Stage 2 Plan v1.1 DRAFT Coverage
+
+Stage 2 remains `DRAFT / NOT_EXECUTED`. Plan v1.1 is a Trade Identity v2-aware, extensible research-planning artifact, not execution authority. It may consume only a future VALID Stage 1 published data baseline; current raw/staging/checkpoint/published-run state was not read or used as research evidence. All implementation/test paths below are PLANNED.
+
+| Requirement | Plan v1.1 Tasks | Planned implementation/tests | State |
+| --- | --- | --- | --- |
+| Stage 1 v2 baseline, ResearchSetup/ContextModel registry and CanonicalKeyLevel contract | S2-T01 | `contracts/`, `registry/` and corresponding conformance tests | PLANNED_BLOCKED_BY_STAGE1 |
+| Pre-registration before observed results | S2-T19 | manifests/configs plus append-only experiment ledger | PLANNED_BLOCKED_BY_OQ_S2_002 |
+| Three causal key-level sources and arbitration | S2-T02, S2-T03 | `key_levels/sources`, `key_levels/arbitration` | PLANNED |
+| Sweep → Reclaim → Hold and invalidation | S2-T04, S2-T05, S2-T06 | `episodes/sweep`, `reclaim`, `hold` | PLANNED |
+| MarketEpisode identity, consume and re-arm | S2-T09 | `episodes/identity`; FI-14, UT-EVT-011 | PLANNED |
+| V1_PRICE G0-G3 and separate V1_FLOW G4 | S2-T07, S2-T08 | `gates/price`, `gates/flow`; no G5/G6 | PLANNED |
+| Registry-driven full candidate generation; BTC/ETH, setup/context and variants separate | S2-T10 | candidate pipeline bound to approved registry and published manifest/hash | PLANNED_BLOCKED_BY_STAGE1 |
+| Historical path metrics and labels | S2-T11, S2-T12, S2-T13, S2-T14 | v2 ordering, MFE/MAE/time, first passage, AMBIGUOUS bounds | PLANNED |
+| Conditional baseline and placebo | S2-T15, S2-T16 | matched baseline/placebo with frozen relaxation and seeds | PLANNED_FULL_DATA |
+| Cluster ownership and cluster bootstrap CI | S2-T17, S2-T18 | BTC/ETH-separated clustering and cluster-level resampling | PLANNED_FULL_DATA |
+| Deterministic event explanation and historical evidence cards | S2-T21 | `reporting/event_explainer`; semantic SVG/PNG/sidecar, fixture/real mode isolation | PLANNED_FULL_DATA |
+| Stage 2 research gate | S2-T20 | Stage validation and human Go/No-Go; no automatic Stage 3 | PLANNED_FULL_DATA |
+
+Trade Identity v2 propagation is explicit: `(instrument, canonical_trade_id)` is the historical fact identity; `venue_trade_id` is only a venue attribute; ordering is `(ts_event_ns, venue_trade_id, canonical_trade_id)`; confirmed conflicting venue IDs remain separate facts and enter sensitivity/quality reporting. No Stage 2 task may deduplicate by venue ID or filter conflict-labelled facts without an approved L3 change.
+
+Research extensibility is bounded: only the V1.3.4 key-low sweep/reclaim/hold family is currently executable; preregistered G1 context models may be added through the registry without altering MarketEpisode consumption. New strategy families remain outside this Plan. S2-T21 may visualize only existing facts and research outputs; illustrative and historical evidence modes must never be confused.

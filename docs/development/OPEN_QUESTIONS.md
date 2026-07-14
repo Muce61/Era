@@ -24,6 +24,9 @@ These questions are inherited from V1.3.4 Appendix N. They do not block planning
 | OQ-S1-003 | 如何满足Stage 1全量构建磁盘安全门？ | RESOLVED | Stage 1 T13 | NONE | 2026-07-13人工批准常驻外盘工作根`/Volumes/FuckingLife/era100x_stage1`；真实写探针通过。20%空间门、不可变和保留策略不变；以T13 v1.1复验结果为准。 |
 | OQ-S1-004 | checksum有效的官方Trades月包跨日期交错后，同一UTC日期内部仍出现时间/Trade ID倒退；是否允许审计化外部排序？ | RESOLVED | Stage 1 T14 | NONE | 2026-07-13 Muce人工批准：按`(ts_event_ns, trade_id, canonical row)`磁盘外部稳定排序；排序前后行数、倒退计数、重复分类、输入hash和逻辑hash必须报告；冲突重复/非法值仍失败。无CR。 |
 | OQ-S1-005 | 官方ETHUSDT 2025-08归档中`venue_trade_id=6299136398`存在两条不同成交事实，如何处置？ | RESOLVED | Stage 1 T14 | NONE | 2026-07-14 Muce批准CR-2026-001/ADR-2026-001：两条官方事实全部保留，以canonical事实身份去重并携带冲突标签；月包/日包canonical集合一致才允许发布。月包SHA-256为`464bdf18378ff90fea7cc4e019436f22b954e74a172554aa4b300498142e5cfc`。 |
+| OQ-S2-001 | Stage 2大型候选、路径、标签和研究报告的外部可写根、不可变发布布局、保留策略与空间门是什么？ | OPEN | Stage 2 replanning | Stage 2 approval | 需Muce在Stage 2批准前指定；不得写入Stage 1工作根或Git仓库，不得自行沿用未批准路径。 |
+| OQ-S2-002 | Stage 2预注册的主标的、主假设、主标签、主匹配方案，以及U-007/U-008/U-009/U-011参数域与失败线是什么？ | OPEN | Stage 2 preregistration | S2-T19 and Stage 2 approval | 需Muce人工决定；Codex不得从已观察数据选择最有利设定。BTC/ETH仍必须分别研究，未选为primary者作为预注册secondary。 |
+| OQ-S2-003 | Stage 2事件说明是否需要类似带K线、步骤、门和研究问题的可视化图片？ | RESOLVED | Stage 2 reporting | NONE | 2026-07-14 Muce明确要求加入。Plan v1.1新增S2-T21：区分带显著水印的`EVENT_EXPLAINER`与真实数据驱动的`EVENT_EVIDENCE_CARD`；正式证据必须确定性、可追溯且不得伪造历史或执行字段。精确字体/配色和渲染依赖在Task审批前冻结。 |
 
 New questions must record discovery/source, affected rules/contracts/baselines, evidence required, owner, status, and linked ADR/CR. No unresolved question may be answered by assumption.
 

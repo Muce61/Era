@@ -3,14 +3,14 @@
 ## Metadata
 
 - task_id: S2-T19
-- task_version: 0.1
+- task_version: 1.1
 - status: DRAFT
 - stage_id: S2
-- stage_plan_version: 0.1
+- stage_plan_version: 1.1
 - created_from_spec_version: V1.3.4
-- created_from_commit: 28bfb764f8286d2b4f23568a81f1233bb2b57b15
-- dependencies: S2-T18
-- supersedes: NONE
+- created_from_commit: c984fb4
+- dependencies: S2-T01 PASS; human preregistration decisions recorded
+- supersedes: task_version 1.0
 - approved_by: NONE
 - approved_at: NONE
 
@@ -31,7 +31,7 @@
 
 ## 4. 前置条件
 
-Stage 2 Plan 0.1 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和基线已核验。
+Stage 2 Plan v1.1 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和基线已核验。
 
 ## 5. 允许范围
 
@@ -43,7 +43,7 @@ Stage 2 Plan 0.1 与本 Task 均已人工批准；依赖项有真实 validation�
 
 ## 7. 允许修改的路径
 
-src/research/events/, tests/research/events/, artifacts/experiments/ (all paths PLANNED; final paths require approved Stage review)
+以第21节的v1.0精确路径为准；未列路径禁止修改。
 
 ## 8. 禁止修改的路径
 
@@ -71,9 +71,7 @@ src/research/events/, tests/research/events/, artifacts/experiments/ (all paths 
 
 ## 14. 必须运行的命令
 
-TO_BE_DEFINED_IN_STAGE_0
-
-不得虚构不存在的命令。Stage 0 冻结工具链后，Task 新版本必须替换为实际命令并重新审批。
+以第21节的定向pytest命令和现有统一质量门为准；全量研究CLI必须由S2-T19预注册后通过Task新版本冻结。
 
 ## 15. 完成报告格式
 
@@ -97,4 +95,14 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 
 ## 20. 变更历史
 
-- 2026-07-12：v0.1，依据 Stage 2 Plan 0.1 创建，状态 DRAFT，未执行。
+- 2026-07-12：v0.1，依据 Stage 2 Plan v0.1 创建，状态 DRAFT，未执行。
+- 2026-07-14：v1.0，按Stage 1 Trade Identity v2与Stage 2 Plan v1.0重规划；状态DRAFT，未执行。
+- 2026-07-14：v1.1，加入可扩展研究setup架构与事件说明图规划；状态DRAFT，未执行。
+
+## 21. Stage 2 Plan v1.1执行覆盖（优先于v0.1通用占位）
+
+- 数据与能力边界：在任何候选全量运行前冻结主标的/假设/标签、`setup_id/setup_version/context_model_id/context_version`、required data capability、参数域、匹配放宽、多重试验家族、切分、失败线、seed、baseline hash和代码/config hash；事件图模板版本与证据/示意模式也必须预注册；append-only。
+- 允许修改路径：`src/era100x/research/stage_2/manifests/`、`tests/research/stage_2/manifests/`、`configs/research/stage_2/`、`artifacts/manifests/stage_2/`，以及本Task validation/TRACEABILITY。禁止修改Stage 1实现/数据、\`docs/spec/**\`和Stage 3+。
+- 验证命令：\`uv run python -m pytest tests/research/stage_2/manifests -q\`；\`uv run python scripts/run_quality_gate.py\`。全量研究CLI须由S2-T19冻结后再写入Task新版本，不得当前虚构。
+- 验收标准：schema、setup/context注册引用、必填项、hash、不可覆盖、结果产生后拒绝修改、所有实验版本台账、未批准setup拒绝及事件图模式/模板版本测试通过；需人工预注册决定。
+- 证据模式：\`PREREGISTRATION_REQUIRED_BEFORE_T02_FULL_USE\`。无论fixture能力是否可验收，Stage 1最终PASSED与VALID data baseline之前均不得执行本Task。
