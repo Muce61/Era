@@ -2,14 +2,14 @@
 
 ## Metadata
 - task_id: S1-T09
-- task_version: 1.0
+- task_version: 1.1
 - status: PASSED
 - stage_id: S1
-- stage_plan_version: 1.0
+- stage_plan_version: 1.1
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: S1-T08 PASS
-- supersedes: task_version 0.1
+- supersedes: task_version 1.0
 - approved_by: Muce
 - approved_at: 2026-07-12
 
@@ -53,3 +53,4 @@ interval、边界、tie-break、volume或source变化。
 聚合非确定或跨源混用。
 ## 20. 变更历史
 - 2026-07-12：v1.0，补充价格源和UTC边界；状态DRAFT。
+- 2026-07-14：v1.1，排序使用`(ts_event_ns, venue_trade_id, canonical_trade_id)`且冲突事实各计一次；回归PASS。

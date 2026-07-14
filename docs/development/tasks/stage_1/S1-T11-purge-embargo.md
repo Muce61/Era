@@ -5,7 +5,7 @@
 - task_version: 1.0
 - status: PASSED
 - stage_id: S1
-- stage_plan_version: 1.0
+- stage_plan_version: 1.1
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: S1-T02 PASS
@@ -53,3 +53,4 @@ lookback/episode/holding定义或区间策略变化。
 出现区间重叠、purge不足或locked泄漏。
 ## 20. 变更历史
 - 2026-07-12：v1.0，从原T12前移并限定为无泄漏契约；状态DRAFT。
+- 2026-07-14：CR-2026-001回归PASS；purge/embargo语义未改变。

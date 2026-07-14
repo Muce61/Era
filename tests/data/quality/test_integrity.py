@@ -1,13 +1,26 @@
 from decimal import Decimal
 from era100x.data.quality import inspect_contract_gaps, inspect_trades
 from era100x.data.schema.models import ContractPrice1s, NormalizedTrade
+from era100x.data.normalize.identity import canonical_trade_identity
 
 
 def trade(i: int, ts: int, price: str = "1") -> NormalizedTrade:
+    decimal_price = Decimal(price)
+    canonical_id = canonical_trade_identity(
+        instrument="BTCUSDT",
+        venue_trade_id=i,
+        ts_event_ns=ts,
+        price=decimal_price,
+        quantity=Decimal("1"),
+        quote_quantity=Decimal("1"),
+        is_buyer_maker=True,
+    )
     return NormalizedTrade(
         instrument="BTCUSDT",
-        trade_id=i,
-        price=Decimal(price),
+        venue_trade_id=i,
+        canonical_trade_id=canonical_id,
+        identity_status="UNIQUE_VENUE_ID",
+        price=decimal_price,
         quantity=Decimal("1"),
         quote_quantity=Decimal("1"),
         ts_event_ns=ts,
@@ -23,11 +36,12 @@ def test_duplicates_conflicts_reversal_and_gap_are_distinct() -> None:
     clean, issues = inspect_trades(rows)
     assert [x.code for x in issues] == [
         "DUPLICATE_EXACT",
-        "DUPLICATE_CONFLICT",
         "TIME_REVERSAL",
         "TRADE_ID_GAP",
+        "VENUE_ID_CONFLICT",
     ]
-    assert len(clean) == 2
+    assert len(clean) == 3
+    assert clean[0].identity_status == clean[1].identity_status == "CONFLICTING_VENUE_ID"
 
 
 def test_contract_gap_is_not_filled() -> None:

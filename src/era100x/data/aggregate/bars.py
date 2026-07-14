@@ -19,7 +19,9 @@ def aggregate_trade_bars(
         groups[(row.ts_event_ns // width) * width].append(row)
     result = []
     for bucket, group in sorted(groups.items()):
-        ordered = sorted(group, key=lambda r: (r.ts_event_ns, r.trade_id))
+        ordered = sorted(
+            group, key=lambda r: (r.ts_event_ns, r.venue_trade_id, r.canonical_trade_id)
+        )
         prices = [r.price for r in ordered]
         result.append(
             ContractBar(

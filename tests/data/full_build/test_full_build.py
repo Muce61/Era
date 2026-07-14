@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 import pytest
+import era100x.data.full_build.builder as builder_module
 
 from era100x.data.full_build.builder import (
     ARROW_SCHEMA,
@@ -13,6 +14,7 @@ from era100x.data.full_build.builder import (
     atomic_json,
     parse_checksum,
     process_archive,
+    validate_official_conflicts,
 )
 
 
@@ -97,7 +99,23 @@ def test_exact_duplicates_are_audited_and_deterministically_removed(tmp_path: Pa
     assert entries[0]["duplicate_exact_count"] == 2
 
 
-def test_conflicting_duplicate_does_not_leave_output(tmp_path: Path) -> None:
+def test_exact_duplicates_remain_counted_on_external_sort_path(tmp_path: Path) -> None:
+    archive = make_zip(
+        tmp_path / "sorted-exact.zip",
+        [
+            "2,101,1,101,1577836801000,true",
+            "1,100,1,100,1577836800000,true",
+            "1,100,1,100,1577836800000,true",
+        ],
+    )
+    entry = process_archive(archive, tmp_path / "sorted-exact", "BTCUSDT")[0]
+    assert entry["rows"] == 2
+    assert entry["input_rows"] == 2
+    assert entry["source_input_rows"] == 3
+    assert entry["duplicate_exact_count"] == 1
+
+
+def test_conflicting_venue_id_preserves_both_official_facts(tmp_path: Path) -> None:
     conflict = make_zip(
         tmp_path / "duplicate.zip",
         [
@@ -106,9 +124,52 @@ def test_conflicting_duplicate_does_not_leave_output(tmp_path: Path) -> None:
         ],
     )
     output = tmp_path / "output"
-    with pytest.raises(ValueError, match="conflicting duplicate"):
-        process_archive(conflict, output, "BTCUSDT")
-    assert not output.exists()
+    entries = process_archive(conflict, output, "BTCUSDT")
+    assert entries[0]["rows"] == 2
+    assert entries[0]["venue_trade_id_conflict_count"] == 1
+    table = pq.read_table(output / "date=2020-01-01/part-000.parquet")
+    assert table.column("identity_status").to_pylist() == [
+        "CONFLICTING_VENUE_ID",
+        "CONFLICTING_VENUE_ID",
+    ]
+    assert len(set(table.column("canonical_trade_id").to_pylist())) == 2
+
+
+def test_input_shuffle_keeps_partition_logical_hash(tmp_path: Path) -> None:
+    rows = [
+        "1,100,1,100,1577836800000,true",
+        "1,101,1,101,1577836801000,true",
+        "2,99,1,99,1577836800500,false",
+    ]
+    first = process_archive(make_zip(tmp_path / "first.zip", rows), tmp_path / "a", "BTCUSDT")
+    second = process_archive(
+        make_zip(tmp_path / "second.zip", list(reversed(rows))), tmp_path / "b", "BTCUSDT"
+    )
+    assert first[0]["logical_sha256"] == second[0]["logical_sha256"]
+
+
+def test_monthly_daily_conflict_sets_must_match(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rows = [
+        "7,100,1,100,1577836800000,true",
+        "7,101,1,101,1577836801000,true",
+    ]
+    monthly_entries = process_archive(
+        make_zip(tmp_path / "monthly.zip", rows), tmp_path / "monthly", "BTCUSDT"
+    )
+    daily = make_zip(tmp_path / "daily.zip", rows)
+    digest = hashlib.sha256(daily.read_bytes()).hexdigest()
+    monkeypatch.setattr(builder_module, "archive_url", lambda *_: "https://official/daily.zip")
+    monkeypatch.setattr(builder_module, "fetch_text", lambda *_: f"{digest}  daily.zip\n")
+    monkeypatch.setattr(builder_module, "download_archive", lambda *_: daily)
+    results = validate_official_conflicts(tmp_path, "BTCUSDT", "monthly", monthly_entries)
+    assert results[0]["status"] == "CONFIRMED_OFFICIAL_CONFLICT"
+
+    mismatched = make_zip(tmp_path / "mismatch.zip", rows[:1])
+    monkeypatch.setattr(builder_module, "download_archive", lambda *_: mismatched)
+    with pytest.raises(ValueError, match="source disagreement"):
+        validate_official_conflicts(tmp_path / "other", "BTCUSDT", "monthly", monthly_entries)
 
 
 def test_within_date_time_reversal_is_stably_sorted_and_audited(tmp_path: Path) -> None:

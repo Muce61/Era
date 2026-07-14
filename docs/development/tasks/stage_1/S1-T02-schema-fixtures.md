@@ -2,14 +2,14 @@
 
 ## Metadata
 - task_id: S1-T02
-- task_version: 1.0
+- task_version: 1.1
 - status: PASSED
 - stage_id: S1
-- stage_plan_version: 1.0
+- stage_plan_version: 1.1
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: S1-T01 PASS
-- supersedes: task_version 0.1
+- supersedes: task_version 1.0
 - approved_by: Muce
 - approved_at: 2026-07-12
 
@@ -53,3 +53,4 @@ registry覆盖计划全部对象；fixture可供T03-T12离线验收；`data`之�
 下游已消费schema后schema hash变化。
 ## 20. 变更历史
 - 2026-07-12：v1.0，合并schema registry与可复用样本契约；状态DRAFT。
+- 2026-07-14：v1.1，CR-2026-001重开并PASS；Trade Identity v2新增canonical身份和冲突标签。

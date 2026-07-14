@@ -4,7 +4,12 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
-from era100x.data.schema.models import ContractPrice1s, DataQuality, HistoricalEvidenceRow
+from era100x.data.schema.models import (
+    ContractPrice1s,
+    DataQuality,
+    HistoricalEvidenceRow,
+    NormalizedTrade,
+)
 
 
 def test_contract_price_decimal_and_float_source_label() -> None:
@@ -50,3 +55,22 @@ def test_quality_round_trip() -> None:
         count=2,
     )
     assert DataQuality.model_validate_json(q.model_dump_json()) == q
+
+
+def test_trade_identity_v2_requires_valid_sha_and_explicit_conflict_state() -> None:
+    values = dict(
+        instrument="ETHUSDT",
+        venue_trade_id=6299136398,
+        canonical_trade_id="a" * 64,
+        identity_status="CONFLICTING_VENUE_ID",
+        venue_trade_id_conflict_group="ETHUSDT:6299136398",
+        price=Decimal("4451.32"),
+        quantity=Decimal("0.005"),
+        quote_quantity=Decimal("22.2566"),
+        ts_event_ns=1756448283173000000,
+        is_buyer_maker=True,
+        source_sha256="b" * 64,
+    )
+    assert NormalizedTrade(**values).venue_trade_id == 6299136398
+    with pytest.raises(ValidationError):
+        NormalizedTrade(**{**values, "canonical_trade_id": "not-a-sha"})

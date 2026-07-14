@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 from typing import Literal
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 
 class StrictModel(BaseModel):
@@ -24,7 +24,7 @@ class ContractPrice1s(StrictModel):
 
 class RawTrade(StrictModel):
     instrument: Literal["BTCUSDT", "ETHUSDT"]
-    trade_id: int
+    venue_trade_id: int
     price_text: str
     qty_text: str
     quote_qty_text: str
@@ -35,7 +35,10 @@ class RawTrade(StrictModel):
 
 class NormalizedTrade(StrictModel):
     instrument: Literal["BTCUSDT", "ETHUSDT"]
-    trade_id: int
+    venue_trade_id: int
+    canonical_trade_id: str
+    identity_status: Literal["UNIQUE_VENUE_ID", "CONFLICTING_VENUE_ID"]
+    venue_trade_id_conflict_group: str | None = None
     price: Decimal
     quantity: Decimal
     quote_quantity: Decimal
@@ -43,6 +46,23 @@ class NormalizedTrade(StrictModel):
     is_buyer_maker: bool
     aggressor_side: Literal["BUY", "SELL"] | None = None
     source_sha256: str
+
+    @field_validator("canonical_trade_id")
+    @classmethod
+    def canonical_id_is_sha256(cls, value: str) -> str:
+        if len(value) != 64 or any(char not in "0123456789abcdef" for char in value):
+            raise ValueError("canonical_trade_id must be a lowercase SHA-256")
+        return value
+
+    @model_validator(mode="after")
+    def conflict_group_matches_status(self) -> NormalizedTrade:
+        expected = f"{self.instrument}:{self.venue_trade_id}"
+        if self.identity_status == "CONFLICTING_VENUE_ID":
+            if self.venue_trade_id_conflict_group != expected:
+                raise ValueError("conflicting venue ID requires its deterministic conflict group")
+        elif self.venue_trade_id_conflict_group is not None:
+            raise ValueError("unique venue ID cannot carry a conflict group")
+        return self
 
 
 class HistoricalEvidenceRow(StrictModel):

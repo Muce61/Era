@@ -5,7 +5,7 @@
 - task_version: 1.0
 - status: PASSED
 - stage_id: S1
-- stage_plan_version: 1.0
+- stage_plan_version: 1.1
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: S1-T05 PASS
@@ -53,3 +53,4 @@ Binance字段语义或registry版本变化。
 方向映射被官方事实否定。
 ## 20. 变更历史
 - 2026-07-12：v1.0，限定为方向解析而非Flow研究；状态DRAFT。
+- 2026-07-14：CR-2026-001回归PASS；maker方向语义未改变。

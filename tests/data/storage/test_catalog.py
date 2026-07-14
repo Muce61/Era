@@ -2,17 +2,30 @@ from decimal import Decimal
 from pathlib import Path
 import pytest
 from era100x.data.schema.models import NormalizedTrade
+from era100x.data.normalize.identity import canonical_trade_identity
 from era100x.data.storage import publish_partition
 
 
 def trade(i: int) -> NormalizedTrade:
-    return NormalizedTrade(
+    ts = 1577836800000000000 + i
+    canonical_id = canonical_trade_identity(
         instrument="BTCUSDT",
-        trade_id=i,
+        venue_trade_id=i,
+        ts_event_ns=ts,
         price=Decimal("100"),
         quantity=Decimal("1"),
         quote_quantity=Decimal("100"),
-        ts_event_ns=1577836800000000000 + i,
+        is_buyer_maker=True,
+    )
+    return NormalizedTrade(
+        instrument="BTCUSDT",
+        venue_trade_id=i,
+        canonical_trade_id=canonical_id,
+        identity_status="UNIQUE_VENUE_ID",
+        price=Decimal("100"),
+        quantity=Decimal("1"),
+        quote_quantity=Decimal("100"),
+        ts_event_ns=ts,
         is_buyer_maker=True,
         aggressor_side="SELL",
         source_sha256="x",

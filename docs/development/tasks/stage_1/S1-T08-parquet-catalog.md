@@ -2,14 +2,14 @@
 
 ## Metadata
 - task_id: S1-T08
-- task_version: 1.0
+- task_version: 1.1
 - status: PASSED
 - stage_id: S1
-- stage_plan_version: 1.0
+- stage_plan_version: 1.1
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: S1-T07 PASS
-- supersedes: task_version 0.1
+- supersedes: task_version 1.0
 - approved_by: Muce
 - approved_at: 2026-07-12
 
@@ -53,3 +53,4 @@ Parquet引擎、schema、排序或分区规则变化。
 相同环境逻辑hash不一致或catalog遗漏文件。
 ## 20. 变更历史
 - 2026-07-12：v1.0，补充catalog、逻辑hash和原子发布；状态DRAFT。
+- 2026-07-14：v1.1，Parquet/Catalog升级`stage1-trades-v2`并携带v2身份与冲突lineage；回归PASS。

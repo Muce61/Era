@@ -69,36 +69,36 @@ S0-T01 carries no business `rule_id` and does not mark any FROZEN rule or INV as
 
 Stage 0 baseline validity: **VALID / PASSED**. Any later change to its code, configuration contracts, dependency lock, traceability catalogue, or validation evidence requires explicit invalidation or reopening under `CHANGE_POLICY.md`.
 
-## Stage 1 v1.0 Execution Coverage
+## Stage 1 v1.1 Execution Coverage
 
-Stage 1 is `IN_PROGRESS` under approved Plan v1.0. S1-T01～S1-T13 are PASSED; S1-T14 v1.4 is the explicitly approved full-data run and remains `IN_PROGRESS` until both symbols are published and deterministic verification passes. Prior runs are INVALIDATED and unpublished; immutable raw inputs remain reusable by checksum. v1.4 routes by UTC date and uses audited disk-backed stable ordering for within-date source reversals. S1-T15 remains DRAFT.
+Stage 1 is `IN_PROGRESS` under approved Plan v1.1 and CR-2026-001. S1-T02/T05/T07/T08/T09/T12 v1.1 implement Trade Identity v2 and are PASSED after targeted regression; S1-T06/T10/T11 retain semantics and passed regression. `venue_trade_id` is a venue property, `canonical_trade_id` is the fact identity, and official conflicting venue IDs are retained only after monthly/daily canonical-set confirmation. S1-T14 v1.5 awaits a fresh run from merged `main`; the prior 134/162 run is INVALIDATED and unpublished. S1-T15 remains DRAFT.
 
 | Requirement | Planned Tasks | Planned Evidence | State |
 | --- | --- | --- | --- |
 | Existing local asset/path audit | S1-T01 | read-only asset report, path/permission/capacity record | PLANNED |
 | S1-T01 delivered evidence | S1-T01 | `scripts/audit_stage1_assets.py`, `reviews/stage_1_asset_audit.md`, `tests/data/audit/` | PASSED |
 | Schema Registry and sample fixtures | S1-T02 | schema/nullable/unit tests and committed minimal fixtures | PLANNED |
-| S1-T02 delivered evidence | S1-T02 | `src/era100x/data/schema/`, `tests/data/schema/`, `tests/fixtures/stage_1/` | PASSED |
+| S1-T02 v1.1 delivered evidence | S1-T02 | `src/era100x/data/schema/`, `tests/data/schema/`, `tests/fixtures/stage_1/`, ADR-2026-001 | PASSED_V2 |
 | 1s Contract Price H1 input | S1-T03, S1-T07, S1-T09 | reader, integrity/gap and deterministic aggregation tests | PLANNED |
 | S1-T03 delivered evidence | S1-T03 | `src/era100x/data/readers/`, `tests/data/readers/` | PASSED |
 | S1-T09 delivered evidence | S1-T09 | `src/era100x/data/aggregate/`, `tests/data/aggregate/` | PASSED |
 | Binance Trades raw lineage | S1-T04 | immutable raw manifest, source/coverage/hash and idempotency tests | PLANNED |
 | S1-T04 delivered evidence | S1-T04 | `src/era100x/data/ingest/`, `scripts/import_stage1_trades.py`, `tests/data/ingest/` | PASSED |
 | Trade normalization and aggressor side | S1-T05, S1-T06 | Decimal/time/ID mapping and maker-side tests | PLANNED |
-| S1-T05 delivered evidence | S1-T05 | `src/era100x/data/normalize/`, `tests/data/normalize/` | PASSED |
+| S1-T05 v1.1 delivered evidence | S1-T05 | `src/era100x/data/normalize/`, `tests/data/normalize/` | PASSED_V2 |
 | S1-T06 delivered evidence | S1-T06 | `src/era100x/data/trades/`, `tests/data/trades/` | PASSED |
 | Duplicates, anomalies, rollback and gaps | S1-T07 | issue classification, deterministic dedup and gap segments | PLANNED |
-| S1-T07 delivered evidence | S1-T07 | `src/era100x/data/quality/`, `tests/data/quality/` | PASSED |
+| S1-T07 v1.1 delivered evidence | S1-T07 | canonical dedup + venue conflict retention in `src/era100x/data/quality/`, `tests/data/quality/` | PASSED_V2 |
 | Parquet catalog and checksum | S1-T08 | partition/catalog/logical-hash/atomic-publish tests | PLANNED |
-| S1-T08 delivered evidence | S1-T08 | `src/era100x/data/storage/`, `tests/data/storage/`, catalog verifier | PASSED |
+| S1-T08 v1.1 delivered evidence | S1-T08 | v2 Parquet/Catalog in `src/era100x/data/storage/`, `tests/data/storage/`, full-build schema | PASSED_V2 |
 | Historical execution fields remain NULL | S1-T02, S1-T10 | UT-DATA-013 and illegal-zero/false-evidence regression | PLANNED |
 | S1-T10 delivered evidence | S1-T10 | `src/era100x/data/evidence/`, `tests/data/evidence/` | PASSED |
 | Purge and embargo/no leakage | S1-T11 | interval/property tests and manifest fields | PLANNED |
 | S1-T11 delivered evidence | S1-T11 | `src/era100x/data/splits/`, `tests/data/splits/` | PASSED |
 | Small-sample capability acceptance | S1-T12 | fixture quality report marked NOT_RUN_FULL_DATA | PLANNED |
-| S1-T12 delivered evidence | S1-T12 | `src/era100x/data/reporting/`, `tests/data/reporting/`, sample report CLI | PASSED |
+| S1-T12 v1.1 delivered evidence | S1-T12 | v2 identity/conflict gates plus existing report/null/split regression | PASSED_V2 |
 | Full-data preflight and build | S1-T13, S1-T14 | approved paths/source/coverage, resumable builder, full catalog, repeat-build hash | T13_PASSED_T14_IN_PROGRESS |
-| S1-T14 builder implementation | S1-T14 | `src/era100x/data/full_build/`, `scripts/run_stage1_full_build.py`, `tests/data/full_build/` | V1.4_IN_PROGRESS_PRIOR_RUNS_INVALIDATED |
+| S1-T14 v1.5 builder implementation | S1-T14 | `stage1-trades-v2`, official conflict cross-validation, `src/era100x/data/full_build/`, `tests/data/full_build/` | IN_PROGRESS_PRIOR_134_OF_162_RUN_INVALIDATED |
 | S1-T13 actual preflight | S1-T13 | 162/162 official archives; write probe; 20% disk safety calculation | PASSED |
 | Stage 1 gate | S1-T15 | Stage 1 validation; BTC/ETH separate conclusions | PLANNED |
 

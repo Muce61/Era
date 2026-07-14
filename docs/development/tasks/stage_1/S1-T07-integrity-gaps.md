@@ -2,14 +2,14 @@
 
 ## Metadata
 - task_id: S1-T07
-- task_version: 1.0
+- task_version: 1.1
 - status: PASSED
 - stage_id: S1
-- stage_plan_version: 1.0
+- stage_plan_version: 1.1
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: S1-T03 PASS; S1-T06 PASS
-- supersedes: task_version 0.1
+- supersedes: task_version 1.0
 - approved_by: Muce
 - approved_at: 2026-07-12
 
@@ -53,3 +53,4 @@ quality issue schema、deterministic dedup view、gap segments和summary。
 检测漏报、非确定或源hash变化。
 ## 20. 变更历史
 - 2026-07-12：v1.0，将时间倒退和缺口提升为明确验收项；状态DRAFT。
+- 2026-07-14：v1.1，canonical重复折叠、venue冲突事实全部保留并标记；回归PASS。

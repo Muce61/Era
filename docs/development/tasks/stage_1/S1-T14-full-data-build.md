@@ -2,14 +2,14 @@
 
 ## Metadata
 - task_id: S1-T14
-- task_version: 1.4
+- task_version: 1.5
 - status: IN_PROGRESS
 - stage_id: S1
-- stage_plan_version: 1.0
+- stage_plan_version: 1.1
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: S1-T13 PASS and explicit full-data execution approval
-- supersedes: task_version 1.3
+- supersedes: task_version 1.4
 - approved_by: Muce
 - approved_at: 2026-07-13
 
@@ -46,7 +46,7 @@ BTC/ETH完整catalog、quality report、coverage/gap表、checksums、manifest�
 ## 16. 回滚方式
 保留失败run/manifest并INVALIDATED；不删除源；新run恢复。
 ## 17. 开放问题
-OQ-S1-004 已由用户批准并关闭：使用磁盘外部稳定排序建立确定性日分区，保留排序前后审计；冲突重复和非法值仍硬失败。
+OQ-S1-004与OQ-S1-005已关闭。CR-2026-001要求Trade Identity v2、官方月/日冲突集合交叉验证和新run从raw重建。
 ## 18. 变化触发器
 输入hash、覆盖、实现、依赖或配置变化。
 ## 19. 失效条件
@@ -58,3 +58,4 @@ OQ-S1-004 已由用户批准并关闭：使用磁盘外部稳定排序建立确�
 - 2026-07-13：v1.2预运行完成2/162归档后发现首版双worker采用月度锁步等待，已标记该预运行INVALIDATED；调度修正为每个symbol独立连续推进，逻辑契约和版本号不变。
 - 2026-07-13：v1.3，人工批准处理官方BTCUSDT 2023-01月包跨日期交错；v1.2 run在68/162归档处停止且未发布，标记INVALIDATED。按真实UTC日期路由，日期内排序硬门保持不变。
 - 2026-07-13：v1.4，人工批准OQ-S1-004；按`(ts_event_ns, trade_id, canonical row)`执行磁盘外部稳定排序，记录输入hash、倒退次数和排序后逻辑hash；冲突重复/非法值继续失败。
+- 2026-07-14：v1.5，CR-2026-001；旧134/162 run INVALIDATED，使用`stage1-trades-v2`和v2排序，冲突经官方日包交叉验证后保留；IN_PROGRESS。

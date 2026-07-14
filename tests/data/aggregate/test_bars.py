@@ -2,13 +2,26 @@ from decimal import Decimal
 import pytest
 from era100x.data.aggregate import aggregate_trade_bars
 from era100x.data.schema.models import NormalizedTrade
+from era100x.data.normalize.identity import canonical_trade_identity
 
 
 def t(i: int, ts: int, price: str, symbol: str = "BTCUSDT") -> NormalizedTrade:
+    decimal_price = Decimal(price)
+    canonical_id = canonical_trade_identity(
+        instrument=symbol,
+        venue_trade_id=i,
+        ts_event_ns=ts,
+        price=decimal_price,
+        quantity=Decimal("1"),
+        quote_quantity=decimal_price,
+        is_buyer_maker=True,
+    )
     return NormalizedTrade(
         instrument=symbol,
-        trade_id=i,
-        price=Decimal(price),
+        venue_trade_id=i,
+        canonical_trade_id=canonical_id,
+        identity_status="UNIQUE_VENUE_ID",
+        price=decimal_price,
         quantity=Decimal("1"),
         quote_quantity=Decimal(price),
         ts_event_ns=ts,
@@ -28,6 +41,14 @@ def test_utc_bucket_and_stable_tie_breaker() -> None:
         Decimal("102"),
     )
     assert bars[1].bucket_start_ns == 1_000_000_000
+
+
+def test_conflicting_venue_id_facts_both_contribute_once() -> None:
+    rows = [t(7, 100, "100"), t(7, 200, "101"), t(7, 100, "100")]
+    unique = {row.canonical_trade_id: row for row in rows}
+    bar = aggregate_trade_bars(list(unique.values()))[0]
+    assert bar.volume == Decimal("2")
+    assert (bar.open, bar.close) == (Decimal("100"), Decimal("101"))
 
 
 def test_mixed_sources_and_bad_interval_fail() -> None:

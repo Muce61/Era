@@ -23,6 +23,7 @@ import pyarrow as pa  # type: ignore[import-untyped]
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
 from era100x.data.ingest import archive_url
+from era100x.data.normalize.identity import SCHEMA_VERSION, canonical_trade_identity
 
 Symbol = Literal["BTCUSDT", "ETHUSDT"]
 Frequency = Literal["monthly", "daily"]
@@ -51,7 +52,11 @@ class ArchiveOrderingError(ValueError):
 ARROW_SCHEMA = pa.schema(
     [
         ("instrument", pa.string()),
-        ("trade_id", pa.int64()),
+        ("venue_trade_id", pa.int64()),
+        ("canonical_trade_id", pa.string()),
+        ("identity_status", pa.string()),
+        ("venue_trade_id_conflict_group", pa.string()),
+        ("source_archive_sha256", pa.string()),
         ("price", pa.decimal128(38, 18)),
         ("quantity", pa.decimal128(38, 18)),
         ("quote_quantity", pa.decimal128(38, 18)),
@@ -172,10 +177,12 @@ class PartitionWriter:
         symbol: Symbol,
         partition_date: date,
         *,
+        source_archive_sha256: str,
         permit_trade_id_reversal: bool = False,
     ) -> None:
         self.symbol = symbol
         self.partition_date = partition_date
+        self.source_archive_sha256 = source_archive_sha256
         self.directory = root / f"date={partition_date.isoformat()}"
         self.directory.mkdir(parents=True, exist_ok=False)
         self.path = self.directory / "part-000.parquet"
@@ -197,10 +204,10 @@ class PartitionWriter:
         self.hash_batch = bytearray()
 
     def append(self, values: list[str], row_date: date, timestamp_ms: int) -> None:
-        if len(values) != 6:
+        if len(values) not in {6, 9}:
             raise ValueError(f"unexpected Trades column count: {len(values)}")
         self.input_rows += 1
-        trade_id = int(values[0])
+        venue_trade_id = int(values[0])
         price, price_text = canonical_decimal(values[1])
         quantity, quantity_text = canonical_decimal(values[2])
         quote_quantity, quote_text = canonical_decimal(values[3])
@@ -212,8 +219,22 @@ class PartitionWriter:
         if row_date != self.partition_date:
             raise ValueError(f"trade falls outside partition date: {row_date}")
         ts_event_ns = timestamp_ms * 1_000_000
+        canonical_trade_id = canonical_trade_identity(
+            instrument=self.symbol,
+            venue_trade_id=venue_trade_id,
+            ts_event_ns=ts_event_ns,
+            price=price,
+            quantity=quantity,
+            quote_quantity=quote_quantity,
+            is_buyer_maker=maker_text == "true",
+        )
+        identity_status = values[6] if len(values) == 9 else "UNIQUE_VENUE_ID"
+        conflict_group = values[7] or None if len(values) == 9 else None
+        supplied_canonical_id = values[8] if len(values) == 9 else canonical_trade_id
+        if supplied_canonical_id != canonical_trade_id:
+            raise ValueError("canonical trade identity mismatch")
         signature = (
-            trade_id,
+            venue_trade_id,
             price_text,
             quantity_text,
             quote_text,
@@ -221,33 +242,43 @@ class PartitionWriter:
             maker_text,
         )
         if self.last_trade_id is not None:
-            if trade_id == self.last_trade_id:
+            if venue_trade_id == self.last_trade_id:
                 if signature == self.last_signature:
                     self.duplicate_exact_count += 1
                     return
-                raise ValueError(f"conflicting duplicate trade_id: {trade_id}")
-            if trade_id < self.last_trade_id:
+                if identity_status != "CONFLICTING_VENUE_ID" or conflict_group is None:
+                    raise ArchiveOrderingError(
+                        f"unclassified conflicting venue_trade_id: {venue_trade_id}"
+                    )
+            if venue_trade_id < self.last_trade_id:
                 if not self.permit_trade_id_reversal:
-                    raise ArchiveOrderingError(f"trade_id reversal: {trade_id}")
+                    raise ArchiveOrderingError(f"venue_trade_id reversal: {venue_trade_id}")
                 self.trade_id_reversal_count += 1
                 if len(self.trade_id_reversal_examples) < 100:
-                    self.trade_id_reversal_examples.append(f"{self.last_trade_id}->{trade_id}")
-            if trade_id > self.last_trade_id + 1:
-                self.gap_count += trade_id - self.last_trade_id - 1
+                    self.trade_id_reversal_examples.append(
+                        f"{self.last_trade_id}->{venue_trade_id}"
+                    )
+            if venue_trade_id > self.last_trade_id + 1:
+                self.gap_count += venue_trade_id - self.last_trade_id - 1
                 if len(self.gap_examples) < 100:
-                    self.gap_examples.append(f"{self.last_trade_id + 1}-{trade_id - 1}")
+                    self.gap_examples.append(f"{self.last_trade_id + 1}-{venue_trade_id - 1}")
         if self.last_ts_ns is not None and ts_event_ns < self.last_ts_ns:
-            raise ArchiveOrderingError(f"timestamp reversal at trade_id {trade_id}")
+            raise ArchiveOrderingError(f"timestamp reversal at venue_trade_id {venue_trade_id}")
         maker = maker_text == "true"
         canonical = (
-            f"{self.symbol}|{trade_id}|{price_text}|{quantity_text}|{quote_text}|"
-            f"{ts_event_ns}|{maker_text}|{'SELL' if maker else 'BUY'}\n"
+            f"{self.symbol}|{venue_trade_id}|{canonical_trade_id}|{price_text}|{quantity_text}|"
+            f"{quote_text}|{ts_event_ns}|{maker_text}|{identity_status}|{conflict_group or ''}|"
+            f"{'SELL' if maker else 'BUY'}\n"
         ).encode()
         self.hash_batch.extend(canonical)
         self.batch.append(
             {
                 "instrument": self.symbol,
-                "trade_id": trade_id,
+                "venue_trade_id": venue_trade_id,
+                "canonical_trade_id": canonical_trade_id,
+                "identity_status": identity_status,
+                "venue_trade_id_conflict_group": conflict_group,
+                "source_archive_sha256": self.source_archive_sha256,
                 "price": price,
                 "quantity": quantity,
                 "quote_quantity": quote_quantity,
@@ -256,8 +287,8 @@ class PartitionWriter:
                 "aggressor_side": "SELL" if maker else "BUY",
             }
         )
-        self.first_trade_id = trade_id if self.first_trade_id is None else self.first_trade_id
-        self.last_trade_id = trade_id
+        self.first_trade_id = venue_trade_id if self.first_trade_id is None else self.first_trade_id
+        self.last_trade_id = venue_trade_id
         self.last_ts_ns = ts_event_ns
         self.last_signature = signature
         self.rows += 1
@@ -283,13 +314,13 @@ class PartitionWriter:
             "rows": self.rows,
             "input_rows": self.input_rows,
             "duplicate_exact_count": self.duplicate_exact_count,
-            "first_trade_id": self.first_trade_id,
-            "last_trade_id": self.last_trade_id,
+            "first_venue_trade_id": self.first_trade_id,
+            "last_venue_trade_id": self.last_trade_id,
             "last_ts_ns": self.last_ts_ns,
-            "trade_id_gap_count": self.gap_count,
-            "trade_id_gap_examples": self.gap_examples,
-            "trade_id_reversal_count": self.trade_id_reversal_count,
-            "trade_id_reversal_examples": self.trade_id_reversal_examples,
+            "venue_trade_id_gap_count": self.gap_count,
+            "venue_trade_id_gap_examples": self.gap_examples,
+            "venue_trade_id_reversal_count": self.trade_id_reversal_count,
+            "venue_trade_id_reversal_examples": self.trade_id_reversal_examples,
             "byte_sha256": sha256_file(self.path),
             "logical_sha256": self.logical_hash.hexdigest(),
             "bytes": self.path.stat().st_size,
@@ -313,17 +344,46 @@ def _external_sort(source: Path, destination: Path, keys: tuple[str, ...], temp:
         raise RuntimeError(completed.stderr.decode("utf-8", errors="replace"))
 
 
-def _assert_no_conflicting_trade_ids(path: Path) -> None:
-    previous_id: str | None = None
-    previous_line: bytes | None = None
-    with path.open("rb") as stream:
+def _classify_venue_id_groups(
+    source: Path, destination: Path, symbol: Symbol
+) -> tuple[list[dict[str, object]], int]:
+    groups: list[dict[str, object]] = []
+    duplicate_exact_count = 0
+    current_id: str | None = None
+    lines: dict[str, str] = {}
+
+    def flush(output: io.TextIOWrapper) -> None:
+        if current_id is None:
+            return
+        conflicting = len(lines) > 1
+        group = f"{symbol}:{current_id}" if conflicting else ""
+        status = "CONFLICTING_VENUE_ID" if conflicting else "UNIQUE_VENUE_ID"
+        for canonical_id in sorted(lines):
+            output.write(lines[canonical_id].rstrip("\n") + f"\t{status}\t{group}\n")
+        if conflicting:
+            groups.append(
+                {
+                    "venue_trade_id": int(current_id),
+                    "canonical_trade_ids": sorted(lines),
+                    "conflict_group": group,
+                }
+            )
+
+    with source.open() as stream, destination.open("w") as output:
         for line in stream:
-            fields = line.rstrip(b"\n").split(b"\t")
-            trade_id = fields[1].decode()
-            if trade_id == previous_id and line != previous_line:
-                raise ValueError(f"conflicting duplicate trade_id: {trade_id}")
-            previous_id = trade_id
-            previous_line = line
+            fields = line.rstrip("\n").split("\t")
+            venue_id = fields[1]
+            canonical_id = fields[6]
+            if current_id is not None and venue_id != current_id:
+                flush(output)
+                lines = {}
+            current_id = venue_id
+            if canonical_id in lines:
+                duplicate_exact_count += 1
+            else:
+                lines[canonical_id] = line
+        flush(output)
+    return groups, duplicate_exact_count
 
 
 def _process_archive_streaming(
@@ -331,6 +391,7 @@ def _process_archive_streaming(
     output_root: Path,
     symbol: Symbol,
     *,
+    source_archive_sha256: str,
     selected_dates: set[date] | None = None,
 ) -> list[dict[str, object]]:
     if output_root.exists():
@@ -362,7 +423,12 @@ def _process_archive_streaming(
                             entry = writer.close()
                             entry["ordering_mode"] = "SOURCE_ORDER"
                             entries.append(entry)
-                        writer = PartitionWriter(output_root, symbol, row_date)
+                        writer = PartitionWriter(
+                            output_root,
+                            symbol,
+                            row_date,
+                            source_archive_sha256=source_archive_sha256,
+                        )
                         current_date = row_date
                     assert writer is not None
                     writer.append(values, row_date, timestamp_ms)
@@ -386,6 +452,7 @@ def _process_archive_sorted(
     output_root: Path,
     symbol: Symbol,
     *,
+    source_archive_sha256: str,
     selected_dates: set[date] | None = None,
 ) -> list[dict[str, object]]:
     if output_root.exists():
@@ -437,11 +504,11 @@ def _process_archive_sorted(
                     previous_source_date = row_date
                     previous = source_previous.get(row_date)
                     counters = source_reversals.setdefault(
-                        row_date, {"timestamp": 0, "trade_id": 0}
+                        row_date, {"timestamp": 0, "venue_trade_id": 0}
                     )
                     if previous is not None:
                         counters["timestamp"] += int(timestamp_ms < previous[0])
-                        counters["trade_id"] += int(trade_id < previous[1])
+                        counters["venue_trade_id"] += int(trade_id < previous[1])
                     source_previous[row_date] = (timestamp_ms, trade_id)
                     spool = spools.get(row_date)
                     if spool is None:
@@ -449,9 +516,18 @@ def _process_archive_sorted(
                         spools[row_date] = spool
                         raw_hashes[row_date] = hashlib.sha256()
                         input_rows[row_date] = 0
+                    canonical_id = canonical_trade_identity(
+                        instrument=symbol,
+                        venue_trade_id=trade_id,
+                        ts_event_ns=timestamp_ms * 1_000_000,
+                        price=price,
+                        quantity=quantity,
+                        quote_quantity=quote_quantity,
+                        is_buyer_maker=maker_text == "true",
+                    )
                     canonical_line = (
                         f"{timestamp_ms}\t{trade_id}\t{price_text}\t{quantity_text}\t"
-                        f"{quote_text}\t{maker_text}\n"
+                        f"{quote_text}\t{maker_text}\t{canonical_id}\n"
                     )
                     spool.write(canonical_line)
                     raw_hashes[row_date].update(canonical_line.encode())
@@ -462,24 +538,28 @@ def _process_archive_sorted(
         for partition_date in sorted(spools):
             source = sort_root / f"{partition_date.isoformat()}.input.tsv"
             by_id = sort_root / f"{partition_date.isoformat()}.by-id.tsv"
+            classified = sort_root / f"{partition_date.isoformat()}.classified.tsv"
             ordered = sort_root / f"{partition_date.isoformat()}.ordered.tsv"
             _external_sort(
                 source,
                 by_id,
-                ("-k2,2n", "-k1,1n", "-k3,3", "-k4,4", "-k5,5", "-k6,6"),
+                ("-k2,2n", "-k7,7", "-k1,1n"),
                 sort_root,
             )
-            _assert_no_conflicting_trade_ids(by_id)
+            conflict_groups, sorted_duplicate_exact_count = _classify_venue_id_groups(
+                by_id, classified, symbol
+            )
             _external_sort(
-                by_id,
+                classified,
                 ordered,
-                ("-k1,1n", "-k2,2n", "-k3,3", "-k4,4", "-k5,5", "-k6,6"),
+                ("-k1,1n", "-k2,2n", "-k7,7"),
                 sort_root,
             )
             writer = PartitionWriter(
                 output_root,
                 symbol,
                 partition_date,
+                source_archive_sha256=source_archive_sha256,
                 permit_trade_id_reversal=True,
             )
             with ordered.open() as stream:
@@ -491,6 +571,9 @@ def _process_archive_sorted(
                         sorted_quantity,
                         sorted_quote,
                         sorted_maker,
+                        canonical_id,
+                        identity_status,
+                        conflict_group,
                     ) = line.rstrip("\n").split("\t")
                     writer.append(
                         [
@@ -500,23 +583,34 @@ def _process_archive_sorted(
                             sorted_quote,
                             timestamp_text,
                             sorted_maker,
+                            identity_status,
+                            conflict_group,
+                            canonical_id,
                         ],
                         partition_date,
                         int(timestamp_text),
                     )
             entry = writer.close()
+            entry["duplicate_exact_count"] = (
+                cast(int, entry["duplicate_exact_count"]) + sorted_duplicate_exact_count
+            )
             entry["source_input_rows"] = input_rows[partition_date]
             entry["source_order_sha256"] = raw_hashes[partition_date].hexdigest()
             entry["source_timestamp_reversal_count"] = source_reversals[partition_date]["timestamp"]
-            entry["source_trade_id_reversal_count"] = source_reversals[partition_date]["trade_id"]
+            entry["source_venue_trade_id_reversal_count"] = source_reversals[partition_date][
+                "venue_trade_id"
+            ]
             entry["archive_date_reversal_count"] = date_reversal_count
             entry["ordering_mode"] = "EXTERNAL_STABLE_SORT"
+            entry["venue_trade_id_conflict_groups"] = conflict_groups
+            entry["venue_trade_id_conflict_count"] = len(conflict_groups)
             entry["archive_interleaved_dates"] = [
                 value.isoformat() for value in sorted(interleaved_dates)
             ]
             entries.append(entry)
             source.unlink()
             by_id.unlink()
+            classified.unlink()
             ordered.unlink()
         sort_root.rmdir()
         if not entries:
@@ -535,13 +629,16 @@ def process_archive(
     output_root: Path,
     symbol: Symbol,
     *,
+    source_archive_sha256: str | None = None,
     selected_dates: set[date] | None = None,
 ) -> list[dict[str, object]]:
+    lineage_sha256 = source_archive_sha256 or sha256_file(archive)
     try:
         return _process_archive_streaming(
             archive,
             output_root,
             symbol,
+            source_archive_sha256=lineage_sha256,
             selected_dates=selected_dates,
         )
     except ArchiveOrderingError:
@@ -549,8 +646,99 @@ def process_archive(
             archive,
             output_root,
             symbol,
+            source_archive_sha256=lineage_sha256,
             selected_dates=selected_dates,
         )
+
+
+def _canonical_ids_for_venue_id(archive: Path, symbol: Symbol, venue_trade_id: int) -> set[str]:
+    identities: set[str] = set()
+    with zipfile.ZipFile(archive) as bundle:
+        members = [name for name in bundle.namelist() if name.lower().endswith(".csv")]
+        if len(members) != 1:
+            raise ValueError("archive must contain exactly one CSV")
+        with bundle.open(members[0]) as raw_stream:
+            rows = csv.reader(io.TextIOWrapper(raw_stream, encoding="utf-8", newline=""))
+            for values in rows:
+                if not values or not values[0].strip().lstrip("-").isdigit():
+                    continue
+                if int(values[0]) != venue_trade_id:
+                    continue
+                price, _ = canonical_decimal(values[1])
+                quantity, _ = canonical_decimal(values[2])
+                quote_quantity, _ = canonical_decimal(values[3])
+                maker_text = values[5].strip().lower()
+                if maker_text not in {"true", "false"}:
+                    raise ValueError("invalid isBuyerMaker in conflict evidence")
+                identities.add(
+                    canonical_trade_identity(
+                        instrument=symbol,
+                        venue_trade_id=venue_trade_id,
+                        ts_event_ns=int(values[4]) * 1_000_000,
+                        price=price,
+                        quantity=quantity,
+                        quote_quantity=quote_quantity,
+                        is_buyer_maker=maker_text == "true",
+                    )
+                )
+    return identities
+
+
+def validate_official_conflicts(
+    work_root: Path,
+    symbol: Symbol,
+    frequency: Frequency,
+    entries: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    results: list[dict[str, object]] = []
+    for entry in entries:
+        groups = cast(list[dict[str, object]], entry.get("venue_trade_id_conflict_groups", []))
+        for group in groups:
+            partition_date = str(entry["date"])
+            result: dict[str, object] = {
+                "date": partition_date,
+                "conflict_group": group["conflict_group"],
+                "monthly_canonical_trade_ids": group["canonical_trade_ids"],
+                "monthly_sha256": entry.get("source_archive_sha256"),
+            }
+            if frequency != "monthly":
+                result["status"] = "SOURCE_DISAGREEMENT"
+                result["reason"] = "independent daily cross-validation source unavailable"
+                results.append(result)
+                continue
+            daily_url = archive_url(symbol, partition_date, "daily")
+            filename = daily_url.rsplit("/", 1)[-1]
+            try:
+                checksum_text = fetch_text(daily_url + ".CHECKSUM")
+                daily_sha = parse_checksum(checksum_text, filename)
+                raw_dir = work_root / "raw/trades" / symbol / "daily"
+                checksum_path = raw_dir / (filename + ".CHECKSUM")
+                checksum_path.parent.mkdir(parents=True, exist_ok=True)
+                if checksum_path.exists() and checksum_path.read_text() != checksum_text:
+                    raise FileExistsError(f"immutable checksum sidecar conflict: {checksum_path}")
+                if not checksum_path.exists():
+                    checksum_path.write_text(checksum_text)
+                    os.chmod(checksum_path, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+                daily_archive = download_archive(daily_url, raw_dir / filename, daily_sha)
+                daily_ids = _canonical_ids_for_venue_id(
+                    daily_archive, symbol, cast(int, group["venue_trade_id"])
+                )
+                monthly_ids = set(cast(list[str], group["canonical_trade_ids"]))
+                result["daily_sha256"] = daily_sha
+                result["daily_canonical_trade_ids"] = sorted(daily_ids)
+                result["status"] = (
+                    "CONFIRMED_OFFICIAL_CONFLICT"
+                    if daily_ids == monthly_ids
+                    else "SOURCE_DISAGREEMENT"
+                )
+            except Exception as exc:
+                result["status"] = "SOURCE_DISAGREEMENT"
+                result["reason"] = f"{type(exc).__name__}: {exc}"
+            results.append(result)
+    disagreements = [item for item in results if item["status"] == "SOURCE_DISAGREEMENT"]
+    if disagreements:
+        raise ValueError(f"official conflict source disagreement: {disagreements}")
+    return results
 
 
 def expected_dates() -> set[str]:
@@ -587,7 +775,14 @@ def build_one_archive(
         return key, cast(list[dict[str, object]], archive_summary["entries"])
     temporary = archive_root.with_name(archive_root.name + ".tmp")
     shutil.rmtree(temporary, ignore_errors=True)
-    entries = process_archive(archive, temporary, symbol)
+    entries = process_archive(archive, temporary, symbol, source_archive_sha256=expected)
+    for entry in entries:
+        entry["source_archive_sha256"] = expected
+    conflict_validation = validate_official_conflicts(work_root, symbol, frequency, entries)
+    for entry in entries:
+        entry["official_conflict_validation"] = [
+            item for item in conflict_validation if item["date"] == entry["date"]
+        ]
     atomic_json(
         temporary / "archive.json",
         {
@@ -596,6 +791,7 @@ def build_one_archive(
             "official_sha256": expected,
             "archive_bytes": archive.stat().st_size,
             "entries": entries,
+            "conflict_validation": conflict_validation,
         },
     )
     os.replace(temporary, archive_root)
@@ -615,7 +811,7 @@ class FullBuild:
     def initial_checkpoint(self) -> dict[str, Any]:
         return {
             "run_id": self.run_id,
-            "dataset_version": "stage1-v1.0",
+            "dataset_version": SCHEMA_VERSION,
             "code_commit": self.code_commit,
             "config_hash": self.config_hash,
             "status": "IN_PROGRESS",
@@ -716,10 +912,23 @@ class FullBuild:
                     "date_start": min(dates),
                     "date_end_inclusive": max(dates),
                     "rows": sum(int(entry["rows"]) for entry in entries),
-                    "input_rows": sum(int(entry["input_rows"]) for entry in entries),
+                    "input_rows": sum(
+                        int(entry.get("source_input_rows", entry["input_rows"]))
+                        for entry in entries
+                    ),
                     "duplicate_exact_count": sum(
                         int(entry["duplicate_exact_count"]) for entry in entries
                     ),
+                    "venue_trade_id_conflict_count": sum(
+                        int(entry.get("venue_trade_id_conflict_count", 0)) for entry in entries
+                    ),
+                    "official_conflict_validation": [
+                        validation
+                        for entry in entries
+                        for validation in cast(
+                            list[dict[str, object]], entry.get("official_conflict_validation", [])
+                        )
+                    ],
                     "partitions": len(entries),
                     "logical_data_hash": logical.hexdigest(),
                     "count_outlier_review": outliers,
@@ -732,7 +941,7 @@ class FullBuild:
         self._verify_determinism(checkpoint)
         for symbol in SYMBOLS:
             staging = self.work_root / "staging" / self.run_id / symbol
-            published = self.work_root / "published/stage1-v1.0" / self.run_id / symbol
+            published = self.work_root / "published" / SCHEMA_VERSION / self.run_id / symbol
             published.parent.mkdir(parents=True, exist_ok=True)
             if published.exists():
                 raise FileExistsError(f"published symbol already exists: {published}")
@@ -741,7 +950,7 @@ class FullBuild:
             atomic_json(self.checkpoint_path, checkpoint)
         manifest = {
             "run_id": self.run_id,
-            "dataset_version": "stage1-v1.0",
+            "dataset_version": SCHEMA_VERSION,
             "code_commit": self.code_commit,
             "config_hash": self.config_hash,
             "source": "Binance official public USD-M Futures Trades archives",
@@ -762,6 +971,12 @@ class FullBuild:
                         "input_rows": checkpoint["symbols"][symbol]["input_rows"],
                         "duplicate_exact_count": checkpoint["symbols"][symbol][
                             "duplicate_exact_count"
+                        ],
+                        "venue_trade_id_conflict_count": checkpoint["symbols"][symbol][
+                            "venue_trade_id_conflict_count"
+                        ],
+                        "official_conflict_validation": checkpoint["symbols"][symbol][
+                            "official_conflict_validation"
                         ],
                         "partitions": checkpoint["symbols"][symbol]["partitions"],
                         "count_outlier_review": checkpoint["symbols"][symbol][

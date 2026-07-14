@@ -2,14 +2,14 @@
 
 ## Metadata
 - task_id: S1-T12
-- task_version: 1.0
+- task_version: 1.1
 - status: PASSED
 - stage_id: S1
-- stage_plan_version: 1.0
+- stage_plan_version: 1.1
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: S1-T07, S1-T09, S1-T10, S1-T11 PASS
-- supersedes: former S1-T10 v0.1
+- supersedes: task_version 1.0
 - approved_by: Muce
 - approved_at: 2026-07-12
 
@@ -53,3 +53,4 @@ OQ-S1-001/002继续阻塞全量，不阻塞本Task。
 上游Task重开或报告遗漏失败证据。
 ## 20. 变更历史
 - 2026-07-12：v1.0，将样本能力验收与全量运行分离；状态DRAFT。
+- 2026-07-14：v1.1，增加Trade Identity v2及官方月/日冲突集合质量门；回归PASS。

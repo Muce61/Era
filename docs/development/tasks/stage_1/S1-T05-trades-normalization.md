@@ -2,14 +2,14 @@
 
 ## Metadata
 - task_id: S1-T05
-- task_version: 1.0
+- task_version: 1.1
 - status: PASSED
 - stage_id: S1
-- stage_plan_version: 1.0
+- stage_plan_version: 1.1
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: S1-T04 PASS
-- supersedes: task_version 0.1
+- supersedes: task_version 1.0
 - approved_by: Muce
 - approved_at: 2026-07-12
 
@@ -34,7 +34,7 @@ T04 raw fixtures/manifest；输出仅写批准的normalized run目录。
 ## 10. 交付物
 NormalizedTrade转换器、schema version、lineage和行数/失败统计。
 ## 11. 实现要求
-Trade ID与instrument组成稳定身份；价格/数量禁float；时间不使用本地时区。
+`canonical_trade_id`按ADR-2026-001规范JSON生成；`venue_trade_id`仅保留交易所属性；价格/数量禁float；时间不使用本地时区。
 ## 12. 测试要求
 round-trip、边界Decimal、坏时间/负数量/未知列、BTC/ETH隔离和确定性输出。
 ## 13. 验收标准
@@ -53,3 +53,4 @@ raw schema、单位、主键或错误策略变化。
 转换hash不稳定或lineage断裂。
 ## 20. 变更历史
 - 2026-07-12：v1.0，冻结标准化与质量职责分离；状态DRAFT。
+- 2026-07-14：v1.1，CR-2026-001重开并PASS；规范身份排除归档路径和source hash。

@@ -1,5 +1,6 @@
 contract_price_root: /Users/muce/1m_data/klines_data_usdm_1s_agg
 work_root: /Volumes/FuckingLife/era100x_stage1
+dataset_version: stage1-trades-v2
 superseded_work_roots:
   - /Users/muce/1m_data/era100x_stage1
 layout:

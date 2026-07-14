@@ -14,7 +14,10 @@ def _sha(data: bytes) -> str:
 def publish_partition(rows: list[NormalizedTrade], root: Path, run_id: str) -> dict[str, object]:
     if not rows:
         raise ValueError("empty partition")
-    ordered = sorted(rows, key=lambda r: (r.instrument, r.ts_event_ns, r.trade_id))
+    ordered = sorted(
+        rows,
+        key=lambda r: (r.instrument, r.ts_event_ns, r.venue_trade_id, r.canonical_trade_id),
+    )
     symbol = ordered[0].instrument
     if any(r.instrument != symbol for r in ordered):
         raise ValueError("mixed instruments")
@@ -35,7 +38,10 @@ def publish_partition(rows: list[NormalizedTrade], root: Path, run_id: str) -> d
     records = [
         {
             "instrument": r.instrument,
-            "trade_id": r.trade_id,
+            "venue_trade_id": r.venue_trade_id,
+            "canonical_trade_id": r.canonical_trade_id,
+            "identity_status": r.identity_status,
+            "venue_trade_id_conflict_group": r.venue_trade_id_conflict_group,
             "price": str(r.price),
             "quantity": str(r.quantity),
             "quote_quantity": str(r.quote_quantity),
