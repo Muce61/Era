@@ -1,6 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+import pytest
+
+from era100x.research.stage_2.pipelines.candidates import candidate_diagnostics
 from era100x.research.stage_2.pipelines.candidates.candidate_diagnostics import (
+    assert_code_commit_matches_head,
     classify_legacy_price_records,
 )
 
@@ -70,3 +76,16 @@ def test_diagnosis_is_input_order_independent() -> None:
     assert classify_legacy_price_records(rows, timing) == classify_legacy_price_records(
         list(reversed(rows)), timing
     )
+
+
+def test_diagnostic_evidence_rejects_a_code_commit_other_than_head(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        candidate_diagnostics.subprocess,
+        "check_output",
+        lambda *args, **kwargs: "a" * 40 + "\n",
+    )
+    with pytest.raises(ValueError, match="current HEAD"):
+        assert_code_commit_matches_head("b" * 40)
+    assert not (tmp_path / "evidence").exists()

@@ -11,6 +11,7 @@ import polars as pl
 
 from era100x.research.stage_2.manifests.configuration import parameter_sets
 from era100x.research.stage_2.pipelines.candidates.candidate_diagnostics import (
+    assert_code_commit_matches_head,
     classify_legacy_price_records,
 )
 
@@ -52,6 +53,7 @@ def load_records(failed_run_root: Path, days: int) -> list[dict[str, object]]:
 def publish_evidence(
     *, failed_run_root: Path, output_root: Path, days: int, code_commit: str
 ) -> dict[str, object]:
+    assert_code_commit_matches_head(code_commit)
     if output_root.exists():
         raise FileExistsError(f"append-only diagnostic evidence exists: {output_root}")
     for name in ("staging", "published", "manifests", "reports", "logs", "tmp"):

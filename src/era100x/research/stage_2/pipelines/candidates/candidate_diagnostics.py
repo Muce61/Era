@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass
+import subprocess
 from typing import Any
 
 from era100x.research.stage_2.contracts.identity import (
@@ -21,6 +22,12 @@ from era100x.research.stage_2.pipelines.candidates.candidate_finalizer import (
 class LegacyDiagnosis:
     summary: dict[str, Any]
     classifications: list[dict[str, Any]]
+
+
+def assert_code_commit_matches_head(code_commit: str) -> None:
+    current_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    if code_commit != current_commit:
+        raise ValueError("diagnostic code commit does not match current HEAD")
 
 
 def classify_legacy_price_records(
