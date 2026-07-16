@@ -2232,7 +2232,7 @@ rules:
     cr_s2_004_status: APPROVED_L2
     cr_s2_004_validation: docs/development/validations/stage_2/CR-2026-004.md
     execution_blocker: NONE
-    execution_state: READY_FOR_S2_T10_RECOVERY_EXECUTION
+    execution_state: S2_T10_DUAL_FULL_BUILD_IN_PROGRESS
   state: PLANNED
 - rule_id: GATE-STAGE-3
   rule_status: FROZEN

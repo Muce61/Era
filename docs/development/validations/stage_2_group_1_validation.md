@@ -4,8 +4,8 @@
 
 **FAIL**
 
-Recovery status: CR-2026-003 path repair IMPLEMENTED/TESTED; CR-2026-004 identity/ownership
-validation PASS; S2-T10 v1.5 APPROVED_FOR_REEXECUTION. This remains a FAIL draft until two new
+Recovery status: CR-2026-003 path repair IMPLEMENTED/TESTED; CR-2026-004 RESOLVED with
+validation PASS; S2-T10 v1.5 dual full build IN_PROGRESS. This remains a FAIL draft until two new
 complete deterministic full runs satisfy the Group-1 gate.
 
 S2-T19 and S2-T01～S2-T09 passed their directed tests and small-sample integration. S2-T10
