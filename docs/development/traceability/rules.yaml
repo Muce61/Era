@@ -138,6 +138,11 @@ rules:
   - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); UT-EVT-011, FI-14
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
+  stage_2_identity_delivery:
+    implementation: src/era100x/research/stage_2/episodes/identity/
+    tests: tests/research/stage_2/episodes/identity/
+    validation: docs/development/validations/stage_2/S2-T09.md
+    state: PASSED
   state: PLANNED
 - rule_id: FILL-FIRST-NONZERO-PROTECT
   rule_status: FROZEN
