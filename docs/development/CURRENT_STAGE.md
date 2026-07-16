@@ -1,10 +1,10 @@
 # Current Development State
 
 ```text
-Current Stage: Stage 1
-Current Plan: stage_1_plan_v1.1
+Current Stage: NONE
+Current Plan: NONE
 Current Task: NONE
-Status: READY_FOR_STAGE_1_FINAL_APPROVAL
+Status: WAITING_FOR_SCAFFOLD_EXTRACTION
 ```
 
-Stage 0 remains PASSED. Stage 1 Plan v1.1 remains the approved execution plan. S1-T01～S1-T15 are PASSED and Stage 1 integration validation is PASS. Stage 1 awaits final human approval and has no final baseline or tag. Stage 2～Stage 9 remain DRAFT and no Stage 2 code or research was executed.
+Stage 0 and Stage 1 are PASSED with VALID baselines. Stage 1 baseline version 1.0 freezes the delivery produced under approved Plan v1.1 and tag `stage-1-v1.0-passed`. Stage 2～Stage 9 remain DRAFT; no Stage 2 Task or research has executed. The next permitted activity is a separately governed Scaffold Extraction v1.0, not automatic Stage 2 execution.

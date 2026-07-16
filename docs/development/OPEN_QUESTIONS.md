@@ -31,3 +31,5 @@ These questions are inherited from V1.3.4 Appendix N. They do not block planning
 New questions must record discovery/source, affected rules/contracts/baselines, evidence required, owner, status, and linked ADR/CR. No unresolved question may be answered by assumption.
 
 U-001～U-003 remain OPEN after Stage 0 final approval. They block only their recorded downstream execution/adaptation scopes and do not invalidate the offline Stage 0 v1.0 baseline.
+
+All OPEN questions assigned to Stage 2 or later remain OPEN after Stage 1 final approval. They do not invalidate the Stage 1 v1.0 historical data baseline, but continue to block their recorded downstream research or execution scope.

@@ -208,6 +208,14 @@ rules:
   - tests/stage_5/ (PLANNED forward regression)
   validation_paths:
   - docs/development/validations/stage_5/ (PLANNED)
+  stage_1_delivery:
+    implementation: IMPLEMENTED
+    tests: TESTED
+    validation: VALIDATED
+    tasks: [S1-T02, S1-T10, S1-T12, S1-T14, S1-T15]
+    implementation_paths: [src/era100x/data/evidence/historical.py, src/era100x/data/full_build/builder.py]
+    test_paths: [tests/data/evidence/test_historical_boundary.py, tests/data/full_build/test_full_build.py]
+    validation_path: docs/development/validations/stage_1_validation.md
   state: PLANNED
 - rule_id: RESEARCH-LOCKED-REPLAY-ONCE
   rule_status: FROZEN
@@ -261,6 +269,14 @@ rules:
   - tests/research/stage_2/contracts/, tests/research/stage_2/gates/ (PLANNED); T-EVT-002
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
+  stage_1_delivery:
+    implementation: IMPLEMENTED
+    tests: TESTED
+    validation: VALIDATED
+    tasks: [S1-T03, S1-T09, S1-T10, S1-T15]
+    implementation_paths: [src/era100x/data/readers/contract_price.py, src/era100x/data/aggregate/bars.py, src/era100x/data/evidence/historical.py]
+    test_paths: [tests/data/readers/test_contract_price_reader.py, tests/data/aggregate/test_bars.py, tests/data/evidence/test_historical_boundary.py]
+    validation_path: docs/development/validations/stage_1_validation.md
   state: PLANNED
 - rule_id: RESEARCH-H3-CONDITIONAL-ROUND-PROB
   rule_status: FROZEN
@@ -680,6 +696,11 @@ rules:
   planned_stage: S2
   planned_tasks:
   - S0-T10
+  - S1-T02
+  - S1-T10
+  - S1-T12
+  - S1-T14
+  - S1-T15
   - S2-T01
   - S2-T07
   - S2-T08
@@ -691,6 +712,14 @@ rules:
   - tests/research/stage_2/ (PLANNED); UT-DATA-013
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
+  stage_1_delivery:
+    implementation: IMPLEMENTED
+    tests: TESTED
+    validation: VALIDATED
+    tasks: [S1-T02, S1-T10, S1-T12, S1-T14, S1-T15]
+    implementation_paths: [src/era100x/data/evidence/historical.py, src/era100x/data/schema/models.py, src/era100x/data/full_build/builder.py]
+    test_paths: [tests/data/evidence/test_historical_boundary.py, tests/data/schema/test_data_schema_models.py, tests/data/full_build/test_full_build.py]
+    validation_path: docs/development/validations/stage_1_validation.md
   state: PLANNED
 - rule_id: INV-014
   rule_status: FROZEN
@@ -2147,12 +2176,18 @@ rules:
   - S1-T14
   - S1-T15
   implementation_paths:
-  - NONE (governance gate)
+  - docs/development/tasks/stage_1/ (S1-T01 through S1-T15 PASSED)
   test_paths:
-  - docs/development/validations/stage_1/ (PLANNED)
+  - tests/data/ (TESTED)
   validation_paths:
-  - docs/development/validations/stage_1/ (PLANNED)
-  state: PLANNED
+  - docs/development/validations/stage_1_validation.md (VALIDATED)
+  stage_1_delivery:
+    implementation: IMPLEMENTED
+    tests: TESTED
+    validation: VALIDATED
+    tasks: [S1-T12, S1-T14, S1-T15]
+    validation_path: docs/development/validations/stage_1_validation.md
+  state: VALIDATED
 - rule_id: GATE-STAGE-2
   rule_status: FROZEN
   source_section: §30; Appendix L
