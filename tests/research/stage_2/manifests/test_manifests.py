@@ -97,6 +97,7 @@ def test_recovery_manifest_binds_fix_commit_and_forbids_price_reuse() -> None:
             "failure_reason": "archive path omitted",
             "change_request": "CR-2026-003",
             "identity_change_request": "CR-2026-004",
+            "ownership_change_request": "CR-2026-005",
             "fix_code_commit": "a" * 40,
             "reused_price_staging": False,
         },
@@ -105,6 +106,7 @@ def test_recovery_manifest_binds_fix_commit_and_forbids_price_reuse() -> None:
     assert manifest.recovery is not None
     assert manifest.recovery.reused_price_staging is False
     assert manifest.recovery.identity_change_request == "CR-2026-004"
+    assert manifest.recovery.ownership_change_request == "CR-2026-005"
     assert manifest.quality_gate_evidence_hash == "7" * 64
     assert manifest.tool_versions["polars"] == "1.42.1"
     payload["recovery"]["fix_code_commit"] = "b" * 40  # type: ignore[index]

@@ -164,9 +164,9 @@ def _safety_checks() -> dict[str, Any]:
     output_hits = [token for token in forbidden_outputs if token in candidate_source]
     if output_hits:
         errors.append(f"forbidden later-stage output hits: {output_hits}")
-    failed_root = STAGE2_ROOT / "runs/stage2-g1-full-a-20260716-4c15e46"
+    failed_root = STAGE2_ROOT / "runs/stage2-g1-full-a-20260716T122601Z-0247d30f9f62"
     failed = json.loads((failed_root / "checkpoint.json").read_text())
-    if failed.get("status") != "FAILED" or (failed_root / "published/data").exists():
+    if failed.get("status") != "FAILED_UNPUBLISHED" or (failed_root / "published/data").exists():
         errors.append("failed predecessor protection changed")
     invalidated = json.loads(
         (

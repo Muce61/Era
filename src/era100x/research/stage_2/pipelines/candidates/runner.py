@@ -64,7 +64,7 @@ PREREGISTRATION_MANIFEST_PATH = (
     / "manifests"
     / f"{EXPECTED_PREREGISTRATION_MANIFEST}.json"
 )
-FAILED_RUN_ID = "stage2-g1-full-a-20260716-4c15e46"
+FAILED_RUN_ID = "stage2-g1-full-a-20260716T122601Z-0247d30f9f62"
 INVALIDATED_RUN_ID = "stage2-g1-full-a-20260716-93a6016"
 RUN_A_REQUIRED_FREE_BYTES = 2_018_047_426_560
 RUN_B_REQUIRED_FREE_BYTES = 1_345_364_951_040
@@ -171,6 +171,7 @@ class CandidateRun:
             or recovery.supersedes_failed_run_id != FAILED_RUN_ID
             or recovery.change_request != "CR-2026-003"
             or recovery.identity_change_request != "CR-2026-004"
+            or recovery.ownership_change_request != "CR-2026-005"
             or recovery.reused_price_staging
         ):
             raise ValueError("invalid CR-2026-003 recovery metadata")
@@ -226,7 +227,7 @@ class CandidateRun:
             failed_root = STAGE2_ROOT / "runs" / FAILED_RUN_ID
             failed_checkpoint = json.loads((failed_root / "checkpoint.json").read_text())
             if (
-                failed_checkpoint.get("status") != "FAILED"
+                failed_checkpoint.get("status") != "FAILED_UNPUBLISHED"
                 or (failed_root / "published" / "data").exists()
             ):
                 raise ValueError("failed predecessor run state changed")
@@ -294,6 +295,16 @@ class CandidateRun:
             )
         ):
             raise ValueError("CR-2026-004 is not resolved/implemented/validated")
+        cr_005_text = (root / "docs/development/changes/CR-2026-005.md").read_text()
+        if not all(
+            marker in cr_005_text
+            for marker in (
+                "- status: RESOLVED",
+                "- implementation_status: IMPLEMENTED",
+                "- validation_status: PASS",
+            )
+        ):
+            raise ValueError("CR-2026-005 is not resolved/implemented/validated")
         self._assert_quality_evidence(current_commit)
         invalidated_root = STAGE2_ROOT / "runs" / INVALIDATED_RUN_ID
         invalidation = json.loads((invalidated_root / "reports" / "invalidation.json").read_text())

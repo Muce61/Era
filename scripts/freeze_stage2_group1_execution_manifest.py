@@ -13,7 +13,7 @@ from era100x.research.stage_2.manifests.repository import AppendOnlyManifestRepo
 
 PREREGISTRATION_HASH = "6b0f66e4007b86e08b58a9b366170eeee952199baa203d7f174b2ca69478c1f9"
 CONFIG_HASH = "adb6295e210de66d1e69aa008e6161e8fef1e1fd72001ff812b68597f8c72e3f"
-FAILED_RUN_ID = "stage2-g1-full-a-20260716-4c15e46"
+FAILED_RUN_ID = "stage2-g1-full-a-20260716T122601Z-0247d30f9f62"
 
 
 def main() -> int:
@@ -38,7 +38,7 @@ def main() -> int:
     manifest = Stage2ExecutionManifest.seal(
         {
             "schema_name": "stage2-group1-execution",
-            "manifest_version": "1.2-dual-full-build",
+            "manifest_version": "1.3-cr-2026-005-dual-full-build",
             "preregistration_manifest_hash": PREREGISTRATION_HASH,
             "code_commit": head,
             "fixture_logical_hash": (
@@ -68,10 +68,12 @@ def main() -> int:
                 "recovery_of_run_id": FAILED_RUN_ID,
                 "supersedes_failed_run_id": FAILED_RUN_ID,
                 "failure_reason": (
-                    "CR-2026-003 archive path omission and CR-2026-004 legacy candidate identity"
+                    "CR-2026-003 archive path omission, CR-2026-004 legacy candidate identity, "
+                    "and CR-2026-005 adjacent-minute Sweep seed ownership"
                 ),
                 "change_request": "CR-2026-003",
                 "identity_change_request": "CR-2026-004",
+                "ownership_change_request": "CR-2026-005",
                 "fix_code_commit": head,
                 "reused_price_staging": False,
             },
