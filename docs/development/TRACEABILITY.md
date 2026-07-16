@@ -108,7 +108,7 @@ Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～
 
 ## Stage 2 Plan v1.2 APPROVED Coverage
 
-Stage 2 is `IN_PROGRESS / GROUP_1_S2_T10_DUAL_FULL_BUILD_IN_PROGRESS`. CR-2026-004 is RESOLVED / IMPLEMENTED / VALIDATED after deterministic splitting of legacy Case C conflicts under a canonical candidate identity containing the actual OFAT parameter set and timing combination. S2-T09 v1.4 is PASSED and S2-T10 v1.5 is IN_PROGRESS behind mandatory pre-run quality and space gates. Failed run `stage2-g1-full-a-20260716-4c15e46` remains FAILED_UNPUBLISHED. Groups 2～4 remain DRAFT and were not executed.
+Stage 2 is `BLOCKED / GROUP_1_BLOCKED_CR_2026_005`. CR-2026-004 remains RESOLVED / IMPLEMENTED / VALIDATED and S2-T09 v1.4 remains PASSED. The first S2-T10 v1.5 Run A completed all 2,376 BTC PRICE daily construction partitions but failed unpublished during finalization on two same-canonical-identity/different-payload groups caused by adjacent-minute key-level validity snapshots. [CR-2026-005](changes/CR-2026-005.md) awaits Muce's disposition; no resume, replacement Run A or Run B is authorized. All failed evidence remains retained. Groups 2～4 remain DRAFT and were not executed.
 
 | Requirement | Plan v1.2 Tasks | Planned implementation/tests | State |
 | --- | --- | --- | --- |
@@ -128,7 +128,7 @@ Stage 2 is `IN_PROGRESS / GROUP_1_S2_T10_DUAL_FULL_BUILD_IN_PROGRESS`. CR-2026-0
 | S2-T08 v1.3 delivered evidence | S2-T08 | Trades-only G4 facts/tests and `validations/stage_2/S2-T08.md` | PASSED |
 | MarketEpisode identity, consume and re-arm | S2-T09 | fixture-only `episodes/identity`; FI-14, UT-EVT-011 | APPROVED_NOT_EXECUTED |
 | S2-T09 v1.4 identity correction | S2-T09 | CR-2026-004 canonical candidate identity/payload hash while preserving FROZEN MarketEpisode identity; `validations/stage_2/CR-2026-004.md` | PASSED |
-| Registry-driven full candidate generation; BTC/ETH, variant and Primary/Exploratory separate | S2-T10 v1.5 | dual variant candidate-attempt finalization, semantic Catalog/release analysis, checksum recovery and CR-2026-003/004 regression tests; prior failures retained in `validations/stage_2/S2-T10.md` | IN_PROGRESS |
+| Registry-driven full candidate generation; BTC/ETH, variant and Primary/Exploratory separate | S2-T10 v1.5 | dual variant candidate-attempt finalization, semantic Catalog/release analysis, checksum recovery and CR-2026-003/004 regression tests; v1.5 Run A finalization conflict recorded in `validations/stage_2/S2-T10.md` and CR-2026-005 | BLOCKED |
 | Group-1 small-sample integration | S2-T01～S2-T09 | fixture chain plus six controlled real windows; locked execution Manifest | PASSED |
 | Historical path metrics and labels | S2-T11, S2-T12, S2-T13, S2-T14 | v2 ordering, MFE/MAE/time, first passage, AMBIGUOUS bounds | DRAFT_NOT_APPROVED |
 | Conditional baseline and placebo | S2-T15, S2-T16 | matched baseline/placebo with frozen relaxation and seeds | DRAFT_NOT_APPROVED |

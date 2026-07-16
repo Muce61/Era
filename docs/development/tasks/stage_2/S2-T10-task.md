@@ -4,7 +4,7 @@
 
 - task_id: S2-T10
 - task_version: 1.5
-- status: IN_PROGRESS
+- status: BLOCKED
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
@@ -88,6 +88,11 @@ CR-2026-004 已由Muce按L2批准：旧identity conflict按包含实际OFAT参�
 canonical candidate identity拆分。修复、前50日双重放和全部质量门通过前，不得冻结新
 Execution Manifest或启动recovery run。
 
+CR-2026-005 is OPEN_PENDING_HUMAN_DECISION after the first v1.5 Run A found two
+same-canonical-identity/different-payload groups during BTC PRICE finalization. No resume, new
+Execution Manifest, replacement Run A or Run B is permitted until Muce selects the event/snapshot
+ownership disposition.
+
 ## 18. 变化触发器
 
 schema、标签、成本模型、事件定义、数据/配置哈希、git commit 或聚类方式变化；或发现与 V1.3.4/Binance 官方事实冲突。 触发 task_version 递增和重新审批。
@@ -97,6 +102,8 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 依赖 Task/Stage 重开、输入哈希变化、映射规则变化、验收测试被推翻或产物不可复现时标记 INVALIDATED，不得继续作为有效证据。
 
 ## 20. 变更历史
+
+- 2026-07-16：v1.5 Run A完成BTC PRICE 2376/2376日构造后，在2020-04-27 finalization发现两个same identity/different payload冲突并保持未发布失败；创建CR-2026-005，Task状态BLOCKED，未创建Run B。
 
 - 2026-07-16：v1.5，Muce批准CR-2026-004 L2及Case C按新身份拆分；重开Task以修复candidate identity、partition ownership和dedup finalization，本轮禁止创建全量run。
 

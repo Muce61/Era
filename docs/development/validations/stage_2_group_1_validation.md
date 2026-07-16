@@ -5,8 +5,8 @@
 **FAIL**
 
 Recovery status: CR-2026-003 path repair IMPLEMENTED/TESTED; CR-2026-004 RESOLVED with
-validation PASS; S2-T10 v1.5 dual full build IN_PROGRESS. This remains a FAIL draft until two new
-complete deterministic full runs satisfy the Group-1 gate.
+validation PASS; the first S2-T10 v1.5 Run A failed unpublished during BTC PRICE finalization.
+CR-2026-005 is open and blocks any replacement Run A or Run B. This remains FAIL.
 
 S2-T19 and S2-T01～S2-T09 passed their directed tests and small-sample integration. S2-T10
 failed during the first full BTCUSDT Flow partition because its Stage 1 Trades physical-path
@@ -36,6 +36,11 @@ zero conflict and deterministic replay. No new Execution Manifest or recovery ru
 | CR-2026-003 archive path correction | PASS in code/regression |
 | Candidate identity/ownership correction | PASS: CR-2026-004 |
 | No blocker for S2-T10 recovery | PASS |
+| v1.5 Run A BTC PRICE daily construction | PASS, 2376/2376 |
+| v1.5 Run A candidate finalization | FAIL: 2 same-identity/different-payload groups |
+| v1.5 Run A publication | NONE / FAILED_UNPUBLISHED |
+| v1.5 independent Run B | NOT CREATED |
+| CR-2026-005 decision | BLOCKED / HUMAN DECISION REQUIRED |
 
 ## Failure disposition
 
@@ -43,3 +48,8 @@ Run `stage2-g1-full-a-20260716-4c15e46` is `FAILED_UNPUBLISHED`. Its staging and
 remain intact. [CR-2026-003](../changes/CR-2026-003.md) corrected the path resolver; the separate
 [CR-2026-004](../changes/CR-2026-004.md) validates candidate identity and ownership. Group 1 is
 ready to retry S2-T10 but is not ready for final approval.
+
+The later v1.5 Run A is retained separately as
+`stage2-g1-full-a-20260716T122601Z-0247d30f9f62`. It is `FAILED_UNPUBLISHED` after the approved
+hard-conflict gate detected two adjacent-minute snapshot payload conflicts on 2020-04-27. It may
+not be resumed or published. [CR-2026-005](../changes/CR-2026-005.md) records the new blocker.
