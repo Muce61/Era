@@ -94,6 +94,51 @@ def test_failed_partition_is_not_published(tmp_path: Path, monkeypatch: pytest.M
     with pytest.raises(RuntimeError, match="fixture failure"):
         run.execute("BTCUSDT", "V1_PRICE", resume=False)
     assert not (run.root / "published" / "data").exists()
+    assert run._checkpoint()["status"] == "FAILED_UNPUBLISHED"
+    assert (run.root / "reports" / "failure.json").exists()
+    with pytest.raises(ValueError, match="terminal run"):
+        run.execute("BTCUSDT", "V1_PRICE", resume=True)
+
+
+def test_finalization_conflict_records_terminal_unpublished_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest_path = tmp_path / "execution.json"
+    manifest(manifest_path)
+    monkeypatch.setattr(runner, "STAGE2_ROOT", tmp_path / "stage2")
+    monkeypatch.setattr(runner, "dates", lambda: [date(2020, 1, 1)])
+    monkeypatch.setenv("ERA_STAGE2_WORKERS", "1")
+    monkeypatch.setattr(runner, "build_price_day", lambda **_kwargs: {"candidate_attempts": []})
+
+    conflict = runner.CandidateIdentityConflict(
+        [
+            {
+                "canonical_candidate_id": "1" * 64,
+                "payload_hashes": ["2" * 64, "3" * 64],
+                "attempt_count": 2,
+                "sources": [],
+            }
+        ]
+    )
+
+    def fail_finalization(*_args: object, **_kwargs: object) -> object:
+        raise conflict
+
+    monkeypatch.setattr(runner, "finalize_candidate_attempts", fail_finalization)
+    run = runner.CandidateRun.preflight("run-conflict", manifest_path)
+
+    with pytest.raises(runner.CandidateIdentityConflict):
+        run.execute("BTCUSDT", "V1_PRICE", resume=False)
+
+    checkpoint = run._checkpoint()
+    assert checkpoint["status"] == "FAILED_UNPUBLISHED"
+    assert checkpoint["failed"][0]["key"] == "BTCUSDT:V1_PRICE:FINALIZE"
+    assert not (run.root / "published" / "data").exists()
+    assert (run.root / "reports" / "failure.json").exists()
+    assert (
+        run.root / "reports/candidate_identity_conflicts/instrument=BTCUSDT/variant=V1_PRICE/"
+        "date=2020-01-01.json"
+    ).exists()
 
 
 def test_catalog_ignores_external_volume_appledouble_sidecars(tmp_path: Path) -> None:

@@ -5,7 +5,7 @@ import os
 import shutil
 import subprocess
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -342,7 +342,7 @@ class CandidateRun:
                 continue
             status = json.loads(checkpoint_path.read_text()).get("status")
             invalidated = path / "reports" / "invalidation.json"
-            effective_terminal = status in {"FAILED", "PUBLISHED"} or (
+            effective_terminal = status in {"FAILED", "FAILED_UNPUBLISHED", "PUBLISHED"} or (
                 invalidated.exists()
                 and json.loads(invalidated.read_text()).get("status") == "INVALIDATED"
             )
@@ -383,6 +383,8 @@ class CandidateRun:
         checkpoint = self._checkpoint()
         if checkpoint["execution_manifest_hash"] != self.manifest.manifest_hash:
             raise ValueError("resume Manifest mismatch")
+        if checkpoint["status"] in {"FAILED", "FAILED_UNPUBLISHED", "PUBLISHED"}:
+            raise ValueError(f"terminal run cannot execute: {checkpoint['status']}")
         if variant == "V1_FLOW" and not self._variant_complete(instrument, "V1_PRICE", checkpoint):
             raise ValueError("V1_FLOW requires completed V1_PRICE windows")
         if resume:
@@ -396,16 +398,20 @@ class CandidateRun:
         ]
         if interruption_limit:
             for day in pending:
-                key = _execute_partition(
-                    self.root,
-                    instrument,
-                    variant,
-                    day,
-                    self.manifest.stage1_data_run_id,
-                    self.manifest.config_hash,
-                    checkpoint["code_commit"],
-                    self._trade_partitions(instrument, variant, day),
-                )
+                try:
+                    key = _execute_partition(
+                        self.root,
+                        instrument,
+                        variant,
+                        day,
+                        self.manifest.stage1_data_run_id,
+                        self.manifest.config_hash,
+                        checkpoint["code_commit"],
+                        self._trade_partitions(instrument, variant, day),
+                    )
+                except Exception as exc:
+                    self._record_terminal_failure(checkpoint, f"{instrument}:{variant}:{day}", exc)
+                    raise
                 checkpoint["completed"].append(key)
                 completed_this_call += 1
                 atomic_json(self.root / "checkpoint.json", checkpoint)
@@ -434,11 +440,13 @@ class CandidateRun:
                         checkpoint["completed"].append(completed_key)
                     atomic_json(self.root / "checkpoint.json", checkpoint)
                 except Exception as exc:
-                    checkpoint["failed"].append({"key": key, "error": repr(exc)})
-                    checkpoint["status"] = "FAILED"
-                    atomic_json(self.root / "checkpoint.json", checkpoint)
+                    self._record_terminal_failure(checkpoint, key, exc)
                     raise
-            self._finish_execute(instrument, variant, checkpoint)
+            try:
+                self._finish_execute(instrument, variant, checkpoint)
+            except Exception as exc:
+                self._record_terminal_failure(checkpoint, f"{instrument}:{variant}:FINALIZE", exc)
+                raise
             return
         futures = {}
         with ProcessPoolExecutor(max_workers=workers) as pool:
@@ -464,13 +472,41 @@ class CandidateRun:
                         checkpoint["completed"].append(completed_key)
                     atomic_json(self.root / "checkpoint.json", checkpoint)
                 except Exception as exc:
-                    checkpoint["failed"].append({"key": key, "error": repr(exc)})
-                    checkpoint["status"] = "FAILED"
-                    atomic_json(self.root / "checkpoint.json", checkpoint)
+                    self._record_terminal_failure(checkpoint, key, exc)
                     for remaining in futures:
                         remaining.cancel()
                     raise
-        self._finish_execute(instrument, variant, checkpoint)
+        try:
+            self._finish_execute(instrument, variant, checkpoint)
+        except Exception as exc:
+            self._record_terminal_failure(checkpoint, f"{instrument}:{variant}:FINALIZE", exc)
+            raise
+
+    def _record_terminal_failure(
+        self, checkpoint: dict[str, Any], failed_phase: str, exc: Exception
+    ) -> None:
+        failure = {"key": failed_phase, "error": repr(exc)}
+        if failure not in checkpoint["failed"]:
+            checkpoint["failed"].append(failure)
+        checkpoint["status"] = "FAILED_UNPUBLISHED"
+        atomic_json(self.root / "checkpoint.json", checkpoint)
+        _write_once_json(
+            self.root / "reports" / "failure.json",
+            {
+                "record_type": "STAGE2_GROUP1_RUN_FAILURE",
+                "recorded_at": datetime.now(UTC).isoformat(),
+                "run_id": self.run_id,
+                "task_id": "S2-T10",
+                "status": "FAILED_UNPUBLISHED",
+                "failed_phase": failed_phase,
+                "completed_items": len(checkpoint["completed"]),
+                "planned_items": len(checkpoint["planned"]),
+                "error": repr(exc),
+                "publication": "NONE",
+                "cleanup_authorized": False,
+                "staging_retention": "REQUIRED_PENDING_AUDIT",
+            },
+        )
 
     def _verify_completed_variant(
         self, instrument: Instrument, variant: Variant, checkpoint: dict[str, Any]
@@ -568,7 +604,7 @@ class CandidateRun:
                     attempts, include_flow_windows=variant == "V1_PRICE"
                 )
             except CandidateIdentityConflict as exc:
-                atomic_json(
+                _write_once_json(
                     self.root
                     / "reports"
                     / "candidate_identity_conflicts"

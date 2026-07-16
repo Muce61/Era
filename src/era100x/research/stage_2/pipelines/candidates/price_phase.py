@@ -24,6 +24,13 @@ from era100x.research.stage_2.manifests.configuration import parameter_sets, tim
 Instrument = Literal["BTCUSDT", "ETHUSDT"]
 SECOND_NS = 1_000_000_000
 DAY_NS = 86_400 * SECOND_NS
+MINUTE_NS = 60 * SECOND_NS
+
+
+def owns_sweep_start(minute_start_ns: int, sweep_start_ns: int) -> bool:
+    """Return whether this UTC minute seed uniquely owns the Sweep start fact."""
+
+    return minute_start_ns <= sweep_start_ns < minute_start_ns + MINUTE_NS
 
 
 def _path(root: Path, instrument: Instrument, day: date) -> Path:
@@ -208,6 +215,8 @@ def build_price_day(
                     canonical, window, confirmation_bps=parameter.sweep_confirmation_bps
                 )
                 if sweep is None:
+                    continue
+                if not owns_sweep_start(minute_start, sweep.sweep_start_ts):
                     continue
                 output["sweeps"].append(
                     {
