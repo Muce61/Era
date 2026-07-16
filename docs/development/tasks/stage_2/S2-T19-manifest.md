@@ -83,7 +83,7 @@ Stage 2 Plan v1.2 与本 Task 均已人工批准；依赖项有真实 validation
 
 ## 17. 开放问题
 
-OQ-S2-004 当前阻塞本 Task：T1/T3/T4 时间组合、三个预注册时期、条件随机匹配分箱与固定放宽顺序、主失败线的精确定义尚未出现在仓库批准记录中。不得推测、补全或执行 S2-T19；须由用户提供精确值并关闭该问题后再开始。
+OQ-S2-004 已由Muce人工决定并通过[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)关闭，Blocking Scope为NONE。其值仅为BASELINE/RESEARCH预注册定义，不是最优或FROZEN。
 
 其他情况下，只记录影响本 Task 的 U/CR/ADR；需要改变风险、数据边界、执行语义或 Binance 能力判断时停止并请求人工决定。
 
@@ -102,6 +102,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 2026-07-14：v1.1，加入可扩展研究setup架构与事件说明图规划；状态DRAFT，未执行。
 - 2026-07-16：v1.2，按Plan v1.2收口分组、前置S2-T19并修订DAG；状态DRAFT，未执行。
 - 2026-07-16：Plan v1.2 与本 Task 由 Muce 批准；状态 APPROVED / NOT_EXECUTED，OQ-S2-004 阻塞执行。
+- 2026-07-16：OQ-S2-004由ADR-S2-004正式关闭；Blocking Scope为NONE，本Task仍为APPROVED / NOT_EXECUTED。
 
 ## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
 
@@ -110,3 +111,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 验证命令：\`uv run python -m pytest tests/research/stage_2/manifests -q\`；\`uv run python scripts/run_quality_gate.py\`。全量研究CLI须由S2-T19冻结后再写入Task新版本，不得当前虚构。
 - 验收标准：所有必填字段、版本和hash可验证；BTC/ETH配置隔离；允许/禁止指标白名单生效；输出根必须来自OQ-S2-001决定；结果产生后拒绝修改或覆盖；失效传播、台账追加、未知setup/参数集/数据基线拒绝测试通过；第一组Manifest可被T01～T10只读引用。不得读取结果调参，不得生成候选事件、收益指标或研究结论。
 - 证据模式：\`PREREGISTRATION_GATE\`；这是第一组和整个Stage 2的首个Task。
+
+## 22. ADR-S2-004预注册Manifest要求
+
+Manifest必须完整、机器可验证地锁定[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)的T1～T4及唯一Primary T2、P1～P3、不可放宽字段、UTC四小时bucket、训练折quintile边界、L0～L5、5 controls、排除规则、`matching_seed=20260716`、Episode等权基线、AMBIGUOUS三种报告、cluster定义、5000次percentile bootstrap、`bootstrap_seed=20260716`、F1～F10、BH FDR `q<=0.10`及ETH分类。任一必填定义缺失或五分位bin无效必须BLOCKED。OQ关闭不代表本Task已执行或PASS；状态仍为APPROVED / NOT_EXECUTED。

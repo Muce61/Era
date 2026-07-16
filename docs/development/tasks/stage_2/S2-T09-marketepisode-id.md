@@ -107,3 +107,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 验证命令：\`uv run python -m pytest tests/research/stage_2/episodes/identity -q\`；\`uv run python scripts/run_quality_gate.py\`。本Task只做fixture身份、消费和re-arm验证；全量消费审计由S2-T10生成。
 - 验收标准：同episode二次跌破不新建、strategy变更不重置消费、re-arm/gap/过期和稳定hash测试通过。
 - 证据模式：\`FIXTURE_CAPABILITY\`；不得在本Task运行全量episode发布。
+
+## 22. ADR-S2-004预注册绑定
+
+Episode必须按[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)使用`available_at_ts`唯一归属P1/P2/P3；BTC/ETH、时期与split/fold不得混用。匹配或T配置变化不得静默复用不兼容的配置/Manifest证据，且不能改变FROZEN的MarketEpisode消费身份语义。本Task仍为APPROVED / NOT_EXECUTED。

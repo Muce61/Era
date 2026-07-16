@@ -107,3 +107,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 验证命令：\`uv run python -m pytest tests/research/stage_2/episodes/sweep -q\`；\`uv run python scripts/run_quality_gate.py\`。本Task只做fixture事件构造；全量事件频率由S2-T10生成。
 - 验收标准：首次穿越、边界相等、缺口、重入、无未来数据和确定性测试通过；不生成EntryIntent。
 - 证据模式：\`FIXTURE_CAPABILITY\`；不得在本Task运行全量事件生成。
+
+## 22. ADR-S2-004预注册绑定
+
+[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)规定Reclaim超时从`sweep_detection_ts`起算，采用UTC事件时间纳秒和左闭右开窗口；恰好命中结束边界不属于窗口。Sweep不得因后续Reclaim、T配置或标签结果被反向确认。本Task仍为APPROVED / NOT_EXECUTED。

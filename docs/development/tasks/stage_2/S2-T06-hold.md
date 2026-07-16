@@ -107,3 +107,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 验证命令：\`uv run python -m pytest tests/research/stage_2/episodes/hold -q\`；\`uv run python scripts/run_quality_gate.py\`。本Task只做fixture窗口、失败和确定性验证；全量候选运行唯一由S2-T10负责。
 - 验收标准：连续窗口、边界、缺秒/缺trade、重破、失效原因和输入打乱确定性测试通过。
 - 证据模式：\`FIXTURE_CAPABILITY\`；不得在本Task生成全量参数地形。
+
+## 22. ADR-S2-004预注册绑定
+
+Hold fixture必须覆盖[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)的T1/T2/T3/T4确认窗口15/30/30/60秒，从`reclaim_available_at_ts`起算并采用UTC纳秒左闭右开语义；窗口后事实不得参与确认。本Task仍为APPROVED / NOT_EXECUTED。

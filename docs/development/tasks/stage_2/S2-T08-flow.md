@@ -107,3 +107,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 验证命令：\`uv run python -m pytest tests/research/stage_2/gates/flow -q\`；\`uv run python scripts/run_quality_gate.py\`。本Task只做H2 Flow fixture能力验证；V1_FLOW全量候选由S2-T10生成。
 - 验收标准：BUY/SELL映射、同时间v2排序、冲突事实计入、缺Trades降级、V1_PRICE/V1_FLOW隔离通过。
 - 证据模式：\`FIXTURE_CAPABILITY\`；不得在本Task运行全量Flow研究。
+
+## 22. ADR-S2-004预注册绑定
+
+Trades活跃度特征公式沿用已批准Task定义；[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)只约束其quintile边界必须由对应训练折估计、在验证/holdout冻结、写入Manifest并确定性处理重复值。无法形成五个有效bin时必须BLOCKED，不得替换分箱。本Task仍为APPROVED / NOT_EXECUTED。

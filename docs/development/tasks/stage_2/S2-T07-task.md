@@ -107,3 +107,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 验证命令：\`uv run python -m pytest tests/research/stage_2/gates/price -q\`；\`uv run python scripts/run_quality_gate.py\`。本Task只做G0-G3 fixture验证；全量门通过率由S2-T10生成。
 - 验收标准：每个门单独原因、G0缺口硬失败、新结构低点、速度边界、V1_PRICE无G4测试通过。
 - 证据模式：\`FIXTURE_CAPABILITY\`；不得在本Task运行全量触发生成。
+
+## 22. ADR-S2-004预注册绑定
+
+候选Episode的最终`available_at_ts`必须确定性产生并成为[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)的时期归属和First-passage horizon唯一起点；Trigger不得读取horizon内标签或匹配结果。本Task仍为APPROVED / NOT_EXECUTED。

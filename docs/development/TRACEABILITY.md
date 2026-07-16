@@ -108,11 +108,11 @@ Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～
 
 ## Stage 2 Plan v1.2 APPROVED Coverage
 
-Stage 2 is `APPROVED / NOT_EXECUTED`. Muce approved Plan v1.2 and Group 1 (S2-T19, S2-T01～S2-T10) at 2026-07-16T14:33:04+08:00. OQ-S2-001/002 are RESOLVED; Groups 2 (S2-T11～S2-T14), 3 (S2-T15～S2-T18) and 4 (S2-T20) remain DRAFT. OQ-S2-004 records missing exact preregistration references and blocks S2-T19 execution. All implementation/test paths remain PLANNED; no Stage 2 business code or research has executed.
+Stage 2 is `APPROVED / NOT_EXECUTED`. Muce approved Plan v1.2 and Group 1 (S2-T19, S2-T01～S2-T10). OQ-S2-001/002/004 are RESOLVED; ADR-S2-004 is the authority for T1～T4, P1～P3, matching L0～L5, deterministic controls/seeds, AMBIGUOUS, bootstrap, F1～F10 and ETH Secondary classification. Groups 2 (S2-T11～S2-T14), 3 (S2-T15～S2-T18) and 4 (S2-T20) remain DRAFT. All implementation/test paths remain PLANNED; no Stage 2 business code or research has executed and no execution BLOCKER remains.
 
 | Requirement | Plan v1.2 Tasks | Planned implementation/tests | State |
 | --- | --- | --- | --- |
-| Pre-registration before any Stage 2 implementation/result | S2-T19 | manifest schema, parameter/data/code/time/evidence/metric/output/invalidation contracts | APPROVED_NOT_EXECUTED_BLOCKED_BY_OQ_S2_004 |
+| Pre-registration before any Stage 2 implementation/result | S2-T19 | manifest schema, parameter/data/code/time/evidence/metric/output/invalidation contracts; ADR-S2-004 | APPROVED_NOT_EXECUTED_READY |
 | Stage 1 v2 baseline, ResearchSetup/ContextModel registry and CanonicalKeyLevel contract | S2-T01 | `contracts/`, `registry/` and fixture conformance tests | APPROVED_NOT_EXECUTED_AFTER_T19 |
 | Three causal key-level sources and arbitration | S2-T02, S2-T03 | fixture-only `key_levels/sources`, `key_levels/arbitration` | APPROVED_NOT_EXECUTED |
 | Sweep → Reclaim → Hold and invalidation | S2-T04, S2-T05, S2-T06 | fixture-only `episodes/sweep`, `reclaim`, `hold` | APPROVED_NOT_EXECUTED |

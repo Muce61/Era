@@ -42,4 +42,4 @@ S2-T01～T19 PASS → T20
 
 S2-T19 is the first preregistration capability and has no dependency on another Stage 2 Task. S2-T01～T09 own fixture capability only; S2-T10 exclusively owns full candidate generation. The graph must remain acyclic and all Stage 2 Task references must resolve before approval.
 
-Approval state at 2026-07-16T14:33:04+08:00: Plan v1.2 and Group 1 (S2-T19, S2-T01～S2-T10) are APPROVED; Groups 2 (S2-T11～S2-T14), 3 (S2-T15～S2-T18) and 4 (S2-T20) remain DRAFT. OQ-S2-004 is an external preregistration prerequisite of S2-T19 and therefore blocks execution without adding a Task-cycle edge.
+Approval state after ADR-S2-004: Plan v1.2 and Group 1 (S2-T19, S2-T01～S2-T10) are APPROVED / NOT_EXECUTED; Groups 2 (S2-T11～S2-T14), 3 (S2-T15～S2-T18) and 4 (S2-T20) remain DRAFT. OQ-S2-004 is RESOLVED with blocking scope NONE. The Task DAG and execution order are unchanged; S2-T19 remains the first execution preflight.

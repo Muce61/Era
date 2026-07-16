@@ -25,6 +25,7 @@
 - FROZEN：`EVENT-CONSUME-MARKET-EPISODE`、`STRATEGY-V1-PRICE-ONLY-HISTORICAL`、`INV-005`、`INV-011`、`INV-013`、`GATE-STAGE-2`。
 - RESEARCH：关键位优先级、合并容差、episode gap/re-arm、Sweep/Reclaim/Hold/Trigger/Flow 参数、路径标签、匹配、聚类和统计阈值；不得声明最优或 FROZEN。
 - L2 输入决定：CR-2026-001、ADR-2026-001 Trade Identity v2。
+- Primary 研究定义：[ADR-S2-004](../decisions/ADR-S2-004-primary-research-definition.md)；其值为 `BASELINE / RESEARCH` 预注册配置，不是最优或 `FROZEN`。
 
 ## 3. 冻结输入基线
 
@@ -96,7 +97,7 @@ S2-T19 只建立 schema、配置快照、验证器和 append-only 台账；不�
 ## 8. 产物与发布
 
 - Git：代码、测试、schema、配置、轻量 fixture、Manifest 摘要、Validation、Traceability 和报告摘要。
-- 外部工作根：大型候选、路径、标签、统计和图片产物；具体根与布局等待 OQ-S2-001 人工决定。
+- 外部工作根：`/Volumes/FuckingLife/era100x_stage2`；大型候选、路径、标签、统计和图片产物采用批准的 `runs/<run_id>/{staging,published,manifests,reports,logs,tmp}` 布局及 append-only/保留/空间门规则。
 - 每次运行必须有 run_id、instrument、setup/context/variant、parameter_set_id、config hash、code commit、data run/hash、evidence level 和状态；失败运行不得发布；有效运行不得覆盖。
 
 ## 9. 质量门
@@ -120,7 +121,7 @@ S2-T20 必须检查 BTC/ETH 与 V1_PRICE/V1_FLOW 隔离、无泄漏、Manifest �
 
 - OQ-S2-001：RESOLVED。工作根、布局、append-only、保留、清理审计和1.20空间门已于2026-07-16T14:33:04+08:00由Muce批准。
 - OQ-S2-002：RESOLVED。BTC primary、ETH independent secondary、TARGET_FIRST_STRICT、参数域、cluster/bootstrap/CI等明确值已于2026-07-16T14:33:04+08:00由Muce批准；U-007/U-008/U-009/U-011仍保持RESEARCH，不升级为FROZEN。
-- OQ-S2-004：OPEN。审批提示引用但仓库未定义的T1/T3/T4精确时间组合、三个预注册时期、匹配bin与主失败线仍需Muce补齐；在补齐前阻塞S2-T19执行。
+- OQ-S2-004：RESOLVED。Muce于2026-07-16T14:51:38+08:00批准T1～T4、P1～P3、匹配字段与L0～L5、控制选择、AMBIGUOUS、bootstrap、F1～F10和ETH Secondary分类；完整决定见[ADR-S2-004](../decisions/ADR-S2-004-primary-research-definition.md)。
 
 ## 12. 已批准的预注册决定
 
@@ -132,6 +133,10 @@ S2-T20 必须检查 BTC/ETH 与 V1_PRICE/V1_FLOW 隔离、无泄漏、Manifest �
 - merge tolerance域5/10/15（Primary 10）bps；episode gap域60/300/900（Primary 300）秒；re-arm域300/900/1800（Primary 900）秒。
 - Primary时间：reclaim 30秒、hold 30秒、horizon 180秒。
 - Primary cluster：instrument × UTC calendar week；cluster bootstrap 5000次；双侧95% CI。
+- 时间族：T1=15/15/60秒、T2=30/30/180秒（唯一Primary）、T3=60/30/300秒、T4=60/60/600秒；UTC事件时间纳秒、左闭右开。
+- 时期：P1 `[2020-01-01,2022-01-01)`、P2 `[2022-01-01,2024-01-01)`、P3 `[2024-01-01,2026-07-04)`，均为UTC且按Episode `available_at_ts`归属。
+- 匹配：instrument/direction/high-timeframe trend/period/split永不放宽；L0精确，L1 activity±1，L2 volatility±1，L3四小时bucket循环相邻，L4同年季度，L5 UNMATCHED；每Episode 5 controls，`matching_seed=20260716`。
+- Primary统计：Episode等权matched baseline；AMBIGUOUS按失败；cluster bootstrap 5000次、`bootstrap_seed=20260716`、双侧95% percentile CI；BTC T2按ADR的F1～F10全通过才PASS，ETH只作独立Secondary分类。
 - 上述值均为BASELINE/RESEARCH预注册值，不是最优值，不升级为FROZEN。
 
 ## 13. 失效、恢复与变更
@@ -147,3 +152,4 @@ Stage 1 schema/dataset/Manifest/Logical Hash、Trade Identity、事件/标签/�
 - 2026-07-14：v1.1，增加 setup/context 注册表及事件说明规划；保持 DRAFT。
 - 2026-07-16：v1.2，基于 Stage 1 Baseline v1.0 收口四组边界，前置 S2-T19，消除 T02/T08/T19 依赖冲突，统一全量职责至 T10；状态 READY_FOR_APPROVAL，未执行 Stage 2。
 - 2026-07-16：Muce批准Plan v1.2与第一组Task；第二至第四组保持DRAFT；未执行Stage 2。审批引用的缺失精确定义转记OQ-S2-004并保持执行fail-closed。
+- 2026-07-16：Muce批准ADR-S2-004完整预注册定义并关闭唯一执行BLOCKER；Plan与第一组仍为APPROVED / NOT_EXECUTED，未执行任何Task。

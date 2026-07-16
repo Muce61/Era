@@ -107,3 +107,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 验证命令：\`uv run python -m pytest tests/research/stage_2/contracts -q\`；\`uv run python scripts/run_quality_gate.py\`。本Task只做契约、注册表和小样本验证；全量候选运行唯一由S2-T10负责。
 - 验收标准：schema/unknown-field、BTC/ETH隔离、v2 identity、已完成数据边界、无右侧确认测试通过；dummy setup无需修改编排器即可注册；未知、未批准、数据能力不足或跨标的setup拒绝运行；context不得修改MarketEpisode消费语义；baseline绑定证据存在。
 - 证据模式：\`FIXTURE_CAPABILITY + PUBLISHED_BASELINE_BINDING\`；不得在本Task生成全量候选数据。
+
+## 22. ADR-S2-004预注册绑定
+
+本Task必须把[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)注册为批准的`BASELINE / RESEARCH`配置来源：UTC事件时间纳秒与左闭右开语义、P1～P3按Episode `available_at_ts`唯一归属、BTC/ETH与split/fold隔离，以及T1～T4版本身份必须进入契约/注册表；不得把其标记为最优或FROZEN。本Task仍为APPROVED / NOT_EXECUTED。

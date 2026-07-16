@@ -107,3 +107,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 验证命令：\`uv run python -m pytest tests/research/stage_2/pipelines/candidates -q\`；\`uv run python scripts/run_quality_gate.py\`。全量研究CLI须由S2-T19冻结后再写入Task新版本，不得当前虚构。
 - 验收标准：全量coverage/hash/manifest一致，无staging输入、无跨标的/跨setup/context证据混合、无重复episode、未知setup硬失败、所有尝试版本入账；同一MarketEpisode不能因setup/context不同而重复消费；仅fixture不得PASS。
 - 证据模式：\`FULL_DATA_REQUIRED\`。无论fixture能力是否可验收，Stage 1最终PASSED与VALID data baseline之前均不得执行本Task。
+
+## 22. ADR-S2-004预注册绑定
+
+S2-T10只能只读消费S2-T19锁定且引用[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)的第一组Manifest。全量候选须按instrument、T1～T4、P1～P3和split/fold隔离，保存配置/hash并append-only；本Task不执行匹配、First-passage、bootstrap或F1～F10统计。状态仍为APPROVED / NOT_EXECUTED，且本次未执行。

@@ -107,3 +107,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 验证命令：\`uv run python -m pytest tests/research/stage_2/episodes/reclaim -q\`；\`uv run python scripts/run_quality_gate.py\`。本Task只做fixture顺序和边界验证；全量候选运行唯一由S2-T10负责。
 - 验收标准：顺序、超时、边界、缺口、H1/H2参考价分离和参数邻域测试通过。
 - 证据模式：\`FIXTURE_CAPABILITY\`；不得在本Task生成全量参数地形。
+
+## 22. ADR-S2-004预注册绑定
+
+Reclaim fixture必须覆盖[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)的T1/T2/T3/T4超时15/30/60/60秒、从`sweep_detection_ts`起算、UTC纳秒、左闭右开及结束边界排除；T2是唯一Primary，其他仅敏感性且不得救援。本Task仍为APPROVED / NOT_EXECUTED。

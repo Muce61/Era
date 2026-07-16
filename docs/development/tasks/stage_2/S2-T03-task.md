@@ -107,3 +107,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 验证命令：\`uv run python -m pytest tests/research/stage_2/key_levels/arbitration -q\`；\`uv run python scripts/run_quality_gate.py\`。只验证预注册参数的确定性仲裁；全量候选运行唯一由S2-T10负责。
 - 验收标准：排列不变性、tie-break、成员保留、过期/跨标的拒绝通过；参数来自不可变manifest。
 - 证据模式：\`FIXTURE_CAPABILITY\`；U-007全量分布由S2-T10产物供后续研究使用。
+
+## 22. ADR-S2-004预注册绑定
+
+仲裁配置必须由锁定Manifest引用[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)；不得用P1～P3、T1～T4、匹配或标签结果反向修改关键位归一化。U-007继续保持RESEARCH，本Task仍为APPROVED / NOT_EXECUTED。

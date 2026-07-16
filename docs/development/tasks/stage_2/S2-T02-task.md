@@ -107,3 +107,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 验证命令：\`uv run python -m pytest tests/research/stage_2/key_levels/sources -q\`；\`uv run python scripts/run_quality_gate.py\`。只使用S2-T19锁定参数做fixture验证；全量候选运行唯一由S2-T10负责。
 - 验收标准：三来源逐一通过因果性/property/边界测试；未来数据扰动不改变历史输出；BTC/ETH分别验证。
 - 证据模式：\`FIXTURE_CAPABILITY\`；不得在本Task生成全量参数地形或候选数据。
+
+## 22. ADR-S2-004预注册绑定
+
+关键位来源只能消费[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)已注册的instrument、period、split/fold和时间语义；来源生成本身不得读取后续Episode时期、匹配级别或研究结果。ADR只补充预注册引用，不改变本Task依赖、范围或APPROVED / NOT_EXECUTED状态。
