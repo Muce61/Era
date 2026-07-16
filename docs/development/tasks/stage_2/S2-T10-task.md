@@ -4,7 +4,7 @@
 
 - task_id: S2-T10
 - task_version: 1.6
-- status: APPROVED_FOR_REEXECUTION
+- status: IN_PROGRESS
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
@@ -102,6 +102,10 @@ CR-2026-005 Option A is now IMPLEMENTED / VALIDATED / READY_FOR_RESOLUTION. The 
 APPROVED_FOR_REEXECUTION, but no formal Execution Manifest or new full run is authorized until a
 separate Muce approval.
 
+Muce subsequently resolved CR-2026-005 and authorized one new locked Execution Manifest plus
+fresh, independent v1.6 Run A and Run B builds. No prior PRICE staging may be reused. This
+authorization ends at S2-T10 deterministic acceptance and does not authorize S2-T11～S2-T20.
+
 ## 18. 变化触发器
 
 schema、标签、成本模型、事件定义、数据/配置哈希、git commit 或聚类方式变化；或发现与 V1.3.4/Binance 官方事实冲突。 触发 task_version 递增和重新审批。
@@ -111,6 +115,9 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 依赖 Task/Stage 重开、输入哈希变化、映射规则变化、验收测试被推翻或产物不可复现时标记 INVALIDATED，不得继续作为有效证据。
 
 ## 20. 变更历史
+
+- 2026-07-16：Muce关闭CR-2026-005并授权冻结新Execution Manifest以及执行全新的Run A / Run B
+  双全量确定性构建；Task恢复IN_PROGRESS，禁止复用旧staging和进入后续组。
 
 - 2026-07-16：v1.6 Option A实现与受控真实双重放PASS；Task状态
   APPROVED_FOR_REEXECUTION，等待新的全量运行人工批准，未创建Execution Manifest或run_id。

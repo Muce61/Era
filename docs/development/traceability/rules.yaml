@@ -2231,10 +2231,10 @@ rules:
     s2_t10_recovery_task_version: '1.6'
     cr_s2_004_status: RESOLVED_IMPLEMENTED_VALIDATED_L2
     cr_s2_004_validation: docs/development/validations/stage_2/CR-2026-004.md
-    cr_s2_005_status: IMPLEMENTED_VALIDATED_READY_FOR_RESOLUTION_L2
+    cr_s2_005_status: RESOLVED_IMPLEMENTED_VALIDATED_L2
     cr_s2_005_validation: docs/development/validations/stage_2/CR-2026-005.md
-    execution_blocker: HUMAN_APPROVAL_REQUIRED_FOR_NEW_FULL_RUN
-    execution_state: READY_FOR_S2_T10_NEW_FULL_RUN_APPROVAL
+    execution_blocker: NONE
+    execution_state: S2_T10_V1_6_DUAL_FULL_RUN_AUTHORIZED
   state: PLANNED
 - rule_id: GATE-STAGE-3
   rule_status: FROZEN
