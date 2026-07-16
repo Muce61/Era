@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 
 import pytest
 
-from scripts import replay_stage2_cr_2026_005 as replay
+SCRIPT_PATH = Path(__file__).parents[5] / "scripts" / "replay_stage2_cr_2026_005.py"
+SPEC = importlib.util.spec_from_file_location("replay_stage2_cr_2026_005", SCRIPT_PATH)
+assert SPEC is not None and SPEC.loader is not None
+replay = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(replay)
 
 
 def _result(logical_hash: str = "a" * 64) -> dict[str, object]:
