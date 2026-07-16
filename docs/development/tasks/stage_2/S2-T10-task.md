@@ -3,16 +3,16 @@
 ## Metadata
 
 - task_id: S2-T10
-- task_version: 1.4
-- status: BLOCKED
+- task_version: 1.5
+- status: REOPENED
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T01 PASS; S2-T02 PASS; S2-T03 PASS; S2-T04 PASS; S2-T05 PASS; S2-T06 PASS; S2-T07 PASS; S2-T08 PASS; S2-T09 PASS; S2-T19 PASS; locked Group-1 Manifest
-- supersedes: task_version 1.3
+- supersedes: task_version 1.4
 - approved_by: Muce
-- approved_at: 2026-07-16T18:19:38+08:00
+- approved_at: 2026-07-16T19:26:41+08:00
 
 ## 1. 目标
 
@@ -83,9 +83,9 @@ Stage 2 Plan v1.2 与本 Task 均已人工批准；依赖项有真实 validation
 
 ## 17. 开放问题
 
-CR-2026-004：全量 PRICE 集成未消费 S2-T09 去重账本，且实际 OFAT 参数集未进入
-`candidate_version_id`；修复会改变 PRICE 输出和 logical hash，超出 CR-2026-003 授权，
-等待 Muce 人工批准。批准前不得冻结新 Execution Manifest 或启动 recovery run。
+CR-2026-004 已由Muce按L2批准：旧identity conflict按包含实际OFAT参数与时间组合的新
+canonical candidate identity拆分。修复、前50日双重放和全部质量门通过前，不得冻结新
+Execution Manifest或启动recovery run。
 
 ## 18. 变化触发器
 
@@ -96,6 +96,8 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 依赖 Task/Stage 重开、输入哈希变化、映射规则变化、验收测试被推翻或产物不可复现时标记 INVALIDATED，不得继续作为有效证据。
 
 ## 20. 变更历史
+
+- 2026-07-16：v1.5，Muce批准CR-2026-004 L2及Case C按新身份拆分；重开Task以修复candidate identity、partition ownership和dedup finalization，本轮禁止创建全量run。
 
 - 2026-07-16：CR-2026-003路径修复及回归通过；全量前审计发现保留的BTC PRICE前50日分区3,781行中仅971个唯一candidate identity，2,810行为重复且均被标记included。创建CR-2026-004，Task状态BLOCKED，未创建新run。
 

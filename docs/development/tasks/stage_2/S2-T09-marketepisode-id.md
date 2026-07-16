@@ -3,16 +3,16 @@
 ## Metadata
 
 - task_id: S2-T09
-- task_version: 1.3
-- status: PASSED
+- task_version: 1.4
+- status: REOPENED
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T06 PASS; S2-T07 PASS; S2-T08 PASS
-- supersedes: task_version 1.2
+- supersedes: task_version 1.3
 - approved_by: Muce
-- approved_at: 2026-07-16T15:24:31+08:00
+- approved_at: 2026-07-16T19:26:41+08:00
 
 ## 1. 目标
 
@@ -94,6 +94,8 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 依赖 Task/Stage 重开、输入哈希变化、映射规则变化、验收测试被推翻或产物不可复现时标记 INVALIDATED，不得继续作为有效证据。
 
 ## 20. 变更历史
+
+- 2026-07-16：v1.4，Muce批准CR-2026-004 L2；旧candidate identity未绑定实际OFAT参数和时间组合，前50日形成338个identity conflict组。重开本Task以增加canonical candidate identity/payload hash并保持FROZEN market_episode_id不变。
 
 - 2026-07-16：v1.3，依据CR-2026-002与ADR-S2-005冻结第一组事件构造基线和CLI；Muce批准，状态APPROVED / NOT_EXECUTED。
 

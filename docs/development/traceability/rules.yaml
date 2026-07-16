@@ -2221,15 +2221,17 @@ rules:
     approved_at: '2026-07-16T14:33:04+08:00'
     approved_tasks: [S2-T19, S2-T01, S2-T02, S2-T03, S2-T04, S2-T05, S2-T06, S2-T07, S2-T08, S2-T09, S2-T10]
     approved_task_version: '1.3'
+    s2_t09_identity_task_version: '1.4'
     draft_tasks: [S2-T11, S2-T12, S2-T13, S2-T14, S2-T15, S2-T16, S2-T17, S2-T18, S2-T20]
     oq_s2_004_status: RESOLVED
     decision_ref: docs/development/decisions/ADR-S2-004-primary-research-definition.md
     event_construction_decision_ref: docs/development/decisions/ADR-S2-005-event-construction-baseline.md
     change_request_ref: docs/development/changes/CR-2026-004.md
     implemented_change_request_ref: docs/development/changes/CR-2026-003.md
-    s2_t10_recovery_task_version: '1.4'
-    execution_blocker: CR-2026-004
-    execution_state: S2_T10_BLOCKED_BEFORE_RECOVERY_RUN
+    s2_t10_recovery_task_version: '1.5'
+    cr_s2_004_status: APPROVED_L2
+    execution_blocker: IDENTITY_CONTRACT_FIX_NOT_YET_VALIDATED
+    execution_state: S2_T09_T10_IDENTITY_FIX_IN_PROGRESS
   state: PLANNED
 - rule_id: GATE-STAGE-3
   rule_status: FROZEN

@@ -108,7 +108,7 @@ Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～
 
 ## Stage 2 Plan v1.2 APPROVED Coverage
 
-Stage 2 is `APPROVED / GROUP_1_BLOCKED_CR_2026_004`. S2-T19 and S2-T01～S2-T09 remain PASSED. The CR-2026-003 Catalog/Manifest-authoritative archive-path correction passed regression at commit `89fa273`, but the pre-run audit proved that S2-T10 PRICE integration emits duplicate candidate identities and marks every duplicate included. CR-2026-004 requires human approval because its correction would change PRICE output forbidden by CR-2026-003. No recovery Manifest or run was created. Failed run `stage2-g1-full-a-20260716-4c15e46` remains FAILED_UNPUBLISHED and is not reusable. Groups 2～4 remain DRAFT and were not executed.
+Stage 2 is `APPROVED / GROUP_1_IDENTITY_FIX_IN_PROGRESS`. Muce approved CR-2026-004 at L2 and selected deterministic splitting of legacy Case C conflicts under a canonical candidate identity containing the actual OFAT parameter set and timing combination. S2-T09 v1.4 and S2-T10 v1.5 are REOPENED; no recovery Manifest or run is allowed before correction and validation. Failed run `stage2-g1-full-a-20260716-4c15e46` remains FAILED_UNPUBLISHED. Groups 2～4 remain DRAFT and were not executed.
 
 | Requirement | Plan v1.2 Tasks | Planned implementation/tests | State |
 | --- | --- | --- | --- |
@@ -127,8 +127,8 @@ Stage 2 is `APPROVED / GROUP_1_BLOCKED_CR_2026_004`. S2-T19 and S2-T01～S2-T09 
 | S2-T07 v1.3 delivered evidence | S2-T07 | causal G1/G3 facts/tests and `validations/stage_2/S2-T07.md` | PASSED |
 | S2-T08 v1.3 delivered evidence | S2-T08 | Trades-only G4 facts/tests and `validations/stage_2/S2-T08.md` | PASSED |
 | MarketEpisode identity, consume and re-arm | S2-T09 | fixture-only `episodes/identity`; FI-14, UT-EVT-011 | APPROVED_NOT_EXECUTED |
-| S2-T09 v1.3 delivered evidence | S2-T09 | FROZEN identity, separate inclusion/consumption ledgers, tests and `validations/stage_2/S2-T09.md` | PASSED |
-| Registry-driven full candidate generation; BTC/ETH, setup/context and variants separate | S2-T10 v1.4 | CR-2026-003 path repair implemented and tested; CR-2026-004 blocks full execution because PRICE candidate deduplication is not integrated; prior failure retained in `validations/stage_2/S2-T10.md` | BLOCKED |
+| S2-T09 v1.4 identity correction | S2-T09 | CR-2026-004 canonical candidate identity/payload hash while preserving FROZEN MarketEpisode identity | REOPENED |
+| Registry-driven full candidate generation; BTC/ETH, setup/context and variants separate | S2-T10 v1.5 | CR-2026-003 path repair retained; CR-2026-004 ownership/dedup finalization in progress; prior failure retained in `validations/stage_2/S2-T10.md` | REOPENED |
 | Group-1 small-sample integration | S2-T01～S2-T09 | fixture chain plus six controlled real windows; locked execution Manifest | PASSED |
 | Historical path metrics and labels | S2-T11, S2-T12, S2-T13, S2-T14 | v2 ordering, MFE/MAE/time, first passage, AMBIGUOUS bounds | DRAFT_NOT_APPROVED |
 | Conditional baseline and placebo | S2-T15, S2-T16 | matched baseline/placebo with frozen relaxation and seeds | DRAFT_NOT_APPROVED |
