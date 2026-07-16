@@ -131,7 +131,6 @@ rules:
   - S0-T04
   - S2-T09
   - S2-T10
-  - S2-T21
   - S2-T20
   implementation_paths:
   - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/, src/era100x/research/stage_2/reporting/event_explainer/ (PLANNED)
@@ -198,7 +197,6 @@ rules:
   - S1-T12
   - S1-T14
   - S1-T15
-  - S2-T21
   - S5-T01
   implementation_paths:
   - src/era100x/data/evidence/, tests/data/evidence/, artifacts/manifests/stage_1/ (PLANNED Stage 1 boundary)
@@ -255,7 +253,6 @@ rules:
   - S2-T01
   - S2-T07
   - S2-T08
-  - S2-T21
   - S2-T20
   implementation_paths:
   - src/era100x/data/readers/, src/era100x/data/aggregate/, tests/data/ (PLANNED Stage 1 input boundary)
@@ -569,7 +566,6 @@ rules:
   - S0-T10
   - S2-T09
   - S2-T10
-  - S2-T21
   - S2-T20
   implementation_paths:
   - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/, src/era100x/research/stage_2/reporting/event_explainer/ (PLANNED)
@@ -656,7 +652,6 @@ rules:
   - S0-T10
   - S2-T09
   - S2-T10
-  - S2-T21
   - S2-T20
   implementation_paths:
   - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/, src/era100x/research/stage_2/reporting/event_explainer/ (PLANNED)
@@ -689,7 +684,6 @@ rules:
   - S2-T07
   - S2-T08
   - S2-T10
-  - S2-T21
   - S2-T20
   implementation_paths:
   - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/gates/, src/era100x/research/stage_2/pipelines/candidates/, src/era100x/research/stage_2/reporting/event_explainer/ (PLANNED)

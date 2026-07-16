@@ -71,7 +71,7 @@ Stage 0 baseline validity: **VALID / PASSED**. Any later change to its code, con
 
 ## Stage 1 v1.1 Execution Coverage
 
-Stage 1 is `IN_PROGRESS` under approved Plan v1.1 and CR-2026-001. S1-T02/T05/T07/T08/T09/T12 v1.1 implement Trade Identity v2 and are PASSED after targeted regression; S1-T06/T10/T11 retain semantics and passed regression. `venue_trade_id` is a venue property, `canonical_trade_id` is the fact identity, and official conflicting venue IDs are retained only after monthly/daily canonical-set confirmation. S1-T14 v1.5 awaits a fresh run from merged `main`; the prior 134/162 run is INVALIDATED and unpublished. S1-T15 remains DRAFT.
+Stage 1 is `IN_PROGRESS` under approved Plan v1.1 and CR-2026-001. S1-T02/T05/T07/T08/T09/T12 v1.1 implement Trade Identity v2 and are PASSED after targeted regression; S1-T06/T10/T11 retain semantics and passed regression. `venue_trade_id` is a venue property, `canonical_trade_id` is the fact identity, and official conflicting venue IDs are retained only after monthly/daily canonical-set confirmation. S1-T14 v1.5 is PASSED using the immutable 162/162 published run and read-only post-run verification; the prior 134/162 run remains INVALIDATED and unpublished. S1-T15 remains DRAFT pending integration acceptance.
 
 | Requirement | Planned Tasks | Planned Evidence | State |
 | --- | --- | --- | --- |
@@ -97,8 +97,8 @@ Stage 1 is `IN_PROGRESS` under approved Plan v1.1 and CR-2026-001. S1-T02/T05/T0
 | S1-T11 delivered evidence | S1-T11 | `src/era100x/data/splits/`, `tests/data/splits/` | PASSED |
 | Small-sample capability acceptance | S1-T12 | fixture quality report marked NOT_RUN_FULL_DATA | PLANNED |
 | S1-T12 v1.1 delivered evidence | S1-T12 | v2 identity/conflict gates plus existing report/null/split regression | PASSED_V2 |
-| Full-data preflight and build | S1-T13, S1-T14 | approved paths/source/coverage, resumable builder, full catalog, repeat-build hash | T13_PASSED_T14_IN_PROGRESS |
-| S1-T14 v1.5 builder implementation | S1-T14 | `stage1-trades-v2`, official conflict cross-validation, six-worker immutable raw prefetch overlapped with two-symbol build workers, resumable `.part`, `src/era100x/data/full_build/`, `tests/data/full_build/` | IN_PROGRESS_PRIOR_134_OF_162_RUN_INVALIDATED_PIPELINE_TESTED_NOT_FULL_RUN |
+| Full-data preflight and build | S1-T13, S1-T14 | approved paths/source/coverage, resumable builder, full catalog, repeat-build hash | PASSED |
+| S1-T14 v1.5 builder implementation and scheduler recovery | S1-T14 | `stage1-trades-v2`, official conflict cross-validation, explicit multi-symbol terminal-state scheduler, resumable `.part`, `src/era100x/data/full_build/`, `tests/data/full_build/` | PASSED_162_OF_162_READ_ONLY_REVERIFIED |
 | S1-T13 actual preflight | S1-T13 | 162/162 official archives; write probe; 20% disk safety calculation | PASSED |
 | Stage 1 gate | S1-T15 | Stage 1 validation; BTC/ETH separate conclusions | PLANNED |
 
@@ -120,9 +120,8 @@ Stage 2 remains `DRAFT / NOT_EXECUTED`. Plan v1.1 is a Trade Identity v2-aware, 
 | Historical path metrics and labels | S2-T11, S2-T12, S2-T13, S2-T14 | v2 ordering, MFE/MAE/time, first passage, AMBIGUOUS bounds | PLANNED |
 | Conditional baseline and placebo | S2-T15, S2-T16 | matched baseline/placebo with frozen relaxation and seeds | PLANNED_FULL_DATA |
 | Cluster ownership and cluster bootstrap CI | S2-T17, S2-T18 | BTC/ETH-separated clustering and cluster-level resampling | PLANNED_FULL_DATA |
-| Deterministic event explanation and historical evidence cards | S2-T21 | `reporting/event_explainer`; semantic SVG/PNG/sidecar, fixture/real mode isolation | PLANNED_FULL_DATA |
 | Stage 2 research gate | S2-T20 | Stage validation and human Go/No-Go; no automatic Stage 3 | PLANNED_FULL_DATA |
 
 Trade Identity v2 propagation is explicit: `(instrument, canonical_trade_id)` is the historical fact identity; `venue_trade_id` is only a venue attribute; ordering is `(ts_event_ns, venue_trade_id, canonical_trade_id)`; confirmed conflicting venue IDs remain separate facts and enter sensitivity/quality reporting. No Stage 2 task may deduplicate by venue ID or filter conflict-labelled facts without an approved L3 change.
 
-Research extensibility is bounded: only the V1.3.4 key-low sweep/reclaim/hold family is currently executable; preregistered G1 context models may be added through the registry without altering MarketEpisode consumption. New strategy families remain outside this Plan. S2-T21 may visualize only existing facts and research outputs; illustrative and historical evidence modes must never be confused.
+Research extensibility is bounded: only the V1.3.4 key-low sweep/reclaim/hold family is currently executable; preregistered G1 context models may be added through the registry without altering MarketEpisode consumption. New strategy families remain outside this Plan. The isolated Stage 2 planning branch retains the unapproved event-explainer draft; it is not part of Stage 1 acceptance.

@@ -21,6 +21,7 @@ from concurrent.futures import (
 from contextlib import suppress
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, Literal, cast
 from urllib.error import HTTPError
@@ -51,6 +52,41 @@ UNAVAILABLE_FIELDS = (
     "order_slippage",
     "order_book_depth",
 )
+
+
+class SchedulerState(StrEnum):
+    """Explicit multi-symbol scheduler states used for safe completion."""
+
+    SYMBOL_COMPLETE = "SYMBOL_COMPLETE"
+    GLOBAL_BUILD_COMPLETE = "GLOBAL_BUILD_COMPLETE"
+    TEMPORARILY_IDLE = "TEMPORARILY_IDLE"
+    RECOVERY_REQUIRED = "RECOVERY_REQUIRED"
+    FAILED = "FAILED"
+    UNKNOWN = "UNKNOWN"
+
+
+def classify_scheduler_state(
+    *,
+    planned: set[str],
+    completed: set[str],
+    pending_count: int,
+    active_count: int,
+    recovery_count: int = 0,
+    failed_count: int = 0,
+    unknown_count: int = 0,
+) -> SchedulerState:
+    """Classify global state without treating an empty worker set as completion."""
+    if unknown_count:
+        return SchedulerState.UNKNOWN
+    if failed_count:
+        return SchedulerState.FAILED
+    if recovery_count:
+        return SchedulerState.RECOVERY_REQUIRED
+    if completed == planned and pending_count == 0 and active_count == 0:
+        return SchedulerState.GLOBAL_BUILD_COMPLETE
+    if completed <= planned and (pending_count > 0 or active_count > 0):
+        return SchedulerState.TEMPORARILY_IDLE
+    return SchedulerState.UNKNOWN
 
 
 class ArchiveOrderingError(ValueError):
@@ -889,7 +925,15 @@ class FullBuild:
             "completed_archives": [],
             "prefetched_archives": [],
             "download_workers": DOWNLOAD_WORKERS,
-            "symbols": {symbol: {"status": "PENDING", "entries": []} for symbol in SYMBOLS},
+            "scheduler_state": SchedulerState.TEMPORARILY_IDLE,
+            "symbols": {
+                symbol: {
+                    "status": "PENDING",
+                    "schedule_status": SchedulerState.TEMPORARILY_IDLE,
+                    "entries": [],
+                }
+                for symbol in SYMBOLS
+            },
             "errors": [],
         }
 
@@ -915,11 +959,23 @@ class FullBuild:
 
     def run(self) -> dict[str, Any]:
         checkpoint = self.load_or_create()
+        inventory = archive_inventory()
+        planned = {f"{symbol}/{frequency}/{period}" for symbol, period, frequency in inventory}
         completed = set(checkpoint["completed_archives"])
+        if checkpoint.get("status") == "COMPLETE":
+            if completed != planned:
+                raise ValueError("complete checkpoint does not cover the full archive plan")
+            for symbol in SYMBOLS:
+                published = self.work_root / "published" / SCHEMA_VERSION / self.run_id / symbol
+                symbol_is_published = checkpoint["symbols"][symbol].get("status") == "PUBLISHED"
+                if not symbol_is_published or not published.is_dir():
+                    raise ValueError(f"complete checkpoint has invalid publication state: {symbol}")
+            checkpoint["scheduler_state"] = SchedulerState.GLOBAL_BUILD_COMPLETE
+            return checkpoint
         pending_by_symbol = {
             symbol: [
                 item
-                for item in archive_inventory()
+                for item in inventory
                 if item[0] == symbol and f"{item[0]}/{item[2]}/{item[1]}" not in completed
             ]
             for symbol in SYMBOLS
@@ -981,6 +1037,7 @@ class FullBuild:
                     active_builds[future] = item
 
             def record_failure(kind: str, key: str, exc: BaseException) -> None:
+                checkpoint["scheduler_state"] = SchedulerState.FAILED
                 checkpoint["last_error"] = {
                     "at": datetime.now(tz=UTC).isoformat(),
                     "kind": kind,
@@ -990,12 +1047,36 @@ class FullBuild:
                 checkpoint["errors"].append(checkpoint["last_error"])
                 atomic_json(self.checkpoint_path, checkpoint)
 
+            def resolve_prior_failures(key: str, kind: str) -> None:
+                resolved_at = datetime.now(tz=UTC).isoformat()
+                for error in checkpoint["errors"]:
+                    if (
+                        error.get("archive") == key
+                        and error.get("kind") == kind
+                        and "resolved_at" not in error
+                    ):
+                        error["resolved_at"] = resolved_at
+
             fill_download_pool()
-            while active_downloads or active_builds:
+            while True:
                 submit_ready_builds()
+                pending_count = sum(len(items) for items in pending_by_symbol.values())
+                active_count = len(active_downloads) + len(active_builds)
+                state = classify_scheduler_state(
+                    planned=planned,
+                    completed=completed,
+                    pending_count=pending_count,
+                    active_count=active_count,
+                )
+                checkpoint["scheduler_state"] = state
+                if state is SchedulerState.GLOBAL_BUILD_COMPLETE:
+                    atomic_json(self.checkpoint_path, checkpoint)
+                    break
                 all_active: set[Future[Any]] = set(active_downloads) | set(active_builds)
                 if not all_active:
-                    raise RuntimeError("pipeline stalled with pending archives")
+                    checkpoint["scheduler_state"] = SchedulerState.RECOVERY_REQUIRED
+                    atomic_json(self.checkpoint_path, checkpoint)
+                    raise RuntimeError("pipeline requires recovery with unfinished archives")
                 done, _ = wait(all_active, return_when=FIRST_COMPLETED)
                 for future in done:
                     if future in active_downloads:
@@ -1015,6 +1096,7 @@ class FullBuild:
                             checkpoint["prefetched_archives"].append(prepared_key)
                             prefetched.add(prepared_key)
                             atomic_json(self.checkpoint_path, checkpoint)
+                        resolve_prior_failures(prepared_key, "DOWNLOAD")
                     else:
                         typed_future = cast(Future[tuple[str, list[dict[str, object]]]], future)
                         item = active_builds.pop(typed_future)
@@ -1036,6 +1118,11 @@ class FullBuild:
                         checkpoint["symbols"][symbol]["entries"].extend(entries)
                         checkpoint["completed_archives"].append(built_key)
                         completed.add(built_key)
+                        resolve_prior_failures(built_key, "BUILD")
+                        if not pending_by_symbol[symbol]:
+                            checkpoint["symbols"][symbol]["schedule_status"] = (
+                                SchedulerState.SYMBOL_COMPLETE
+                            )
                         atomic_json(self.checkpoint_path, checkpoint)
                 fill_download_pool()
         self._finalize(checkpoint)
@@ -1147,6 +1234,7 @@ class FullBuild:
             },
         )
         checkpoint["status"] = "COMPLETE"
+        checkpoint["scheduler_state"] = SchedulerState.GLOBAL_BUILD_COMPLETE
         checkpoint["completed_at"] = datetime.now(tz=UTC).isoformat()
         atomic_json(self.checkpoint_path, checkpoint)
 
