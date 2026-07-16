@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 
 from .models import ParameterSet, TimeConfiguration, canonical_json, sha256_text
 
@@ -100,3 +100,20 @@ def config_hash() -> str:
         "market_episode_identity": "sha256(venue|instrument|canonical_key_level_id|sweep_start_ns)",
     }
     return sha256_text(canonical_json(payload))
+
+
+def research_classification(
+    parameter_set_id: str, timing_id: str
+) -> tuple[Literal["PRIMARY", "EXPLORATORY"], bool]:
+    """Classify a registered OFAT set without pooling registered strategy variants."""
+
+    registered = {item.parameter_set_id: item for item in parameter_sets()}
+    try:
+        selected = registered[parameter_set_id]
+    except KeyError as exc:
+        raise ValueError(f"unregistered Stage 2 parameter set: {parameter_set_id}") from exc
+    if timing_id != selected.timing_id:
+        raise ValueError("candidate timing does not match registered parameter set")
+    primary = registered["G1-PRIMARY-V1"]
+    eligible = selected == primary and timing_id == "T2"
+    return ("PRIMARY" if eligible else "EXPLORATORY", eligible)

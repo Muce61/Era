@@ -29,6 +29,7 @@ from era100x.research.stage_2.pipelines.candidates.io import (
     write_or_verify_partition,
 )
 from era100x.research.stage_2.pipelines.candidates.price_phase import build_price_day
+from era100x.research.stage_2.pipelines.candidates.release import analyze_release
 from era100x.research.stage_2.pipelines.candidates.stage1_catalog import (
     Stage1CatalogAuthority,
     Stage1TradesCatalogIndex,
@@ -64,6 +65,9 @@ PREREGISTRATION_MANIFEST_PATH = (
     / f"{EXPECTED_PREREGISTRATION_MANIFEST}.json"
 )
 FAILED_RUN_ID = "stage2-g1-full-a-20260716-4c15e46"
+INVALIDATED_RUN_ID = "stage2-g1-full-a-20260716-93a6016"
+RUN_A_REQUIRED_FREE_BYTES = 2_018_047_426_560
+RUN_B_REQUIRED_FREE_BYTES = 1_345_364_951_040
 LOGICAL_HASHES = {
     "BTCUSDT": "03d437ed9a6c19d92162e5c9dd115df4988e8accce3c8180b749f15cfdcc36a8",
     "ETHUSDT": "6db4d5e411edae3838b352944b83c38ba68915841a1f9c9de8f16ef44c3b8332",
@@ -83,6 +87,7 @@ def _execute_partition(
     key = f"{instrument}:{variant}:{day}"
     marker = run_root / "staging" / "status" / instrument / variant / f"{day}.json"
     if marker.exists():
+        _verify_completed_partition(run_root, marker)
         return key
     if variant == "V1_PRICE":
         outputs = build_price_day(
@@ -108,7 +113,13 @@ def _execute_partition(
         frame = pl.read_parquet(window_path)
         windows = [] if "empty_partition" in frame.columns else frame.to_dicts()
         trade_paths = Stage1TradesCatalogIndex.select_for_windows(trade_partitions, windows)
-        outputs = build_flow_day(trade_paths=trade_paths, instrument=instrument, windows=windows)
+        outputs = build_flow_day(
+            trade_paths=trade_paths,
+            instrument=instrument,
+            windows=windows,
+            processing_partition=day.isoformat(),
+        )
+    written = []
     for dataset, records in outputs.items():
         base = run_root / "staging" / ("work" if dataset == "candidate_attempts" else "data")
         path = (
@@ -119,8 +130,9 @@ def _execute_partition(
             / f"date={day}"
             / "part-000.parquet"
         )
-        write_partition(path, records, dataset)
-    atomic_json(marker, {"key": key, "status": "COMPLETE"})
+        metadata = write_partition(path, records, dataset)
+        written.append({"relative_path": str(path.relative_to(run_root)), **metadata})
+    atomic_json(marker, {"key": key, "status": "COMPLETE", "outputs": written})
     return key
 
 
@@ -169,6 +181,8 @@ class CandidateRun:
             raise ValueError("preregistration Manifest hash mismatch")
         if preregistration.config_hash != self.manifest.config_hash:
             raise ValueError("execution/preregistration config hash mismatch")
+        if self.manifest.quality_gate_evidence_hash is None or not self.manifest.tool_versions:
+            raise ValueError("production execution Manifest lacks quality/tool evidence")
         baseline = preregistration.stage1
         if baseline.data_run_id != self.manifest.stage1_data_run_id:
             raise ValueError("execution/preregistration Stage 1 Data Run mismatch")
@@ -203,6 +217,7 @@ class CandidateRun:
         run = cls(run_id, manifest_path)
         current_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
         if run.manifest.stage1_data_run_id == STAGE1_RUN_ID:
+            run._assert_production_preflight(current_commit)
             if current_commit != run.manifest.code_commit:
                 raise ValueError("execution Manifest code commit does not match current HEAD")
             if run.stage1_index is None:
@@ -229,7 +244,9 @@ class CandidateRun:
             for variant in VARIANTS
             for day in dates()
         ]
-        planned.extend(f"{instrument}:V1_PRICE:FINALIZE" for instrument in INSTRUMENTS)
+        planned.extend(
+            f"{instrument}:{variant}:FINALIZE" for instrument in INSTRUMENTS for variant in VARIANTS
+        )
         checkpoint = {
             "run_id": run_id,
             "execution_manifest_hash": run.manifest.manifest_hash,
@@ -250,12 +267,126 @@ class CandidateRun:
         atomic_json(run.root / "checkpoint.json", checkpoint)
         return run
 
+    def _assert_production_preflight(self, current_commit: str) -> None:
+        branch = subprocess.check_output(["git", "branch", "--show-current"], text=True).strip()
+        if branch != "stage/2-event-construction":
+            raise ValueError("S2-T10 requires stage/2-event-construction")
+        if subprocess.check_output(["git", "status", "--porcelain"], text=True).strip():
+            raise ValueError("S2-T10 preflight requires a clean worktree")
+        stage1_commit = subprocess.check_output(
+            ["git", "rev-list", "-n", "1", "stage-1-v1.0-passed"], text=True
+        ).strip()
+        if stage1_commit != "b7d4ff3d18dcfc515feb8892659cb0b186cd68f8":
+            raise ValueError("Stage 1 tag/baseline commit changed")
+        root = Path(__file__).resolve().parents[6]
+        oq_text = (root / "docs/development/OPEN_QUESTIONS.md").read_text()
+        for oq in ("OQ-S2-001", "OQ-S2-002", "OQ-S2-004"):
+            line = next((item for item in oq_text.splitlines() if f"| {oq} |" in item), "")
+            if "| RESOLVED |" not in line:
+                raise ValueError(f"unresolved prerequisite: {oq}")
+        cr_text = (root / "docs/development/changes/CR-2026-004.md").read_text()
+        if not all(
+            marker in cr_text
+            for marker in (
+                "- status: RESOLVED",
+                "- implementation_status: IMPLEMENTED",
+                "- validation_status: PASS",
+            )
+        ):
+            raise ValueError("CR-2026-004 is not resolved/implemented/validated")
+        self._assert_quality_evidence(current_commit)
+        invalidated_root = STAGE2_ROOT / "runs" / INVALIDATED_RUN_ID
+        invalidation = json.loads((invalidated_root / "reports" / "invalidation.json").read_text())
+        if (
+            invalidation.get("status") != "INVALIDATED"
+            or (invalidated_root / "published" / "data").exists()
+        ):
+            raise ValueError("invalidated predecessor run state changed")
+        self._assert_no_conflicting_run()
+        self._assert_no_conflicting_process()
+        required = (
+            RUN_B_REQUIRED_FREE_BYTES if "full-b-" in self.run_id else RUN_A_REQUIRED_FREE_BYTES
+        )
+        free = shutil.disk_usage(STAGE2_ROOT).free
+        if free < required:
+            raise OSError(f"Stage 2 space gate failed: {free} < {required}")
+
+    def _assert_quality_evidence(self, current_commit: str) -> None:
+        evidence_hash = self.manifest.quality_gate_evidence_hash
+        if evidence_hash is None:
+            raise ValueError("quality evidence hash missing")
+        path = (
+            STAGE2_ROOT
+            / "runs"
+            / "stage2-g1-preregistration-v1.0"
+            / "reports"
+            / f"quality-gate-{evidence_hash}.json"
+        )
+        if not path.exists() or _sha256_file(path) != evidence_hash:
+            raise ValueError("quality gate evidence missing or changed")
+        evidence = json.loads(path.read_text())
+        if evidence.get("status") != "PASS" or evidence.get("code_commit") != current_commit:
+            raise ValueError("quality gate evidence does not bind current HEAD")
+        if evidence.get("tool_versions") != self.manifest.tool_versions:
+            raise ValueError("quality gate tool versions changed")
+
+    def _assert_no_conflicting_run(self) -> None:
+        runs = STAGE2_ROOT / "runs"
+        for path in sorted(runs.glob("stage2-g1-full-*")):
+            if path.name in {FAILED_RUN_ID, INVALIDATED_RUN_ID}:
+                continue
+            if path == self.root:
+                continue
+            checkpoint_path = path / "checkpoint.json"
+            if not checkpoint_path.exists():
+                continue
+            status = json.loads(checkpoint_path.read_text()).get("status")
+            invalidated = path / "reports" / "invalidation.json"
+            effective_terminal = status in {"FAILED", "PUBLISHED"} or (
+                invalidated.exists()
+                and json.loads(invalidated.read_text()).get("status") == "INVALIDATED"
+            )
+            if not effective_terminal:
+                raise ValueError(f"conflicting non-terminal Stage 2 run: {path.name}")
+
+    def _assert_no_conflicting_process(self) -> None:
+        ancestors = {os.getpid()}
+        parent = os.getppid()
+        while parent > 1:
+            ancestors.add(parent)
+            try:
+                parent = int(
+                    subprocess.check_output(
+                        ["ps", "-o", "ppid=", "-p", str(parent)], text=True
+                    ).strip()
+                    or "1"
+                )
+            except subprocess.CalledProcessError:
+                break
+        output = subprocess.check_output(["ps", "-axo", "pid=,command="], text=True)
+        conflicts = []
+        for line in output.splitlines():
+            fields = line.strip().split(maxsplit=1)
+            if len(fields) != 2:
+                continue
+            pid, command = int(fields[0]), fields[1]
+            if (
+                pid not in ancestors
+                and "scripts/run_stage2_group1_candidates.py" in command
+                and command.find("preflight") == -1
+            ):
+                conflicts.append({"pid": pid, "command": command})
+        if conflicts:
+            raise ValueError(f"conflicting Stage 2 processes: {conflicts}")
+
     def execute(self, instrument: Instrument, variant: Variant, *, resume: bool) -> None:
         checkpoint = self._checkpoint()
         if checkpoint["execution_manifest_hash"] != self.manifest.manifest_hash:
             raise ValueError("resume Manifest mismatch")
         if variant == "V1_FLOW" and not self._variant_complete(instrument, "V1_PRICE", checkpoint):
             raise ValueError("V1_FLOW requires completed V1_PRICE windows")
+        if resume:
+            self._verify_completed_variant(instrument, variant, checkpoint)
         interruption_limit = int(os.environ.get("ERA_STAGE2_INTERRUPT_AFTER_PARTITIONS", "0"))
         completed_this_call = 0
         checkpoint["status"] = "IN_PROGRESS"
@@ -341,6 +472,18 @@ class CandidateRun:
                     raise
         self._finish_execute(instrument, variant, checkpoint)
 
+    def _verify_completed_variant(
+        self, instrument: Instrument, variant: Variant, checkpoint: dict[str, Any]
+    ) -> None:
+        for day in dates():
+            key = f"{instrument}:{variant}:{day}"
+            if key not in checkpoint["completed"]:
+                continue
+            marker = self.root / "staging" / "status" / instrument / variant / f"{day}.json"
+            if not marker.exists():
+                raise ValueError(f"resume partition marker missing: {key}")
+            _verify_completed_partition(self.root, marker)
+
     def verify(self) -> dict[str, Any]:
         published = self.root / "published" / "data"
         if not published.exists():
@@ -349,7 +492,18 @@ class CandidateRun:
         existing = json.loads((self.root / "manifests" / "catalog.json").read_text())
         if catalog != existing:
             raise ValueError("published Catalog/logical hash mismatch")
-        return catalog
+        analysis = analyze_release(
+            published,
+            expected_partition_count=len(dates()),
+            checkpoint=self._checkpoint(),
+            manifest_hash=self.manifest.manifest_hash,
+        )
+        stored_analysis = json.loads((self.root / "reports" / "release-analysis.json").read_text())
+        if analysis != stored_analysis:
+            raise ValueError("published semantic release analysis mismatch")
+        if analysis["quality"]["status"] != "PASS":
+            raise ValueError("published Quality Report is not PASS")
+        return {**catalog, "release_analysis": analysis}
 
     def _checkpoint(self) -> dict[str, Any]:
         return cast(dict[str, Any], json.loads((self.root / "checkpoint.json").read_text()))
@@ -365,19 +519,15 @@ class CandidateRun:
         self, instrument: Instrument, variant: Variant, checkpoint: dict[str, Any]
     ) -> bool:
         daily = all(f"{instrument}:{variant}:{day}" in checkpoint["completed"] for day in dates())
-        if variant == "V1_PRICE":
-            return daily and f"{instrument}:V1_PRICE:FINALIZE" in checkpoint["completed"]
-        return daily
+        return daily and f"{instrument}:{variant}:FINALIZE" in checkpoint["completed"]
 
     def _finish_execute(
         self, instrument: Instrument, variant: Variant, checkpoint: dict[str, Any]
     ) -> None:
-        if variant == "V1_PRICE" and all(
-            f"{instrument}:{variant}:{day}" in checkpoint["completed"] for day in dates()
-        ):
-            final_key = f"{instrument}:V1_PRICE:FINALIZE"
+        if all(f"{instrument}:{variant}:{day}" in checkpoint["completed"] for day in dates()):
+            final_key = f"{instrument}:{variant}:FINALIZE"
             if final_key not in checkpoint["completed"]:
-                self._finalize_price_candidates(instrument)
+                self._finalize_candidates(instrument, variant)
                 checkpoint["completed"].append(final_key)
                 atomic_json(self.root / "checkpoint.json", checkpoint)
         if self._all_complete(checkpoint):
@@ -386,7 +536,7 @@ class CandidateRun:
             checkpoint["status"] = "PARTIAL_COMPLETE"
             atomic_json(self.root / "checkpoint.json", checkpoint)
 
-    def _finalize_price_candidates(self, instrument: Instrument) -> None:
+    def _finalize_candidates(self, instrument: Instrument, variant: Variant) -> None:
         summaries: list[dict[str, Any]] = []
         valid_days = dates()
         valid_set = set(valid_days)
@@ -398,7 +548,7 @@ class CandidateRun:
                     / "staging"
                     / "work"
                     / f"instrument={instrument}"
-                    / "variant=V1_PRICE"
+                    / f"variant={variant}"
                     / "candidate_attempts"
                     / f"date={source_day}"
                     / "part-000.parquet"
@@ -414,29 +564,40 @@ class CandidateRun:
                     if owner_partition(int(row["available_at_ts"])) == owner_day.isoformat()
                 )
             try:
-                finalized = finalize_candidate_attempts(attempts)
+                finalized = finalize_candidate_attempts(
+                    attempts, include_flow_windows=variant == "V1_PRICE"
+                )
             except CandidateIdentityConflict as exc:
                 atomic_json(
                     self.root
                     / "reports"
                     / "candidate_identity_conflicts"
                     / f"instrument={instrument}"
+                    / f"variant={variant}"
                     / f"date={owner_day}.json",
-                    {"instrument": instrument, "date": str(owner_day), "conflicts": exc.conflicts},
+                    {
+                        "instrument": instrument,
+                        "variant": variant,
+                        "date": str(owner_day),
+                        "conflicts": exc.conflicts,
+                    },
                 )
                 raise
             output_records = {
                 "market_episodes": finalized.market_episodes_by_date.get(str(owner_day), []),
                 "candidate_inclusion": finalized.inclusion_by_date.get(str(owner_day), []),
-                "flow_windows": finalized.flow_windows_by_date.get(str(owner_day), []),
             }
+            if variant == "V1_PRICE":
+                output_records["flow_windows"] = finalized.flow_windows_by_date.get(
+                    str(owner_day), []
+                )
             for dataset, records in output_records.items():
                 path = (
                     self.root
                     / "staging"
                     / "data"
                     / f"instrument={instrument}"
-                    / "variant=V1_PRICE"
+                    / f"variant={variant}"
                     / dataset
                     / f"date={owner_day}"
                     / "part-000.parquet"
@@ -447,12 +608,13 @@ class CandidateRun:
                 / "reports"
                 / "candidate_dedup_audit"
                 / f"instrument={instrument}"
+                / f"variant={variant}"
                 / f"date={owner_day}"
                 / "part-000.parquet"
             )
             write_or_verify_partition(audit_path, finalized.audit_records, "candidate_dedup_audit")
             summaries.append({"date": str(owner_day), **finalized.summary})
-        terminal_attempts = self._attempts_for_source_day(instrument, valid_days[-1])
+        terminal_attempts = self._attempts_for_source_day(instrument, variant, valid_days[-1])
         out_of_range = [
             row
             for row in terminal_attempts
@@ -460,9 +622,10 @@ class CandidateRun:
         ]
         if out_of_range:
             atomic_json(
-                self.root / "reports" / f"{instrument}-out-of-period-candidates.json",
+                self.root / "reports" / f"{instrument}-{variant}-out-of-period-candidates.json",
                 {
                     "instrument": instrument,
+                    "variant": variant,
                     "count": len(out_of_range),
                     "reason_code": "OUT_OF_PREREGISTERED_PERIOD",
                     "canonical_candidate_ids": sorted(
@@ -472,6 +635,7 @@ class CandidateRun:
             )
         aggregate = {
             "instrument": instrument,
+            "variant": variant,
             "dates": len(valid_days),
             "attempt_count": sum(int(row["attempt_count"]) for row in summaries),
             "canonical_count": sum(int(row["canonical_count"]) for row in summaries),
@@ -485,7 +649,7 @@ class CandidateRun:
             "out_of_period_count": len(out_of_range),
             "daily_summary_logical_hash": audit_logical_hash(summaries),
         }
-        summary_path = self.root / "reports" / f"{instrument}-candidate-finalization.json"
+        summary_path = self.root / "reports" / f"{instrument}-{variant}-candidate-finalization.json"
         if summary_path.exists():
             if json.loads(summary_path.read_text()) != aggregate:
                 raise ValueError("resume candidate finalization summary mismatch")
@@ -493,14 +657,14 @@ class CandidateRun:
             atomic_json(summary_path, aggregate)
 
     def _attempts_for_source_day(
-        self, instrument: Instrument, source_day: date
+        self, instrument: Instrument, variant: Variant, source_day: date
     ) -> list[dict[str, Any]]:
         path = (
             self.root
             / "staging"
             / "work"
             / f"instrument={instrument}"
-            / "variant=V1_PRICE"
+            / f"variant={variant}"
             / "candidate_attempts"
             / f"date={source_day}"
             / "part-000.parquet"
@@ -521,8 +685,75 @@ class CandidateRun:
         if published_data.exists():
             raise FileExistsError("published output is append-only")
         catalog = catalog_tree(staging_data)
+        analysis = analyze_release(
+            staging_data,
+            expected_partition_count=len(dates()),
+            checkpoint=checkpoint,
+            manifest_hash=self.manifest.manifest_hash,
+        )
+        if analysis["quality"]["status"] != "PASS":
+            _write_once_json(self.root / "reports" / "quality-report-failed.json", analysis)
+            raise ValueError("Stage 2 Group 1 Quality Report failed")
+        _write_once_json(self.root / "reports" / "release-analysis.json", analysis)
+        _write_once_json(
+            self.root / "reports" / "quality-report.json",
+            {
+                "schema_name": "stage2-group1-quality-report-v1",
+                "status": "PASS",
+                "manifest_hash": self.manifest.manifest_hash,
+                "catalog_logical_hash": analysis["catalog_logical_hash"],
+                "quality": analysis["quality"],
+            },
+        )
+        _write_once_json(
+            self.root / "reports" / "count-summary.json",
+            {
+                "schema_name": "stage2-group1-count-summary-v1",
+                "manifest_hash": self.manifest.manifest_hash,
+                "catalog_logical_hash": analysis["catalog_logical_hash"],
+                "datasets": {
+                    key: {
+                        field: value
+                        for field, value in stats.items()
+                        if not field.startswith("partition_")
+                    }
+                    for key, stats in analysis["datasets"].items()
+                },
+                "distributions": analysis["distributions"],
+                "finalization": analysis["finalization"],
+            },
+        )
+        if (self.root / "manifests" / "catalog.json").exists():
+            raise FileExistsError("published Catalog is append-only")
         atomic_json(self.root / "manifests" / "catalog.json", catalog)
         os.replace(staging_data, published_data)
         checkpoint["status"] = "PUBLISHED"
         checkpoint["published_logical_hash"] = catalog["logical_hash"]
+        checkpoint["published_physical_hash"] = catalog["physical_hash"]
         atomic_json(self.root / "checkpoint.json", checkpoint)
+
+
+def _write_once_json(path: Path, payload: dict[str, Any]) -> None:
+    if path.exists():
+        raise FileExistsError(f"append-only report exists: {path}")
+    atomic_json(path, payload)
+
+
+def _verify_completed_partition(run_root: Path, marker: Path) -> None:
+    payload = json.loads(marker.read_text())
+    if payload.get("status") != "COMPLETE" or not payload.get("outputs"):
+        raise ValueError(f"incomplete or legacy partition marker: {marker}")
+    for output in payload["outputs"]:
+        path = run_root / output["relative_path"]
+        if not path.exists() or _sha256_file(path) != output["byte_sha256"]:
+            raise ValueError(f"resume partition checksum mismatch: {path}")
+
+
+def _sha256_file(path: Path) -> str:
+    import hashlib
+
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(4 * 1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()

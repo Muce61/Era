@@ -19,6 +19,7 @@ from era100x.research.stage_2.contracts.models import (
     ReclaimEvent,
     SweepEpisode,
 )
+from era100x.research.stage_2.manifests.configuration import research_classification
 
 
 def build_market_episode(
@@ -80,8 +81,14 @@ def build_market_episode(
         "flow_feature_set_id": None if flow is None else flow.flow_feature_set_id,
     }
     canonical_id = canonical_candidate_identity(identity_payload)
+    research_role, primary_eligible = research_classification(
+        event_parameter_set_id, time_combination_id
+    )
     semantic_payload = {
         "identity": identity_payload,
+        "variant_id": variant,
+        "research_role": research_role,
+        "primary_eligible": primary_eligible,
         "market_episode_id": market_id,
         "venue": venue,
         "sweep_start_ns": sweep.sweep_start_ts,
@@ -121,7 +128,10 @@ def build_market_episode(
             "trigger_id": trigger.trigger_id,
             "flow_feature_set_id": None if flow is None else flow.flow_feature_set_id,
             "variant": variant,
+            "variant_id": variant,
             "time_combination_id": time_combination_id,
+            "research_role": research_role,
+            "primary_eligible": primary_eligible,
             "sweep_start_ns": sweep.sweep_start_ts,
             "episode_status": "CANDIDATE",
             "consumed": False,
@@ -155,6 +165,10 @@ class CandidateInclusionLedger:
             canonical_candidate_id=episode.canonical_candidate_id,
             candidate_version_id=episode.candidate_version_id,
             canonical_payload_hash=episode.canonical_payload_hash,
+            variant_id=episode.variant_id,
+            time_combination_id=episode.time_combination_id,
+            research_role=episode.research_role,
+            primary_eligible=episode.primary_eligible,
             included=included,
             reason_code="CANDIDATE_INCLUDED" if included else "DUPLICATE_CANDIDATE",
             deduplication_key=f"{episode.market_episode_id}:{episode.candidate_version_id}",

@@ -47,7 +47,9 @@ def audit_logical_hash(records: list[dict[str, Any]]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-def finalize_candidate_attempts(attempts: list[dict[str, Any]]) -> FinalizedCandidates:
+def finalize_candidate_attempts(
+    attempts: list[dict[str, Any]], *, include_flow_windows: bool = True
+) -> FinalizedCandidates:
     ordered_attempts = sorted(attempts, key=_attempt_sort_key)
     groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for attempt in ordered_attempts:
@@ -83,7 +85,8 @@ def finalize_candidate_attempts(attempts: list[dict[str, Any]]) -> FinalizedCand
         episodes[owner].append(episode)
         inclusion = _inclusion_record(canonical, owner)
         inclusions[owner].append(inclusion)
-        windows[owner].append(_flow_window(canonical, owner))
+        if include_flow_windows:
+            windows[owner].append(_flow_window(canonical, owner))
         for index, item in enumerate(sorted(items, key=_attempt_sort_key)):
             source_owner = str(item["source_processing_partition"]) == owner
             if index == 0 and source_owner:
@@ -195,6 +198,10 @@ def _inclusion_record(attempt: dict[str, Any], owner: str) -> dict[str, Any]:
         "canonical_candidate_id": canonical_id,
         "candidate_version_id": canonical_id,
         "canonical_payload_hash": attempt["canonical_payload_hash"],
+        "variant_id": attempt["variant_id"],
+        "time_combination_id": attempt["time_combination_id"],
+        "research_role": attempt["research_role"],
+        "primary_eligible": attempt["primary_eligible"],
         "included": True,
         "reason_code": "CANONICAL_INCLUDED",
         "deduplication_key": canonical_id,
@@ -229,6 +236,9 @@ def _flow_window(attempt: dict[str, Any], owner: str) -> dict[str, Any]:
         "market_episode_id",
         "canonical_candidate_id",
         "canonical_payload_hash",
+        "variant_id",
+        "research_role",
+        "primary_eligible",
     )
     return {
         **{field: attempt[field] for field in fields},
@@ -254,8 +264,11 @@ def _audit_record(
         "canonical_payload_hash": attempt["canonical_payload_hash"],
         "market_episode_id": attempt["market_episode_id"],
         "instrument": attempt["instrument"],
+        "variant_id": attempt["variant_id"],
         "event_parameter_set_id": attempt["parameter_set_id"],
         "time_combination_id": attempt["time_combination_id"],
+        "research_role": attempt["research_role"],
+        "primary_eligible": attempt["primary_eligible"],
         "available_at_ts": attempt["available_at_ts"],
         "owner_partition": owner,
         "ownership_status": "OWNED"

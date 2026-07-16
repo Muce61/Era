@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import cast
 
 from era100x.research.stage_2.pipelines.candidates.runner import CandidateRun, Instrument, Variant
+from era100x.research.stage_2.pipelines.candidates.release import semantic_comparison
 
 
 def parser() -> argparse.ArgumentParser:
@@ -44,11 +45,18 @@ def main() -> int:
         )
         return 0
     catalog = run.verify()
+    result = {
+        "logical_hash": catalog["logical_hash"],
+        "physical_hash": catalog["physical_hash"],
+        "entries": len(catalog["entries"]),
+    }
     if args.compare_run_id:
         other = CandidateRun(args.compare_run_id, args.manifest).verify()
-        if catalog["logical_hash"] != other["logical_hash"]:
-            raise ValueError("deterministic full-run logical hash mismatch")
-    print(json.dumps({"logical_hash": catalog["logical_hash"], "entries": len(catalog["entries"])}))
+        comparison = semantic_comparison(catalog["release_analysis"], other["release_analysis"])
+        result["comparison"] = comparison
+        if comparison["status"] != "PASS":
+            raise ValueError(f"deterministic full-run mismatch: {comparison['different_fields']}")
+    print(json.dumps(result, sort_keys=True))
     return 0
 
 

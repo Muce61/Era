@@ -32,12 +32,11 @@ def write_partition(path: Path, records: list[dict[str, Any]], schema_name: str)
 
 def records_logical_hash(records: list[dict[str, Any]], schema_name: str) -> str:
     normalized = records or [{"schema_name": schema_name, "empty_partition": True}]
-    return hashlib.sha256(
-        "\n".join(
-            json.dumps(record, sort_keys=True, separators=(",", ":"), default=str)
-            for record in normalized
-        ).encode()
-    ).hexdigest()
+    serialized = sorted(
+        json.dumps(record, sort_keys=True, separators=(",", ":"), default=str)
+        for record in normalized
+    )
+    return hashlib.sha256("\n".join(serialized).encode()).hexdigest()
 
 
 def write_or_verify_partition(
@@ -62,7 +61,8 @@ def write_or_verify_partition(
 
 def catalog_tree(root: Path) -> dict[str, Any]:
     entries = []
-    aggregate = hashlib.sha256()
+    logical_aggregate = hashlib.sha256()
+    physical_aggregate = hashlib.sha256()
     # External macOS volumes may materialize AppleDouble sidecars named
     # ``._part-000.parquet``.  They are filesystem metadata, not published
     # dataset partitions, and must never enter a Stage 2 Catalog.
@@ -73,8 +73,52 @@ def catalog_tree(root: Path) -> dict[str, Any]:
     ):
         relative = str(path.relative_to(root))
         byte_hash = hashlib.sha256(path.read_bytes()).hexdigest()
-        rows = pl.scan_parquet(path).select(pl.len()).collect().item()
-        entry = {"relative_path": relative, "rows": rows, "byte_sha256": byte_hash}
+        frame = pl.read_parquet(path)
+        empty = "empty_partition" in frame.columns
+        records = [] if empty else frame.to_dicts()
+        rows = 0 if empty else frame.height
+        dataset = _dataset_name(Path(relative))
+        logical_hash = records_logical_hash(records, dataset)
+        entry = {
+            "relative_path": relative,
+            "rows": rows,
+            "byte_sha256": byte_hash,
+            "logical_sha256": logical_hash,
+        }
         entries.append(entry)
-        aggregate.update(json.dumps(entry, sort_keys=True, separators=(",", ":")).encode())
-    return {"entries": entries, "logical_hash": aggregate.hexdigest()}
+        logical_aggregate.update(
+            json.dumps(
+                {
+                    "relative_path": relative,
+                    "rows": rows,
+                    "logical_sha256": logical_hash,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
+        )
+        physical_aggregate.update(
+            json.dumps(
+                {"relative_path": relative, "rows": rows, "byte_sha256": byte_hash},
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
+        )
+    return {
+        "entries": entries,
+        "logical_hash": logical_aggregate.hexdigest(),
+        "physical_hash": physical_aggregate.hexdigest(),
+    }
+
+
+def _dataset_name(relative: Path) -> str:
+    parts = relative.parts
+    for index, part in enumerate(parts):
+        if part.startswith("variant=") and index + 1 < len(parts):
+            return parts[index + 1]
+    for part in parts:
+        if not part.startswith(("instrument=", "variant=", "date=")) and not part.startswith(
+            "part-"
+        ):
+            return part
+    raise ValueError(f"cannot infer dataset name from {relative}")

@@ -11,6 +11,8 @@ from era100x.research.stage_2.contracts.identity import (
     canonical_candidate_identity,
     canonical_candidate_payload_hash,
 )
+from era100x.research.stage_2.manifests.configuration import research_classification
+from era100x.research.stage_2.pipelines.candidates.candidate_finalizer import owner_partition
 
 Instrument = Literal["BTCUSDT", "ETHUSDT"]
 SECOND_NS = 1_000_000_000
@@ -32,9 +34,10 @@ def build_flow_day(
     trade_paths: Sequence[Path],
     instrument: Instrument,
     windows: list[dict[str, Any]],
+    processing_partition: str | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
     if not windows:
-        return {"flow_features": [], "market_episodes": []}
+        return {"flow_features": [], "candidate_attempts": []}
     if not trade_paths:
         raise FileNotFoundError("no Catalog-authorized Stage 1 Trades partitions for Flow windows")
     columns = ["ts_event_ns", "quantity", "aggressor_side", "canonical_trade_id"]
@@ -46,7 +49,7 @@ def build_flow_day(
     import bisect
 
     features: list[dict[str, Any]] = []
-    episodes: list[dict[str, Any]] = []
+    attempts: list[dict[str, Any]] = []
     for window in windows:
         start = int(window["window_start_ts"])
         end = int(window["window_end_ts"])
@@ -75,6 +78,9 @@ def build_flow_day(
             end,
             window["event_parameter_set_id"],
         )
+        research_role, primary_eligible = research_classification(
+            str(window["event_parameter_set_id"]), str(window["time_combination_id"])
+        )
         feature = {
             "flow_feature_set_id": feature_id,
             "instrument": instrument,
@@ -92,6 +98,10 @@ def build_flow_day(
             else ("FLOW_TRADES_UNAVAILABLE" if total == 0 else "FLOW_THRESHOLD_NOT_MET"),
             "market_episode_id": window["market_episode_id"],
             "event_parameter_set_id": window["event_parameter_set_id"],
+            "variant_id": "V1_FLOW",
+            "time_combination_id": window["time_combination_id"],
+            "research_role": research_role,
+            "primary_eligible": primary_eligible,
         }
         features.append(feature)
         if passed:
@@ -123,9 +133,16 @@ def build_flow_day(
                     "parent_price_canonical_candidate_id": window["canonical_candidate_id"],
                     "parent_price_payload_hash": window["canonical_payload_hash"],
                     "flow_feature": feature,
+                    "variant_id": "V1_FLOW",
+                    "research_role": research_role,
+                    "primary_eligible": primary_eligible,
                 }
             )
-            episodes.append(
+            ordinal = len(attempts)
+            source_partition = processing_partition or str(
+                window.get("owner_partition", owner_partition(end))
+            )
+            attempts.append(
                 {
                     "market_episode_id": window["market_episode_id"],
                     "canonical_candidate_id": canonical_id,
@@ -139,6 +156,7 @@ def build_flow_day(
                     "code_version": window["code_version"],
                     "parameter_set_id": window["event_parameter_set_id"],
                     "variant": "V1_FLOW",
+                    "variant_id": "V1_FLOW",
                     "available_at_ts": end,
                     "venue": window["venue"],
                     "canonical_key_level_id": window["canonical_key_level_id"],
@@ -148,15 +166,23 @@ def build_flow_day(
                     "trigger_id": window["trigger_id"],
                     "flow_feature_set_id": feature_id,
                     "time_combination_id": window["time_combination_id"],
+                    "research_role": research_role,
+                    "primary_eligible": primary_eligible,
                     "sweep_start_ns": window["sweep_start_ns"],
                     "episode_status": "CANDIDATE",
                     "consumed": False,
                     "consumed_by_intent_id": None,
                     "rearm_eligible_at_ns": None,
                     "event_parameter_set_id": window["event_parameter_set_id"],
+                    "source_processing_partition": source_partition,
+                    "source_row_ordinal": ordinal,
+                    "source_file_logical_path": (
+                        f"instrument={instrument}/variant=V1_FLOW/"
+                        f"candidate_attempts/date={source_partition}/part-000.parquet"
+                    ),
                 }
             )
-    return {"flow_features": features, "market_episodes": episodes}
+    return {"flow_features": features, "candidate_attempts": attempts}
 
 
 def _sha(*parts: object) -> str:

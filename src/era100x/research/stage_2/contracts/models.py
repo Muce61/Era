@@ -154,7 +154,10 @@ class MarketEpisode(Lineage):
     trigger_id: str
     flow_feature_set_id: str | None
     variant: Literal["V1_PRICE", "V1_FLOW"]
+    variant_id: Literal["V1_PRICE", "V1_FLOW"]
     time_combination_id: Literal["T1", "T2", "T3", "T4"]
+    research_role: Literal["PRIMARY", "EXPLORATORY"]
+    primary_eligible: bool
     sweep_start_ns: int = Field(ge=0)
     episode_status: Literal["CANDIDATE", "REJECTED", "INVALIDATED"]
     consumed: bool = False
@@ -165,6 +168,10 @@ class MarketEpisode(Lineage):
     def canonical_candidate_alias(self) -> Self:
         if self.candidate_version_id != self.canonical_candidate_id:
             raise ValueError("candidate_version_id must equal canonical_candidate_id")
+        if self.variant_id != self.variant:
+            raise ValueError("variant_id must equal variant")
+        if self.primary_eligible != (self.research_role == "PRIMARY"):
+            raise ValueError("primary_eligible and research_role disagree")
         return self
 
 
@@ -174,6 +181,10 @@ class CandidateInclusionRecord(Lineage):
     canonical_candidate_id: str = Field(pattern=r"^[0-9a-f]{64}$")
     candidate_version_id: str
     canonical_payload_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    variant_id: Literal["V1_PRICE", "V1_FLOW"]
+    time_combination_id: Literal["T1", "T2", "T3", "T4"]
+    research_role: Literal["PRIMARY", "EXPLORATORY"]
+    primary_eligible: bool
     included: bool
     reason_code: str
     deduplication_key: str

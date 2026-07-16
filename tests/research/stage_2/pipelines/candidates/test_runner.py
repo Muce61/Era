@@ -41,15 +41,31 @@ def test_controlled_interruption_resume_publish_and_verify(
     monkeypatch.setattr(runner, "dates", lambda: [date(2020, 1, 1), date(2020, 1, 2)])
     monkeypatch.setenv("ERA_STAGE2_WORKERS", "1")
 
+    def analysis(*_: object, **__: object) -> dict[str, object]:
+        return {
+            "schema_name": "fixture",
+            "manifest_hash": "1" * 64,
+            "catalog_logical_hash": runner.catalog_tree(
+                run.root
+                / ("published/data" if (run.root / "published/data").exists() else "staging/data")
+            )["logical_hash"],
+            "catalog_physical_hash": "fixture",
+            "datasets": {},
+            "distributions": {},
+            "finalization": {},
+            "quality": {"status": "PASS"},
+        }
+
     def price(**_: object) -> dict[str, list[dict[str, object]]]:
-        return {"flow_windows": [], "market_episodes": []}
+        return {"candidate_attempts": []}
 
     def flow(**_: object) -> dict[str, list[dict[str, object]]]:
-        return {"flow_features": [], "market_episodes": []}
+        return {"flow_features": [], "candidate_attempts": []}
 
     monkeypatch.setattr(runner, "build_price_day", price)
     monkeypatch.setattr(runner, "build_flow_day", flow)
     run = runner.CandidateRun.preflight("run-a", manifest_path)
+    monkeypatch.setattr(runner, "analyze_release", analysis)
     monkeypatch.setenv("ERA_STAGE2_INTERRUPT_AFTER_PARTITIONS", "1")
     with pytest.raises(InterruptedError, match="controlled"):
         run.execute("BTCUSDT", "V1_PRICE", resume=False)
@@ -130,7 +146,10 @@ def test_price_attempts_are_finalized_before_flow_and_resume_is_idempotent(
                     "trigger_id": "8" * 64,
                     "flow_feature_set_id": None,
                     "variant": "V1_PRICE",
+                    "variant_id": "V1_PRICE",
                     "time_combination_id": "T2",
+                    "research_role": "PRIMARY",
+                    "primary_eligible": True,
                     "sweep_start_ns": start,
                     "episode_status": "CANDIDATE",
                     "consumed": False,
@@ -164,3 +183,10 @@ def test_price_attempts_are_finalized_before_flow_and_resume_is_idempotent(
     assert "BTCUSDT:V1_PRICE:FINALIZE" in checkpoint["completed"]
     run.execute("BTCUSDT", "V1_PRICE", resume=True)
     assert run._checkpoint()["completed"].count("BTCUSDT:V1_PRICE:FINALIZE") == 1
+    attempt_path = (
+        run.root / "staging/work/instrument=BTCUSDT/variant=V1_PRICE/candidate_attempts/"
+        "date=2020-01-01/part-000.parquet"
+    )
+    attempt_path.write_bytes(b"corrupt")
+    with pytest.raises(ValueError, match="checksum mismatch"):
+        run.execute("BTCUSDT", "V1_PRICE", resume=True)

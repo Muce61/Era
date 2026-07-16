@@ -135,17 +135,45 @@ def test_actual_ofat_parameter_and_timing_split_legacy_identity_conflict() -> No
 
 
 def test_t1_through_t4_have_isolated_candidate_identities() -> None:
+    parameter_by_timing = {
+        "T1": "G1-TIMING_T1-V1",
+        "T2": "G1-PRIMARY-V1",
+        "T3": "G1-TIMING_T3-V1",
+        "T4": "G1-TIMING_T4-V1",
+    }
     identities = {
         build_market_episode(
             *chain(),
             None,
             variant="V1_PRICE",
-            event_parameter_set_id=f"G1-TIMING_{timing}-V1",
+            event_parameter_set_id=parameter_by_timing[timing],
             time_combination_id=timing,
         ).canonical_candidate_id
         for timing in ("T1", "T2", "T3", "T4")
     }
     assert len(identities) == 4
+
+
+def test_primary_and_exploratory_roles_are_explicit_and_variant_scoped() -> None:
+    price = build_market_episode(
+        *chain(),
+        None,
+        variant="V1_PRICE",
+        event_parameter_set_id="G1-PRIMARY-V1",
+        time_combination_id="T2",
+    )
+    exploratory = build_market_episode(
+        *chain(),
+        None,
+        variant="V1_PRICE",
+        event_parameter_set_id="G1-HOLD_3-V1",
+        time_combination_id="T2",
+    )
+    assert price.variant_id == "V1_PRICE"
+    assert price.research_role == "PRIMARY"
+    assert price.primary_eligible is True
+    assert exploratory.research_role == "EXPLORATORY"
+    assert exploratory.primary_eligible is False
 
 
 def test_candidate_dedup_and_consumption_are_separate_and_once_only() -> None:

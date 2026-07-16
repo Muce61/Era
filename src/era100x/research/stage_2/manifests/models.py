@@ -191,13 +191,20 @@ class Stage2ExecutionManifest(FrozenModel):
     stage1_logical_hashes: dict[Literal["BTCUSDT", "ETHUSDT"], str]
     full_run_cli: str
     invalidation_conditions: tuple[str, ...]
+    quality_gate_evidence_hash: str | None = Field(default=None, pattern=SHA256_PATTERN)
+    tool_versions: dict[str, str] = Field(default_factory=dict)
     recovery: RecoveryMetadata | None = None
     manifest_hash: str = Field(pattern=SHA256_PATTERN)
 
     def computed_hash(self) -> str:
         return sha256_text(
             canonical_json(
-                self.model_dump(mode="python", exclude={"manifest_hash"}, exclude_none=True)
+                self.model_dump(
+                    mode="python",
+                    exclude={"manifest_hash"},
+                    exclude_none=True,
+                    exclude_defaults=True,
+                )
             )
         )
 

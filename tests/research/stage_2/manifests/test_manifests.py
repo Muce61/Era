@@ -83,6 +83,14 @@ def test_recovery_manifest_binds_fix_commit_and_forbids_price_reuse() -> None:
             "uv run python scripts/run_stage2_group1_candidates.py {preflight,run,resume,verify}"
         ),
         "invalidation_conditions": ("hash drift",),
+        "quality_gate_evidence_hash": "7" * 64,
+        "tool_versions": {
+            "python": "3.12.7",
+            "polars": "1.42.1",
+            "pytest": "8.4.2",
+            "ruff": "0.15.21",
+            "mypy": "1.20.2",
+        },
         "recovery": {
             "recovery_of_run_id": "failed-run",
             "supersedes_failed_run_id": "failed-run",
@@ -97,6 +105,8 @@ def test_recovery_manifest_binds_fix_commit_and_forbids_price_reuse() -> None:
     assert manifest.recovery is not None
     assert manifest.recovery.reused_price_staging is False
     assert manifest.recovery.identity_change_request == "CR-2026-004"
+    assert manifest.quality_gate_evidence_hash == "7" * 64
+    assert manifest.tool_versions["polars"] == "1.42.1"
     payload["recovery"]["fix_code_commit"] = "b" * 40  # type: ignore[index]
     with pytest.raises(ValueError, match="fix commit"):
         Stage2ExecutionManifest.seal(payload)

@@ -128,7 +128,7 @@ Stage 2 is `IN_PROGRESS / GROUP_1_S2_T10_DUAL_FULL_BUILD_IN_PROGRESS`. CR-2026-0
 | S2-T08 v1.3 delivered evidence | S2-T08 | Trades-only G4 facts/tests and `validations/stage_2/S2-T08.md` | PASSED |
 | MarketEpisode identity, consume and re-arm | S2-T09 | fixture-only `episodes/identity`; FI-14, UT-EVT-011 | APPROVED_NOT_EXECUTED |
 | S2-T09 v1.4 identity correction | S2-T09 | CR-2026-004 canonical candidate identity/payload hash while preserving FROZEN MarketEpisode identity; `validations/stage_2/CR-2026-004.md` | PASSED |
-| Registry-driven full candidate generation; BTC/ETH, setup/context and variants separate | S2-T10 v1.5 | CR-2026-003 path repair and CR-2026-004 ownership/dedup finalization validated; prior failure retained in `validations/stage_2/S2-T10.md` | IN_PROGRESS |
+| Registry-driven full candidate generation; BTC/ETH, variant and Primary/Exploratory separate | S2-T10 v1.5 | dual variant candidate-attempt finalization, semantic Catalog/release analysis, checksum recovery and CR-2026-003/004 regression tests; prior failures retained in `validations/stage_2/S2-T10.md` | IN_PROGRESS |
 | Group-1 small-sample integration | S2-T01～S2-T09 | fixture chain plus six controlled real windows; locked execution Manifest | PASSED |
 | Historical path metrics and labels | S2-T11, S2-T12, S2-T13, S2-T14 | v2 ordering, MFE/MAE/time, first passage, AMBIGUOUS bounds | DRAFT_NOT_APPROVED |
 | Conditional baseline and placebo | S2-T15, S2-T16 | matched baseline/placebo with frozen relaxation and seeds | DRAFT_NOT_APPROVED |

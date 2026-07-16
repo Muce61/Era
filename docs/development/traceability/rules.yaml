@@ -2229,7 +2229,7 @@ rules:
     change_request_ref: docs/development/changes/CR-2026-004.md
     implemented_change_request_ref: docs/development/changes/CR-2026-003.md
     s2_t10_recovery_task_version: '1.5'
-    cr_s2_004_status: APPROVED_L2
+    cr_s2_004_status: RESOLVED_IMPLEMENTED_VALIDATED_L2
     cr_s2_004_validation: docs/development/validations/stage_2/CR-2026-004.md
     execution_blocker: NONE
     execution_state: S2_T10_DUAL_FULL_BUILD_IN_PROGRESS
