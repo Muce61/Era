@@ -4,7 +4,7 @@
 
 - task_id: S2-T10
 - task_version: 1.5
-- status: REOPENED
+- status: APPROVED_FOR_REEXECUTION
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
@@ -98,6 +98,8 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 ## 20. 变更历史
 
 - 2026-07-16：v1.5，Muce批准CR-2026-004 L2及Case C按新身份拆分；重开Task以修复candidate identity、partition ownership和dedup finalization，本轮禁止创建全量run。
+
+- 2026-07-16：v1.5修复、前50日双重放和全部质量门PASS；状态APPROVED_FOR_REEXECUTION。本轮未创建Execution Manifest或全量run。
 
 - 2026-07-16：CR-2026-003路径修复及回归通过；全量前审计发现保留的BTC PRICE前50日分区3,781行中仅971个唯一candidate identity，2,810行为重复且均被标记included。创建CR-2026-004，Task状态BLOCKED，未创建新run。
 

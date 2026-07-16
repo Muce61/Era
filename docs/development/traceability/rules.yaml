@@ -2230,8 +2230,9 @@ rules:
     implemented_change_request_ref: docs/development/changes/CR-2026-003.md
     s2_t10_recovery_task_version: '1.5'
     cr_s2_004_status: APPROVED_L2
-    execution_blocker: IDENTITY_CONTRACT_FIX_NOT_YET_VALIDATED
-    execution_state: S2_T09_T10_IDENTITY_FIX_IN_PROGRESS
+    cr_s2_004_validation: docs/development/validations/stage_2/CR-2026-004.md
+    execution_blocker: NONE
+    execution_state: READY_FOR_S2_T10_RECOVERY_EXECUTION
   state: PLANNED
 - rule_id: GATE-STAGE-3
   rule_status: FROZEN

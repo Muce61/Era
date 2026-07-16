@@ -4,20 +4,19 @@
 
 **FAIL**
 
-Recovery status: CR-2026-003 path repair IMPLEMENTED/TESTED; S2-T10 v1.4 BLOCKED by proposed
-CR-2026-004. This remains a FAIL draft and cannot become PASS until the candidate-deduplication
-integration is explicitly approved, corrected, and followed by two complete deterministic runs.
+Recovery status: CR-2026-003 path repair IMPLEMENTED/TESTED; CR-2026-004 identity/ownership
+validation PASS; S2-T10 v1.5 APPROVED_FOR_REEXECUTION. This remains a FAIL draft until two new
+complete deterministic full runs satisfy the Group-1 gate.
 
 S2-T19 and S2-T01～S2-T09 passed their directed tests and small-sample integration. S2-T10
 failed during the first full BTCUSDT Flow partition because its Stage 1 Trades physical-path
 resolver omitted the frozen `archive=YYYY-MM` partition level. The full run was not published,
 ETH and Run B were not executed, and deterministic full-run acceptance is unavailable.
 
-The approved CR-2026-003 path fix now passes its regression and unified quality gate. Mandatory
-pre-run inspection then found 2,810 duplicate identities among 3,781 rows in the first 50 retained
-BTC PRICE MarketEpisode partitions, with duplicate inclusion rows all marked included. Because
-CR-2026-003 forbids changing PRICE results, CR-2026-004 must be approved before implementation.
-No new Execution Manifest or recovery run was created.
+The approved CR-2026-003 path fix passes its regression and unified quality gate. CR-2026-004
+proved the 2,810 legacy excess rows were parameter/timing identity collisions, not exact
+duplicates. The corrected identity maps all 3,781 rows to 3,781 unique canonical candidates with
+zero conflict and deterministic replay. No new Execution Manifest or recovery run was created.
 
 ## Acceptance summary
 
@@ -35,12 +34,12 @@ No new Execution Manifest or recovery run was created.
 | Failure does not publish | PASS |
 | No Group 2～4 execution | PASS |
 | CR-2026-003 archive path correction | PASS in code/regression |
-| Candidate identity deduplication | FAIL: `CR-2026-004` pending approval |
-| No blocker | FAIL: `CR-2026-004` |
+| Candidate identity/ownership correction | PASS: CR-2026-004 |
+| No blocker for S2-T10 recovery | PASS |
 
 ## Failure disposition
 
 Run `stage2-g1-full-a-20260716-4c15e46` is `FAILED_UNPUBLISHED`. Its staging and failure evidence
 remain intact. [CR-2026-003](../changes/CR-2026-003.md) corrected the path resolver; the separate
-[CR-2026-004](../changes/CR-2026-004.md) records the blocked candidate-deduplication integration.
-Group 1 is not ready for final approval.
+[CR-2026-004](../changes/CR-2026-004.md) validates candidate identity and ownership. Group 1 is
+ready to retry S2-T10 but is not ready for final approval.

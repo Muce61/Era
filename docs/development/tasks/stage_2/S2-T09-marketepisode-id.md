@@ -4,7 +4,7 @@
 
 - task_id: S2-T09
 - task_version: 1.4
-- status: REOPENED
+- status: PASSED
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
@@ -96,6 +96,8 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 ## 20. 变更历史
 
 - 2026-07-16：v1.4，Muce批准CR-2026-004 L2；旧candidate identity未绑定实际OFAT参数和时间组合，前50日形成338个identity conflict组。重开本Task以增加canonical candidate identity/payload hash并保持FROZEN market_episode_id不变。
+
+- 2026-07-16：v1.4修复与回归PASS；前50日3,781条记录形成3,781个新canonical identity、0冲突、0 exact duplicate；Task恢复PASSED。
 
 - 2026-07-16：v1.3，依据CR-2026-002与ADR-S2-005冻结第一组事件构造基线和CLI；Muce批准，状态APPROVED / NOT_EXECUTED。
 
