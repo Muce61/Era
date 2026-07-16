@@ -38,7 +38,14 @@ def write_partition(path: Path, records: list[dict[str, Any]], schema_name: str)
 def catalog_tree(root: Path) -> dict[str, Any]:
     entries = []
     aggregate = hashlib.sha256()
-    for path in sorted(root.rglob("*.parquet")):
+    # External macOS volumes may materialize AppleDouble sidecars named
+    # ``._part-000.parquet``.  They are filesystem metadata, not published
+    # dataset partitions, and must never enter a Stage 2 Catalog.
+    for path in sorted(
+        candidate
+        for candidate in root.rglob("part-*.parquet")
+        if not candidate.name.startswith("._")
+    ):
         relative = str(path.relative_to(root))
         byte_hash = hashlib.sha256(path.read_bytes()).hexdigest()
         rows = pl.scan_parquet(path).select(pl.len()).collect().item()

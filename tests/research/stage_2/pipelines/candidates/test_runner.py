@@ -36,9 +36,8 @@ def test_controlled_interruption_resume_publish_and_verify(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     manifest_path = tmp_path / "execution.json"
-    item = manifest(manifest_path)
+    manifest(manifest_path)
     monkeypatch.setattr(runner, "STAGE2_ROOT", tmp_path / "stage2")
-    monkeypatch.setattr(runner, "EXPECTED_EXECUTION_MANIFEST", item.manifest_hash)
     monkeypatch.setattr(runner, "dates", lambda: [date(2020, 1, 1), date(2020, 1, 2)])
     monkeypatch.setenv("ERA_STAGE2_WORKERS", "1")
 
@@ -66,9 +65,8 @@ def test_controlled_interruption_resume_publish_and_verify(
 
 def test_failed_partition_is_not_published(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     manifest_path = tmp_path / "execution.json"
-    item = manifest(manifest_path)
+    manifest(manifest_path)
     monkeypatch.setattr(runner, "STAGE2_ROOT", tmp_path / "stage2")
-    monkeypatch.setattr(runner, "EXPECTED_EXECUTION_MANIFEST", item.manifest_hash)
     monkeypatch.setattr(runner, "dates", lambda: [date(2020, 1, 1)])
     monkeypatch.setenv("ERA_STAGE2_WORKERS", "1")
 
@@ -80,3 +78,16 @@ def test_failed_partition_is_not_published(tmp_path: Path, monkeypatch: pytest.M
     with pytest.raises(RuntimeError, match="fixture failure"):
         run.execute("BTCUSDT", "V1_PRICE", resume=False)
     assert not (run.root / "published" / "data").exists()
+
+
+def test_catalog_ignores_external_volume_appledouble_sidecars(tmp_path: Path) -> None:
+    data = tmp_path / "data" / "dataset" / "date=2020-01-01"
+    data.mkdir(parents=True)
+    (data / "._part-000.parquet").write_bytes(b"not parquet; macOS metadata only")
+    runner.write_partition(data / "part-000.parquet", [{"id": "one"}], "dataset")
+
+    catalog = runner.catalog_tree(tmp_path / "data")
+
+    assert [entry["relative_path"] for entry in catalog["entries"]] == [
+        "dataset/date=2020-01-01/part-000.parquet"
+    ]

@@ -4,7 +4,7 @@
 
 - task_id: S2-T10
 - task_version: 1.4
-- status: REOPENED
+- status: IN_PROGRESS
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4

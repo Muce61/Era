@@ -169,6 +169,15 @@ class Stage2PreregistrationManifest(FrozenModel):
         return provisional.model_copy(update={"manifest_hash": provisional.computed_hash()})
 
 
+class RecoveryMetadata(FrozenModel):
+    recovery_of_run_id: str
+    supersedes_failed_run_id: str
+    failure_reason: str
+    change_request: Literal["CR-2026-003"]
+    fix_code_commit: str = Field(min_length=40, max_length=40)
+    reused_price_staging: Literal[False] = False
+
+
 class Stage2ExecutionManifest(FrozenModel):
     schema_name: Literal["stage2-group1-execution"]
     manifest_version: str
@@ -181,17 +190,22 @@ class Stage2ExecutionManifest(FrozenModel):
     stage1_logical_hashes: dict[Literal["BTCUSDT", "ETHUSDT"], str]
     full_run_cli: str
     invalidation_conditions: tuple[str, ...]
+    recovery: RecoveryMetadata | None = None
     manifest_hash: str = Field(pattern=SHA256_PATTERN)
 
     def computed_hash(self) -> str:
         return sha256_text(
-            canonical_json(self.model_dump(mode="python", exclude={"manifest_hash"}))
+            canonical_json(
+                self.model_dump(mode="python", exclude={"manifest_hash"}, exclude_none=True)
+            )
         )
 
     @model_validator(mode="after")
     def hash_matches(self) -> Self:
         if self.manifest_hash != "0" * 64 and self.manifest_hash != self.computed_hash():
             raise ValueError("manifest_hash mismatch")
+        if self.recovery is not None and self.recovery.fix_code_commit != self.code_commit:
+            raise ValueError("recovery fix commit must equal execution code commit")
         return self
 
     @classmethod

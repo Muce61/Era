@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from collections.abc import Sequence
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Literal
@@ -24,17 +24,17 @@ UNAVAILABLE_FIELDS = [
 
 def build_flow_day(
     *,
-    stage1_trades_root: Path,
+    trade_paths: Sequence[Path],
     instrument: Instrument,
-    day: date,
     windows: list[dict[str, Any]],
 ) -> dict[str, list[dict[str, Any]]]:
-    path = stage1_trades_root / instrument / f"date={day.isoformat()}" / "part-000.parquet"
-    if not path.exists():
-        raise FileNotFoundError(f"missing published Stage 1 Trades partition: {path}")
-    frame = pl.read_parquet(
-        path, columns=["ts_event_ns", "quantity", "aggressor_side", "canonical_trade_id"]
-    ).sort(["ts_event_ns", "canonical_trade_id"])
+    if not windows:
+        return {"flow_features": [], "market_episodes": []}
+    if not trade_paths:
+        raise FileNotFoundError("no Catalog-authorized Stage 1 Trades partitions for Flow windows")
+    columns = ["ts_event_ns", "quantity", "aggressor_side", "canonical_trade_id"]
+    frames = [pl.read_parquet(path, columns=columns) for path in trade_paths]
+    frame = pl.concat(frames).sort(["ts_event_ns", "canonical_trade_id"])
     timestamps = frame["ts_event_ns"].to_list()
     quantities = frame["quantity"].to_list()
     sides = frame["aggressor_side"].to_list()
