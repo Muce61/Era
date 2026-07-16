@@ -5,8 +5,9 @@
 **FAIL**
 
 Recovery status: CR-2026-003 path repair IMPLEMENTED/TESTED; CR-2026-004 RESOLVED with
-validation PASS; the first S2-T10 v1.5 Run A failed unpublished during BTC PRICE finalization.
-CR-2026-005 is open and blocks any replacement Run A or Run B. This remains FAIL.
+validation PASS; CR-2026-005 Option A is IMPLEMENTED / VALIDATED / READY_FOR_RESOLUTION. The
+first S2-T10 v1.5 Run A remains failed unpublished. S2-T10 v1.6 is
+APPROVED_FOR_REEXECUTION, but no replacement Run A or Run B is authorized yet. This remains FAIL.
 
 S2-T19 and S2-T01～S2-T09 passed their directed tests and small-sample integration. S2-T10
 failed during the first full BTCUSDT Flow partition because its Stage 1 Trades physical-path
@@ -35,21 +36,26 @@ zero conflict and deterministic replay. No new Execution Manifest or recovery ru
 | No Group 2～4 execution | PASS |
 | CR-2026-003 archive path correction | PASS in code/regression |
 | Candidate identity/ownership correction | PASS: CR-2026-004 |
-| No blocker for S2-T10 recovery | PASS |
+| CR-2026-005 bounded correction and diagnostic | PASS; full-run approval still required |
 | v1.5 Run A BTC PRICE daily construction | PASS, 2376/2376 |
 | v1.5 Run A candidate finalization | FAIL: 2 same-identity/different-payload groups |
 | v1.5 Run A publication | NONE / FAILED_UNPUBLISHED |
 | v1.5 independent Run B | NOT CREATED |
-| CR-2026-005 decision | BLOCKED / HUMAN DECISION REQUIRED |
+| CR-2026-005 decision | Option A IMPLEMENTED / VALIDATED / READY_FOR_RESOLUTION |
+| S2-T10 v1.6 state | APPROVED_FOR_REEXECUTION; NEW FULL RUN REQUIRES HUMAN APPROVAL |
 
 ## Failure disposition
 
 Run `stage2-g1-full-a-20260716-4c15e46` is `FAILED_UNPUBLISHED`. Its staging and failure evidence
 remain intact. [CR-2026-003](../changes/CR-2026-003.md) corrected the path resolver; the separate
 [CR-2026-004](../changes/CR-2026-004.md) validates candidate identity and ownership. Group 1 is
-ready to retry S2-T10 but is not ready for final approval.
+ready for a new S2-T10 full-run approval but is not ready for final approval.
 
 The later v1.5 Run A is retained separately as
 `stage2-g1-full-a-20260716T122601Z-0247d30f9f62`. It is `FAILED_UNPUBLISHED` after the approved
 hard-conflict gate detected two adjacent-minute snapshot payload conflicts on 2020-04-27. It may
-not be resumed or published. [CR-2026-005](../changes/CR-2026-005.md) records the new blocker.
+not be resumed or published. [CR-2026-005](../changes/CR-2026-005.md) records the implemented
+Option A correction. Its bounded forward/reverse diagnostic replay produced 236 unique
+candidates, zero conflicts and identical logical hash
+`0e55874df0fdd0cdf669af4af8c645879ed7596fb450d6fa380e5f7438425a52`; no formal data was
+published. Group 1 remains FAIL until separately approved dual full builds complete.

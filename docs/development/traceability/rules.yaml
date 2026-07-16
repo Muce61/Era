@@ -2231,8 +2231,10 @@ rules:
     s2_t10_recovery_task_version: '1.6'
     cr_s2_004_status: RESOLVED_IMPLEMENTED_VALIDATED_L2
     cr_s2_004_validation: docs/development/validations/stage_2/CR-2026-004.md
-    execution_blocker: CR-2026-005_IMPLEMENTATION_VALIDATION_PENDING
-    execution_state: CR_2026_005_OPTION_A_IMPLEMENTATION_IN_PROGRESS
+    cr_s2_005_status: IMPLEMENTED_VALIDATED_READY_FOR_RESOLUTION_L2
+    cr_s2_005_validation: docs/development/validations/stage_2/CR-2026-005.md
+    execution_blocker: HUMAN_APPROVAL_REQUIRED_FOR_NEW_FULL_RUN
+    execution_state: READY_FOR_S2_T10_NEW_FULL_RUN_APPROVAL
   state: PLANNED
 - rule_id: GATE-STAGE-3
   rule_status: FROZEN

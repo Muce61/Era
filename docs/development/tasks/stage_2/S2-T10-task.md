@@ -4,7 +4,7 @@
 
 - task_id: S2-T10
 - task_version: 1.6
-- status: IN_PROGRESS
+- status: APPROVED_FOR_REEXECUTION
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
@@ -97,6 +97,11 @@ Muce approved CR-2026-005 Option A at L2. v1.6 may implement and validate unique
 minute ownership plus terminal failure recording. This approval does not authorize a formal
 Execution Manifest or full run.
 
+CR-2026-005 Option A is now IMPLEMENTED / VALIDATED / READY_FOR_RESOLUTION. The bounded
+2020-04-26～2020-04-28 diagnostic replay is deterministic with zero identity conflicts. v1.6 is
+APPROVED_FOR_REEXECUTION, but no formal Execution Manifest or new full run is authorized until a
+separate Muce approval.
+
 ## 18. 变化触发器
 
 schema、标签、成本模型、事件定义、数据/配置哈希、git commit 或聚类方式变化；或发现与 V1.3.4/Binance 官方事实冲突。 触发 task_version 递增和重新审批。
@@ -106,6 +111,9 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 依赖 Task/Stage 重开、输入哈希变化、映射规则变化、验收测试被推翻或产物不可复现时标记 INVALIDATED，不得继续作为有效证据。
 
 ## 20. 变更历史
+
+- 2026-07-16：v1.6 Option A实现与受控真实双重放PASS；Task状态
+  APPROVED_FOR_REEXECUTION，等待新的全量运行人工批准，未创建Execution Manifest或run_id。
 
 - 2026-07-16：v1.6，Muce批准CR-2026-005 Option A，仅修复Sweep-start UTC分钟所有权与runner失败终态并执行受控诊断；状态IN_PROGRESS，禁止创建全量run。
 
