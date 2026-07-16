@@ -121,6 +121,7 @@ Stage 2 is `APPROVED / NOT_EXECUTED`. Muce approved Plan v1.2 and Group 1 Task v
 | S2-T03 v1.3 delivered evidence | S2-T03 | deterministic arbitration, source retention tests and `validations/stage_2/S2-T03.md` | PASSED |
 | Sweep → Reclaim → Hold and invalidation | S2-T04, S2-T05, S2-T06 | fixture-only `episodes/sweep`, `reclaim`, `hold` | APPROVED_NOT_EXECUTED |
 | S2-T04 v1.3 delivered evidence | S2-T04 | causal Sweep detector/tests and `validations/stage_2/S2-T04.md` | PASSED |
+| S2-T05 v1.3 delivered evidence | S2-T05 | causal Reclaim detector/tests and `validations/stage_2/S2-T05.md` | PASSED |
 | V1_PRICE G0-G3 and separate V1_FLOW G4 | S2-T07, S2-T08 | fixture-only `gates/price`, `gates/flow`; no G5/G6 | APPROVED_NOT_EXECUTED |
 | MarketEpisode identity, consume and re-arm | S2-T09 | fixture-only `episodes/identity`; FI-14, UT-EVT-011 | APPROVED_NOT_EXECUTED |
 | Registry-driven full candidate generation; BTC/ETH, setup/context and variants separate | S2-T10 | only full-candidate owner, bound to locked Group-1 Manifest and published hashes | APPROVED_NOT_EXECUTED |
