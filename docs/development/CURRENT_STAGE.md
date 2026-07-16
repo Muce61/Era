@@ -7,4 +7,4 @@ Current Task: NONE
 Status: READY_FOR_STAGE_2_GROUP_1_EXECUTION
 ```
 
-Stage 0 and Stage 1 are PASSED with VALID baselines. Stage 1 baseline version 1.0 freezes the delivery produced under approved Plan v1.1 and tag `stage-1-v1.0-passed`. Stage 2 Plan v1.2 and Group 1 Tasks are APPROVED; Group 2 (S2-T11～S2-T14), Group 3 (S2-T15～S2-T18) and Group 4 (S2-T20) remain DRAFT. OQ-S2-004 is RESOLVED by ADR-S2-004 and no Stage 2 execution BLOCKER remains. No Stage 2 Task or research has executed; the next permitted action is the separately requested Group 1 execution preflight beginning with S2-T19.
+Stage 0 and Stage 1 are PASSED with VALID baselines. Stage 1 baseline version 1.0 freezes the delivery produced under approved Plan v1.1 and tag `stage-1-v1.0-passed`. Stage 2 Plan v1.2 and Group 1 Task v1.3 are APPROVED; Group 2 (S2-T11～S2-T14), Group 3 (S2-T15～S2-T18) and Group 4 (S2-T20) remain DRAFT. OQ-S2-004 is RESOLVED by ADR-S2-004; CR-2026-002 and ADR-S2-005 freeze the Group-1 event-construction baseline and CLI. No Stage 2 execution BLOCKER remains. No Stage 2 Task or research has executed; the next permitted action is S2-T19.

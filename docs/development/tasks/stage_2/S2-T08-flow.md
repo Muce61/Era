@@ -3,16 +3,16 @@
 ## Metadata
 
 - task_id: S2-T08
-- task_version: 1.2
+- task_version: 1.3
 - status: APPROVED
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T19 PASS; Stage 1 H2 Trades capability confirmed
-- supersedes: task_version 1.1
+- supersedes: task_version 1.2
 - approved_by: Muce
-- approved_at: 2026-07-16T14:33:04+08:00
+- approved_at: 2026-07-16T15:24:31+08:00
 
 ## 1. 目标
 
@@ -95,6 +95,8 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 
 ## 20. 变更历史
 
+- 2026-07-16：v1.3，依据CR-2026-002与ADR-S2-005冻结第一组事件构造基线和CLI；Muce批准，状态APPROVED / NOT_EXECUTED。
+
 - 2026-07-12：v0.1，依据 Stage 2 Plan v0.1 创建，状态 DRAFT，未执行。
 - 2026-07-14：v1.0，按Stage 1 Trade Identity v2与Stage 2 Plan v1.0重规划；状态DRAFT，未执行。
 - 2026-07-14：v1.1，加入可扩展研究setup架构与事件说明图规划；状态DRAFT，未执行。
@@ -111,3 +113,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 ## 22. ADR-S2-004预注册绑定
 
 Trades活跃度特征公式沿用已批准Task定义；[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)只约束其quintile边界必须由对应训练折估计、在验证/holdout冻结、写入Manifest并确定性处理重复值。无法形成五个有效bin时必须BLOCKED，不得替换分箱。本Task仍为APPROVED / NOT_EXECUTED。
+
+## 23. ADR-S2-005事件构造绑定
+
+This Task implements ADR-S2-005 G4 from Stage 1 Trades only. V1_PRICE remains independent and unavailable historical execution fields remain NULL/unavailable.

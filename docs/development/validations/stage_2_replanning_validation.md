@@ -11,16 +11,17 @@
 
 ## Inputs
 
-V1.3.4 formal manual; Stage 0/1 final governance; Stage 1 Baseline v1.0 at `b7d4ff3d18dcfc515feb8892659cb0b186cd68f8`; Plan v1.2; the user's 2026-07-16 approvals; OQ-S2-001/002/004 decisions; ADR-S2-004.
+V1.3.4 formal manual; Stage 0/1 final governance; Stage 1 Baseline v1.0 at `b7d4ff3d18dcfc515feb8892659cb0b186cd68f8`; Plan v1.2; the user's 2026-07-16 approvals; OQ-S2-001/002/004 decisions; ADR-S2-004; CR-2026-002 and ADR-S2-005.
 
 ## Approval result
 
 - Stage 2 Plan v1.2: `APPROVED`; `approved_by: Muce`; supersedes v1.1.
-- Group 1 Tasks S2-T19 and S2-T01～S2-T10: `APPROVED / NOT_EXECUTED`.
+- Group 1 Tasks S2-T19 and S2-T01～S2-T10 v1.3: `APPROVED / NOT_EXECUTED`.
 - Group 2 S2-T11～S2-T14, Group 3 S2-T15～S2-T18 and Group 4 S2-T20: `DRAFT / NOT_APPROVED`.
 - OQ-S2-001 and OQ-S2-002: `RESOLVED`, with the user's decisions recorded verbatim in governance documents.
 - U-007, U-008, U-009 and U-011 remain research questions; approval of parameter domains does not freeze them.
 - OQ-S2-004: `RESOLVED / NONE`; ADR-S2-004 records T1～T4, P1～P3, exact fields and L0～L5, deterministic controls/seeds, AMBIGUOUS, bootstrap, F1～F10 and ETH Secondary classification.
+- CR-2026-002 / ADR-S2-005: `APPROVED / ACCEPTED`; exact Group-1 key-level, event, G1/G3/G4, 20-set OFAT and CLI definitions are frozen as BASELINE/RESEARCH preregistration.
 - `CURRENT_STAGE.md`: Stage 2 / stage_2_plan_v1.2 / NONE / READY_FOR_STAGE_2_GROUP_1_EXECUTION. No Stage 2 execution BLOCKER remains.
 
 ## Structure and dependency assertions

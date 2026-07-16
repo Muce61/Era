@@ -3,16 +3,16 @@
 ## Metadata
 
 - task_id: S2-T19
-- task_version: 1.2
+- task_version: 1.3
 - status: APPROVED
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: Stage 1 PASSED / VALID; Stage 2 Plan v1.2 APPROVED; input data baseline confirmed; no blocking OPEN QUESTION
-- supersedes: task_version 1.1
+- supersedes: task_version 1.2
 - approved_by: Muce
-- approved_at: 2026-07-16T14:33:04+08:00
+- approved_at: 2026-07-16T15:24:31+08:00
 
 ## 1. 目标
 
@@ -97,6 +97,8 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 
 ## 20. 变更历史
 
+- 2026-07-16：v1.3，依据CR-2026-002与ADR-S2-005冻结第一组事件构造基线和CLI；Muce批准，状态APPROVED / NOT_EXECUTED。
+
 - 2026-07-12：v0.1，依据 Stage 2 Plan v0.1 创建，状态 DRAFT，未执行。
 - 2026-07-14：v1.0，按Stage 1 Trade Identity v2与Stage 2 Plan v1.0重规划；状态DRAFT，未执行。
 - 2026-07-14：v1.1，加入可扩展研究setup架构与事件说明图规划；状态DRAFT，未执行。
@@ -115,3 +117,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 ## 22. ADR-S2-004预注册Manifest要求
 
 Manifest必须完整、机器可验证地锁定[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)的T1～T4及唯一Primary T2、P1～P3、不可放宽字段、UTC四小时bucket、训练折quintile边界、L0～L5、5 controls、排除规则、`matching_seed=20260716`、Episode等权基线、AMBIGUOUS三种报告、cluster定义、5000次percentile bootstrap、`bootstrap_seed=20260716`、F1～F10、BH FDR `q<=0.10`及ETH分类。任一必填定义缺失或五分位bin无效必须BLOCKED。OQ关闭不代表本Task已执行或PASS；状态仍为APPROVED / NOT_EXECUTED。
+
+## 23. ADR-S2-005事件构造绑定
+
+This Task freezes both preregistration and execution Manifest layers, the 20 OFAT parameter sets, Stage 1 physical and logical hashes, Contract Price inventory hash, approved external-root space gate and the single CLI contract from ADR-S2-005. It generates no candidate event or research result.

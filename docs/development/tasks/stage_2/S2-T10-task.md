@@ -3,16 +3,16 @@
 ## Metadata
 
 - task_id: S2-T10
-- task_version: 1.2
+- task_version: 1.3
 - status: APPROVED
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T01 PASS; S2-T02 PASS; S2-T03 PASS; S2-T04 PASS; S2-T05 PASS; S2-T06 PASS; S2-T07 PASS; S2-T08 PASS; S2-T09 PASS; S2-T19 PASS; locked Group-1 Manifest
-- supersedes: task_version 1.1
+- supersedes: task_version 1.2
 - approved_by: Muce
-- approved_at: 2026-07-16T14:33:04+08:00
+- approved_at: 2026-07-16T15:24:31+08:00
 
 ## 1. 目标
 
@@ -95,6 +95,8 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 
 ## 20. 变更历史
 
+- 2026-07-16：v1.3，依据CR-2026-002与ADR-S2-005冻结第一组事件构造基线和CLI；Muce批准，状态APPROVED / NOT_EXECUTED。
+
 - 2026-07-12：v0.1，依据 Stage 2 Plan v0.1 创建，状态 DRAFT，未执行。
 - 2026-07-14：v1.0，按Stage 1 Trade Identity v2与Stage 2 Plan v1.0重规划；状态DRAFT，未执行。
 - 2026-07-14：v1.1，加入可扩展研究setup架构与事件说明图规划；状态DRAFT，未执行。
@@ -111,3 +113,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 ## 22. ADR-S2-004预注册绑定
 
 S2-T10只能只读消费S2-T19锁定且引用[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)的第一组Manifest。全量候选须按instrument、T1～T4、P1～P3和split/fold隔离，保存配置/hash并append-only；本Task不执行匹配、First-passage、bootstrap或F1～F10统计。状态仍为APPROVED / NOT_EXECUTED，且本次未执行。
+
+## 23. ADR-S2-005事件构造绑定
+
+This Task is the sole full-data builder and uses only `uv run python scripts/run_stage2_group1_candidates.py {preflight,run,resume,verify}`. Run accepts a locked manifest, instrument and variant only; resume requires identical hashes; verify is read-only. No later-stage labels, metrics or research conclusions are produced.

@@ -26,6 +26,7 @@
 - RESEARCH：关键位优先级、合并容差、episode gap/re-arm、Sweep/Reclaim/Hold/Trigger/Flow 参数、路径标签、匹配、聚类和统计阈值；不得声明最优或 FROZEN。
 - L2 输入决定：CR-2026-001、ADR-2026-001 Trade Identity v2。
 - Primary 研究定义：[ADR-S2-004](../decisions/ADR-S2-004-primary-research-definition.md)；其值为 `BASELINE / RESEARCH` 预注册配置，不是最优或 `FROZEN`。
+- 第一组事件构造基线：[ADR-S2-005](../decisions/ADR-S2-005-event-construction-baseline.md)与[CR-2026-002](../changes/CR-2026-002.md)；Plan保持v1.2，第一组Task以v1.3执行，分组和依赖不变。
 
 ## 3. 冻结输入基线
 
@@ -153,3 +154,4 @@ Stage 1 schema/dataset/Manifest/Logical Hash、Trade Identity、事件/标签/�
 - 2026-07-16：v1.2，基于 Stage 1 Baseline v1.0 收口四组边界，前置 S2-T19，消除 T02/T08/T19 依赖冲突，统一全量职责至 T10；状态 READY_FOR_APPROVAL，未执行 Stage 2。
 - 2026-07-16：Muce批准Plan v1.2与第一组Task；第二至第四组保持DRAFT；未执行Stage 2。审批引用的缺失精确定义转记OQ-S2-004并保持执行fail-closed。
 - 2026-07-16：Muce批准ADR-S2-004完整预注册定义并关闭唯一执行BLOCKER；Plan与第一组仍为APPROVED / NOT_EXECUTED，未执行任何Task。
+- 2026-07-16：Muce批准CR-2026-002与ADR-S2-005，冻结第一组关键位、事件、G1/G3/G4、20个OFAT参数集和单一全量CLI；Plan保持v1.2，第一组Task升为v1.3。

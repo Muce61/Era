@@ -3,16 +3,16 @@
 ## Metadata
 
 - task_id: S2-T09
-- task_version: 1.2
+- task_version: 1.3
 - status: APPROVED
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T06 PASS; S2-T07 PASS; S2-T08 PASS
-- supersedes: task_version 1.1
+- supersedes: task_version 1.2
 - approved_by: Muce
-- approved_at: 2026-07-16T14:33:04+08:00
+- approved_at: 2026-07-16T15:24:31+08:00
 
 ## 1. 目标
 
@@ -95,6 +95,8 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 
 ## 20. 变更历史
 
+- 2026-07-16：v1.3，依据CR-2026-002与ADR-S2-005冻结第一组事件构造基线和CLI；Muce批准，状态APPROVED / NOT_EXECUTED。
+
 - 2026-07-12：v0.1，依据 Stage 2 Plan v0.1 创建，状态 DRAFT，未执行。
 - 2026-07-14：v1.0，按Stage 1 Trade Identity v2与Stage 2 Plan v1.0重规划；状态DRAFT，未执行。
 - 2026-07-14：v1.1，加入可扩展研究setup架构与事件说明图规划；状态DRAFT，未执行。
@@ -111,3 +113,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 ## 22. ADR-S2-004预注册绑定
 
 Episode必须按[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)使用`available_at_ts`唯一归属P1/P2/P3；BTC/ETH、时期与split/fold不得混用。匹配或T配置变化不得静默复用不兼容的配置/Manifest证据，且不能改变FROZEN的MarketEpisode消费身份语义。本Task仍为APPROVED / NOT_EXECUTED。
+
+## 23. ADR-S2-005事件构造绑定
+
+This Task preserves the V1.3.4 FROZEN MarketEpisode four-field identity and uses separate candidate_version_id for configuration/data/code/variant identity. Gap, re-arm, deduplication and research inclusion are bound to ADR-S2-005.

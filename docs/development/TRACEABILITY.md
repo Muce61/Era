@@ -108,7 +108,7 @@ Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～
 
 ## Stage 2 Plan v1.2 APPROVED Coverage
 
-Stage 2 is `APPROVED / NOT_EXECUTED`. Muce approved Plan v1.2 and Group 1 (S2-T19, S2-T01～S2-T10). OQ-S2-001/002/004 are RESOLVED; ADR-S2-004 is the authority for T1～T4, P1～P3, matching L0～L5, deterministic controls/seeds, AMBIGUOUS, bootstrap, F1～F10 and ETH Secondary classification. Groups 2 (S2-T11～S2-T14), 3 (S2-T15～S2-T18) and 4 (S2-T20) remain DRAFT. All implementation/test paths remain PLANNED; no Stage 2 business code or research has executed and no execution BLOCKER remains.
+Stage 2 is `APPROVED / NOT_EXECUTED`. Muce approved Plan v1.2 and Group 1 Task v1.3 (S2-T19, S2-T01～S2-T10). ADR-S2-004 governs later research definitions; CR-2026-002/ADR-S2-005 govern exact Group-1 key-level, event, gate, OFAT and CLI definitions. Groups 2～4 remain DRAFT. All implementation/test paths remain PLANNED; no Stage 2 business code or research has executed and no execution BLOCKER remains.
 
 | Requirement | Plan v1.2 Tasks | Planned implementation/tests | State |
 | --- | --- | --- | --- |
