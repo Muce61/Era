@@ -111,6 +111,17 @@ def test_out_of_partition_context_is_rehomed_to_available_date() -> None:
     )
 
 
+def test_cross_month_context_is_owned_by_february_partition() -> None:
+    february_start = 1_580_515_200_000_000_000
+    record = attempt(
+        source_partition="2020-01-31",
+        available_at_ts=february_start,
+    )
+    result = finalize_candidate_attempts([record])
+    assert list(result.market_episodes_by_date) == ["2020-02-01"]
+    assert result.summary["out_of_partition_context_count"] == 1
+
+
 @pytest.mark.parametrize(
     ("timestamp", "expected"),
     [

@@ -134,6 +134,20 @@ def test_actual_ofat_parameter_and_timing_split_legacy_identity_conflict() -> No
     assert timing.candidate_version_id == timing.canonical_candidate_id
 
 
+def test_t1_through_t4_have_isolated_candidate_identities() -> None:
+    identities = {
+        build_market_episode(
+            *chain(),
+            None,
+            variant="V1_PRICE",
+            event_parameter_set_id=f"G1-TIMING_{timing}-V1",
+            time_combination_id=timing,
+        ).canonical_candidate_id
+        for timing in ("T1", "T2", "T3", "T4")
+    }
+    assert len(identities) == 4
+
+
 def test_candidate_dedup_and_consumption_are_separate_and_once_only() -> None:
     episode = build_market_episode(
         *chain(),
