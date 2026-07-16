@@ -5,7 +5,7 @@ Allowed statuses: `DRAFT`, `READY_FOR_APPROVAL`, `APPROVED`, `IN_PROGRESS`, `REV
 | Stage | Plan Version | Status | Dependencies | Baseline | Validity | Notes |
 | ----- | ------------ | ------ | ------------ | -------- | -------- | ----- |
 | Stage 0 | 1.0 | PASSED | NONE | `stage-0-v1.0-passed` | VALID | Final human approval 2026-07-12; validated implementation commit `692dd29`; 13 Tasks PASSED |
-| Stage 1 | 1.1 | IN_PROGRESS | Stage 0 PASSED | NONE | PARTIALLY_EXECUTED | CR-2026-001 Trade Identity v2 approved; S1-T01～S1-T14 PASSED; 162/162 run published and scheduler regression closed; S1-T15 DRAFT pending integration acceptance |
+| Stage 1 | 1.1 | READY_FOR_FINAL_APPROVAL | Stage 0 PASSED | NONE | ACCEPTANCE_PASS_AWAITING_HUMAN_BASELINE | S1-T01～S1-T15 PASSED; 162/162 immutable run published; integration Validation PASS; no final baseline/tag and not Stage PASSED |
 | Stage 2 | 1.1 | DRAFT | Stage 1 PASSED + VALID data baseline | NONE | NOT_EXECUTED | Extensible setup/context registry and deterministic event explainer/evidence-card planning added; OQ-S2-001/002 and final Stage 1 gate block approval; no Task executed |
 | Stage 3 | 0.1 | DRAFT | Stage 2 | NONE | NOT_EXECUTED | H3 成本与执行压力代理; human approval required |
 | Stage 4 | 0.1 | DRAFT | Stage 3 | NONE | NOT_EXECUTED | LOCKED_HISTORICAL_REPLAY; human approval required |

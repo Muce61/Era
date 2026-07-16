@@ -71,7 +71,7 @@ Stage 0 baseline validity: **VALID / PASSED**. Any later change to its code, con
 
 ## Stage 1 v1.1 Execution Coverage
 
-Stage 1 is `IN_PROGRESS` under approved Plan v1.1 and CR-2026-001. S1-T02/T05/T07/T08/T09/T12 v1.1 implement Trade Identity v2 and are PASSED after targeted regression; S1-T06/T10/T11 retain semantics and passed regression. `venue_trade_id` is a venue property, `canonical_trade_id` is the fact identity, and official conflicting venue IDs are retained only after monthly/daily canonical-set confirmation. S1-T14 v1.5 is PASSED using the immutable 162/162 published run and read-only post-run verification; the prior 134/162 run remains INVALIDATED and unpublished. S1-T15 remains DRAFT pending integration acceptance.
+Stage 1 is `READY_FOR_FINAL_APPROVAL` under approved Plan v1.1 and CR-2026-001. S1-T01～S1-T15 are PASSED and [`validations/stage_1_validation.md`](validations/stage_1_validation.md) concludes PASS. `venue_trade_id` is a venue property, `canonical_trade_id` is the fact identity, and official conflicting venue IDs are retained only after monthly/daily canonical-set confirmation. S1-T14 v1.5 uses the immutable 162/162 published run and read-only post-run verification; its scheduler-only repair changes no dataset semantics or recorded logical hash. The prior 134/162 run remains INVALIDATED and unpublished. Stage 1 is not yet a PASSED baseline and requires final human approval.
 
 | Requirement | Planned Tasks | Planned Evidence | State |
 | --- | --- | --- | --- |
@@ -100,7 +100,7 @@ Stage 1 is `IN_PROGRESS` under approved Plan v1.1 and CR-2026-001. S1-T02/T05/T0
 | Full-data preflight and build | S1-T13, S1-T14 | approved paths/source/coverage, resumable builder, full catalog, repeat-build hash | PASSED |
 | S1-T14 v1.5 builder implementation and scheduler recovery | S1-T14 | `stage1-trades-v2`, official conflict cross-validation, explicit multi-symbol terminal-state scheduler, resumable `.part`, `src/era100x/data/full_build/`, `tests/data/full_build/` | PASSED_162_OF_162_READ_ONLY_REVERIFIED |
 | S1-T13 actual preflight | S1-T13 | 162/162 official archives; write probe; 20% disk safety calculation | PASSED |
-| Stage 1 gate | S1-T15 | Stage 1 validation; BTC/ETH separate conclusions | PLANNED |
+| Stage 1 gate | S1-T15 | `validations/stage_1_validation.md`; BTC/ETH separate PASS conclusions | PASSED_AWAITING_FINAL_HUMAN_APPROVAL |
 
 `DATA-HISTORICAL-NO-FAKE-EXECUTION` is enforced at the Stage 1 historical boundary by S1-T02/T10/T12/T14 and remains planned for Stage 5 forward-field separation. `STRATEGY-V1-PRICE-ONLY-HISTORICAL` is enforced at the Stage 1 input/source boundary by S1-T03/T09/T10; event behavior remains Stage 2. This does not promote either later behavioral implementation to PASSED.
 
