@@ -133,9 +133,9 @@ rules:
   - S2-T10
   - S2-T20
   implementation_paths:
-  - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/, src/era100x/research/stage_2/reporting/event_explainer/ (PLANNED)
+  - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/ (PLANNED)
   test_paths:
-  - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/, tests/research/stage_2/reporting/event_explainer/ (PLANNED); UT-EVT-011, FI-14
+  - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); UT-EVT-011, FI-14
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   state: PLANNED
@@ -200,11 +200,11 @@ rules:
   - S5-T01
   implementation_paths:
   - src/era100x/data/evidence/, tests/data/evidence/, artifacts/manifests/stage_1/ (PLANNED Stage 1 boundary)
-  - src/era100x/research/stage_2/reporting/event_explainer/ (PLANNED Stage 2 evidence visualization boundary)
+  - artifacts/reports/stage_2/ (PLANNED Stage 2 deterministic evidence reporting boundary)
   - src/forward/, tests/forward/, artifacts/manifests/ (PLANNED Stage 5 forward fields)
   test_paths:
   - tests/data/evidence/ (PLANNED); UT-DATA-013
-  - tests/research/stage_2/reporting/event_explainer/ (PLANNED historical field and illustration/evidence isolation regression)
+  - docs/development/validations/stage_2/ (PLANNED historical field and illustration/evidence isolation review)
   - tests/stage_5/ (PLANNED forward regression)
   validation_paths:
   - docs/development/validations/stage_5/ (PLANNED)
@@ -264,7 +264,7 @@ rules:
   - S2-T20
   implementation_paths:
   - src/era100x/data/readers/, src/era100x/data/aggregate/, tests/data/ (PLANNED Stage 1 input boundary)
-  - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/gates/, src/era100x/research/stage_2/reporting/event_explainer/ (PLANNED Stage 2 behavior/report separation)
+  - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/gates/ (PLANNED Stage 2 behavior separation)
   test_paths:
   - tests/research/stage_2/contracts/, tests/research/stage_2/gates/ (PLANNED); T-EVT-002
   validation_paths:
@@ -584,7 +584,7 @@ rules:
   - S2-T10
   - S2-T20
   implementation_paths:
-  - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/, src/era100x/research/stage_2/reporting/event_explainer/ (PLANNED)
+  - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/ (PLANNED)
   test_paths:
   - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); FI-14
   validation_paths:
@@ -670,7 +670,7 @@ rules:
   - S2-T10
   - S2-T20
   implementation_paths:
-  - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/, src/era100x/research/stage_2/reporting/event_explainer/ (PLANNED)
+  - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/ (PLANNED)
   test_paths:
   - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); UT-EVT-011
   validation_paths:
@@ -707,7 +707,7 @@ rules:
   - S2-T10
   - S2-T20
   implementation_paths:
-  - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/gates/, src/era100x/research/stage_2/pipelines/candidates/, src/era100x/research/stage_2/reporting/event_explainer/ (PLANNED)
+  - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/gates/, src/era100x/research/stage_2/pipelines/candidates/ (PLANNED)
   test_paths:
   - tests/research/stage_2/ (PLANNED); UT-DATA-013
   validation_paths:
@@ -1367,12 +1367,16 @@ rules:
   planned_tasks:
   - S0-T06
   - S0-T08
+  - S2-T19
   implementation_paths:
   - src/foundation/, tests/foundation/, configs/ (PLANNED)
+  - src/era100x/research/stage_2/manifests/, configs/research/stage_2/, artifacts/manifests/stage_2/ (PLANNED)
   test_paths:
   - tests/stage_0/ (PLANNED)
+  - tests/research/stage_2/manifests/ (PLANNED)
   validation_paths:
   - docs/development/validations/stage_0/ (PLANNED)
+  - docs/development/validations/stage_2/ (PLANNED)
   state: PLANNED
 - rule_id: REASON-ACCOUNT_MODE_INVALID
   rule_status: FROZEN

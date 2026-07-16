@@ -3,14 +3,14 @@
 ## Metadata
 
 - task_id: S2-T01
-- task_version: 1.1
+- task_version: 1.2
 - status: DRAFT
 - stage_id: S2
-- stage_plan_version: 1.1
+- stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
-- created_from_commit: c984fb4
-- dependencies: Stage 1 PASSED + VALID data baseline + Stage 2 Plan v1.1 APPROVED
-- supersedes: task_version 1.0
+- created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
+- dependencies: S2-T19 PASS
+- supersedes: task_version 1.1
 - approved_by: NONE
 - approved_at: NONE
 
@@ -31,7 +31,7 @@
 
 ## 4. 前置条件
 
-Stage 2 Plan v1.1 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和基线已核验。
+Stage 2 Plan v1.2 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和Stage 1 Baseline v1.0已核验。
 
 ## 5. 允许范围
 
@@ -98,11 +98,12 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 2026-07-12：v0.1，依据 Stage 2 Plan v0.1 创建，状态 DRAFT，未执行。
 - 2026-07-14：v1.0，按Stage 1 Trade Identity v2与Stage 2 Plan v1.0重规划；状态DRAFT，未执行。
 - 2026-07-14：v1.1，加入可扩展研究setup架构与事件说明图规划；状态DRAFT，未执行。
+- 2026-07-16：v1.2，按Plan v1.2收口分组、前置S2-T19并修订DAG；状态DRAFT，未执行。
 
-## 21. Stage 2 Plan v1.1执行覆盖（优先于v0.1通用占位）
+## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
 
 - 数据与能力边界：仅在Stage 1最终PASSED且data baseline VALID后绑定published manifest；fixture只可验证schema。Trades按canonical_trade_id唯一且v2稳定排序，CanonicalKeyLevel禁止右侧确认。注册表至少定义`setup_id/setup_version/context_model_id/context_version/required_data_capability/evidence_status`，当前唯一可执行setup为`KEY_LOW_SWEEP_RECLAIM_HOLD_V1`；dummy setup只用于架构测试。
 - 允许修改路径：`src/era100x/research/stage_2/contracts/`、`src/era100x/research/stage_2/registry/`、`tests/research/stage_2/contracts/`、`tests/research/stage_2/registry/`、`configs/research/stage_2/`、`tests/test_package_import.py`，以及本Task validation/TRACEABILITY。禁止修改Stage 1实现/数据、\`docs/spec/**\`和Stage 3+。
-- 验证命令：\`uv run python -m pytest tests/research/stage_2/contracts -q\`；\`uv run python scripts/run_quality_gate.py\`。全量研究CLI须由S2-T19冻结后再写入Task新版本，不得当前虚构。
+- 验证命令：\`uv run python -m pytest tests/research/stage_2/contracts -q\`；\`uv run python scripts/run_quality_gate.py\`。本Task只做契约、注册表和小样本验证；全量候选运行唯一由S2-T10负责。
 - 验收标准：schema/unknown-field、BTC/ETH隔离、v2 identity、已完成数据边界、无右侧确认测试通过；dummy setup无需修改编排器即可注册；未知、未批准、数据能力不足或跨标的setup拒绝运行；context不得修改MarketEpisode消费语义；baseline绑定证据存在。
-- 证据模式：\`FIXTURE_CAPABILITY + PUBLISHED_BASELINE_BINDING\`。无论fixture能力是否可验收，Stage 1最终PASSED与VALID data baseline之前均不得执行本Task。
+- 证据模式：\`FIXTURE_CAPABILITY + PUBLISHED_BASELINE_BINDING\`；不得在本Task生成全量候选数据。

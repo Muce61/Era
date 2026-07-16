@@ -3,20 +3,20 @@
 ## Metadata
 
 - task_id: S2-T19
-- task_version: 1.1
+- task_version: 1.2
 - status: DRAFT
 - stage_id: S2
-- stage_plan_version: 1.1
+- stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
-- created_from_commit: c984fb4
-- dependencies: S2-T01 PASS; human preregistration decisions recorded
-- supersedes: task_version 1.0
+- created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
+- dependencies: Stage 1 PASSED / VALID; Stage 2 Plan v1.2 APPROVED; input data baseline confirmed; no blocking OPEN QUESTION
+- supersedes: task_version 1.1
 - approved_by: NONE
 - approved_at: NONE
 
 ## 1. 目标
 
-规划并交付“预注册实验 Manifest”这一单一能力，使其可独立测试、审查和回滚。
+在任何Stage 2实现或研究运行之前，交付可版本化、可验证且不可覆盖的预注册Manifest能力；本Task只定义和锁定研究输入，不执行收益研究或产生研究结论。
 
 ## 2. 背景
 
@@ -31,7 +31,7 @@
 
 ## 4. 前置条件
 
-Stage 2 Plan v1.1 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和基线已核验。
+Stage 2 Plan v1.2 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和Stage 1 Baseline v1.0已核验。
 
 ## 5. 允许范围
 
@@ -98,11 +98,12 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 2026-07-12：v0.1，依据 Stage 2 Plan v0.1 创建，状态 DRAFT，未执行。
 - 2026-07-14：v1.0，按Stage 1 Trade Identity v2与Stage 2 Plan v1.0重规划；状态DRAFT，未执行。
 - 2026-07-14：v1.1，加入可扩展研究setup架构与事件说明图规划；状态DRAFT，未执行。
+- 2026-07-16：v1.2，按Plan v1.2收口分组、前置S2-T19并修订DAG；状态DRAFT，未执行。
 
-## 21. Stage 2 Plan v1.1执行覆盖（优先于v0.1通用占位）
+## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
 
-- 数据与能力边界：在任何候选全量运行前冻结主标的/假设/标签、`setup_id/setup_version/context_model_id/context_version`、required data capability、参数域、匹配放宽、多重试验家族、切分、失败线、seed、baseline hash和代码/config hash；事件图模板版本与证据/示意模式也必须预注册；append-only。
+- 数据与能力边界：在任何Stage 2业务Task开始前冻结研究运行Manifest Schema、`parameter_set_id/parameter_set_version`、Stage 1 baseline tag/commit/data_run_id/manifest/schema/logical hashes、代码版本、UTC时间切分与purge/embargo、instrument、evidence_level、`setup_id/setup_version/context_model_id/context_version`、允许指标、禁止指标、参数域、匹配放宽、失败线、seed、输出目录、run布局、原子发布/不可覆盖规则和失效条件。第一组全量运行配置必须在S2-T10之前锁定且append-only。
 - 允许修改路径：`src/era100x/research/stage_2/manifests/`、`tests/research/stage_2/manifests/`、`configs/research/stage_2/`、`artifacts/manifests/stage_2/`，以及本Task validation/TRACEABILITY。禁止修改Stage 1实现/数据、\`docs/spec/**\`和Stage 3+。
 - 验证命令：\`uv run python -m pytest tests/research/stage_2/manifests -q\`；\`uv run python scripts/run_quality_gate.py\`。全量研究CLI须由S2-T19冻结后再写入Task新版本，不得当前虚构。
-- 验收标准：schema、setup/context注册引用、必填项、hash、不可覆盖、结果产生后拒绝修改、所有实验版本台账、未批准setup拒绝及事件图模式/模板版本测试通过；需人工预注册决定。
-- 证据模式：\`PREREGISTRATION_REQUIRED_BEFORE_T02_FULL_USE\`。无论fixture能力是否可验收，Stage 1最终PASSED与VALID data baseline之前均不得执行本Task。
+- 验收标准：所有必填字段、版本和hash可验证；BTC/ETH配置隔离；允许/禁止指标白名单生效；输出根必须来自OQ-S2-001决定；结果产生后拒绝修改或覆盖；失效传播、台账追加、未知setup/参数集/数据基线拒绝测试通过；第一组Manifest可被T01～T10只读引用。不得读取结果调参，不得生成候选事件、收益指标或研究结论。
+- 证据模式：\`PREREGISTRATION_GATE\`；这是第一组和整个Stage 2的首个Task。
