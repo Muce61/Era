@@ -3,14 +3,14 @@
 ## Metadata
 
 - task_id: S2-T10
-- task_version: 1.5
-- status: BLOCKED
+- task_version: 1.6
+- status: IN_PROGRESS
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T01 PASS; S2-T02 PASS; S2-T03 PASS; S2-T04 PASS; S2-T05 PASS; S2-T06 PASS; S2-T07 PASS; S2-T08 PASS; S2-T09 PASS; S2-T19 PASS; locked Group-1 Manifest
-- supersedes: task_version 1.4
+- supersedes: task_version 1.5
 - approved_by: Muce
 - approved_at: 2026-07-16T19:26:41+08:00
 - execution_started_at: 2026-07-16T20:06:27+08:00
@@ -93,6 +93,10 @@ same-canonical-identity/different-payload groups during BTC PRICE finalization. 
 Execution Manifest, replacement Run A or Run B is permitted until Muce selects the event/snapshot
 ownership disposition.
 
+Muce approved CR-2026-005 Option A at L2. v1.6 may implement and validate unique UTC Sweep-start
+minute ownership plus terminal failure recording. This approval does not authorize a formal
+Execution Manifest or full run.
+
 ## 18. 变化触发器
 
 schema、标签、成本模型、事件定义、数据/配置哈希、git commit 或聚类方式变化；或发现与 V1.3.4/Binance 官方事实冲突。 触发 task_version 递增和重新审批。
@@ -102,6 +106,8 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 依赖 Task/Stage 重开、输入哈希变化、映射规则变化、验收测试被推翻或产物不可复现时标记 INVALIDATED，不得继续作为有效证据。
 
 ## 20. 变更历史
+
+- 2026-07-16：v1.6，Muce批准CR-2026-005 Option A，仅修复Sweep-start UTC分钟所有权与runner失败终态并执行受控诊断；状态IN_PROGRESS，禁止创建全量run。
 
 - 2026-07-16：v1.5 Run A完成BTC PRICE 2376/2376日构造后，在2020-04-27 finalization发现两个same identity/different payload冲突并保持未发布失败；创建CR-2026-005，Task状态BLOCKED，未创建Run B。
 
