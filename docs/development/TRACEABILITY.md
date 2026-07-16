@@ -113,6 +113,7 @@ Stage 2 is `APPROVED / NOT_EXECUTED`. Muce approved Plan v1.2 and Group 1 Task v
 | Requirement | Plan v1.2 Tasks | Planned implementation/tests | State |
 | --- | --- | --- | --- |
 | Pre-registration before any Stage 2 implementation/result | S2-T19 | manifest schema, parameter/data/code/time/evidence/metric/output/invalidation contracts; ADR-S2-004 | APPROVED_NOT_EXECUTED_READY |
+| S2-T19 v1.3 delivered evidence | S2-T19 | `src/era100x/research/stage_2/manifests/`, config/summary, immutable external Manifest and `validations/stage_2/S2-T19.md` | PASSED |
 | Stage 1 v2 baseline, ResearchSetup/ContextModel registry and CanonicalKeyLevel contract | S2-T01 | `contracts/`, `registry/` and fixture conformance tests | APPROVED_NOT_EXECUTED_AFTER_T19 |
 | Three causal key-level sources and arbitration | S2-T02, S2-T03 | fixture-only `key_levels/sources`, `key_levels/arbitration` | APPROVED_NOT_EXECUTED |
 | Sweep → Reclaim → Hold and invalidation | S2-T04, S2-T05, S2-T06 | fixture-only `episodes/sweep`, `reclaim`, `hold` | APPROVED_NOT_EXECUTED |

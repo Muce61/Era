@@ -1377,6 +1377,11 @@ rules:
   validation_paths:
   - docs/development/validations/stage_0/ (PLANNED)
   - docs/development/validations/stage_2/ (PLANNED)
+  stage_2_delivery:
+    implementation: src/era100x/research/stage_2/manifests/
+    tests: tests/research/stage_2/manifests/
+    validation: docs/development/validations/stage_2/S2-T19.md
+    state: PASSED
   state: PLANNED
 - rule_id: REASON-ACCOUNT_MODE_INVALID
   rule_status: FROZEN
