@@ -4,13 +4,20 @@
 
 **FAIL**
 
-Recovery status: CR-2026-003 APPROVED; S2-T10 v1.4 REOPENED. This remains a FAIL draft and
-cannot become PASS until two new complete deterministic runs satisfy every Group-1 gate.
+Recovery status: CR-2026-003 path repair IMPLEMENTED/TESTED; S2-T10 v1.4 BLOCKED by proposed
+CR-2026-004. This remains a FAIL draft and cannot become PASS until the candidate-deduplication
+integration is explicitly approved, corrected, and followed by two complete deterministic runs.
 
 S2-T19 and S2-T01～S2-T09 passed their directed tests and small-sample integration. S2-T10
 failed during the first full BTCUSDT Flow partition because its Stage 1 Trades physical-path
 resolver omitted the frozen `archive=YYYY-MM` partition level. The full run was not published,
 ETH and Run B were not executed, and deterministic full-run acceptance is unavailable.
+
+The approved CR-2026-003 path fix now passes its regression and unified quality gate. Mandatory
+pre-run inspection then found 2,810 duplicate identities among 3,781 rows in the first 50 retained
+BTC PRICE MarketEpisode partitions, with duplicate inclusion rows all marked included. Because
+CR-2026-003 forbids changing PRICE results, CR-2026-004 must be approved before implementation.
+No new Execution Manifest or recovery run was created.
 
 ## Acceptance summary
 
@@ -27,11 +34,13 @@ ETH and Run B were not executed, and deterministic full-run acceptance is unavai
 | No Stage 1 mutation | PASS |
 | Failure does not publish | PASS |
 | No Group 2～4 execution | PASS |
-| No blocker | FAIL: `CR-2026-003` |
+| CR-2026-003 archive path correction | PASS in code/regression |
+| Candidate identity deduplication | FAIL: `CR-2026-004` pending approval |
+| No blocker | FAIL: `CR-2026-004` |
 
 ## Failure disposition
 
 Run `stage2-g1-full-a-20260716-4c15e46` is `FAILED_UNPUBLISHED`. Its staging and failure evidence
-must remain intact until audit and explicitly approved cleanup. [CR-2026-003](../changes/CR-2026-003.md)
-proposes an L1 path-resolution correction, full preflight coverage and two new full runs. Group 1
-is not ready for final approval.
+remain intact. [CR-2026-003](../changes/CR-2026-003.md) corrected the path resolver; the separate
+[CR-2026-004](../changes/CR-2026-004.md) records the blocked candidate-deduplication integration.
+Group 1 is not ready for final approval.
