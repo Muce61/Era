@@ -108,7 +108,7 @@ Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～
 
 ## Stage 2 Plan v1.2 APPROVED Coverage
 
-Stage 2 is `APPROVED / NOT_EXECUTED`. Muce approved Plan v1.2 and Group 1 Task v1.3 (S2-T19, S2-T01～S2-T10). ADR-S2-004 governs later research definitions; CR-2026-002/ADR-S2-005 govern exact Group-1 key-level, event, gate, OFAT and CLI definitions. Groups 2～4 remain DRAFT. All implementation/test paths remain PLANNED; no Stage 2 business code or research has executed and no execution BLOCKER remains.
+Stage 2 is `BLOCKED / GROUP_1_FAILED_UNPUBLISHED`. S2-T19 and S2-T01～S2-T09 passed implementation, directed tests and small-sample integration. S2-T10 full run `stage2-g1-full-a-20260716-4c15e46` completed 2376 BTC price partitions, then failed on its first Flow partition because the reader omitted the frozen Stage 1 `archive=YYYY-MM` path level. No data was published; CR-2026-003 is READY_FOR_APPROVAL. Groups 2～4 remain DRAFT and were not executed.
 
 | Requirement | Plan v1.2 Tasks | Planned implementation/tests | State |
 | --- | --- | --- | --- |
@@ -128,7 +128,7 @@ Stage 2 is `APPROVED / NOT_EXECUTED`. Muce approved Plan v1.2 and Group 1 Task v
 | S2-T08 v1.3 delivered evidence | S2-T08 | Trades-only G4 facts/tests and `validations/stage_2/S2-T08.md` | PASSED |
 | MarketEpisode identity, consume and re-arm | S2-T09 | fixture-only `episodes/identity`; FI-14, UT-EVT-011 | APPROVED_NOT_EXECUTED |
 | S2-T09 v1.3 delivered evidence | S2-T09 | FROZEN identity, separate inclusion/consumption ledgers, tests and `validations/stage_2/S2-T09.md` | PASSED |
-| Registry-driven full candidate generation; BTC/ETH, setup/context and variants separate | S2-T10 | only full-candidate owner, bound to locked Group-1 Manifest and published hashes | APPROVED_NOT_EXECUTED |
+| Registry-driven full candidate generation; BTC/ETH, setup/context and variants separate | S2-T10 | 2376 BTC price partitions completed; first BTC Flow partition failed; no publication; `validations/stage_2/S2-T10.md` | FAILED_UNPUBLISHED |
 | Group-1 small-sample integration | S2-T01～S2-T09 | fixture chain plus six controlled real windows; locked execution Manifest | PASSED |
 | Historical path metrics and labels | S2-T11, S2-T12, S2-T13, S2-T14 | v2 ordering, MFE/MAE/time, first passage, AMBIGUOUS bounds | DRAFT_NOT_APPROVED |
 | Conditional baseline and placebo | S2-T15, S2-T16 | matched baseline/placebo with frozen relaxation and seeds | DRAFT_NOT_APPROVED |

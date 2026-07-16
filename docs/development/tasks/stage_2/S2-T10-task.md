@@ -4,7 +4,7 @@
 
 - task_id: S2-T10
 - task_version: 1.3
-- status: IN_PROGRESS
+- status: FAILED
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
@@ -95,6 +95,8 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 
 ## 20. 变更历史
 
+- 2026-07-16：v1.3 full run在首个BTCUSDT Flow分区因Stage 1 Trades物理路径解析遗漏`archive=YYYY-MM`层失败；2376/9504分区完成、无发布，状态FAILED；CR-2026-003待决策。
+
 - 2026-07-16：v1.3，依据CR-2026-002与ADR-S2-005冻结第一组事件构造基线和CLI；Muce批准，状态APPROVED / NOT_EXECUTED。
 
 - 2026-07-12：v0.1，依据 Stage 2 Plan v0.1 创建，状态 DRAFT，未执行。
@@ -112,7 +114,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 
 ## 22. ADR-S2-004预注册绑定
 
-S2-T10只能只读消费S2-T19锁定且引用[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)的第一组Manifest。全量候选须按instrument、T1～T4、P1～P3和split/fold隔离，保存配置/hash并append-only；本Task不执行匹配、First-passage、bootstrap或F1～F10统计。状态仍为APPROVED / NOT_EXECUTED，且本次未执行。
+S2-T10只能只读消费S2-T19锁定且引用[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)的第一组Manifest。全量候选须按instrument、T1～T4、P1～P3和split/fold隔离，保存配置/hash并append-only；本Task不执行匹配、First-passage、bootstrap或F1～F10统计。本次执行以FAILED / UNPUBLISHED终止，后续动作受CR-2026-003阻塞。
 
 ## 23. ADR-S2-005事件构造绑定
 
