@@ -3,16 +3,16 @@
 ## Metadata
 
 - task_id: S2-T10
-- task_version: 1.3
-- status: FAILED
+- task_version: 1.4
+- status: REOPENED
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T01 PASS; S2-T02 PASS; S2-T03 PASS; S2-T04 PASS; S2-T05 PASS; S2-T06 PASS; S2-T07 PASS; S2-T08 PASS; S2-T09 PASS; S2-T19 PASS; locked Group-1 Manifest
-- supersedes: task_version 1.2
+- supersedes: task_version 1.3
 - approved_by: Muce
-- approved_at: 2026-07-16T15:24:31+08:00
+- approved_at: 2026-07-16T18:19:38+08:00
 
 ## 1. 目标
 
@@ -95,6 +95,8 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 
 ## 20. 变更历史
 
+- 2026-07-16：v1.4，Muce批准CR-2026-003，仅允许修复Stage 1 Catalog到`archive=YYYY-MM/date=YYYY-MM-DD`的物理路径解析并以全新run重新执行；状态REOPENED。
+
 - 2026-07-16：v1.3 full run在首个BTCUSDT Flow分区因Stage 1 Trades物理路径解析遗漏`archive=YYYY-MM`层失败；2376/9504分区完成、无发布，状态FAILED；CR-2026-003待决策。
 
 - 2026-07-16：v1.3，依据CR-2026-002与ADR-S2-005冻结第一组事件构造基线和CLI；Muce批准，状态APPROVED / NOT_EXECUTED。
@@ -114,7 +116,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 
 ## 22. ADR-S2-004预注册绑定
 
-S2-T10只能只读消费S2-T19锁定且引用[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)的第一组Manifest。全量候选须按instrument、T1～T4、P1～P3和split/fold隔离，保存配置/hash并append-only；本Task不执行匹配、First-passage、bootstrap或F1～F10统计。本次执行以FAILED / UNPUBLISHED终止，后续动作受CR-2026-003阻塞。
+S2-T10只能只读消费S2-T19锁定且引用[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)的第一组Manifest。全量候选须按instrument、T1～T4、P1～P3和split/fold隔离，保存配置/hash并append-only；本Task不执行匹配、First-passage、bootstrap或F1～F10统计。v1.4仅按已批准CR-2026-003修复物理路径解析；失败run不得恢复、复用、覆盖或清理。
 
 ## 23. ADR-S2-005事件构造绑定
 

@@ -4,6 +4,9 @@
 
 **FAIL**
 
+Recovery status: CR-2026-003 APPROVED; S2-T10 v1.4 REOPENED. This remains a FAIL draft and
+cannot become PASS until two new complete deterministic runs satisfy every Group-1 gate.
+
 S2-T19 and S2-T01～S2-T09 passed their directed tests and small-sample integration. S2-T10
 failed during the first full BTCUSDT Flow partition because its Stage 1 Trades physical-path
 resolver omitted the frozen `archive=YYYY-MM` partition level. The full run was not published,

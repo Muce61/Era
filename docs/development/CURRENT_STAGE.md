@@ -3,8 +3,8 @@
 ```text
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
-Current Task: NONE
-Status: BLOCKED
+Current Task: S2-T10
+Status: READY_FOR_S2_T10_RECOVERY_EXECUTION
 ```
 
-Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 and Group 1 Task v1.3 are APPROVED; S2-T19 and S2-T01～S2-T09 are PASSED. S2-T10 failed in unpublished run `stage2-g1-full-a-20260716-4c15e46` because its Trades reader omitted the frozen `archive=YYYY-MM` physical partition level. CR-2026-003 is READY_FOR_APPROVAL and blocks reopening S2-T10. Group 2 (S2-T11～S2-T14), Group 3 (S2-T15～S2-T18) and Group 4 (S2-T20) remain DRAFT and were not executed.
+Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED; S2-T19 and S2-T01～S2-T09 remain PASSED. Muce approved CR-2026-003 and reopened S2-T10 as v1.4 solely for Catalog-authoritative `archive=YYYY-MM` path repair and two new deterministic full runs. Failed run `stage2-g1-full-a-20260716-4c15e46` remains FAILED_UNPUBLISHED and cannot be resumed or reused. Groups 2～4 remain DRAFT and unexecuted.
