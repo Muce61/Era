@@ -9,6 +9,10 @@ from era100x.research.stage_2.contracts.models import (
     ReclaimEvent,
     SweepEpisode,
 )
+from era100x.research.stage_2.contracts.identity import (
+    canonical_candidate_identity,
+    canonical_identity_json,
+)
 from era100x.research.stage_2.episodes.identity import (
     CandidateInclusionLedger,
     EpisodeConsumptionLedger,
@@ -97,16 +101,47 @@ def chain(config_hash: str = "2" * 64, instrument: str = "BTCUSDT") -> tuple[obj
 
 
 def test_frozen_market_identity_is_stable_while_candidate_version_changes() -> None:
-    first = build_market_episode(*chain(), None, variant="V1_PRICE")
-    changed = build_market_episode(*chain("9" * 64), None, variant="V1_PRICE")
-    eth = build_market_episode(*chain(instrument="ETHUSDT"), None, variant="V1_PRICE")
+    kwargs = dict(
+        variant="V1_PRICE", event_parameter_set_id="G1-PRIMARY-V1", time_combination_id="T2"
+    )
+    first = build_market_episode(*chain(), None, **kwargs)
+    changed = build_market_episode(*chain("9" * 64), None, **kwargs)
+    eth = build_market_episode(*chain(instrument="ETHUSDT"), None, **kwargs)
     assert first.market_episode_id == changed.market_episode_id
     assert first.candidate_version_id != changed.candidate_version_id
     assert first.market_episode_id != eth.market_episode_id
 
 
+def test_actual_ofat_parameter_and_timing_split_legacy_identity_conflict() -> None:
+    primary = build_market_episode(
+        *chain(),
+        None,
+        variant="V1_PRICE",
+        event_parameter_set_id="G1-PRIMARY-V1",
+        time_combination_id="T2",
+    )
+    timing = build_market_episode(
+        *chain(),
+        None,
+        variant="V1_PRICE",
+        event_parameter_set_id="G1-TIMING_T1-V1",
+        time_combination_id="T1",
+    )
+
+    assert primary.market_episode_id == timing.market_episode_id
+    assert primary.canonical_candidate_id != timing.canonical_candidate_id
+    assert primary.candidate_version_id == primary.canonical_candidate_id
+    assert timing.candidate_version_id == timing.canonical_candidate_id
+
+
 def test_candidate_dedup_and_consumption_are_separate_and_once_only() -> None:
-    episode = build_market_episode(*chain(), None, variant="V1_PRICE")
+    episode = build_market_episode(
+        *chain(),
+        None,
+        variant="V1_PRICE",
+        event_parameter_set_id="G1-PRIMARY-V1",
+        time_combination_id="T2",
+    )
     ledger = CandidateInclusionLedger()
     assert ledger.include(episode).included is True
     assert ledger.include(episode).included is False
@@ -134,3 +169,41 @@ def test_gap_and_rearm_boundaries_are_inclusive() -> None:
         rearm_seconds=900,
         level_active=True,
     )
+
+
+def test_canonical_serialization_fixes_decimal_null_map_and_list_semantics() -> None:
+    payload = {
+        "decimal": Decimal("1.2300"),
+        "negative_zero": Decimal("-0.00"),
+        "null": None,
+        "map": {"z": 1, "a": 2},
+        "list": ["b", "a"],
+    }
+    assert canonical_identity_json(payload) == (
+        '{"decimal":"1.23","list":["b","a"],"map":{"a":2,"z":1},"negative_zero":"0","null":null}'
+    )
+    with pytest.raises(TypeError, match="binary floats"):
+        canonical_identity_json({"forbidden": 1.5})
+
+
+def test_config_and_stage1_baseline_changes_invalidate_canonical_identity() -> None:
+    base = {
+        "variant": "V1_PRICE",
+        "instrument": "BTCUSDT",
+        "direction": "LONG",
+        "key_level_id": "1" * 64,
+        "sweep_id": "2" * 64,
+        "reclaim_id": "3" * 64,
+        "hold_id": "4" * 64,
+        "price_trigger_id": "5" * 64,
+        "time_combination_id": "T2",
+        "event_parameter_set_id": "G1-PRIMARY-V1",
+        "available_at_ts": 1,
+        "stage1_data_run_id": "stage1-a",
+        "stage1_instrument_logical_hash": "6" * 64,
+        "config_hash": "7" * 64,
+        "flow_feature_set_id": None,
+    }
+    identity = canonical_candidate_identity(base)
+    assert identity != canonical_candidate_identity({**base, "config_hash": "8" * 64})
+    assert identity != canonical_candidate_identity({**base, "stage1_data_run_id": "stage1-b"})

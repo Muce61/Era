@@ -59,11 +59,29 @@ def test_complete_fixture_chain_is_stable_and_causal() -> None:
         _trade(3, trigger.available_at_ts - S + 1, "BUY", "2"),
     ]
     flow = evaluate_flow_gate(trigger, trades)
-    episode = build_market_episode(level, sweep, reclaim, hold, trigger, flow, variant="V1_FLOW")
+    episode = build_market_episode(
+        level,
+        sweep,
+        reclaim,
+        hold,
+        trigger,
+        flow,
+        variant="V1_FLOW",
+        event_parameter_set_id="G1-PRIMARY-V1",
+        time_combination_id="T2",
+    )
     assert episode.episode_status == "CANDIDATE"
     assert episode.available_at_ts == flow.available_at_ts
     assert episode == build_market_episode(
-        level, sweep, reclaim, hold, trigger, flow, variant="V1_FLOW"
+        level,
+        sweep,
+        reclaim,
+        hold,
+        trigger,
+        flow,
+        variant="V1_FLOW",
+        event_parameter_set_id="G1-PRIMARY-V1",
+        time_combination_id="T2",
     )
 
 

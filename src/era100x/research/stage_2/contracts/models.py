@@ -142,8 +142,11 @@ class FlowFeatureSet(Lineage):
 
 class MarketEpisode(Lineage):
     market_episode_id: str = Field(pattern=r"^[0-9a-f]{64}$")
+    canonical_candidate_id: str = Field(pattern=r"^[0-9a-f]{64}$")
     candidate_version_id: str = Field(pattern=r"^[0-9a-f]{64}$")
+    canonical_payload_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     venue: Literal["BINANCE_USDM"]
+    direction: Direction = "LONG"
     canonical_key_level_id: str
     sweep_id: str
     reclaim_id: str
@@ -151,17 +154,32 @@ class MarketEpisode(Lineage):
     trigger_id: str
     flow_feature_set_id: str | None
     variant: Literal["V1_PRICE", "V1_FLOW"]
+    time_combination_id: Literal["T1", "T2", "T3", "T4"]
     sweep_start_ns: int = Field(ge=0)
     episode_status: Literal["CANDIDATE", "REJECTED", "INVALIDATED"]
     consumed: bool = False
     consumed_by_intent_id: None = None
     rearm_eligible_at_ns: int | None = None
 
+    @model_validator(mode="after")
+    def canonical_candidate_alias(self) -> Self:
+        if self.candidate_version_id != self.canonical_candidate_id:
+            raise ValueError("candidate_version_id must equal canonical_candidate_id")
+        return self
+
 
 class CandidateInclusionRecord(Lineage):
     inclusion_id: str = Field(pattern=r"^[0-9a-f]{64}$")
     market_episode_id: str
+    canonical_candidate_id: str = Field(pattern=r"^[0-9a-f]{64}$")
     candidate_version_id: str
+    canonical_payload_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     included: bool
     reason_code: str
     deduplication_key: str
+    ownership_status: Literal["OWNED", "OUT_OF_PARTITION_CONTEXT"] = "OWNED"
+    duplicate_of_candidate_id: str | None = None
+    source_processing_partition: str | None = None
+    source_row_ordinal: int | None = Field(default=None, ge=0)
+    source_file_logical_path: str | None = None
+    excluded_reason: str | None = None

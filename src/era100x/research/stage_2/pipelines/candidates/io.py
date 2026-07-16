@@ -26,13 +26,38 @@ def write_partition(path: Path, records: list[dict[str, Any]], schema_name: str)
     frame.write_parquet(temporary, compression="zstd", statistics=True)
     os.replace(temporary, path)
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    logical = hashlib.sha256(
+    logical = records_logical_hash(records, schema_name)
+    return {"rows": len(records), "byte_sha256": digest, "logical_sha256": logical}
+
+
+def records_logical_hash(records: list[dict[str, Any]], schema_name: str) -> str:
+    normalized = records or [{"schema_name": schema_name, "empty_partition": True}]
+    return hashlib.sha256(
         "\n".join(
             json.dumps(record, sort_keys=True, separators=(",", ":"), default=str)
             for record in normalized
         ).encode()
     ).hexdigest()
-    return {"rows": len(records), "byte_sha256": digest, "logical_sha256": logical}
+
+
+def write_or_verify_partition(
+    path: Path, records: list[dict[str, Any]], schema_name: str
+) -> dict[str, Any]:
+    expected = records_logical_hash(records, schema_name)
+    if path.exists():
+        frame = pl.read_parquet(path)
+        actual_records = frame.to_dicts()
+        actual = records_logical_hash(
+            [] if "empty_partition" in frame.columns else actual_records, schema_name
+        )
+        if actual != expected:
+            raise ValueError(f"resume partition logical hash mismatch: {path}")
+        return {
+            "rows": 0 if "empty_partition" in frame.columns else frame.height,
+            "byte_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            "logical_sha256": actual,
+        }
+    return write_partition(path, records, schema_name)
 
 
 def catalog_tree(root: Path) -> dict[str, Any]:

@@ -16,10 +16,17 @@ from era100x.research.stage_2.manifests.models import (
     Stage2PreregistrationManifest,
 )
 from era100x.research.stage_2.pipelines.candidates.flow_phase import build_flow_day
+from era100x.research.stage_2.pipelines.candidates.candidate_finalizer import (
+    CandidateIdentityConflict,
+    audit_logical_hash,
+    finalize_candidate_attempts,
+    owner_partition,
+)
 from era100x.research.stage_2.pipelines.candidates.io import (
     atomic_json,
     catalog_tree,
     write_partition,
+    write_or_verify_partition,
 )
 from era100x.research.stage_2.pipelines.candidates.price_phase import build_price_day
 from era100x.research.stage_2.pipelines.candidates.stage1_catalog import (
@@ -103,10 +110,9 @@ def _execute_partition(
         trade_paths = Stage1TradesCatalogIndex.select_for_windows(trade_partitions, windows)
         outputs = build_flow_day(trade_paths=trade_paths, instrument=instrument, windows=windows)
     for dataset, records in outputs.items():
+        base = run_root / "staging" / ("work" if dataset == "candidate_attempts" else "data")
         path = (
-            run_root
-            / "staging"
-            / "data"
+            base
             / f"instrument={instrument}"
             / f"variant={variant}"
             / dataset
@@ -152,6 +158,7 @@ class CandidateRun:
             recovery.recovery_of_run_id != FAILED_RUN_ID
             or recovery.supersedes_failed_run_id != FAILED_RUN_ID
             or recovery.change_request != "CR-2026-003"
+            or recovery.identity_change_request != "CR-2026-004"
             or recovery.reused_price_staging
         ):
             raise ValueError("invalid CR-2026-003 recovery metadata")
@@ -222,6 +229,7 @@ class CandidateRun:
             for variant in VARIANTS
             for day in dates()
         ]
+        planned.extend(f"{instrument}:V1_PRICE:FINALIZE" for instrument in INSTRUMENTS)
         checkpoint = {
             "run_id": run_id,
             "execution_manifest_hash": run.manifest.manifest_hash,
@@ -299,11 +307,7 @@ class CandidateRun:
                     checkpoint["status"] = "FAILED"
                     atomic_json(self.root / "checkpoint.json", checkpoint)
                     raise
-            if self._all_complete(checkpoint):
-                self._publish(checkpoint)
-            else:
-                checkpoint["status"] = "PARTIAL_COMPLETE"
-                atomic_json(self.root / "checkpoint.json", checkpoint)
+            self._finish_execute(instrument, variant, checkpoint)
             return
         futures = {}
         with ProcessPoolExecutor(max_workers=workers) as pool:
@@ -335,11 +339,7 @@ class CandidateRun:
                     for remaining in futures:
                         remaining.cancel()
                     raise
-        if self._all_complete(checkpoint):
-            self._publish(checkpoint)
-        else:
-            checkpoint["status"] = "PARTIAL_COMPLETE"
-            atomic_json(self.root / "checkpoint.json", checkpoint)
+        self._finish_execute(instrument, variant, checkpoint)
 
     def verify(self) -> dict[str, Any]:
         published = self.root / "published" / "data"
@@ -364,7 +364,151 @@ class CandidateRun:
     def _variant_complete(
         self, instrument: Instrument, variant: Variant, checkpoint: dict[str, Any]
     ) -> bool:
-        return all(f"{instrument}:{variant}:{day}" in checkpoint["completed"] for day in dates())
+        daily = all(f"{instrument}:{variant}:{day}" in checkpoint["completed"] for day in dates())
+        if variant == "V1_PRICE":
+            return daily and f"{instrument}:V1_PRICE:FINALIZE" in checkpoint["completed"]
+        return daily
+
+    def _finish_execute(
+        self, instrument: Instrument, variant: Variant, checkpoint: dict[str, Any]
+    ) -> None:
+        if variant == "V1_PRICE" and all(
+            f"{instrument}:{variant}:{day}" in checkpoint["completed"] for day in dates()
+        ):
+            final_key = f"{instrument}:V1_PRICE:FINALIZE"
+            if final_key not in checkpoint["completed"]:
+                self._finalize_price_candidates(instrument)
+                checkpoint["completed"].append(final_key)
+                atomic_json(self.root / "checkpoint.json", checkpoint)
+        if self._all_complete(checkpoint):
+            self._publish(checkpoint)
+        else:
+            checkpoint["status"] = "PARTIAL_COMPLETE"
+            atomic_json(self.root / "checkpoint.json", checkpoint)
+
+    def _finalize_price_candidates(self, instrument: Instrument) -> None:
+        summaries: list[dict[str, Any]] = []
+        valid_days = dates()
+        valid_set = set(valid_days)
+        for owner_day in valid_days:
+            attempts: list[dict[str, Any]] = []
+            for source_day in (owner_day - timedelta(days=1), owner_day):
+                source = (
+                    self.root
+                    / "staging"
+                    / "work"
+                    / f"instrument={instrument}"
+                    / "variant=V1_PRICE"
+                    / "candidate_attempts"
+                    / f"date={source_day}"
+                    / "part-000.parquet"
+                )
+                if not source.exists():
+                    continue
+                frame = pl.read_parquet(source)
+                if "empty_partition" in frame.columns:
+                    continue
+                attempts.extend(
+                    row
+                    for row in frame.to_dicts()
+                    if owner_partition(int(row["available_at_ts"])) == owner_day.isoformat()
+                )
+            try:
+                finalized = finalize_candidate_attempts(attempts)
+            except CandidateIdentityConflict as exc:
+                atomic_json(
+                    self.root
+                    / "reports"
+                    / "candidate_identity_conflicts"
+                    / f"instrument={instrument}"
+                    / f"date={owner_day}.json",
+                    {"instrument": instrument, "date": str(owner_day), "conflicts": exc.conflicts},
+                )
+                raise
+            output_records = {
+                "market_episodes": finalized.market_episodes_by_date.get(str(owner_day), []),
+                "candidate_inclusion": finalized.inclusion_by_date.get(str(owner_day), []),
+                "flow_windows": finalized.flow_windows_by_date.get(str(owner_day), []),
+            }
+            for dataset, records in output_records.items():
+                path = (
+                    self.root
+                    / "staging"
+                    / "data"
+                    / f"instrument={instrument}"
+                    / "variant=V1_PRICE"
+                    / dataset
+                    / f"date={owner_day}"
+                    / "part-000.parquet"
+                )
+                write_or_verify_partition(path, records, dataset)
+            audit_path = (
+                self.root
+                / "reports"
+                / "candidate_dedup_audit"
+                / f"instrument={instrument}"
+                / f"date={owner_day}"
+                / "part-000.parquet"
+            )
+            write_or_verify_partition(audit_path, finalized.audit_records, "candidate_dedup_audit")
+            summaries.append({"date": str(owner_day), **finalized.summary})
+        terminal_attempts = self._attempts_for_source_day(instrument, valid_days[-1])
+        out_of_range = [
+            row
+            for row in terminal_attempts
+            if date.fromisoformat(owner_partition(int(row["available_at_ts"]))) not in valid_set
+        ]
+        if out_of_range:
+            atomic_json(
+                self.root / "reports" / f"{instrument}-out-of-period-candidates.json",
+                {
+                    "instrument": instrument,
+                    "count": len(out_of_range),
+                    "reason_code": "OUT_OF_PREREGISTERED_PERIOD",
+                    "canonical_candidate_ids": sorted(
+                        str(row["canonical_candidate_id"]) for row in out_of_range
+                    ),
+                },
+            )
+        aggregate = {
+            "instrument": instrument,
+            "dates": len(valid_days),
+            "attempt_count": sum(int(row["attempt_count"]) for row in summaries),
+            "canonical_count": sum(int(row["canonical_count"]) for row in summaries),
+            "exact_duplicate_excluded_count": sum(
+                int(row["exact_duplicate_excluded_count"]) for row in summaries
+            ),
+            "identity_conflict_count": 0,
+            "out_of_partition_context_count": sum(
+                int(row["out_of_partition_context_count"]) for row in summaries
+            ),
+            "out_of_period_count": len(out_of_range),
+            "daily_summary_logical_hash": audit_logical_hash(summaries),
+        }
+        summary_path = self.root / "reports" / f"{instrument}-candidate-finalization.json"
+        if summary_path.exists():
+            if json.loads(summary_path.read_text()) != aggregate:
+                raise ValueError("resume candidate finalization summary mismatch")
+        else:
+            atomic_json(summary_path, aggregate)
+
+    def _attempts_for_source_day(
+        self, instrument: Instrument, source_day: date
+    ) -> list[dict[str, Any]]:
+        path = (
+            self.root
+            / "staging"
+            / "work"
+            / f"instrument={instrument}"
+            / "variant=V1_PRICE"
+            / "candidate_attempts"
+            / f"date={source_day}"
+            / "part-000.parquet"
+        )
+        if not path.exists():
+            return []
+        frame = pl.read_parquet(path)
+        return [] if "empty_partition" in frame.columns else frame.to_dicts()
 
     def _all_complete(self, checkpoint: dict[str, Any]) -> bool:
         return (

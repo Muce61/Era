@@ -7,6 +7,11 @@ from typing import Any, Literal
 
 import polars as pl
 
+from era100x.research.stage_2.contracts.identity import (
+    canonical_candidate_identity,
+    canonical_candidate_payload_hash,
+)
+
 Instrument = Literal["BTCUSDT", "ETHUSDT"]
 SECOND_NS = 1_000_000_000
 UNAVAILABLE_FIELDS = [
@@ -90,21 +95,65 @@ def build_flow_day(
         }
         features.append(feature)
         if passed:
+            identity_payload = {
+                "variant": "V1_FLOW",
+                "instrument": instrument,
+                "direction": window["direction"],
+                "key_level_id": window["canonical_key_level_id"],
+                "sweep_id": window["sweep_id"],
+                "reclaim_id": window["reclaim_id"],
+                "hold_id": window["hold_id"],
+                "price_trigger_id": window["trigger_id"],
+                "time_combination_id": window["time_combination_id"],
+                "event_parameter_set_id": window["event_parameter_set_id"],
+                "available_at_ts": end,
+                "stage1_data_run_id": window["data_run_id"],
+                "stage1_instrument_logical_hash": window["dataset_logical_hash"],
+                "config_hash": window["config_hash"],
+                "flow_feature_set_id": feature_id,
+            }
+            canonical_id = canonical_candidate_identity(identity_payload)
+            payload_hash = canonical_candidate_payload_hash(
+                {
+                    "identity": identity_payload,
+                    "market_episode_id": window["market_episode_id"],
+                    "venue": window["venue"],
+                    "sweep_start_ns": window["sweep_start_ns"],
+                    "episode_status": "CANDIDATE",
+                    "parent_price_canonical_candidate_id": window["canonical_candidate_id"],
+                    "parent_price_payload_hash": window["canonical_payload_hash"],
+                    "flow_feature": feature,
+                }
+            )
             episodes.append(
                 {
                     "market_episode_id": window["market_episode_id"],
-                    "candidate_version_id": _sha(
-                        "candidate-version-v1-flow",
-                        window["candidate_version_id"],
-                        feature_id,
-                    ),
+                    "canonical_candidate_id": canonical_id,
+                    "candidate_version_id": canonical_id,
+                    "canonical_payload_hash": payload_hash,
                     "instrument": instrument,
+                    "direction": window["direction"],
+                    "data_run_id": window["data_run_id"],
+                    "dataset_logical_hash": window["dataset_logical_hash"],
+                    "config_hash": window["config_hash"],
+                    "code_version": window["code_version"],
+                    "parameter_set_id": window["event_parameter_set_id"],
                     "variant": "V1_FLOW",
                     "available_at_ts": end,
+                    "venue": window["venue"],
+                    "canonical_key_level_id": window["canonical_key_level_id"],
+                    "sweep_id": window["sweep_id"],
+                    "reclaim_id": window["reclaim_id"],
+                    "hold_id": window["hold_id"],
+                    "trigger_id": window["trigger_id"],
                     "flow_feature_set_id": feature_id,
-                    "event_parameter_set_id": window["event_parameter_set_id"],
+                    "time_combination_id": window["time_combination_id"],
+                    "sweep_start_ns": window["sweep_start_ns"],
                     "episode_status": "CANDIDATE",
                     "consumed": False,
+                    "consumed_by_intent_id": None,
+                    "rearm_eligible_at_ns": None,
+                    "event_parameter_set_id": window["event_parameter_set_id"],
                 }
             )
     return {"flow_features": features, "market_episodes": episodes}

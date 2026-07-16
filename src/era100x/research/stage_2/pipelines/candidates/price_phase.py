@@ -164,9 +164,7 @@ def build_price_day(
             "reclaims",
             "holds",
             "price_triggers",
-            "market_episodes",
-            "candidate_inclusion",
-            "flow_windows",
+            "candidate_attempts",
         )
     }
     output["raw_key_levels"] = [item.model_dump(mode="json") for item in raw]
@@ -262,32 +260,33 @@ def build_price_day(
                 if trigger.status != "PASS":
                     continue
                 episode = build_market_episode(
-                    canonical, sweep, reclaim, hold, trigger, None, variant="V1_PRICE"
+                    canonical,
+                    sweep,
+                    reclaim,
+                    hold,
+                    trigger,
+                    None,
+                    variant="V1_PRICE",
+                    event_parameter_set_id=parameter.parameter_set_id,
+                    time_combination_id=parameter.timing_id,
                 )
                 episode_record = {
                     **episode.model_dump(mode="json"),
                     "event_parameter_set_id": parameter.parameter_set_id,
                 }
-                output["market_episodes"].append(episode_record)
-                output["candidate_inclusion"].append(
+                ordinal = len(output["candidate_attempts"])
+                output["candidate_attempts"].append(
                     {
-                        "market_episode_id": episode.market_episode_id,
-                        "candidate_version_id": episode.candidate_version_id,
-                        "included": True,
-                        "reason_code": "CANDIDATE_INCLUDED",
-                    }
-                )
-                output["flow_windows"].append(
-                    {
-                        "instrument": instrument,
-                        "date": day.isoformat(),
-                        "market_episode_id": episode.market_episode_id,
-                        "candidate_version_id": episode.candidate_version_id,
-                        "trigger_id": trigger.trigger_id,
+                        **episode_record,
                         "trigger_available_at_ts": trigger.available_at_ts,
                         "window_start_ts": trigger.available_at_ts - 5 * SECOND_NS,
                         "window_end_ts": trigger.available_at_ts,
-                        "event_parameter_set_id": parameter.parameter_set_id,
+                        "source_processing_partition": day.isoformat(),
+                        "source_row_ordinal": ordinal,
+                        "source_file_logical_path": (
+                            f"instrument={instrument}/variant=V1_PRICE/"
+                            f"candidate_attempts/date={day.isoformat()}/part-000.parquet"
+                        ),
                     }
                 )
     output["arbitration"] = [

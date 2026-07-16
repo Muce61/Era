@@ -174,6 +174,7 @@ class RecoveryMetadata(FrozenModel):
     supersedes_failed_run_id: str
     failure_reason: str
     change_request: Literal["CR-2026-003"]
+    identity_change_request: Literal["CR-2026-004"] | None = None
     fix_code_commit: str = Field(min_length=40, max_length=40)
     reused_price_staging: Literal[False] = False
 

@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from era100x.research.stage_2.contracts.identity import market_episode_identity, stable_id
+from era100x.research.stage_2.contracts.identity import (
+    canonical_candidate_identity,
+    canonical_candidate_payload_hash,
+    market_episode_identity,
+    semantic_fact_payload_hash,
+    stable_id,
+)
 from era100x.research.stage_2.contracts.models import (
     CandidateInclusionRecord,
     CanonicalKeyLevel,
@@ -24,6 +30,8 @@ def build_market_episode(
     flow: FlowFeatureSet | None,
     *,
     variant: str,
+    event_parameter_set_id: str,
+    time_combination_id: str,
     venue: str = "BINANCE_USDM",
 ) -> MarketEpisode:
     if not (
@@ -49,20 +57,48 @@ def build_market_episode(
     market_id = market_episode_identity(
         venue, level.instrument, level.key_level_id, sweep.sweep_start_ts
     )
-    flow_id = flow.flow_feature_set_id if flow is not None else "NO_FLOW"
-    candidate_version_id = stable_id(
-        "candidate-version",
-        "v1",
-        market_id,
-        variant,
-        trigger.trigger_version,
-        flow_id,
-        level.parameter_set_id,
-        level.data_run_id,
-        level.dataset_logical_hash,
-        level.config_hash,
-        level.code_version,
+    available_at_ts = max(
+        hold.available_at_ts,
+        trigger.available_at_ts,
+        flow.available_at_ts if flow is not None else 0,
     )
+    identity_payload = {
+        "variant": variant,
+        "instrument": level.instrument,
+        "direction": "LONG",
+        "key_level_id": level.key_level_id,
+        "sweep_id": sweep.sweep_id,
+        "reclaim_id": reclaim.reclaim_id,
+        "hold_id": hold.hold_id,
+        "price_trigger_id": trigger.trigger_id,
+        "time_combination_id": time_combination_id,
+        "event_parameter_set_id": event_parameter_set_id,
+        "available_at_ts": available_at_ts,
+        "stage1_data_run_id": level.data_run_id,
+        "stage1_instrument_logical_hash": level.dataset_logical_hash,
+        "config_hash": level.config_hash,
+        "flow_feature_set_id": None if flow is None else flow.flow_feature_set_id,
+    }
+    canonical_id = canonical_candidate_identity(identity_payload)
+    semantic_payload = {
+        "identity": identity_payload,
+        "market_episode_id": market_id,
+        "venue": venue,
+        "sweep_start_ns": sweep.sweep_start_ts,
+        "episode_status": "CANDIDATE",
+        "trigger_version": trigger.trigger_version,
+        "event_fact_payload_hashes": {
+            "key_level": semantic_fact_payload_hash(level.model_dump(mode="python")),
+            "sweep": semantic_fact_payload_hash(sweep.model_dump(mode="python")),
+            "reclaim": semantic_fact_payload_hash(reclaim.model_dump(mode="python")),
+            "hold": semantic_fact_payload_hash(hold.model_dump(mode="python")),
+            "trigger": semantic_fact_payload_hash(trigger.model_dump(mode="python")),
+            "flow": None
+            if flow is None
+            else semantic_fact_payload_hash(flow.model_dump(mode="python")),
+        },
+    }
+    payload_hash = canonical_candidate_payload_hash(semantic_payload)
     return MarketEpisode.model_validate(
         {
             "instrument": level.instrument,
@@ -70,15 +106,14 @@ def build_market_episode(
             "dataset_logical_hash": level.dataset_logical_hash,
             "config_hash": level.config_hash,
             "code_version": level.code_version,
-            "parameter_set_id": level.parameter_set_id,
-            "available_at_ts": max(
-                hold.available_at_ts,
-                trigger.available_at_ts,
-                flow.available_at_ts if flow is not None else 0,
-            ),
+            "parameter_set_id": event_parameter_set_id,
+            "available_at_ts": available_at_ts,
             "market_episode_id": market_id,
-            "candidate_version_id": candidate_version_id,
+            "canonical_candidate_id": canonical_id,
+            "candidate_version_id": canonical_id,
+            "canonical_payload_hash": payload_hash,
             "venue": venue,
+            "direction": "LONG",
             "canonical_key_level_id": level.key_level_id,
             "sweep_id": sweep.sweep_id,
             "reclaim_id": reclaim.reclaim_id,
@@ -86,6 +121,7 @@ def build_market_episode(
             "trigger_id": trigger.trigger_id,
             "flow_feature_set_id": None if flow is None else flow.flow_feature_set_id,
             "variant": variant,
+            "time_combination_id": time_combination_id,
             "sweep_start_ns": sweep.sweep_start_ts,
             "episode_status": "CANDIDATE",
             "consumed": False,
@@ -101,7 +137,7 @@ class CandidateInclusionLedger:
         self._keys: set[tuple[str, str]] = set()
 
     def include(self, episode: MarketEpisode) -> CandidateInclusionRecord:
-        key = (episode.market_episode_id, episode.candidate_version_id)
+        key = (episode.canonical_candidate_id, episode.canonical_payload_hash)
         included = key not in self._keys
         if included:
             self._keys.add(key)
@@ -116,7 +152,9 @@ class CandidateInclusionLedger:
             available_at_ts=episode.available_at_ts,
             inclusion_id=inclusion_id,
             market_episode_id=episode.market_episode_id,
+            canonical_candidate_id=episode.canonical_candidate_id,
             candidate_version_id=episode.candidate_version_id,
+            canonical_payload_hash=episode.canonical_payload_hash,
             included=included,
             reason_code="CANDIDATE_INCLUDED" if included else "DUPLICATE_CANDIDATE",
             deduplication_key=f"{episode.market_episode_id}:{episode.candidate_version_id}",

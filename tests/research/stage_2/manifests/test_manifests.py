@@ -88,6 +88,7 @@ def test_recovery_manifest_binds_fix_commit_and_forbids_price_reuse() -> None:
             "supersedes_failed_run_id": "failed-run",
             "failure_reason": "archive path omitted",
             "change_request": "CR-2026-003",
+            "identity_change_request": "CR-2026-004",
             "fix_code_commit": "a" * 40,
             "reused_price_staging": False,
         },
@@ -95,6 +96,7 @@ def test_recovery_manifest_binds_fix_commit_and_forbids_price_reuse() -> None:
     manifest = Stage2ExecutionManifest.seal(payload)
     assert manifest.recovery is not None
     assert manifest.recovery.reused_price_staging is False
+    assert manifest.recovery.identity_change_request == "CR-2026-004"
     payload["recovery"]["fix_code_commit"] = "b" * 40  # type: ignore[index]
     with pytest.raises(ValueError, match="fix commit"):
         Stage2ExecutionManifest.seal(payload)
