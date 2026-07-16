@@ -1,10 +1,14 @@
 # Stage 2 Plan v1.2 Approval Review
 
-Status: READY_FOR_USER_DECISION
+Status: APPROVED_WITH_EXECUTION_BLOCKER
 
 Scope: planning and governance only
 
-Stage 2 execution authorized: NO
+Approved by: Muce
+
+Approved at: 2026-07-16T14:33:04+08:00
+
+Stage 2 Group 1 execution authorized: BLOCKED_BY_OQ_S2_004
 
 ## OQ-S2-001
 
@@ -40,4 +44,11 @@ Stage 2 execution authorized: NO
 
 ## Approval boundary
 
-本审查只给出选项和推荐，不将 OQ 标记为 RESOLVED。用户明确决定后，需更新 `OPEN_QUESTIONS.md`、S2-T19 预注册输入和 Plan 审批元数据；在此之前 Stage 2 不得 APPROVED 或 IN_PROGRESS。
+OQ-S2-001与OQ-S2-002已按Muce 2026-07-16提示正式RESOLVED。Plan v1.2及第一组S2-T19、S2-T01～S2-T10已批准；第二组S2-T11～S2-T14、第三组S2-T15～S2-T18及第四组S2-T20仍为DRAFT。
+
+## Final approved decision
+
+- OQ-S2-001采用方案A，并扩展run布局为`staging,published,manifests,reports,logs,tmp`；外盘不可用直接BLOCKED；空间门1.20；append-only、保留和人工清理审计规则按批准提示执行。
+- OQ-S2-002采用BTC primary、ETH independent secondary；主标签TARGET_FIRST_STRICT，AMBIGUOUS主结果按失败；参数域、primary值、weekly cluster、5000 bootstrap和95%双侧CI按批准提示执行。
+- 所有参数保持BASELINE/RESEARCH，不描述为最优，不升级为FROZEN。
+- 批准提示引用“审批记录中的T1/T3/T4”“三个预注册时期”“主失败线”，但本记录、仓库和全部本地Git历史均无其具体定义；条件随机匹配也未给出精确bin。该缺口转记OQ-S2-004，阻塞S2-T19执行，不影响本次治理批准本身。

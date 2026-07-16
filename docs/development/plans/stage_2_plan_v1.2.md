@@ -4,14 +4,14 @@
 
 - stage_id: S2
 - plan_version: 1.2
-- status: READY_FOR_APPROVAL
+- status: APPROVED
 - created_from_spec_version: V1.3.4
 - created_from_stage_1_baseline: v1.0
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: Stage 0 PASSED; Stage 1 PASSED / VALID
 - supersedes: stage_2_plan_v1.1
-- approved_by: NONE
-- approved_at: NONE
+- approved_by: Muce
+- approved_at: 2026-07-16T14:33:04+08:00
 
 ## 1. 目标与边界
 
@@ -118,20 +118,32 @@ S2-T20 必须检查 BTC/ETH 与 V1_PRICE/V1_FLOW 隔离、无泄漏、Manifest �
 
 ## 11. 开放问题
 
-- OQ-S2-001：Stage 2 外部工作根、发布布局、保留策略、空间门。
-- OQ-S2-002：主标的、主假设、主标签、匹配方案、U-007/U-008/U-009/U-011 参数域与失败线。
+- OQ-S2-001：RESOLVED。工作根、布局、append-only、保留、清理审计和1.20空间门已于2026-07-16T14:33:04+08:00由Muce批准。
+- OQ-S2-002：RESOLVED。BTC primary、ETH independent secondary、TARGET_FIRST_STRICT、参数域、cluster/bootstrap/CI等明确值已于2026-07-16T14:33:04+08:00由Muce批准；U-007/U-008/U-009/U-011仍保持RESEARCH，不升级为FROZEN。
+- OQ-S2-004：OPEN。审批提示引用但仓库未定义的T1/T3/T4精确时间组合、三个预注册时期、匹配bin与主失败线仍需Muce补齐；在补齐前阻塞S2-T19执行。
 
-两项均保持 OPEN；本 Plan 的推荐方案不等于人工决定。
+## 12. 已批准的预注册决定
 
-## 12. 失效、恢复与变更
+- 工作根：/Volumes/FuckingLife/era100x_stage2；布局：runs/<run_id>/{staging,published,manifests,reports,logs,tmp}；外盘不可用直接BLOCKED，无备用根；空间门为预计峰值×1.20。
+- published、manifests、reports append-only且有效产物长期保留；失败staging在审计前不得清理，清理需人工批准和审计记录；无效运行Manifest、报告和失效记录永久保留。
+- Primary：BTCUSDT；Secondary：ETHUSDT，独立复现且不与BTC合并。
+- 主假设：严格TARGET_FIRST_STRICT概率高于同标的条件随机基线；AMBIGUOUS主结果按失败。
+- Primary target/stop：20/25 bps；target域20/30/40/50/70/100；stop域15/20/25/30/35；max target 100 bps。
+- merge tolerance域5/10/15（Primary 10）bps；episode gap域60/300/900（Primary 300）秒；re-arm域300/900/1800（Primary 900）秒。
+- Primary时间：reclaim 30秒、hold 30秒、horizon 180秒。
+- Primary cluster：instrument × UTC calendar week；cluster bootstrap 5000次；双侧95% CI。
+- 上述值均为BASELINE/RESEARCH预注册值，不是最优值，不升级为FROZEN。
+
+## 13. 失效、恢复与变更
 
 Stage 1 schema/dataset/Manifest/Logical Hash、Trade Identity、事件/标签/匹配/聚类、purge/embargo、参数域、主指标、代码或配置 hash 任一变化，使受影响证据 `INVALIDATED`。旧运行和失败实验保留；恢复只允许从同一有效 baseline 与锁定 Manifest 重入，不得覆盖。
 
 研究方法、标签或指标变化按 L3 Change Request 处理；FROZEN 风险/执行规则变化按 L4 处理，均须人工批准。
 
-## 13. 变更历史
+## 14. 变更历史
 
 - 2026-07-12：v0.1，初始草案。
 - 2026-07-14：v1.0，适配 Trade Identity v2。
 - 2026-07-14：v1.1，增加 setup/context 注册表及事件说明规划；保持 DRAFT。
 - 2026-07-16：v1.2，基于 Stage 1 Baseline v1.0 收口四组边界，前置 S2-T19，消除 T02/T08/T19 依赖冲突，统一全量职责至 T10；状态 READY_FOR_APPROVAL，未执行 Stage 2。
+- 2026-07-16：Muce批准Plan v1.2与第一组Task；第二至第四组保持DRAFT；未执行Stage 2。审批引用的缺失精确定义转记OQ-S2-004并保持执行fail-closed。

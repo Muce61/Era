@@ -2204,6 +2204,15 @@ rules:
   - docs/development/validations/stage_2/ (PLANNED)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
+  stage_2_governance:
+    plan_version: '1.2'
+    plan_status: APPROVED
+    approved_by: Muce
+    approved_at: '2026-07-16T14:33:04+08:00'
+    approved_tasks: [S2-T19, S2-T01, S2-T02, S2-T03, S2-T04, S2-T05, S2-T06, S2-T07, S2-T08, S2-T09, S2-T10]
+    draft_tasks: [S2-T11, S2-T12, S2-T13, S2-T14, S2-T15, S2-T16, S2-T17, S2-T18, S2-T20]
+    execution_blocker: OQ-S2-004
+    execution_state: NOT_EXECUTED
   state: PLANNED
 - rule_id: GATE-STAGE-3
   rule_status: FROZEN

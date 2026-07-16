@@ -4,15 +4,15 @@
 
 - task_id: S2-T19
 - task_version: 1.2
-- status: DRAFT
+- status: APPROVED
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: Stage 1 PASSED / VALID; Stage 2 Plan v1.2 APPROVED; input data baseline confirmed; no blocking OPEN QUESTION
 - supersedes: task_version 1.1
-- approved_by: NONE
-- approved_at: NONE
+- approved_by: Muce
+- approved_at: 2026-07-16T14:33:04+08:00
 
 ## 1. 目标
 
@@ -83,7 +83,9 @@ Stage 2 Plan v1.2 与本 Task 均已人工批准；依赖项有真实 validation
 
 ## 17. 开放问题
 
-只记录影响本 Task 的 U/CR/ADR；需要改变风险、数据边界、执行语义或 Binance 能力判断时停止并请求人工决定。
+OQ-S2-004 当前阻塞本 Task：T1/T3/T4 时间组合、三个预注册时期、条件随机匹配分箱与固定放宽顺序、主失败线的精确定义尚未出现在仓库批准记录中。不得推测、补全或执行 S2-T19；须由用户提供精确值并关闭该问题后再开始。
+
+其他情况下，只记录影响本 Task 的 U/CR/ADR；需要改变风险、数据边界、执行语义或 Binance 能力判断时停止并请求人工决定。
 
 ## 18. 变化触发器
 
@@ -99,6 +101,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 2026-07-14：v1.0，按Stage 1 Trade Identity v2与Stage 2 Plan v1.0重规划；状态DRAFT，未执行。
 - 2026-07-14：v1.1，加入可扩展研究setup架构与事件说明图规划；状态DRAFT，未执行。
 - 2026-07-16：v1.2，按Plan v1.2收口分组、前置S2-T19并修订DAG；状态DRAFT，未执行。
+- 2026-07-16：Plan v1.2 与本 Task 由 Muce 批准；状态 APPROVED / NOT_EXECUTED，OQ-S2-004 阻塞执行。
 
 ## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
 

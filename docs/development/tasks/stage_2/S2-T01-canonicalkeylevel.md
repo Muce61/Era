@@ -4,15 +4,15 @@
 
 - task_id: S2-T01
 - task_version: 1.2
-- status: DRAFT
+- status: APPROVED
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T19 PASS
 - supersedes: task_version 1.1
-- approved_by: NONE
-- approved_at: NONE
+- approved_by: Muce
+- approved_at: 2026-07-16T14:33:04+08:00
 
 ## 1. 目标
 
