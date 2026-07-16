@@ -40,6 +40,7 @@ def test_controlled_interruption_resume_publish_and_verify(
     monkeypatch.setattr(runner, "STAGE2_ROOT", tmp_path / "stage2")
     monkeypatch.setattr(runner, "EXPECTED_EXECUTION_MANIFEST", item.manifest_hash)
     monkeypatch.setattr(runner, "dates", lambda: [date(2020, 1, 1), date(2020, 1, 2)])
+    monkeypatch.setenv("ERA_STAGE2_WORKERS", "1")
 
     def price(**_: object) -> dict[str, list[dict[str, object]]]:
         return {"flow_windows": [], "market_episodes": []}
@@ -69,6 +70,7 @@ def test_failed_partition_is_not_published(tmp_path: Path, monkeypatch: pytest.M
     monkeypatch.setattr(runner, "STAGE2_ROOT", tmp_path / "stage2")
     monkeypatch.setattr(runner, "EXPECTED_EXECUTION_MANIFEST", item.manifest_hash)
     monkeypatch.setattr(runner, "dates", lambda: [date(2020, 1, 1)])
+    monkeypatch.setenv("ERA_STAGE2_WORKERS", "1")
 
     def fail(**_: object) -> dict[str, list[dict[str, object]]]:
         raise RuntimeError("fixture failure")

@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import subprocess
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -36,6 +37,64 @@ LOGICAL_HASHES = {
     "BTCUSDT": "03d437ed9a6c19d92162e5c9dd115df4988e8accce3c8180b749f15cfdcc36a8",
     "ETHUSDT": "6db4d5e411edae3838b352944b83c38ba68915841a1f9c9de8f16ef44c3b8332",
 }
+
+
+def _execute_partition(
+    run_root: Path,
+    instrument: Instrument,
+    variant: Variant,
+    day: date,
+    data_run_id: str,
+    config_hash: str,
+    code_commit: str,
+) -> str:
+    key = f"{instrument}:{variant}:{day}"
+    marker = run_root / "staging" / "status" / instrument / variant / f"{day}.json"
+    if marker.exists():
+        return key
+    if variant == "V1_PRICE":
+        outputs = build_price_day(
+            contract_root=CONTRACT_ROOT,
+            instrument=instrument,
+            day=day,
+            data_run_id=data_run_id,
+            dataset_logical_hash=LOGICAL_HASHES[instrument],
+            config_hash=config_hash,
+            code_version=code_commit,
+        )
+    else:
+        window_path = (
+            run_root
+            / "staging"
+            / "data"
+            / f"instrument={instrument}"
+            / "variant=V1_PRICE"
+            / "flow_windows"
+            / f"date={day}"
+            / "part-000.parquet"
+        )
+        frame = pl.read_parquet(window_path)
+        windows = [] if "empty_partition" in frame.columns else frame.to_dicts()
+        outputs = build_flow_day(
+            stage1_trades_root=TRADES_ROOT,
+            instrument=instrument,
+            day=day,
+            windows=windows,
+        )
+    for dataset, records in outputs.items():
+        path = (
+            run_root
+            / "staging"
+            / "data"
+            / f"instrument={instrument}"
+            / f"variant={variant}"
+            / dataset
+            / f"date={day}"
+            / "part-000.parquet"
+        )
+        write_partition(path, records, dataset)
+    atomic_json(marker, {"key": key, "status": "COMPLETE"})
+    return key
 
 
 def dates() -> list[date]:
@@ -96,54 +155,86 @@ class CandidateRun:
         completed_this_call = 0
         checkpoint["status"] = "IN_PROGRESS"
         atomic_json(self.root / "checkpoint.json", checkpoint)
-        for day in dates():
-            key = f"{instrument}:{variant}:{day}"
-            if key in checkpoint["completed"]:
-                continue
-            try:
-                if variant == "V1_PRICE":
-                    outputs = build_price_day(
-                        contract_root=CONTRACT_ROOT,
-                        instrument=instrument,
-                        day=day,
-                        data_run_id=self.manifest.stage1_data_run_id,
-                        dataset_logical_hash=LOGICAL_HASHES[instrument],
-                        config_hash=self.manifest.config_hash,
-                        code_version=checkpoint["code_commit"],
-                    )
-                else:
-                    windows = self._flow_windows(instrument, day)
-                    outputs = build_flow_day(
-                        stage1_trades_root=TRADES_ROOT,
-                        instrument=instrument,
-                        day=day,
-                        windows=windows,
-                    )
-                for dataset, records in outputs.items():
-                    path = (
-                        self.root
-                        / "staging"
-                        / "data"
-                        / f"instrument={instrument}"
-                        / f"variant={variant}"
-                        / dataset
-                        / f"date={day}"
-                        / "part-000.parquet"
-                    )
-                    write_partition(path, records, dataset)
+        pending = [
+            day for day in dates() if f"{instrument}:{variant}:{day}" not in checkpoint["completed"]
+        ]
+        if interruption_limit:
+            for day in pending:
+                key = _execute_partition(
+                    self.root,
+                    instrument,
+                    variant,
+                    day,
+                    self.manifest.stage1_data_run_id,
+                    self.manifest.config_hash,
+                    checkpoint["code_commit"],
+                )
                 checkpoint["completed"].append(key)
                 completed_this_call += 1
                 atomic_json(self.root / "checkpoint.json", checkpoint)
-            except Exception as exc:
-                checkpoint["failed"].append({"key": key, "error": repr(exc)})
-                checkpoint["status"] = "FAILED"
+                if completed_this_call >= interruption_limit:
+                    checkpoint["controlled_interruptions"].append(key)
+                    checkpoint["status"] = "INTERRUPTED_RECOVERABLE"
+                    atomic_json(self.root / "checkpoint.json", checkpoint)
+                    raise InterruptedError("controlled interruption")
+            return
+        workers = int(os.environ.get("ERA_STAGE2_WORKERS", "6" if variant == "V1_PRICE" else "3"))
+        if workers == 1:
+            for day in pending:
+                key = f"{instrument}:{variant}:{day}"
+                try:
+                    completed_key = _execute_partition(
+                        self.root,
+                        instrument,
+                        variant,
+                        day,
+                        self.manifest.stage1_data_run_id,
+                        self.manifest.config_hash,
+                        checkpoint["code_commit"],
+                    )
+                    if completed_key not in checkpoint["completed"]:
+                        checkpoint["completed"].append(completed_key)
+                    atomic_json(self.root / "checkpoint.json", checkpoint)
+                except Exception as exc:
+                    checkpoint["failed"].append({"key": key, "error": repr(exc)})
+                    checkpoint["status"] = "FAILED"
+                    atomic_json(self.root / "checkpoint.json", checkpoint)
+                    raise
+            if self._all_complete(checkpoint):
+                self._publish(checkpoint)
+            else:
+                checkpoint["status"] = "PARTIAL_COMPLETE"
                 atomic_json(self.root / "checkpoint.json", checkpoint)
-                raise
-            if interruption_limit and completed_this_call >= interruption_limit:
-                checkpoint["controlled_interruptions"].append(key)
-                checkpoint["status"] = "INTERRUPTED_RECOVERABLE"
-                atomic_json(self.root / "checkpoint.json", checkpoint)
-                raise InterruptedError("controlled interruption")
+            return
+        futures = {}
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            for day in pending:
+                future = pool.submit(
+                    _execute_partition,
+                    self.root,
+                    instrument,
+                    variant,
+                    day,
+                    self.manifest.stage1_data_run_id,
+                    self.manifest.config_hash,
+                    checkpoint["code_commit"],
+                )
+                futures[future] = day
+            for future in as_completed(futures):
+                day = futures[future]
+                key = f"{instrument}:{variant}:{day}"
+                try:
+                    completed_key = future.result()
+                    if completed_key not in checkpoint["completed"]:
+                        checkpoint["completed"].append(completed_key)
+                    atomic_json(self.root / "checkpoint.json", checkpoint)
+                except Exception as exc:
+                    checkpoint["failed"].append({"key": key, "error": repr(exc)})
+                    checkpoint["status"] = "FAILED"
+                    atomic_json(self.root / "checkpoint.json", checkpoint)
+                    for remaining in futures:
+                        remaining.cancel()
+                    raise
         if self._all_complete(checkpoint):
             self._publish(checkpoint)
         else:
@@ -162,22 +253,6 @@ class CandidateRun:
 
     def _checkpoint(self) -> dict[str, Any]:
         return cast(dict[str, Any], json.loads((self.root / "checkpoint.json").read_text()))
-
-    def _flow_windows(self, instrument: Instrument, day: date) -> list[dict[str, Any]]:
-        path = (
-            self.root
-            / "staging"
-            / "data"
-            / f"instrument={instrument}"
-            / "variant=V1_PRICE"
-            / "flow_windows"
-            / f"date={day}"
-            / "part-000.parquet"
-        )
-        frame = pl.read_parquet(path)
-        if "empty_partition" in frame.columns:
-            return []
-        return frame.to_dicts()
 
     def _variant_complete(
         self, instrument: Instrument, variant: Variant, checkpoint: dict[str, Any]
