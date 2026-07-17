@@ -57,7 +57,7 @@ RUN_A_EXECUTION_MANIFEST = (
 RUN_A_RELEASE_SUPPLEMENT = (
     RUN_A_ROOT
     / "manifests"
-    / ("1f6a8449ba9ea828bb8c42238e4e636bc25ecd2176bed644bfa26c8f420eb2bb.json")
+    / ("5ef20632761acd77ca9836ede3c12f1e48f58e814f96cad56d86646fcc259007.json")
 )
 
 
