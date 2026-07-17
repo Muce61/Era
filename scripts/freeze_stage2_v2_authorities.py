@@ -84,6 +84,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     quality = _read_object(quality_path)
     if quality.get("status") != "PASS" or quality.get("code_commit") != head:
         raise ValueError("quality evidence is not PASS for current HEAD")
+    code_tree_hash = compute_v2_code_tree_sha256(ROOT)
+    if quality.get("runtime_v2_code_tree_sha256") != code_tree_hash:
+        raise ValueError("quality evidence Runtime V2 code-tree authority differs")
 
     manifests = transition_root / "manifests"
     price_path = manifests / "contract-price-inventory-v2.json"
@@ -113,7 +116,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         execution_manifest_path=RUN_A_EXECUTION_MANIFEST,
         release_supplement_path=RUN_A_RELEASE_SUPPLEMENT,
     )
-    code_tree_hash = compute_v2_code_tree_sha256(ROOT)
     migration = freeze_v2_migration_manifest(
         protection=protection,
         transition_run_root=transition_root,

@@ -18,6 +18,7 @@ import polars
 import pytest
 
 from era100x.research.stage_2.manifests.models import canonical_json
+from era100x.research.stage_2.runtime_v2.orchestrator import compute_v2_code_tree_sha256
 
 ROOT = Path(__file__).resolve().parents[1]
 STAGE2_ROOT = Path("/Volumes/FuckingLife/era100x_stage2")
@@ -57,7 +58,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         "status": "PASS",
         "change_requests": ["CR-2026-007", "CR-2026-008", "CR-2026-009"],
         "code_commit": head,
-        "code_tree_sha256": _git("rev-parse", "HEAD^{tree}"),
+        "repository_tree_sha1": _git("rev-parse", "HEAD^{tree}"),
+        "runtime_v2_code_tree_sha256": compute_v2_code_tree_sha256(ROOT),
         "created_at": datetime.now(UTC).isoformat(),
         "tool_versions": {
             "python": sys.version.split()[0],
