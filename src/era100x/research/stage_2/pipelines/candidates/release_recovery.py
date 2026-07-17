@@ -8,13 +8,20 @@ import json
 import os
 import time
 from collections import Counter, defaultdict
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal, cast
 
+import fcntl
+
 import polars as pl
 
-from era100x.research.stage_2.manifests.models import Stage2ReleaseSupplementManifest
+from era100x.research.stage_2.manifests.models import (
+    Stage2ReleaseSupplementManifest,
+    Stage2ShardAdoptionManifest,
+)
 from era100x.research.stage_2.pipelines.candidates.io import atomic_json, records_logical_hash
 from era100x.research.stage_2.pipelines.candidates.release import (
     FLOW_DATASETS,
@@ -26,7 +33,13 @@ from era100x.research.stage_2.pipelines.candidates.release import (
     _path_dimensions,
 )
 
-ReleasePhase = Literal["DEEP_SCAN", "ARTIFACTS_SEALED", "DATA_RENAMED", "PUBLISHED"]
+ReleasePhase = Literal[
+    "DEEP_SCAN",
+    "ARTIFACTS_SEALED",
+    "RENAME_INTENT_WRITTEN",
+    "DATA_RENAMED",
+    "PUBLISHED",
+]
 
 
 def sha256_file(path: Path) -> str:
@@ -113,6 +126,7 @@ def single_scan_release(
     manifest_hash: str,
     progress_path: Path,
     shard_root: Path,
+    sealed_shard_hashes: dict[str, str] | None = None,
     update_every_files: int = 100,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Read each unsealed Parquet once and produce Catalog plus semantic analysis."""
@@ -128,11 +142,20 @@ def single_scan_release(
         grouped[(item["instrument"], item["variant"], item["dataset"])].append(item)
 
     shards: list[dict[str, Any]] = []
+    consumed_adopted_shards: set[str] = set()
     for key, items in sorted(grouped.items()):
         instrument, variant, dataset = key
         shard_path = shard_root / f"{instrument}-{variant}-{dataset}.json"
         fingerprint = _fingerprint(items)
         if shard_path.exists():
+            relative_shard = str(shard_path.relative_to(run_root))
+            if sealed_shard_hashes is not None:
+                expected_shard_hash = sealed_shard_hashes.get(relative_shard)
+                if expected_shard_hash is None:
+                    raise ValueError(f"sealed shard lacks adoption authority: {relative_shard}")
+                if sha256_file(shard_path) != expected_shard_hash:
+                    raise ValueError(f"sealed shard physical hash changed: {relative_shard}")
+                consumed_adopted_shards.add(relative_shard)
             shard = cast(dict[str, Any], json.loads(shard_path.read_text()))
             if shard.get("inventory_fingerprint") != fingerprint:
                 raise ValueError(f"sealed shard source changed: {key}")
@@ -259,6 +282,10 @@ def single_scan_release(
             dataset=dataset,
             sealed_shards=len(shards),
         )
+
+    if sealed_shard_hashes is not None and consumed_adopted_shards != set(sealed_shard_hashes):
+        missing = sorted(set(sealed_shard_hashes) - consumed_adopted_shards)
+        raise ValueError(f"adopted shard set differs from release inventory: {missing}")
 
     catalog, analysis = _merge_shards(
         shards,
@@ -460,8 +487,33 @@ class ReleaseRecovery:
             raise ValueError("invalid release supplement Manifest")
         if self.supplement.source_run_id != self.root.name:
             raise ValueError("release supplement source run mismatch")
+        self.adoption: Stage2ShardAdoptionManifest | None = None
+        if self.supplement.manifest_version == "1.1":
+            adoption_path = Path(cast(str, self.supplement.shard_adoption_manifest_path))
+            expected_physical = cast(str, self.supplement.shard_adoption_manifest_physical_sha256)
+            if sha256_file(adoption_path) != expected_physical:
+                raise ValueError("shard adoption Manifest physical hash changed")
+            adoption = Stage2ShardAdoptionManifest.model_validate_json(adoption_path.read_bytes())
+            if adoption.manifest_hash != self.supplement.shard_adoption_manifest_hash:
+                raise ValueError("shard adoption Manifest hash mismatch")
+            if adoption.manifest_hash != adoption.computed_hash():
+                raise ValueError("invalid shard adoption Manifest")
+            if adoption.source_run_id != self.root.name:
+                raise ValueError("shard adoption source run mismatch")
+            if adoption.source_checkpoint_hash != self.supplement.source_checkpoint_hash:
+                raise ValueError("shard adoption checkpoint mismatch")
+            if (
+                adoption.previous_release_supplement_hash
+                != self.supplement.previous_release_supplement_hash
+            ):
+                raise ValueError("shard adoption previous supplement mismatch")
+            self.adoption = adoption
 
     def release(self, *, expected_partition_count: int) -> dict[str, Any]:
+        with _single_writer_lock(self.root / "logs" / "release-recovery.lock"):
+            return self._release_locked(expected_partition_count=expected_partition_count)
+
+    def _release_locked(self, *, expected_partition_count: int) -> dict[str, Any]:
         checkpoint_path = self.root / "checkpoint.json"
         checkpoint = cast(dict[str, Any], json.loads(checkpoint_path.read_text()))
         if sha256_file(checkpoint_path) != self.supplement.source_checkpoint_hash:
@@ -484,13 +536,31 @@ class ReleaseRecovery:
         if state["supplement_hash"] != self.supplement.manifest_hash:
             raise ValueError("release state belongs to another supplement")
         if state["phase"] == "PUBLISHED":
-            return self.structural_verify()
+            result = self.structural_verify()
+            progress_path = self.root / "logs" / "release-progress.json"
+            if progress_path.exists():
+                progress = json.loads(progress_path.read_text())
+                if progress.get("phase") != "PUBLISHED":
+                    progress["phase"] = "PUBLISHED"
+                    progress["updated_at"] = datetime.now(UTC).isoformat()
+                    _durable_atomic_json(progress_path, progress)
+            return result
 
         staging = self.root / "staging" / "data"
         published = self.root / "published" / "data"
-        if state["phase"] in {"DEEP_SCAN", "ARTIFACTS_SEALED"} and published.exists():
+        if state["phase"] == "DEEP_SCAN" and published.exists():
             raise ValueError("published data exists before DATA_RENAMED state")
         if state["phase"] == "DEEP_SCAN":
+            if self.adoption is not None:
+                shard_root = self.root / self.adoption.shard_root_relative_path
+                adopted_hashes = {
+                    item.relative_path: item.physical_sha256 for item in self.adoption.shards
+                }
+            else:
+                shard_root = (
+                    self.root / "tmp" / "release-sealed-shards" / self.supplement.manifest_hash
+                )
+                adopted_hashes = None
             catalog, analysis = single_scan_release(
                 staging,
                 run_root=self.root,
@@ -498,31 +568,34 @@ class ReleaseRecovery:
                 checkpoint=checkpoint,
                 manifest_hash=self.supplement.source_execution_manifest_hash,
                 progress_path=self.root / "logs" / "release-progress.json",
-                shard_root=(
-                    self.root / "tmp" / "release-sealed-shards" / self.supplement.manifest_hash
-                ),
+                shard_root=shard_root,
+                sealed_shard_hashes=adopted_hashes,
             )
             if analysis["quality"]["status"] != "PASS":
                 self._fail(checkpoint, analysis)
                 raise ValueError("Stage 2 Group 1 Quality Report failed")
             self._seal_artifacts(catalog, analysis)
-            atomic_json(
-                state_path,
-                {"phase": "ARTIFACTS_SEALED", "supplement_hash": self.supplement.manifest_hash},
-            )
-            atomic_json(
-                self.root / "logs" / "release-state.json", json.loads(state_path.read_text())
-            )
+            self._persist_state("ARTIFACTS_SEALED")
             state["phase"] = "ARTIFACTS_SEALED"
         if state["phase"] == "ARTIFACTS_SEALED":
-            os.replace(staging, published)
-            atomic_json(
-                state_path,
-                {"phase": "DATA_RENAMED", "supplement_hash": self.supplement.manifest_hash},
-            )
-            atomic_json(
-                self.root / "logs" / "release-state.json", json.loads(state_path.read_text())
-            )
+            if published.exists() and not staging.exists():
+                self.structural_verify()
+            elif not staging.exists() or published.exists():
+                raise ValueError("ambiguous release paths before rename intent")
+            self._persist_state("RENAME_INTENT_WRITTEN")
+            state["phase"] = "RENAME_INTENT_WRITTEN"
+        if state["phase"] == "RENAME_INTENT_WRITTEN":
+            if staging.exists() and not published.exists():
+                published.parent.mkdir(parents=True, exist_ok=True)
+                _fsync_directory(published.parent)
+                os.replace(staging, published)
+                _fsync_directory(published.parent)
+            elif not staging.exists() and published.exists():
+                pass
+            else:
+                raise ValueError("ambiguous release paths after rename intent")
+            self.structural_verify()
+            self._persist_state("DATA_RENAMED")
             state["phase"] = "DATA_RENAMED"
         if state["phase"] == "DATA_RENAMED":
             result = self.structural_verify()
@@ -530,18 +603,12 @@ class ReleaseRecovery:
             checkpoint["release_supplement_hash"] = self.supplement.manifest_hash
             checkpoint["published_logical_hash"] = result["logical_hash"]
             checkpoint["published_physical_hash"] = result["physical_hash"]
-            atomic_json(checkpoint_path, checkpoint)
-            atomic_json(
-                state_path,
-                {"phase": "PUBLISHED", "supplement_hash": self.supplement.manifest_hash},
-            )
-            atomic_json(
-                self.root / "logs" / "release-state.json", json.loads(state_path.read_text())
-            )
+            _durable_atomic_json(checkpoint_path, checkpoint)
+            self._persist_state("PUBLISHED")
             progress = json.loads((self.root / "logs" / "release-progress.json").read_text())
             progress["phase"] = "PUBLISHED"
             progress["updated_at"] = datetime.now(UTC).isoformat()
-            atomic_json(self.root / "logs" / "release-progress.json", progress)
+            _durable_atomic_json(self.root / "logs" / "release-progress.json", progress)
             return result
         raise ValueError(f"unknown release state: {state['phase']}")
 
@@ -568,7 +635,7 @@ class ReleaseRecovery:
             "completed_count": 9508,
             "planned_count": 9508,
             "published": False,
-            "change_request": "CR-2026-006",
+            "change_request": self.supplement.change_request,
             "release_supplement_hash": self.supplement.manifest_hash,
         }
         _write_once(
@@ -581,15 +648,34 @@ class ReleaseRecovery:
         )
         state_path = self._state_path()
         if not state_path.exists():
-            atomic_json(
-                state_path,
-                {"phase": "DEEP_SCAN", "supplement_hash": self.supplement.manifest_hash},
+            self._persist_state("DEEP_SCAN")
+        else:
+            _durable_atomic_json(
+                self.root / "logs" / "release-state.json", json.loads(state_path.read_text())
             )
-        atomic_json(self.root / "logs" / "release-state.json", json.loads(state_path.read_text()))
         return {"status": "READY", "phase": "DEEP_SCAN", **report}
 
     def _state_path(self) -> Path:
         return self.root / "logs" / "release-states" / f"{self.supplement.manifest_hash}.json"
+
+    def _persist_state(self, phase: ReleasePhase) -> None:
+        payload = {"phase": phase, "supplement_hash": self.supplement.manifest_hash}
+        _durable_atomic_json(self._state_path(), payload)
+        _durable_atomic_json(self.root / "logs" / "release-state.json", payload)
+        _write_once(
+            self.root
+            / "reports"
+            / "release-recovery"
+            / self.supplement.manifest_hash
+            / "publication-journal"
+            / f"{phase}.json",
+            {
+                "schema_name": "stage2-release-publication-journal-v1",
+                "run_id": self.root.name,
+                "phase": phase,
+                "supplement_hash": self.supplement.manifest_hash,
+            },
+        )
 
     def _verify_source_authority(self) -> None:
         manifest_path = Path(self.supplement.source_execution_manifest_path)
@@ -600,6 +686,11 @@ class ReleaseRecovery:
             path = self.root / "reports" / f"{instrument}-{variant}-candidate-finalization.json"
             if not path.exists() or sha256_file(path) != expected:
                 raise ValueError(f"finalization report changed: {key}")
+        if self.adoption is not None:
+            for item in self.adoption.shards:
+                path = self.root / item.relative_path
+                if not path.is_file() or sha256_file(path) != item.physical_sha256:
+                    raise ValueError(f"adopted shard changed: {item.relative_path}")
 
     def _seal_artifacts(self, catalog: dict[str, Any], analysis: dict[str, Any]) -> None:
         _write_once(self.root / "manifests" / "catalog.json", catalog)
@@ -657,8 +748,9 @@ class ReleaseRecovery:
     def _fail(self, checkpoint: dict[str, Any], analysis: dict[str, Any]) -> None:
         checkpoint["status"] = "FAILED_UNPUBLISHED"
         checkpoint["failed"].append({"key": "RELEASE_RECOVERY", "error": analysis["quality"]})
-        atomic_json(self.root / "checkpoint.json", checkpoint)
-        _write_once(self.root / "reports" / "quality-report-failed-cr-2026-006.json", analysis)
+        _durable_atomic_json(self.root / "checkpoint.json", checkpoint)
+        suffix = self.supplement.change_request.lower()
+        _write_once(self.root / "reports" / f"quality-report-failed-{suffix}.json", analysis)
 
 
 def _write_once(path: Path, payload: dict[str, Any]) -> None:
@@ -667,4 +759,44 @@ def _write_once(path: Path, payload: dict[str, Any]) -> None:
         if existing != payload:
             raise FileExistsError(f"append-only artifact exists: {path}")
         return
-    atomic_json(path, payload)
+    _durable_atomic_json(path, payload)
+
+
+def _durable_atomic_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    raw = (json.dumps(payload, sort_keys=True, indent=2) + "\n").encode("utf-8")
+    with temporary.open("wb") as stream:
+        stream.write(raw)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temporary, path)
+    _fsync_directory(path.parent)
+
+
+def _fsync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+@contextmanager
+def _single_writer_lock(path: Path) -> Iterator[None]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor = os.open(path, os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise RuntimeError("release recovery already has an active writer") from exc
+        os.ftruncate(descriptor, 0)
+        os.write(descriptor, f"pid={os.getpid()}\n".encode())
+        os.fsync(descriptor)
+        yield
+    finally:
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+        finally:
+            os.close(descriptor)

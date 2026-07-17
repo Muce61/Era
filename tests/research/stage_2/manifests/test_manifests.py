@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -8,6 +9,7 @@ from era100x.research.stage_2.manifests.configuration import config_hash, parame
 from era100x.research.stage_2.manifests.models import (
     Stage2ExecutionManifest,
     Stage2ReleaseSupplementManifest,
+    Stage2ShardAdoptionManifest,
 )
 from era100x.research.stage_2.manifests.preflight import estimate_peak_bytes
 from era100x.research.stage_2.manifests.repository import AppendOnlyManifestRepository
@@ -162,6 +164,87 @@ def test_release_supplement_is_stable_and_binds_all_finalizers() -> None:
         Stage2ReleaseSupplementManifest.seal(
             {**payload, "finalization_report_hashes": {"BTCUSDT/V1_PRICE": "a" * 64}}
         )
+
+
+def test_cr009_release_requires_stable_shard_adoption() -> None:
+    shard = {
+        "relative_path": "tmp/release-sealed-shards/old/BTCUSDT-V1_PRICE-sweeps.json",
+        "physical_sha256": "1" * 64,
+        "inventory_fingerprint": "2" * 64,
+        "instrument": "BTCUSDT",
+        "variant": "V1_PRICE",
+        "dataset": "sweeps",
+        "entry_count": 2376,
+    }
+    aggregate = hashlib.sha256()
+    shards = []
+    for index in range(26):
+        item = {
+            **shard,
+            "relative_path": f"tmp/release-sealed-shards/old/{index:02d}.json",
+            "physical_sha256": f"{index + 1:064x}",
+        }
+        shards.append(item)
+        aggregate.update(item["relative_path"].encode())
+        aggregate.update(b"\0")
+        aggregate.update(bytes.fromhex(item["physical_sha256"]))
+    adoption = Stage2ShardAdoptionManifest.seal(
+        {
+            "schema_name": "stage2-release-shard-adoption-v1",
+            "manifest_version": "1.0",
+            "change_request": "CR-2026-009",
+            "source_run_id": "run-a",
+            "source_checkpoint_hash": "3" * 64,
+            "previous_release_supplement_hash": "4" * 64,
+            "previous_release_tool_commit": "a" * 40,
+            "adoption_tool_commit": "b" * 40,
+            "shard_root_relative_path": "tmp/release-sealed-shards/old",
+            "shards": tuple(shards),
+            "aggregate_sha256": aggregate.hexdigest(),
+            "prohibited_actions": ("MODIFY_ADOPTED_SHARDS",),
+        }
+    )
+    assert adoption.manifest_hash == adoption.computed_hash()
+
+    payload = {
+        "schema_name": "stage2-group1-release-supplement",
+        "manifest_version": "1.1",
+        "operation": "RELEASE_EXISTING_STAGING",
+        "change_request": "CR-2026-009",
+        "source_run_id": "run-a",
+        "source_execution_manifest_hash": "5" * 64,
+        "source_execution_manifest_physical_sha256": "6" * 64,
+        "source_execution_manifest_path": "/immutable/execution.json",
+        "generator_commit": "c" * 40,
+        "generator_tree_hash": "7" * 64,
+        "release_tool_commit": "d" * 40,
+        "release_tool_tree_hash": "8" * 64,
+        "quality_gate_evidence_hash": "9" * 64,
+        "stage1_data_run_id": "stage1",
+        "stage1_logical_hashes": {"BTCUSDT": "a" * 64, "ETHUSDT": "b" * 64},
+        "preregistration_manifest_hash": "c" * 64,
+        "config_hash": "d" * 64,
+        "source_checkpoint_hash": "3" * 64,
+        "planned_count": 9508,
+        "completed_count": 9508,
+        "failed_count": 0,
+        "finalization_report_hashes": {
+            "BTCUSDT/V1_PRICE": "e" * 64,
+            "BTCUSDT/V1_FLOW": "f" * 64,
+            "ETHUSDT/V1_PRICE": "1" * 64,
+            "ETHUSDT/V1_FLOW": "2" * 64,
+        },
+        "release_progress_path": "logs/release-progress.json",
+        "prohibited_actions": ("REGENERATE_SOURCE_EVENTS",),
+        "previous_release_supplement_hash": "4" * 64,
+        "shard_adoption_manifest_hash": adoption.manifest_hash,
+        "shard_adoption_manifest_physical_sha256": "e" * 64,
+        "shard_adoption_manifest_path": "/immutable/adoption.json",
+    }
+    supplement = Stage2ReleaseSupplementManifest.seal(payload)
+    assert supplement.manifest_hash == supplement.computed_hash()
+    with pytest.raises(ValueError, match="shard-adoption"):
+        Stage2ReleaseSupplementManifest.seal({**payload, "shard_adoption_manifest_path": None})
 
 
 def test_version_separated_execution_requires_both_tree_hashes() -> None:

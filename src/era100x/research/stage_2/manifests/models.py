@@ -243,9 +243,9 @@ class Stage2ReleaseSupplementManifest(FrozenModel):
     """
 
     schema_name: Literal["stage2-group1-release-supplement"]
-    manifest_version: Literal["1.0"]
+    manifest_version: Literal["1.0", "1.1"]
     operation: Literal["RELEASE_EXISTING_STAGING"]
-    change_request: Literal["CR-2026-006"]
+    change_request: Literal["CR-2026-006", "CR-2026-009"]
     source_run_id: str = Field(min_length=1)
     source_execution_manifest_hash: str = Field(pattern=SHA256_PATTERN)
     source_execution_manifest_physical_sha256: str = Field(pattern=SHA256_PATTERN)
@@ -266,6 +266,12 @@ class Stage2ReleaseSupplementManifest(FrozenModel):
     finalization_report_hashes: dict[str, str]
     release_progress_path: str
     prohibited_actions: tuple[str, ...]
+    previous_release_supplement_hash: str | None = Field(default=None, pattern=SHA256_PATTERN)
+    shard_adoption_manifest_hash: str | None = Field(default=None, pattern=SHA256_PATTERN)
+    shard_adoption_manifest_physical_sha256: str | None = Field(
+        default=None, pattern=SHA256_PATTERN
+    )
+    shard_adoption_manifest_path: str | None = None
     manifest_hash: str = Field(pattern=SHA256_PATTERN)
 
     def computed_hash(self) -> str:
@@ -295,6 +301,75 @@ class Stage2ReleaseSupplementManifest(FrozenModel):
             for value in self.finalization_report_hashes.values()
         ):
             raise ValueError("invalid finalization report hash")
+        hardened = self.manifest_version == "1.1" or self.change_request == "CR-2026-009"
+        adoption = (
+            self.previous_release_supplement_hash,
+            self.shard_adoption_manifest_hash,
+            self.shard_adoption_manifest_physical_sha256,
+            self.shard_adoption_manifest_path,
+        )
+        if hardened and not all(adoption):
+            raise ValueError("CR-2026-009 release requires complete shard-adoption authority")
+        if not hardened and any(adoption):
+            raise ValueError("v1.0 release supplement cannot bind shard adoption")
+        return self
+
+    @classmethod
+    def seal(cls, payload: dict[str, Any]) -> Self:
+        unsealed = dict(payload)
+        unsealed["manifest_hash"] = "0" * 64
+        provisional = cls.model_validate(unsealed)
+        return provisional.model_copy(update={"manifest_hash": provisional.computed_hash()})
+
+
+class ReleaseShardBinding(FrozenModel):
+    relative_path: str = Field(min_length=1)
+    physical_sha256: str = Field(pattern=SHA256_PATTERN)
+    inventory_fingerprint: str = Field(pattern=SHA256_PATTERN)
+    instrument: Literal["BTCUSDT", "ETHUSDT"]
+    variant: Literal["V1_PRICE", "V1_FLOW"]
+    dataset: str = Field(min_length=1)
+    entry_count: int = Field(ge=1)
+
+
+class Stage2ShardAdoptionManifest(FrozenModel):
+    """Append-only CR-2026-009 authority for adopting immutable release shards."""
+
+    schema_name: Literal["stage2-release-shard-adoption-v1"]
+    manifest_version: Literal["1.0"]
+    change_request: Literal["CR-2026-009"]
+    source_run_id: str = Field(min_length=1)
+    source_checkpoint_hash: str = Field(pattern=SHA256_PATTERN)
+    previous_release_supplement_hash: str = Field(pattern=SHA256_PATTERN)
+    previous_release_tool_commit: str = Field(min_length=40, max_length=40)
+    adoption_tool_commit: str = Field(min_length=40, max_length=40)
+    shard_root_relative_path: str = Field(min_length=1)
+    shards: tuple[ReleaseShardBinding, ...]
+    aggregate_sha256: str = Field(pattern=SHA256_PATTERN)
+    prohibited_actions: tuple[str, ...]
+    manifest_hash: str = Field(pattern=SHA256_PATTERN)
+
+    def computed_hash(self) -> str:
+        return sha256_text(
+            canonical_json(self.model_dump(mode="python", exclude={"manifest_hash"}))
+        )
+
+    @model_validator(mode="after")
+    def validate_adoption(self) -> Self:
+        if self.manifest_hash != "0" * 64 and self.manifest_hash != self.computed_hash():
+            raise ValueError("manifest_hash mismatch")
+        if len(self.shards) != 26:
+            raise ValueError("shard adoption requires exactly 26 release shards")
+        paths = [item.relative_path for item in self.shards]
+        if paths != sorted(paths) or len(paths) != len(set(paths)):
+            raise ValueError("adopted shard paths must be unique and sorted")
+        expected = hashlib.sha256()
+        for shard in self.shards:
+            expected.update(shard.relative_path.encode())
+            expected.update(b"\0")
+            expected.update(bytes.fromhex(shard.physical_sha256))
+        if expected.hexdigest() != self.aggregate_sha256:
+            raise ValueError("shard adoption aggregate mismatch")
         return self
 
     @classmethod

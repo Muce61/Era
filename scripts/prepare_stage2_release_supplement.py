@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 from pathlib import Path
 
 from era100x.research.stage_2.manifests.models import (
+    ReleaseShardBinding,
     Stage2ExecutionManifest,
     Stage2ReleaseSupplementManifest,
+    Stage2ShardAdoptionManifest,
 )
 from era100x.research.stage_2.manifests.repository import AppendOnlyManifestRepository
 from era100x.research.stage_2.pipelines.candidates.release_recovery import sha256_file
@@ -34,6 +37,10 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--quality-evidence-hash", required=True)
     result.add_argument("--run-id", default=SOURCE_RUN_ID)
     result.add_argument("--execution-manifest", type=Path)
+    result.add_argument(
+        "--change-request", choices=("CR-2026-006", "CR-2026-009"), default="CR-2026-006"
+    )
+    result.add_argument("--previous-supplement", type=Path)
     return result
 
 
@@ -77,39 +84,102 @@ def main() -> int:
         for variant in ("V1_PRICE", "V1_FLOW"):
             path = run_root / "reports" / f"{instrument}-{variant}-candidate-finalization.json"
             finalizers[f"{instrument}/{variant}"] = sha256_file(path)
-    supplement = Stage2ReleaseSupplementManifest.seal(
-        {
-            "schema_name": "stage2-group1-release-supplement",
-            "manifest_version": "1.0",
-            "operation": "RELEASE_EXISTING_STAGING",
-            "change_request": "CR-2026-006",
-            "source_run_id": args.run_id,
-            "source_execution_manifest_hash": execution_hash,
-            "source_execution_manifest_physical_sha256": execution_physical_hash,
-            "source_execution_manifest_path": str(manifest_path),
-            "generator_commit": GENERATOR_COMMIT,
-            "generator_tree_hash": generator_tree_hash,
-            "release_tool_commit": head,
-            "release_tool_tree_hash": release_tool_tree_hash,
-            "quality_gate_evidence_hash": args.quality_evidence_hash,
-            "stage1_data_run_id": execution.stage1_data_run_id,
-            "stage1_logical_hashes": execution.stage1_logical_hashes,
-            "preregistration_manifest_hash": PREREGISTRATION_HASH,
-            "config_hash": CONFIG_HASH,
-            "source_checkpoint_hash": sha256_file(checkpoint_path),
-            "planned_count": 9508,
-            "completed_count": 9508,
-            "failed_count": 0,
-            "finalization_report_hashes": finalizers,
-            "release_progress_path": "logs/release-progress.json",
-            "prohibited_actions": (
-                "REGENERATE_SOURCE_EVENTS",
-                "MODIFY_SOURCE_EXECUTION_MANIFEST",
-                "MODIFY_STAGE1",
-                "EXECUTE_S2_T11_THROUGH_S2_T20",
-            ),
-        }
-    )
+    supplement_payload = {
+        "schema_name": "stage2-group1-release-supplement",
+        "manifest_version": "1.1" if args.change_request == "CR-2026-009" else "1.0",
+        "operation": "RELEASE_EXISTING_STAGING",
+        "change_request": args.change_request,
+        "source_run_id": args.run_id,
+        "source_execution_manifest_hash": execution_hash,
+        "source_execution_manifest_physical_sha256": execution_physical_hash,
+        "source_execution_manifest_path": str(manifest_path),
+        "generator_commit": GENERATOR_COMMIT,
+        "generator_tree_hash": generator_tree_hash,
+        "release_tool_commit": head,
+        "release_tool_tree_hash": release_tool_tree_hash,
+        "quality_gate_evidence_hash": args.quality_evidence_hash,
+        "stage1_data_run_id": execution.stage1_data_run_id,
+        "stage1_logical_hashes": execution.stage1_logical_hashes,
+        "preregistration_manifest_hash": PREREGISTRATION_HASH,
+        "config_hash": CONFIG_HASH,
+        "source_checkpoint_hash": sha256_file(checkpoint_path),
+        "planned_count": 9508,
+        "completed_count": 9508,
+        "failed_count": 0,
+        "finalization_report_hashes": finalizers,
+        "release_progress_path": "logs/release-progress.json",
+        "prohibited_actions": (
+            "REGENERATE_SOURCE_EVENTS",
+            "MODIFY_SOURCE_EXECUTION_MANIFEST",
+            "MODIFY_STAGE1",
+            "EXECUTE_S2_T11_THROUGH_S2_T20",
+        ),
+    }
+    adoption_path: Path | None = None
+    adoption: Stage2ShardAdoptionManifest | None = None
+    if args.change_request == "CR-2026-009":
+        if args.previous_supplement is None:
+            raise ValueError("CR-2026-009 requires --previous-supplement")
+        previous = Stage2ReleaseSupplementManifest.model_validate_json(
+            args.previous_supplement.read_bytes()
+        )
+        if previous.manifest_hash != previous.computed_hash():
+            raise ValueError("previous release supplement changed")
+        if previous.source_run_id != args.run_id:
+            raise ValueError("previous release supplement belongs to another run")
+        shard_root = run_root / "tmp" / "release-sealed-shards" / previous.manifest_hash
+        shard_paths = sorted(
+            path for path in shard_root.glob("*.json") if not path.name.startswith("._")
+        )
+        bindings: list[ReleaseShardBinding] = []
+        for shard_path in shard_paths:
+            shard = json.loads(shard_path.read_text())
+            bindings.append(
+                ReleaseShardBinding(
+                    relative_path=str(shard_path.relative_to(run_root)),
+                    physical_sha256=sha256_file(shard_path),
+                    inventory_fingerprint=shard["inventory_fingerprint"],
+                    instrument=shard["instrument"],
+                    variant=shard["variant"],
+                    dataset=shard["dataset"],
+                    entry_count=len(shard["entries"]),
+                )
+            )
+        aggregate = hashlib.sha256()
+        for binding in bindings:
+            aggregate.update(binding.relative_path.encode())
+            aggregate.update(b"\0")
+            aggregate.update(bytes.fromhex(binding.physical_sha256))
+        adoption = Stage2ShardAdoptionManifest.seal(
+            {
+                "schema_name": "stage2-release-shard-adoption-v1",
+                "manifest_version": "1.0",
+                "change_request": "CR-2026-009",
+                "source_run_id": args.run_id,
+                "source_checkpoint_hash": sha256_file(checkpoint_path),
+                "previous_release_supplement_hash": previous.manifest_hash,
+                "previous_release_tool_commit": previous.release_tool_commit,
+                "adoption_tool_commit": head,
+                "shard_root_relative_path": str(shard_root.relative_to(run_root)),
+                "shards": tuple(bindings),
+                "aggregate_sha256": aggregate.hexdigest(),
+                "prohibited_actions": (
+                    "MODIFY_ADOPTED_SHARDS",
+                    "REGENERATE_SOURCE_EVENTS",
+                    "MODIFY_STAGE1",
+                ),
+            }
+        )
+        adoption_path = AppendOnlyManifestRepository(run_root / "manifests").publish(adoption)
+        supplement_payload.update(
+            {
+                "previous_release_supplement_hash": previous.manifest_hash,
+                "shard_adoption_manifest_hash": adoption.manifest_hash,
+                "shard_adoption_manifest_physical_sha256": sha256_file(adoption_path),
+                "shard_adoption_manifest_path": str(adoption_path),
+            }
+        )
+    supplement = Stage2ReleaseSupplementManifest.seal(supplement_payload)
     path = AppendOnlyManifestRepository(run_root / "manifests").publish(supplement)
     print(
         json.dumps(
@@ -118,6 +188,10 @@ def main() -> int:
                 "path": str(path),
                 "generator_tree_hash": generator_tree_hash,
                 "release_tool_tree_hash": release_tool_tree_hash,
+                "shard_adoption_manifest_hash": (
+                    adoption.manifest_hash if adoption is not None else None
+                ),
+                "shard_adoption_manifest_path": str(adoption_path) if adoption_path else None,
             },
             sort_keys=True,
         )

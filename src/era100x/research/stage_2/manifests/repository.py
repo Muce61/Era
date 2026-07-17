@@ -8,10 +8,16 @@ from .models import (
     Stage2ExecutionManifest,
     Stage2PreregistrationManifest,
     Stage2ReleaseSupplementManifest,
+    Stage2ShardAdoptionManifest,
     canonical_json,
 )
 
-Manifest = Stage2PreregistrationManifest | Stage2ExecutionManifest | Stage2ReleaseSupplementManifest
+Manifest = (
+    Stage2PreregistrationManifest
+    | Stage2ExecutionManifest
+    | Stage2ReleaseSupplementManifest
+    | Stage2ShardAdoptionManifest
+)
 
 
 class AppendOnlyManifestRepository:
