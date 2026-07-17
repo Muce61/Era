@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +38,30 @@ def records_logical_hash(records: list[dict[str, Any]], schema_name: str) -> str
         for record in normalized
     )
     return hashlib.sha256("\n".join(serialized).encode()).hexdigest()
+
+
+def legacy_sorted_record_bytes(
+    records: Sequence[Mapping[str, Any]],
+) -> tuple[bytes, ...]:
+    """Serialize one bounded compatibility batch for an external hash merge.
+
+    This helper exists only to preserve ``ERA_CANONICAL_JSON_ROW_V1`` while the
+    Runtime V2 producer remains Arrow-native at day scope.  Callers must bound
+    ``records``; the helper deliberately returns one sorted run rather than a
+    day-sized collection or a composable digest.
+    """
+
+    return tuple(
+        sorted(
+            json.dumps(
+                dict(record),
+                sort_keys=True,
+                separators=(",", ":"),
+                default=str,
+            ).encode("utf-8")
+            for record in records
+        )
+    )
 
 
 def write_or_verify_partition(

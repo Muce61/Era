@@ -117,6 +117,28 @@ def test_single_and_multiple_archive_months_are_catalog_authoritative(tmp_path: 
     assert "/archive=2020-02/date=2020-02-01/" in paths[1]
 
 
+def test_primary_month_archive_short_circuits_legacy_stat(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    catalog_root, published_root, authority = catalog_fixture(tmp_path)
+    original = Path.is_file
+    checked: list[str] = []
+
+    def recording_is_file(path: Path) -> bool:
+        checked.append(path.as_posix())
+        return original(path)
+
+    monkeypatch.setattr(Path, "is_file", recording_is_file)
+    Stage1TradesCatalogIndex.load(
+        catalog_run_root=catalog_root,
+        published_root=published_root,
+        authority=authority,
+    )
+
+    assert any("archive=2020-01/date=2020-01-01" in item for item in checked)
+    assert not any("archive=2020-01-01/date=2020-01-01" in item for item in checked)
+
+
 def test_daily_archive_partition_is_supported_without_glob(tmp_path: Path) -> None:
     index = load_fixture(
         tmp_path,

@@ -146,31 +146,21 @@ class Stage1TradesCatalogIndex:
             expected_month = partition_date.strftime("%Y-%m")
             if direct_match is not None:
                 path_date = direct_match.group(1)
-                bounded_candidates = (
-                    instrument_root / f"archive={expected_month}" / relative_path,
-                    instrument_root / f"archive={raw_date}" / relative_path,
-                )
-                existing_candidates = tuple(
-                    candidate.resolve() for candidate in bounded_candidates if candidate.is_file()
-                )
-                if not existing_candidates:
+                primary = instrument_root / f"archive={expected_month}" / relative_path
+                legacy = instrument_root / f"archive={raw_date}" / relative_path
+                # The approved Stage 1 layout is archive=YYYY-MM.  Do not
+                # eagerly stat the legacy archive=YYYY-MM-DD fallback for all
+                # 4,752 partitions; inspect it only when the authoritative
+                # primary path is absent.
+                if primary.is_file():
+                    path = primary.resolve()
+                elif legacy.is_file():
+                    path = legacy.resolve()
+                else:
                     raise FileNotFoundError(
                         "missing Catalog-registered Stage 1 partition: "
-                        + ", ".join(map(str, bounded_candidates))
+                        + ", ".join(map(str, (primary, legacy)))
                     )
-                if len(existing_candidates) > 1:
-                    matching_hash = tuple(
-                        candidate
-                        for candidate in existing_candidates
-                        if sha256_file(candidate) == str(entry.get("byte_sha256"))
-                    )
-                    if len(matching_hash) != 1:
-                        raise ValueError(
-                            f"ambiguous Stage 1 archive partition: {instrument} {raw_date}"
-                        )
-                    path = matching_hash[0]
-                else:
-                    path = existing_candidates[0]
                 archive_partition = path.parent.parent.name.removeprefix("archive=")
             elif archive_match is not None:
                 archive_partition, path_date = archive_match.groups()
