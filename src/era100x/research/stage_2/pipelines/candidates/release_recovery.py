@@ -578,7 +578,7 @@ class ReleaseRecovery:
 
     def _verify_source_authority(self) -> None:
         manifest_path = Path(self.supplement.source_execution_manifest_path)
-        if sha256_file(manifest_path) != self.supplement.source_execution_manifest_hash:
+        if sha256_file(manifest_path) != self.supplement.source_execution_manifest_physical_sha256:
             raise ValueError("source Execution Manifest changed")
         for key, expected in self.supplement.finalization_report_hashes.items():
             instrument, variant = key.split("/")

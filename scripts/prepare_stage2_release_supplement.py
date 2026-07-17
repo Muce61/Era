@@ -88,8 +88,9 @@ def main() -> int:
     run_root = STAGE2_ROOT / "runs" / args.run_id
     manifest_path = run_root / "manifests" / f"{EXECUTION_HASH}.json"
     execution = Stage2ExecutionManifest.model_validate_json(manifest_path.read_bytes())
-    if execution.manifest_hash != EXECUTION_HASH or sha256_file(manifest_path) != EXECUTION_HASH:
+    if execution.manifest_hash != EXECUTION_HASH or execution.computed_hash() != EXECUTION_HASH:
         raise ValueError("source Execution Manifest/hash changed")
+    execution_physical_hash = sha256_file(manifest_path)
     checkpoint_path = run_root / "checkpoint.json"
     checkpoint = json.loads(checkpoint_path.read_text())
     if (
@@ -113,6 +114,7 @@ def main() -> int:
             "change_request": "CR-2026-006",
             "source_run_id": args.run_id,
             "source_execution_manifest_hash": EXECUTION_HASH,
+            "source_execution_manifest_physical_sha256": execution_physical_hash,
             "source_execution_manifest_path": str(manifest_path),
             "generator_commit": GENERATOR_COMMIT,
             "generator_tree_hash": generator_tree_hash,

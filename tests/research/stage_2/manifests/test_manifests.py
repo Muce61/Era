@@ -131,6 +131,7 @@ def test_release_supplement_is_stable_and_binds_all_finalizers() -> None:
         "change_request": "CR-2026-006",
         "source_run_id": "run-a",
         "source_execution_manifest_hash": "1" * 64,
+        "source_execution_manifest_physical_sha256": "f" * 64,
         "source_execution_manifest_path": "/immutable/execution.json",
         "generator_commit": "a" * 40,
         "generator_tree_hash": "2" * 64,

@@ -239,6 +239,7 @@ class Stage2ReleaseSupplementManifest(FrozenModel):
     change_request: Literal["CR-2026-006"]
     source_run_id: str = Field(min_length=1)
     source_execution_manifest_hash: str = Field(pattern=SHA256_PATTERN)
+    source_execution_manifest_physical_sha256: str = Field(pattern=SHA256_PATTERN)
     source_execution_manifest_path: str = Field(min_length=1)
     generator_commit: str = Field(min_length=40, max_length=40)
     generator_tree_hash: str = Field(pattern=SHA256_PATTERN)
