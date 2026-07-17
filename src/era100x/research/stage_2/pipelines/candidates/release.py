@@ -262,7 +262,11 @@ def _finalization_summary(root: Path) -> dict[str, Any]:
     run_root = root.parents[1]
     by_pair: dict[str, dict[str, Any]] = {}
     totals: Counter[str] = Counter()
-    for path in sorted((run_root / "reports").glob("*-V1_*-candidate-finalization.json")):
+    for path in sorted(
+        path
+        for path in (run_root / "reports").glob("*-V1_*-candidate-finalization.json")
+        if not path.name.startswith("._")
+    ):
         item = json.loads(path.read_text())
         key = f"{item['instrument']}/{item['variant']}"
         by_pair[key] = item

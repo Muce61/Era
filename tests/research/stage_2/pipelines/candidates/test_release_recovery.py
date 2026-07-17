@@ -188,6 +188,11 @@ def test_scanner_ignores_appledouble_and_rejects_unregistered_dataset(tmp_path: 
     data = run_root / "staging/data"
     first = next(data.rglob("part-000.parquet"))
     (first.parent / "._part-000.parquet").write_bytes(b"metadata")
+    # exFAT may also synthesize an AppleDouble file whose name still matches
+    # the finalization-report glob.  It is execution metadata, never JSON
+    # research evidence, and must not enter the release analysis.
+    finalizer = next((run_root / "reports").glob("*-V1_*-candidate-finalization.json"))
+    (finalizer.parent / f"._{finalizer.name}").write_bytes(b"\x00\x05\x16\x07\xb0metadata")
     single_scan_release(
         data,
         run_root=run_root,
