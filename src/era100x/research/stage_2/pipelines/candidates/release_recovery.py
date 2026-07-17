@@ -475,7 +475,7 @@ class ReleaseRecovery:
         ):
             raise ValueError("source run is not 9508/9508 cleanly complete")
         self._verify_source_authority()
-        state_path = self.root / "logs" / "release-state.json"
+        state_path = self._state_path()
         state = (
             json.loads(state_path.read_text())
             if state_path.exists()
@@ -498,7 +498,9 @@ class ReleaseRecovery:
                 checkpoint=checkpoint,
                 manifest_hash=self.supplement.source_execution_manifest_hash,
                 progress_path=self.root / "logs" / "release-progress.json",
-                shard_root=self.root / "tmp" / "release-sealed-shards",
+                shard_root=(
+                    self.root / "tmp" / "release-sealed-shards" / self.supplement.manifest_hash
+                ),
             )
             if analysis["quality"]["status"] != "PASS":
                 self._fail(checkpoint, analysis)
@@ -508,12 +510,18 @@ class ReleaseRecovery:
                 state_path,
                 {"phase": "ARTIFACTS_SEALED", "supplement_hash": self.supplement.manifest_hash},
             )
+            atomic_json(
+                self.root / "logs" / "release-state.json", json.loads(state_path.read_text())
+            )
             state["phase"] = "ARTIFACTS_SEALED"
         if state["phase"] == "ARTIFACTS_SEALED":
             os.replace(staging, published)
             atomic_json(
                 state_path,
                 {"phase": "DATA_RENAMED", "supplement_hash": self.supplement.manifest_hash},
+            )
+            atomic_json(
+                self.root / "logs" / "release-state.json", json.loads(state_path.read_text())
             )
             state["phase"] = "DATA_RENAMED"
         if state["phase"] == "DATA_RENAMED":
@@ -526,6 +534,9 @@ class ReleaseRecovery:
             atomic_json(
                 state_path,
                 {"phase": "PUBLISHED", "supplement_hash": self.supplement.manifest_hash},
+            )
+            atomic_json(
+                self.root / "logs" / "release-state.json", json.loads(state_path.read_text())
             )
             progress = json.loads((self.root / "logs" / "release-progress.json").read_text())
             progress["phase"] = "PUBLISHED"
@@ -568,13 +579,17 @@ class ReleaseRecovery:
             / "user-stopped.json",
             report,
         )
-        state_path = self.root / "logs" / "release-state.json"
+        state_path = self._state_path()
         if not state_path.exists():
             atomic_json(
                 state_path,
                 {"phase": "DEEP_SCAN", "supplement_hash": self.supplement.manifest_hash},
             )
+        atomic_json(self.root / "logs" / "release-state.json", json.loads(state_path.read_text()))
         return {"status": "READY", "phase": "DEEP_SCAN", **report}
+
+    def _state_path(self) -> Path:
+        return self.root / "logs" / "release-states" / f"{self.supplement.manifest_hash}.json"
 
     def _verify_source_authority(self) -> None:
         manifest_path = Path(self.supplement.source_execution_manifest_path)

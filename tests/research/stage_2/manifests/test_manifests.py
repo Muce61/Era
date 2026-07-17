@@ -164,6 +164,30 @@ def test_release_supplement_is_stable_and_binds_all_finalizers() -> None:
         )
 
 
+def test_version_separated_execution_requires_both_tree_hashes() -> None:
+    payload = {
+        "schema_name": "stage2-group1-execution",
+        "manifest_version": "test-separated",
+        "preregistration_manifest_hash": "1" * 64,
+        "code_commit": "a" * 40,
+        "generator_code_commit": "b" * 40,
+        "generator_tree_hash": "2" * 64,
+        "release_tool_tree_hash": "3" * 64,
+        "publication_mode": "RELEASE_SUPPLEMENT_REQUIRED",
+        "fixture_logical_hash": "4" * 64,
+        "small_sample_validation_hash": "5" * 64,
+        "config_hash": "6" * 64,
+        "stage1_data_run_id": "stage1",
+        "stage1_logical_hashes": {"BTCUSDT": "7" * 64, "ETHUSDT": "8" * 64},
+        "full_run_cli": "fixture",
+        "invalidation_conditions": ("fixture",),
+    }
+    manifest = Stage2ExecutionManifest.seal(payload)
+    assert manifest.generator_code_commit == "b" * 40
+    with pytest.raises(ValueError, match="generator/release provenance"):
+        Stage2ExecutionManifest.seal({**payload, "generator_tree_hash": None})
+
+
 @pytest.mark.skipif(not OLD_EXECUTION_MANIFEST.exists(), reason="external audit manifest absent")
 def test_failed_run_execution_manifest_remains_readable() -> None:
     manifest = Stage2ExecutionManifest.model_validate_json(OLD_EXECUTION_MANIFEST.read_bytes())

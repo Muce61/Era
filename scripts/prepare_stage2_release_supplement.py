@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import subprocess
 from pathlib import Path
@@ -11,10 +10,15 @@ from pathlib import Path
 from era100x.research.stage_2.manifests.models import (
     Stage2ExecutionManifest,
     Stage2ReleaseSupplementManifest,
-    canonical_json,
 )
 from era100x.research.stage_2.manifests.repository import AppendOnlyManifestRepository
 from era100x.research.stage_2.pipelines.candidates.release_recovery import sha256_file
+from era100x.research.stage_2.pipelines.candidates.provenance import (
+    GENERATOR_PATHS,
+    RELEASE_TOOL_PATHS,
+    git_tree_entries,
+    git_tree_hash,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 STAGE2_ROOT = Path("/Volumes/FuckingLife/era100x_stage2")
@@ -23,35 +27,13 @@ GENERATOR_COMMIT = "366a541b7956030d1a0ea2b5c67b4b30e2154c76"
 EXECUTION_HASH = "71385c11e38b0e76b198e3a2ba510665a3301d052f770a8407797795e5312a4b"
 PREREGISTRATION_HASH = "6b0f66e4007b86e08b58a9b366170eeee952199baa203d7f174b2ca69478c1f9"
 CONFIG_HASH = "adb6295e210de66d1e69aa008e6161e8fef1e1fd72001ff812b68597f8c72e3f"
-GENERATOR_PATHS = (
-    "src/era100x/research/stage_2/contracts",
-    "src/era100x/research/stage_2/episodes",
-    "src/era100x/research/stage_2/gates",
-    "src/era100x/research/stage_2/key_levels",
-    "src/era100x/research/stage_2/registry",
-    "src/era100x/research/stage_2/manifests/configuration.py",
-    "src/era100x/research/stage_2/pipelines/candidates/candidate_diagnostics.py",
-    "src/era100x/research/stage_2/pipelines/candidates/candidate_finalizer.py",
-    "src/era100x/research/stage_2/pipelines/candidates/flow_phase.py",
-    "src/era100x/research/stage_2/pipelines/candidates/io.py",
-    "src/era100x/research/stage_2/pipelines/candidates/price_phase.py",
-    "src/era100x/research/stage_2/pipelines/candidates/runner.py",
-    "src/era100x/research/stage_2/pipelines/candidates/stage1_catalog.py",
-)
-RELEASE_TOOL_PATHS = (
-    "scripts/prepare_stage2_release_supplement.py",
-    "scripts/record_stage2_group1_quality_evidence.py",
-    "scripts/run_stage2_group1_candidates.py",
-    "src/era100x/research/stage_2/manifests/models.py",
-    "src/era100x/research/stage_2/manifests/repository.py",
-    "src/era100x/research/stage_2/pipelines/candidates/release_recovery.py",
-)
 
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser()
     result.add_argument("--quality-evidence-hash", required=True)
     result.add_argument("--run-id", default=SOURCE_RUN_ID)
+    result.add_argument("--execution-manifest", type=Path)
     return result
 
 
@@ -59,37 +41,26 @@ def _git(*args: str) -> str:
     return subprocess.check_output(["git", *args], cwd=ROOT, text=True).strip()
 
 
-def _tree_entries(commit: str, paths: tuple[str, ...]) -> list[dict[str, str]]:
-    output = _git("ls-tree", "-r", "--full-tree", commit, "--", *paths)
-    entries = []
-    for line in output.splitlines():
-        metadata, path = line.split("\t", 1)
-        mode, object_type, object_id = metadata.split()
-        entries.append({"mode": mode, "type": object_type, "object_id": object_id, "path": path})
-    return sorted(entries, key=lambda item: item["path"])
-
-
-def _tree_hash(entries: list[dict[str, str]]) -> str:
-    return hashlib.sha256(canonical_json(entries).encode()).hexdigest()
-
-
 def main() -> int:
     args = parser().parse_args()
     head = _git("rev-parse", "HEAD")
     if _git("status", "--porcelain"):
         raise ValueError("release supplement requires a clean worktree")
-    old_generator = _tree_entries(GENERATOR_COMMIT, GENERATOR_PATHS)
-    current_generator = _tree_entries(head, GENERATOR_PATHS)
+    old_generator = git_tree_entries(ROOT, GENERATOR_COMMIT, GENERATOR_PATHS)
+    current_generator = git_tree_entries(ROOT, head, GENERATOR_PATHS)
     if old_generator != current_generator:
         raise ValueError("event generator tree changed after Run A generation")
-    generator_tree_hash = _tree_hash(old_generator)
-    release_tool_tree_hash = _tree_hash(_tree_entries(head, RELEASE_TOOL_PATHS))
+    generator_tree_hash = git_tree_hash(old_generator)
+    release_tool_tree_hash = git_tree_hash(git_tree_entries(ROOT, head, RELEASE_TOOL_PATHS))
 
     run_root = STAGE2_ROOT / "runs" / args.run_id
-    manifest_path = run_root / "manifests" / f"{EXECUTION_HASH}.json"
+    manifest_path = args.execution_manifest or run_root / "manifests" / f"{EXECUTION_HASH}.json"
     execution = Stage2ExecutionManifest.model_validate_json(manifest_path.read_bytes())
-    if execution.manifest_hash != EXECUTION_HASH or execution.computed_hash() != EXECUTION_HASH:
+    execution_hash = execution.manifest_hash
+    if execution.computed_hash() != execution_hash:
         raise ValueError("source Execution Manifest/hash changed")
+    if (execution.generator_code_commit or GENERATOR_COMMIT) != GENERATOR_COMMIT:
+        raise ValueError("release source does not bind the approved generator commit")
     execution_physical_hash = sha256_file(manifest_path)
     checkpoint_path = run_root / "checkpoint.json"
     checkpoint = json.loads(checkpoint_path.read_text())
@@ -113,7 +84,7 @@ def main() -> int:
             "operation": "RELEASE_EXISTING_STAGING",
             "change_request": "CR-2026-006",
             "source_run_id": args.run_id,
-            "source_execution_manifest_hash": EXECUTION_HASH,
+            "source_execution_manifest_hash": execution_hash,
             "source_execution_manifest_physical_sha256": execution_physical_hash,
             "source_execution_manifest_path": str(manifest_path),
             "generator_commit": GENERATOR_COMMIT,

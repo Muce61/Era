@@ -30,6 +30,7 @@ from era100x.research.stage_2.pipelines.candidates.io import (
 )
 from era100x.research.stage_2.pipelines.candidates.price_phase import build_price_day
 from era100x.research.stage_2.pipelines.candidates.release import analyze_release
+from era100x.research.stage_2.pipelines.candidates.provenance import assert_generator_tree
 from era100x.research.stage_2.pipelines.candidates.stage1_catalog import (
     Stage1CatalogAuthority,
     Stage1TradesCatalogIndex,
@@ -221,6 +222,12 @@ class CandidateRun:
             run._assert_production_preflight(current_commit)
             if current_commit != run.manifest.code_commit:
                 raise ValueError("execution Manifest code commit does not match current HEAD")
+            if run.manifest.generator_code_commit and run.manifest.generator_tree_hash:
+                assert_generator_tree(
+                    Path(__file__).resolve().parents[6],
+                    run.manifest.generator_code_commit,
+                    run.manifest.generator_tree_hash,
+                )
             if run.stage1_index is None:
                 raise ValueError("Stage 1 Catalog index unavailable")
             run.stage1_index.assert_coverage(START, END)
@@ -252,6 +259,10 @@ class CandidateRun:
             "run_id": run_id,
             "execution_manifest_hash": run.manifest.manifest_hash,
             "code_commit": current_commit,
+            "generator_code_commit": run.manifest.generator_code_commit or current_commit,
+            "generator_tree_hash": run.manifest.generator_tree_hash,
+            "release_tool_tree_hash": run.manifest.release_tool_tree_hash,
+            "publication_mode": run.manifest.publication_mode,
             "planned": planned,
             "completed": [],
             "failed": [],
@@ -417,7 +428,7 @@ class CandidateRun:
                         day,
                         self.manifest.stage1_data_run_id,
                         self.manifest.config_hash,
-                        checkpoint["code_commit"],
+                        checkpoint["generator_code_commit"],
                         self._trade_partitions(instrument, variant, day),
                     )
                 except Exception as exc:
@@ -444,7 +455,7 @@ class CandidateRun:
                         day,
                         self.manifest.stage1_data_run_id,
                         self.manifest.config_hash,
-                        checkpoint["code_commit"],
+                        checkpoint["generator_code_commit"],
                         self._trade_partitions(instrument, variant, day),
                     )
                     if completed_key not in checkpoint["completed"]:
@@ -470,7 +481,7 @@ class CandidateRun:
                     day,
                     self.manifest.stage1_data_run_id,
                     self.manifest.config_hash,
-                    checkpoint["code_commit"],
+                    checkpoint["generator_code_commit"],
                     self._trade_partitions(instrument, variant, day),
                 )
                 futures[future] = day
@@ -578,7 +589,11 @@ class CandidateRun:
                 checkpoint["completed"].append(final_key)
                 atomic_json(self.root / "checkpoint.json", checkpoint)
         if self._all_complete(checkpoint):
-            self._publish(checkpoint)
+            if self.manifest.publication_mode == "RELEASE_SUPPLEMENT_REQUIRED":
+                checkpoint["status"] = "GENERATION_COMPLETE_AWAITING_RELEASE"
+                atomic_json(self.root / "checkpoint.json", checkpoint)
+            else:
+                self._publish(checkpoint)
         else:
             checkpoint["status"] = "PARTIAL_COMPLETE"
             atomic_json(self.root / "checkpoint.json", checkpoint)

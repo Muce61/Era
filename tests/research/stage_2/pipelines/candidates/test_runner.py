@@ -9,7 +9,7 @@ from era100x.research.stage_2.manifests.models import Stage2ExecutionManifest, c
 from era100x.research.stage_2.pipelines.candidates import runner
 
 
-def manifest(path: Path) -> Stage2ExecutionManifest:
+def manifest(path: Path, *, separated: bool = False) -> Stage2ExecutionManifest:
     item = Stage2ExecutionManifest.seal(
         {
             "schema_name": "stage2-group1-execution",
@@ -27,6 +27,16 @@ def manifest(path: Path) -> Stage2ExecutionManifest:
             ),
             "invalidation_conditions": ("test",),
         }
+        | (
+            {
+                "generator_code_commit": "b" * 40,
+                "generator_tree_hash": "7" * 64,
+                "release_tool_tree_hash": "8" * 64,
+                "publication_mode": "RELEASE_SUPPLEMENT_REQUIRED",
+            }
+            if separated
+            else {}
+        )
     )
     path.write_text(canonical_json(item.model_dump(mode="python")) + "\n")
     return item
@@ -98,6 +108,30 @@ def test_failed_partition_is_not_published(tmp_path: Path, monkeypatch: pytest.M
     assert (run.root / "reports" / "failure.json").exists()
     with pytest.raises(ValueError, match="terminal run"):
         run.execute("BTCUSDT", "V1_PRICE", resume=True)
+
+
+def test_version_separated_run_defers_publication_for_release_supplement(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest_path = tmp_path / "execution.json"
+    manifest(manifest_path, separated=True)
+    monkeypatch.setattr(runner, "STAGE2_ROOT", tmp_path / "stage2")
+    monkeypatch.setattr(runner, "dates", lambda: [date(2020, 1, 1)])
+    monkeypatch.setenv("ERA_STAGE2_WORKERS", "1")
+    monkeypatch.setattr(runner, "build_price_day", lambda **_kwargs: {"candidate_attempts": []})
+    monkeypatch.setattr(
+        runner,
+        "build_flow_day",
+        lambda **_kwargs: {"flow_features": [], "candidate_attempts": []},
+    )
+    run = runner.CandidateRun.preflight("run-separated", manifest_path)
+    for instrument in ("BTCUSDT", "ETHUSDT"):
+        for variant in ("V1_PRICE", "V1_FLOW"):
+            run.execute(instrument, variant, resume=False)  # type: ignore[arg-type]
+    checkpoint = run._checkpoint()
+    assert checkpoint["status"] == "GENERATION_COMPLETE_AWAITING_RELEASE"
+    assert checkpoint["generator_code_commit"] == "b" * 40
+    assert not (run.root / "published" / "data").exists()
 
 
 def test_finalization_conflict_records_terminal_unpublished_failure(

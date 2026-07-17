@@ -185,6 +185,10 @@ class Stage2ExecutionManifest(FrozenModel):
     manifest_version: str
     preregistration_manifest_hash: str = Field(pattern=SHA256_PATTERN)
     code_commit: str = Field(min_length=40, max_length=40)
+    generator_code_commit: str | None = Field(default=None, min_length=40, max_length=40)
+    generator_tree_hash: str | None = Field(default=None, pattern=SHA256_PATTERN)
+    release_tool_tree_hash: str | None = Field(default=None, pattern=SHA256_PATTERN)
+    publication_mode: Literal["INLINE_LEGACY", "RELEASE_SUPPLEMENT_REQUIRED"] = "INLINE_LEGACY"
     fixture_logical_hash: str = Field(pattern=SHA256_PATTERN)
     small_sample_validation_hash: str = Field(pattern=SHA256_PATTERN)
     config_hash: str = Field(pattern=SHA256_PATTERN)
@@ -215,6 +219,11 @@ class Stage2ExecutionManifest(FrozenModel):
             raise ValueError("manifest_hash mismatch")
         if self.recovery is not None and self.recovery.fix_code_commit != self.code_commit:
             raise ValueError("recovery fix commit must equal execution code commit")
+        separated = self.publication_mode == "RELEASE_SUPPLEMENT_REQUIRED"
+        if separated and not all(
+            (self.generator_code_commit, self.generator_tree_hash, self.release_tool_tree_hash)
+        ):
+            raise ValueError("separated publication requires generator/release provenance")
         return self
 
     @classmethod

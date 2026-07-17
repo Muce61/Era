@@ -10,10 +10,18 @@ from pathlib import Path
 
 from era100x.research.stage_2.manifests.models import Stage2ExecutionManifest
 from era100x.research.stage_2.manifests.repository import AppendOnlyManifestRepository
+from era100x.research.stage_2.pipelines.candidates.provenance import (
+    GENERATOR_PATHS,
+    RELEASE_TOOL_PATHS,
+    git_tree_entries,
+    git_tree_hash,
+)
 
 PREREGISTRATION_HASH = "6b0f66e4007b86e08b58a9b366170eeee952199baa203d7f174b2ca69478c1f9"
 CONFIG_HASH = "adb6295e210de66d1e69aa008e6161e8fef1e1fd72001ff812b68597f8c72e3f"
 FAILED_RUN_ID = "stage2-g1-full-a-20260716T122601Z-0247d30f9f62"
+GENERATOR_COMMIT = "366a541b7956030d1a0ea2b5c67b4b30e2154c76"
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def main() -> int:
@@ -35,12 +43,21 @@ def main() -> int:
     evidence = json.loads(raw)
     if evidence.get("status") != "PASS" or evidence.get("code_commit") != head:
         raise ValueError("quality evidence does not bind the current passing HEAD")
+    generator_entries = git_tree_entries(ROOT, GENERATOR_COMMIT, GENERATOR_PATHS)
+    if generator_entries != git_tree_entries(ROOT, head, GENERATOR_PATHS):
+        raise ValueError("current event generator tree differs from approved Run A generator")
+    generator_tree_hash = git_tree_hash(generator_entries)
+    release_tool_tree_hash = git_tree_hash(git_tree_entries(ROOT, head, RELEASE_TOOL_PATHS))
     manifest = Stage2ExecutionManifest.seal(
         {
             "schema_name": "stage2-group1-execution",
-            "manifest_version": "1.3-cr-2026-005-dual-full-build",
+            "manifest_version": "1.4-cr-2026-006-version-separated",
             "preregistration_manifest_hash": PREREGISTRATION_HASH,
             "code_commit": head,
+            "generator_code_commit": GENERATOR_COMMIT,
+            "generator_tree_hash": generator_tree_hash,
+            "release_tool_tree_hash": release_tool_tree_hash,
+            "publication_mode": "RELEASE_SUPPLEMENT_REQUIRED",
             "fixture_logical_hash": (
                 "2fcb1602c86207e7e81c419178acfa9249482231ba26de2e6e80b7603bc7dcf6"
             ),
