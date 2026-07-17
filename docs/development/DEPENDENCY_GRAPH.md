@@ -42,4 +42,20 @@ S2-T01～T19 PASS → T20
 
 S2-T19 is the first preregistration capability and has no dependency on another Stage 2 Task. S2-T01～T09 own fixture capability only; S2-T10 exclusively owns full candidate generation. The graph must remain acyclic and all Stage 2 Task references must resolve before approval.
 
-Approval state after ADR-S2-004 and ADR-S2-005: Plan v1.2 and Group 1 Task v1.3 (S2-T19, S2-T01～S2-T10) are APPROVED / NOT_EXECUTED; Groups 2～4 remain DRAFT. CR-2026-002 changes no dependency edge. The DAG remains acyclic; S2-T19 remains first and S2-T10 remains the sole full candidate builder.
+Current approval state: Plan v1.2 remains APPROVED, S2-T19 and S2-T01～S2-T09 are PASSED, and
+S2-T10 v1.8 is APPROVED / IN_PROGRESS. Groups 2～4 remain DRAFT and unexecuted. CR-2026-007 and
+CR-2026-008 change no dependency edge. The DAG remains acyclic; S2-T19 remains first and S2-T10
+remains the sole full candidate builder.
+
+### S2-T10 v1.8 internal hybrid execution
+
+```text
+isolated CR-2026-006 Run A release child ───────────────┐
+                                                        ├→ exact semantic comparison → S2-T10 PASS
+Stage 1 + locked prereg/config + CR-2026-007/008         │
+  → complete Feature Foundation → fresh V2 Run B ───────┘
+```
+
+The legacy CR-2026-006 parent and its legacy Run B are suppressed. These are internal phases of
+S2-T10, not additional Task nodes, and do not authorize S2-T11 through S2-T20. A Run A failure, V2
+Foundation failure, Run B failure or semantic mismatch stops S2-T10; no branch can rescue another.

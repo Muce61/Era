@@ -108,7 +108,14 @@ Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～
 
 ## Stage 2 Plan v1.2 APPROVED Coverage
 
-Stage 2 is `IN_PROGRESS / S2_T10_V1_7_RELEASE_RECOVERY_IN_PROGRESS`. [CR-2026-006](changes/CR-2026-006.md) approves an L2 release-tool/generator-version separation without changing Stage 1, preregistration, config, parameters or candidate semantics. The fixed v1.6 Run A completed 9508/9508 generation items, was user-stopped during publication and has no published data; only this run's staging is specially authorized for release-only recovery. Earlier failed runs remain immutable and unusable. Run B and dual-run evidence are not yet complete. Groups 2～4 remain DRAFT and were not executed.
+Stage 2 is `IN_PROGRESS / S2_T10_V1_8_HYBRID_RUN_A_RELEASE_AND_V2_PREPARATION_AUTHORIZED`.
+[CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
+approve a bounded hybrid transition without changing Stage 1, preregistration, config, parameters,
+candidate semantics or the Plan v1.2 DAG. The isolated CR-2026-006 Run A release child remains
+authorized; its legacy parent is stopped and must not create a legacy Run B. A fresh V2 Run B must
+build the complete Feature Foundation from frozen Stage 1 input, reconstruct all Group-1 output
+and pass exact layout-independent semantic comparison with formal Run A. Earlier failed runs remain
+immutable and unusable. Groups 2～4 remain DRAFT and were not executed.
 
 | Requirement | Plan v1.2 Tasks | Planned implementation/tests | State |
 | --- | --- | --- | --- |
@@ -128,7 +135,9 @@ Stage 2 is `IN_PROGRESS / S2_T10_V1_7_RELEASE_RECOVERY_IN_PROGRESS`. [CR-2026-00
 | S2-T08 v1.3 delivered evidence | S2-T08 | Trades-only G4 facts/tests and `validations/stage_2/S2-T08.md` | PASSED |
 | MarketEpisode identity, consume and re-arm | S2-T09 | fixture-only `episodes/identity`; FI-14, UT-EVT-011 | APPROVED_NOT_EXECUTED |
 | S2-T09 v1.4 identity correction | S2-T09 | CR-2026-004 canonical candidate identity/payload hash while preserving FROZEN MarketEpisode identity; `validations/stage_2/CR-2026-004.md` | PASSED |
-| Registry-driven full candidate generation; BTC/ETH, variant and Primary/Exploratory separate | S2-T10 v1.7 | CR-2026-006 supplement Manifest, single-scan release recovery and read-only progress; generator semantics remain v1.6 | IN_PROGRESS; RELEASE-ONLY RUN A RECOVERY |
+| Registry-driven full candidate generation; BTC/ETH, variant and Primary/Exploratory separate | S2-T10 v1.8 | CR-2026-006 formal Run A release child; CR-2026-007 Feature Foundation and fresh V2 Run B; CR-2026-008 exact semantic comparison | IN_PROGRESS; HYBRID TRANSITION |
+| Shared causal Feature Foundation, content DAG, receipts and layout-independent Catalog | S2-T10 v1.8 | `CR-2026-007`; `ADR-S2-006`; current approved setup/context/variants only | APPROVED_IN_PROGRESS |
+| Cross-implementation determinism and future Feature Snapshot Tier F/E/D protocol | S2-T10 v1.8; future separately approved Tasks | `CR-2026-008`; `ADR-S2-006`; current full Run-A/Run-B comparison plus future approval boundary | APPROVED_NOT_VALIDATED |
 | Group-1 small-sample integration | S2-T01～S2-T09 | fixture chain plus six controlled real windows; locked execution Manifest | PASSED |
 | Historical path metrics and labels | S2-T11, S2-T12, S2-T13, S2-T14 | v2 ordering, MFE/MAE/time, first passage, AMBIGUOUS bounds | DRAFT_NOT_APPROVED |
 | Conditional baseline and placebo | S2-T15, S2-T16 | matched baseline/placebo with frozen relaxation and seeds | DRAFT_NOT_APPROVED |
@@ -138,3 +147,9 @@ Stage 2 is `IN_PROGRESS / S2_T10_V1_7_RELEASE_RECOVERY_IN_PROGRESS`. [CR-2026-00
 Trade Identity v2 propagation is explicit: `(instrument, canonical_trade_id)` is the historical fact identity; `venue_trade_id` is only a venue attribute; ordering is `(ts_event_ns, venue_trade_id, canonical_trade_id)`; confirmed conflicting venue IDs remain separate facts and enter sensitivity/quality reporting. No Stage 2 task may deduplicate by venue ID or filter conflict-labelled facts without an approved L3 change.
 
 Research extensibility is bounded: only the V1.3.4 key-low sweep/reclaim/hold family is approved for Group 1; preregistered G1 context models may be added through the registry without altering MarketEpisode consumption. New strategy families remain outside this Plan. The former S2-T21 draft is folded into draft S2-T20 reporting acceptance and is not an additional business dependency. Approval never promotes a PLANNED implementation path to IMPLEMENTED.
+
+The Feature Foundation and Tier F/E/D protocol are internal S2-T10 v1.8 engineering and
+validation contracts, not new Task nodes. They add no edge to the Plan v1.2 DAG, do not create
+S2-T21/S2-T22/S2-T23 and do not authorize S2-T11 through S2-T20. Future event definitions require
+their own approved Task and preregistration even when they reuse an already frozen Feature
+Snapshot.

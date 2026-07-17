@@ -3,17 +3,17 @@
 ## Metadata
 
 - task_id: S2-T10
-- task_version: 1.7
+- task_version: 1.8
 - status: IN_PROGRESS
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
-- dependencies: S2-T01 PASS; S2-T02 PASS; S2-T03 PASS; S2-T04 PASS; S2-T05 PASS; S2-T06 PASS; S2-T07 PASS; S2-T08 PASS; S2-T09 PASS; S2-T19 PASS; locked Group-1 Manifest
-- supersedes: task_version 1.6
+- dependencies: S2-T01 PASS; S2-T02 PASS; S2-T03 PASS; S2-T04 PASS; S2-T05 PASS; S2-T06 PASS; S2-T07 PASS; S2-T08 PASS; S2-T09 PASS; S2-T19 PASS; locked Group-1 Manifest; CR-2026-007 APPROVED; CR-2026-008 APPROVED
+- supersedes: task_version 1.7
 - approved_by: Muce
-- approved_at: 2026-07-16T19:26:41+08:00
-- execution_started_at: 2026-07-16T20:06:27+08:00
+- approved_at: 2026-07-17T19:09:18+08:00
+- execution_started_at: 2026-07-17T19:09:18+08:00
 
 ## 1. 目标
 
@@ -84,27 +84,18 @@ Stage 2 Plan v1.2 与本 Task 均已人工批准；依赖项有真实 validation
 
 ## 17. 开放问题
 
-CR-2026-004 已由Muce按L2批准：旧identity conflict按包含实际OFAT参数与时间组合的新
-canonical candidate identity拆分。修复、前50日双重放和全部质量门通过前，不得冻结新
-Execution Manifest或启动recovery run。
+CR-2026-004 and CR-2026-005 are RESOLVED / IMPLEMENTED / VALIDATED. Their identity and unique
+Sweep-start-minute ownership corrections remain binding and are not reopened by v1.8.
 
-CR-2026-005 is OPEN_PENDING_HUMAN_DECISION after the first v1.5 Run A found two
-same-canonical-identity/different-payload groups during BTC PRICE finalization. No resume, new
-Execution Manifest, replacement Run A or Run B is permitted until Muce selects the event/snapshot
-ownership disposition.
+CR-2026-006 remains APPROVED / IN_PROGRESS only for the already-running release child of source
+Run A `stage2-g1-full-a-20260716T144233Z-366a541b7956`. The legacy CR-2026-006 parent is stopped
+and must not create its planned legacy Run B.
 
-Muce approved CR-2026-005 Option A at L2. v1.6 may implement and validate unique UTC Sweep-start
-minute ownership plus terminal failure recording. This approval does not authorize a formal
-Execution Manifest or full run.
-
-CR-2026-005 Option A is now IMPLEMENTED / VALIDATED / READY_FOR_RESOLUTION. The bounded
-2020-04-26～2020-04-28 diagnostic replay is deterministic with zero identity conflicts. v1.6 is
-APPROVED_FOR_REEXECUTION, but no formal Execution Manifest or new full run is authorized until a
-separate Muce approval.
-
-Muce subsequently resolved CR-2026-005 and authorized one new locked Execution Manifest plus
-fresh, independent v1.6 Run A and Run B builds. No prior PRICE staging may be reused. This
-authorization ends at S2-T10 deterministic acceptance and does not authorize S2-T11～S2-T20.
+Muce approved [CR-2026-007](../../changes/CR-2026-007.md) and
+[CR-2026-008](../../changes/CR-2026-008.md). S2-T10 v1.8 therefore keeps the Run A release child,
+builds the complete Feature Foundation, performs a fresh V2 Group-1 reconstruction as Run B, and
+requires exact layout-independent semantic equivalence before PASS. This approval changes no
+Plan v1.2 dependency edge and does not authorize S2-T11～S2-T20.
 
 ## 18. 变化触发器
 
@@ -115,6 +106,11 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 依赖 Task/Stage 重开、输入哈希变化、映射规则变化、验收测试被推翻或产物不可复现时标记 INVALIDATED，不得继续作为有效证据。
 
 ## 20. 变更历史
+
+- 2026-07-17：v1.8，Muce批准CR-2026-007与CR-2026-008的混合切换：当前Run A发布子进程
+  继续，旧CR-2026-006父流程及其legacy Run B停止；新的Run B必须从冻结Stage 1完整构建
+  Feature Foundation并全量重算Group 1，随后与正式Run A执行逐owner-day精确语义比较。
+  Plan v1.2分组和Task DAG不变，Task保持IN_PROGRESS。
 
 - 2026-07-17：v1.7，Muce批准CR-2026-006 L2发布工具版本分离。固定复用已完成
   9508/9508的v1.6 Run A staging，仅以append-only supplement、单扫描可恢复发布器完成深度
@@ -151,7 +147,14 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 ## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
 
 - 数据与能力边界：仅从Stage 1 published baseline全量生成宽松候选；由已批准ResearchSetup/ContextModel注册表驱动，核心编排器不得按具体行情类型分支硬编码；BTC/ETH、setup/context、V1_PRICE/V1_FLOW分run，输出append-only。
-- 允许修改路径：`src/era100x/research/stage_2/pipelines/candidates/`、`tests/research/stage_2/pipelines/candidates/`、经T19冻结的单一候选CLI，以及本Task validation/TRACEABILITY。禁止修改Stage 1实现/数据、\`docs/spec/**\`和Stage 3+。
+- 允许修改路径：`src/era100x/research/stage_2/features/foundation/`、现有Stage 2 registry的
+  最小扩展、`src/era100x/research/stage_2/runtime_v2/`、
+  `src/era100x/research/stage_2/pipelines/v2/`、
+  `src/era100x/research/stage_2/pipelines/candidates/`及其对应
+  `tests/research/stage_2/`路径；还允许V2固定入口
+  `scripts/run_stage2_research.py`、经S2-T19冻结的V1候选CLI、V2
+  Manifest/Catalog/receipt、本Task validation和Traceability。禁止修改Stage 1实现/数据、
+  `docs/spec/**`和Stage 3+。
 - 验证命令：\`uv run python -m pytest tests/research/stage_2/pipelines/candidates -q\`；\`uv run python scripts/run_quality_gate.py\`。全量研究CLI须由S2-T19冻结后再写入Task新版本，不得当前虚构。
 - 验收标准：全量coverage/hash/manifest一致，无staging输入、无跨标的/跨setup/context证据混合、无重复episode、未知setup硬失败、所有尝试版本入账；同一MarketEpisode不能因setup/context不同而重复消费；仅fixture不得PASS。
 - 证据模式：\`FULL_DATA_REQUIRED\`。无论fixture能力是否可验收，Stage 1最终PASSED与VALID data baseline之前均不得执行本Task。
@@ -162,4 +165,38 @@ S2-T10只能只读消费S2-T19锁定且引用[ADR-S2-004](../../decisions/ADR-S2
 
 ## 23. ADR-S2-005事件构造绑定
 
-This Task is the sole full-data builder and uses only `uv run python scripts/run_stage2_group1_candidates.py {preflight,run,resume,verify}`. Run accepts a locked manifest, instrument and variant only; resume requires identical hashes; verify is read-only. No later-stage labels, metrics or research conclusions are produced.
+For the immutable V1 Run A compatibility path, this Task uses only
+`uv run python scripts/run_stage2_group1_candidates.py {preflight,run,resume,verify}`. That V1
+command remains bound to its locked Manifest and is not the V2 Run B interface.
+
+S2-T10 v1.8 Run B must use the fixed V2 entry point
+`uv run python scripts/run_stage2_research.py {preflight,build-foundation,run-group1,resume,verify,compare}`.
+Every mutating subcommand requires the locked V2 Execution Manifest; resume requires identical
+content keys and hashes; verify and compare are read-only. No later-stage labels, metrics or
+research conclusions are produced.
+
+## 24. CR-2026-007 V2平台绑定
+
+S2-T10 v1.8 may build only the Feature Foundation, fail-closed registry, content-addressed build
+graph, logical owner-day receipts, layout-independent Catalog and current Group-1 compatibility
+projection defined by [ADR-S2-006](../../decisions/ADR-S2-006-hybrid-v2-feature-foundation.md).
+Only the already approved setup, context and variants may execute. The Foundation must preserve
+causal availability and Stage 1 evidence capability; physical compaction cannot change logical
+ownership or merge instruments, variants, research roles or parameter sets.
+
+The current Run A release child remains isolated and immutable. A fresh V2 Run B must begin from
+the frozen Stage 1 authorities, publish the complete Foundation, reconstruct every Group-1
+partition and produce the full compatibility projection. No Run A artifact may be reused as a
+Run B input.
+
+## 25. CR-2026-008确定性验收绑定
+
+Run A and Run B may differ in file count, physical path, compression and byte hash, but every
+canonical owner-day projection must match exactly in row count, empty state, canonical logical
+hash, ID association, payload hash, ownership, inclusion and registered distributions. Any
+semantic mismatch fails S2-T10; sampling or tolerance is forbidden.
+
+Future event Tasks, only after separate approval, must follow Tier F/E/D. An event whose
+primitives already exist in a frozen Feature Snapshot performs two complete event computations
+from that snapshot and must not rescan raw Stage 1 Trades. A missing primitive blocks execution
+until a separately approved Foundation extension is built and validated.
