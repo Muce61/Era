@@ -4,9 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .models import Stage2ExecutionManifest, Stage2PreregistrationManifest, canonical_json
+from .models import (
+    Stage2ExecutionManifest,
+    Stage2PreregistrationManifest,
+    Stage2ReleaseSupplementManifest,
+    canonical_json,
+)
 
-Manifest = Stage2PreregistrationManifest | Stage2ExecutionManifest
+Manifest = Stage2PreregistrationManifest | Stage2ExecutionManifest | Stage2ReleaseSupplementManifest
 
 
 class AppendOnlyManifestRepository:

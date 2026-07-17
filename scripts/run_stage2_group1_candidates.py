@@ -9,6 +9,8 @@ from typing import cast
 
 from era100x.research.stage_2.pipelines.candidates.runner import CandidateRun, Instrument, Variant
 from era100x.research.stage_2.pipelines.candidates.release import semantic_comparison
+from era100x.research.stage_2.pipelines.candidates.release_recovery import ReleaseRecovery
+from era100x.research.stage_2.pipelines.candidates.runner import STAGE2_ROOT, dates
 
 
 def parser() -> argparse.ArgumentParser:
@@ -27,11 +29,25 @@ def parser() -> argparse.ArgumentParser:
     verify.add_argument("--run-id", required=True)
     verify.add_argument("--manifest", type=Path, required=True)
     verify.add_argument("--compare-run-id")
+    recovery = commands.add_parser("release-recovery")
+    recovery.add_argument("--action", choices=("prepare", "run", "resume", "verify"), required=True)
+    recovery.add_argument("--run-id", required=True)
+    recovery.add_argument("--supplement", type=Path, required=True)
     return root
 
 
 def main() -> int:
     args = parser().parse_args()
+    if args.command == "release-recovery":
+        recovery = ReleaseRecovery(STAGE2_ROOT / "runs" / args.run_id, args.supplement)
+        if args.action == "prepare":
+            result = recovery.prepare()
+        elif args.action == "verify":
+            result = recovery.structural_verify()
+        else:
+            result = recovery.release(expected_partition_count=len(dates()))
+        print(json.dumps(result, sort_keys=True))
+        return 0
     if args.command == "preflight":
         run = CandidateRun.preflight(args.run_id, args.manifest)
         print(run.run_id)

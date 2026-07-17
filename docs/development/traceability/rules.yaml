@@ -2228,13 +2228,16 @@ rules:
     event_construction_decision_ref: docs/development/decisions/ADR-S2-005-event-construction-baseline.md
     change_request_ref: docs/development/changes/CR-2026-005.md
     implemented_change_request_ref: docs/development/changes/CR-2026-003.md
-    s2_t10_recovery_task_version: '1.6'
+    s2_t10_recovery_task_version: '1.7'
     cr_s2_004_status: RESOLVED_IMPLEMENTED_VALIDATED_L2
     cr_s2_004_validation: docs/development/validations/stage_2/CR-2026-004.md
     cr_s2_005_status: RESOLVED_IMPLEMENTED_VALIDATED_L2
     cr_s2_005_validation: docs/development/validations/stage_2/CR-2026-005.md
+    release_recovery_change_request_ref: docs/development/changes/CR-2026-006.md
+    cr_s2_006_status: APPROVED_L2_RELEASE_TOOL_VERSION_SEPARATION
+    cr_s2_006_validation: docs/development/validations/stage_2/CR-2026-006.md
     execution_blocker: NONE
-    execution_state: S2_T10_V1_6_DUAL_FULL_RUN_AUTHORIZED
+    execution_state: S2_T10_V1_7_RELEASE_RECOVERY_IN_PROGRESS
   state: PLANNED
 - rule_id: GATE-STAGE-3
   rule_status: FROZEN

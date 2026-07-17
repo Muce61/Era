@@ -4,10 +4,10 @@
 
 **FAIL**
 
-Recovery status: CR-2026-003 path repair IMPLEMENTED/TESTED; CR-2026-004 RESOLVED with
-validation PASS; CR-2026-005 Option A is IMPLEMENTED / VALIDATED / READY_FOR_RESOLUTION. The
-first S2-T10 v1.5 Run A remains failed unpublished. S2-T10 v1.6 is
-APPROVED_FOR_REEXECUTION, but no replacement Run A or Run B is authorized yet. This remains FAIL.
+Recovery status: CR-2026-003 and CR-2026-004 are implemented and validated; CR-2026-005 is
+RESOLVED. The current v1.6 Run A completed 9508/9508 generation items but was user-stopped during
+publication with no published data. CR-2026-006 approves release-only recovery of that staging and
+a fresh Run B; neither dual-run acceptance nor Group-1 acceptance is complete. This remains FAIL.
 
 S2-T19 and S2-T01～S2-T09 passed their directed tests and small-sample integration. S2-T10
 failed during the first full BTCUSDT Flow partition because its Stage 1 Trades physical-path

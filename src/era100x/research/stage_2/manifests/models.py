@@ -223,3 +223,73 @@ class Stage2ExecutionManifest(FrozenModel):
         unsealed["manifest_hash"] = "0" * 64
         provisional = cls.model_validate(unsealed)
         return provisional.model_copy(update={"manifest_hash": provisional.computed_hash()})
+
+
+class Stage2ReleaseSupplementManifest(FrozenModel):
+    """Append-only authority for releasing an already generated candidate tree.
+
+    This contract deliberately separates the immutable event generator provenance
+    from the release tooling provenance.  It cannot authorize generation or alter
+    the source Execution Manifest.
+    """
+
+    schema_name: Literal["stage2-group1-release-supplement"]
+    manifest_version: Literal["1.0"]
+    operation: Literal["RELEASE_EXISTING_STAGING"]
+    change_request: Literal["CR-2026-006"]
+    source_run_id: str = Field(min_length=1)
+    source_execution_manifest_hash: str = Field(pattern=SHA256_PATTERN)
+    source_execution_manifest_path: str = Field(min_length=1)
+    generator_commit: str = Field(min_length=40, max_length=40)
+    generator_tree_hash: str = Field(pattern=SHA256_PATTERN)
+    release_tool_commit: str = Field(min_length=40, max_length=40)
+    release_tool_tree_hash: str = Field(pattern=SHA256_PATTERN)
+    quality_gate_evidence_hash: str = Field(pattern=SHA256_PATTERN)
+    stage1_data_run_id: str = Field(min_length=1)
+    stage1_logical_hashes: dict[Literal["BTCUSDT", "ETHUSDT"], str]
+    preregistration_manifest_hash: str = Field(pattern=SHA256_PATTERN)
+    config_hash: str = Field(pattern=SHA256_PATTERN)
+    source_checkpoint_hash: str = Field(pattern=SHA256_PATTERN)
+    planned_count: Literal[9508]
+    completed_count: Literal[9508]
+    failed_count: Literal[0]
+    finalization_report_hashes: dict[str, str]
+    release_progress_path: str
+    prohibited_actions: tuple[str, ...]
+    manifest_hash: str = Field(pattern=SHA256_PATTERN)
+
+    def computed_hash(self) -> str:
+        return sha256_text(
+            canonical_json(self.model_dump(mode="python", exclude={"manifest_hash"}))
+        )
+
+    @model_validator(mode="after")
+    def validate_release_authority(self) -> Self:
+        if self.manifest_hash != "0" * 64 and self.manifest_hash != self.computed_hash():
+            raise ValueError("manifest_hash mismatch")
+        expected_finalizers = {
+            "BTCUSDT/V1_PRICE",
+            "BTCUSDT/V1_FLOW",
+            "ETHUSDT/V1_PRICE",
+            "ETHUSDT/V1_FLOW",
+        }
+        if set(self.finalization_report_hashes) != expected_finalizers:
+            raise ValueError("all four finalization report hashes are required")
+        if any(
+            not __import__("re").fullmatch(SHA256_PATTERN, value)
+            for value in self.stage1_logical_hashes.values()
+        ):
+            raise ValueError("invalid Stage 1 logical hash")
+        if any(
+            not __import__("re").fullmatch(SHA256_PATTERN, value)
+            for value in self.finalization_report_hashes.values()
+        ):
+            raise ValueError("invalid finalization report hash")
+        return self
+
+    @classmethod
+    def seal(cls, payload: dict[str, Any]) -> Self:
+        unsealed = dict(payload)
+        unsealed["manifest_hash"] = "0" * 64
+        provisional = cls.model_validate(unsealed)
+        return provisional.model_copy(update={"manifest_hash": provisional.computed_hash()})

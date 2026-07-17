@@ -5,7 +5,10 @@ from pathlib import Path
 import pytest
 
 from era100x.research.stage_2.manifests.configuration import config_hash, parameter_sets
-from era100x.research.stage_2.manifests.models import Stage2ExecutionManifest
+from era100x.research.stage_2.manifests.models import (
+    Stage2ExecutionManifest,
+    Stage2ReleaseSupplementManifest,
+)
 from era100x.research.stage_2.manifests.preflight import estimate_peak_bytes
 from era100x.research.stage_2.manifests.repository import AppendOnlyManifestRepository
 
@@ -118,6 +121,46 @@ OLD_EXECUTION_MANIFEST = Path(
     "/Volumes/FuckingLife/era100x_stage2/runs/stage2-g1-preregistration-v1.0/manifests/"
     "84f6fcdd2d4710fd98112dc7a39d798d0f488accb6e7b2a7962f98ba589e3b74.json"
 )
+
+
+def test_release_supplement_is_stable_and_binds_all_finalizers() -> None:
+    payload = {
+        "schema_name": "stage2-group1-release-supplement",
+        "manifest_version": "1.0",
+        "operation": "RELEASE_EXISTING_STAGING",
+        "change_request": "CR-2026-006",
+        "source_run_id": "run-a",
+        "source_execution_manifest_hash": "1" * 64,
+        "source_execution_manifest_path": "/immutable/execution.json",
+        "generator_commit": "a" * 40,
+        "generator_tree_hash": "2" * 64,
+        "release_tool_commit": "b" * 40,
+        "release_tool_tree_hash": "3" * 64,
+        "quality_gate_evidence_hash": "4" * 64,
+        "stage1_data_run_id": "stage1",
+        "stage1_logical_hashes": {"BTCUSDT": "5" * 64, "ETHUSDT": "6" * 64},
+        "preregistration_manifest_hash": "7" * 64,
+        "config_hash": "8" * 64,
+        "source_checkpoint_hash": "9" * 64,
+        "planned_count": 9508,
+        "completed_count": 9508,
+        "failed_count": 0,
+        "finalization_report_hashes": {
+            "BTCUSDT/V1_PRICE": "a" * 64,
+            "BTCUSDT/V1_FLOW": "b" * 64,
+            "ETHUSDT/V1_PRICE": "c" * 64,
+            "ETHUSDT/V1_FLOW": "d" * 64,
+        },
+        "release_progress_path": "logs/release-progress.json",
+        "prohibited_actions": ("REGENERATE_SOURCE_EVENTS",),
+    }
+    left = Stage2ReleaseSupplementManifest.seal(payload)
+    right = Stage2ReleaseSupplementManifest.seal(dict(reversed(list(payload.items()))))
+    assert left.manifest_hash == right.manifest_hash
+    with pytest.raises(ValueError, match="four finalization"):
+        Stage2ReleaseSupplementManifest.seal(
+            {**payload, "finalization_report_hashes": {"BTCUSDT/V1_PRICE": "a" * 64}}
+        )
 
 
 @pytest.mark.skipif(not OLD_EXECUTION_MANIFEST.exists(), reason="external audit manifest absent")

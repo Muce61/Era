@@ -3,14 +3,14 @@
 ## Metadata
 
 - task_id: S2-T10
-- task_version: 1.6
+- task_version: 1.7
 - status: IN_PROGRESS
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T01 PASS; S2-T02 PASS; S2-T03 PASS; S2-T04 PASS; S2-T05 PASS; S2-T06 PASS; S2-T07 PASS; S2-T08 PASS; S2-T09 PASS; S2-T19 PASS; locked Group-1 Manifest
-- supersedes: task_version 1.5
+- supersedes: task_version 1.6
 - approved_by: Muce
 - approved_at: 2026-07-16T19:26:41+08:00
 - execution_started_at: 2026-07-16T20:06:27+08:00
@@ -115,6 +115,11 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 依赖 Task/Stage 重开、输入哈希变化、映射规则变化、验收测试被推翻或产物不可复现时标记 INVALIDATED，不得继续作为有效证据。
 
 ## 20. 变更历史
+
+- 2026-07-17：v1.7，Muce批准CR-2026-006 L2发布工具版本分离。固定复用已完成
+  9508/9508的v1.6 Run A staging，仅以append-only supplement、单扫描可恢复发布器完成深度
+  校验和发布；事件生成器、研究语义、参数、Stage 1、preregistration与config均不变。
+  Run A PASS后才可创建全新的Run B；双运行验收前Task保持IN_PROGRESS。
 
 - 2026-07-16：Muce关闭CR-2026-005并授权冻结新Execution Manifest以及执行全新的Run A / Run B
   双全量确定性构建；Task恢复IN_PROGRESS，禁止复用旧staging和进入后续组。

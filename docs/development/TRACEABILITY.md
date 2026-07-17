@@ -108,7 +108,7 @@ Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～
 
 ## Stage 2 Plan v1.2 APPROVED Coverage
 
-Stage 2 is `IN_PROGRESS / S2_T10_V1_6_DUAL_FULL_RUN_AUTHORIZED`. CR-2026-004 remains RESOLVED / IMPLEMENTED / VALIDATED and S2-T09 v1.4 remains PASSED. Muce closed [CR-2026-005](changes/CR-2026-005.md) after its PASS validation and authorized one new locked Execution Manifest plus fresh independent S2-T10 v1.6 Run A / Run B builds. The failed v1.5 Run A remains unpublished and immutable; no old staging may be reused. Groups 2～4 remain DRAFT and were not executed.
+Stage 2 is `IN_PROGRESS / S2_T10_V1_7_RELEASE_RECOVERY_IN_PROGRESS`. [CR-2026-006](changes/CR-2026-006.md) approves an L2 release-tool/generator-version separation without changing Stage 1, preregistration, config, parameters or candidate semantics. The fixed v1.6 Run A completed 9508/9508 generation items, was user-stopped during publication and has no published data; only this run's staging is specially authorized for release-only recovery. Earlier failed runs remain immutable and unusable. Run B and dual-run evidence are not yet complete. Groups 2～4 remain DRAFT and were not executed.
 
 | Requirement | Plan v1.2 Tasks | Planned implementation/tests | State |
 | --- | --- | --- | --- |
@@ -128,7 +128,7 @@ Stage 2 is `IN_PROGRESS / S2_T10_V1_6_DUAL_FULL_RUN_AUTHORIZED`. CR-2026-004 rem
 | S2-T08 v1.3 delivered evidence | S2-T08 | Trades-only G4 facts/tests and `validations/stage_2/S2-T08.md` | PASSED |
 | MarketEpisode identity, consume and re-arm | S2-T09 | fixture-only `episodes/identity`; FI-14, UT-EVT-011 | APPROVED_NOT_EXECUTED |
 | S2-T09 v1.4 identity correction | S2-T09 | CR-2026-004 canonical candidate identity/payload hash while preserving FROZEN MarketEpisode identity; `validations/stage_2/CR-2026-004.md` | PASSED |
-| Registry-driven full candidate generation; BTC/ETH, variant and Primary/Exploratory separate | S2-T10 v1.6 | CR-2026-005 Option A Sweep-start-minute ownership, terminal failure evidence, dual variant finalization and prior CR regressions; v1.5 failure retained in `validations/stage_2/S2-T10.md` | IN_PROGRESS; NEW RUN A / RUN B AUTHORIZED |
+| Registry-driven full candidate generation; BTC/ETH, variant and Primary/Exploratory separate | S2-T10 v1.7 | CR-2026-006 supplement Manifest, single-scan release recovery and read-only progress; generator semantics remain v1.6 | IN_PROGRESS; RELEASE-ONLY RUN A RECOVERY |
 | Group-1 small-sample integration | S2-T01～S2-T09 | fixture chain plus six controlled real windows; locked execution Manifest | PASSED |
 | Historical path metrics and labels | S2-T11, S2-T12, S2-T13, S2-T14 | v2 ordering, MFE/MAE/time, first passage, AMBIGUOUS bounds | DRAFT_NOT_APPROVED |
 | Conditional baseline and placebo | S2-T15, S2-T16 | matched baseline/placebo with frozen relaxation and seeds | DRAFT_NOT_APPROVED |
