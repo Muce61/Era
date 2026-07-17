@@ -170,9 +170,14 @@ For the immutable V1 Run A compatibility path, this Task uses only
 command remains bound to its locked Manifest and is not the V2 Run B interface.
 
 S2-T10 v1.8 Run B must use the fixed V2 entry point
-`uv run python scripts/run_stage2_research.py {preflight,build-foundation,run-group1,resume,verify,compare}`.
+`uv run python scripts/run_stage2_research.py {preflight,build-foundation,run-group1,resume,release,verify,compare}`.
 Every mutating subcommand requires the locked V2 Execution Manifest; resume requires identical
-content keys and hashes; verify and compare are read-only. No later-stage labels, metrics or
+content keys and hashes; verify is read-only. Under CR-2026-009, compare may only write one
+append-only deterministic evidence report and therefore requires a write probe and run lock.
+The fixed operator preparation scripts are `freeze_stage2_v2_authorities.py` and
+`record_stage2_v2_quality_evidence.py`; the three `diagnose_stage2_v2_*_rss.py` scripts are
+DIAGNOSTIC_ONLY. A sealed Foundation staging authority may feed Group 1 inside the same Run B,
+while publication remains a single combined atomic snapshot. No later-stage labels, metrics or
 research conclusions are produced.
 
 ## 24. CR-2026-007 V2平台绑定
