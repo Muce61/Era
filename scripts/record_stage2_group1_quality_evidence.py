@@ -34,6 +34,7 @@ STAGE1_PUBLISHED_ROOT = (
     Path("/Volumes/FuckingLife/era100x_stage1/published/stage1-trades-v2") / STAGE1_RUN_ID
 )
 REPORT_ROOT = STAGE2_ROOT / "runs/stage2-g1-preregistration-v1.0/reports"
+CR_2026_006_SEQUENTIAL_RELEASE_AND_RUN_B_REQUIRED_BYTES = 1_345_364_951_040
 
 
 def main() -> int:
@@ -176,8 +177,9 @@ def _safety_checks() -> dict[str, Any]:
     if invalidated.get("status") != "INVALIDATED":
         errors.append("invalidated predecessor protection changed")
     free = shutil.disk_usage(STAGE2_ROOT).free
-    if free < 2_018_047_426_560:
-        errors.append(f"Run A space gate failed: {free}")
+    required_free = CR_2026_006_SEQUENTIAL_RELEASE_AND_RUN_B_REQUIRED_BYTES
+    if free < required_free:
+        errors.append(f"CR-2026-006 sequential release/Run B space gate failed: {free}")
     return {
         "errors": errors,
         "stage1_index_hash": index.logical_hash,
@@ -185,7 +187,8 @@ def _safety_checks() -> dict[str, Any]:
         "preregistration_hash": preregistration.manifest_hash,
         "config_hash": preregistration.config_hash,
         "free_bytes": free,
-        "required_free_bytes": 2_018_047_426_560,
+        "required_free_bytes": required_free,
+        "space_gate_basis": "CR-2026-006 sequential Run A release then one fresh Run B",
         "large_file_scan": "PASS" if not large else "FAIL",
         "secret_scan": "PASS" if not secret_hits else "FAIL",
         "future_leakage_output_scan": "PASS" if not output_hits else "FAIL",
