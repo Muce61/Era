@@ -275,9 +275,16 @@ class Stage2ReleaseSupplementManifest(FrozenModel):
     manifest_hash: str = Field(pattern=SHA256_PATTERN)
 
     def computed_hash(self) -> str:
-        return sha256_text(
-            canonical_json(self.model_dump(mode="python", exclude={"manifest_hash"}))
-        )
+        payload = self.model_dump(mode="python", exclude={"manifest_hash"})
+        if self.manifest_version == "1.0":
+            for field in (
+                "previous_release_supplement_hash",
+                "shard_adoption_manifest_hash",
+                "shard_adoption_manifest_physical_sha256",
+                "shard_adoption_manifest_path",
+            ):
+                payload.pop(field, None)
+        return sha256_text(canonical_json(payload))
 
     @model_validator(mode="after")
     def validate_release_authority(self) -> Self:
