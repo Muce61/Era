@@ -7,6 +7,7 @@ import hashlib
 import json
 import subprocess
 from pathlib import Path
+from typing import cast
 
 from era100x.research.stage_2.manifests.models import (
     ReleaseShardBinding,
@@ -46,6 +47,59 @@ def parser() -> argparse.ArgumentParser:
 
 def _git(*args: str) -> str:
     return subprocess.check_output(["git", *args], cwd=ROOT, text=True).strip()
+
+
+def _adopted_shard_bindings(
+    *,
+    run_root: Path,
+    previous: Stage2ReleaseSupplementManifest,
+) -> tuple[str, tuple[ReleaseShardBinding, ...]]:
+    """Verify and inherit immutable shards across supplement generations."""
+
+    if previous.manifest_version == "1.1":
+        adoption_path = Path(cast(str, previous.shard_adoption_manifest_path))
+        if not adoption_path.resolve().is_relative_to(
+            (run_root / "manifests").resolve()
+        ) or sha256_file(adoption_path) != cast(
+            str, previous.shard_adoption_manifest_physical_sha256
+        ):
+            raise ValueError("previous shard adoption authority changed")
+        prior = Stage2ShardAdoptionManifest.model_validate_json(adoption_path.read_bytes())
+        if (
+            prior.manifest_hash != previous.shard_adoption_manifest_hash
+            or prior.manifest_hash != prior.computed_hash()
+            or prior.source_run_id != run_root.name
+        ):
+            raise ValueError("previous shard adoption Manifest is invalid")
+        bindings = prior.shards
+        shard_root_relative = prior.shard_root_relative_path
+    else:
+        shard_root = run_root / "tmp" / "release-sealed-shards" / previous.manifest_hash
+        shard_paths = sorted(
+            path for path in shard_root.glob("*.json") if not path.name.startswith("._")
+        )
+        bindings = tuple(
+            ReleaseShardBinding(
+                relative_path=str(shard_path.relative_to(run_root)),
+                physical_sha256=sha256_file(shard_path),
+                inventory_fingerprint=shard["inventory_fingerprint"],
+                instrument=shard["instrument"],
+                variant=shard["variant"],
+                dataset=shard["dataset"],
+                entry_count=len(shard["entries"]),
+            )
+            for shard_path in shard_paths
+            for shard in (json.loads(shard_path.read_text()),)
+        )
+        shard_root_relative = str(shard_root.relative_to(run_root))
+    for binding in bindings:
+        shard_path = run_root / binding.relative_path
+        if (
+            not shard_path.resolve().is_relative_to(run_root.resolve())
+            or sha256_file(shard_path) != binding.physical_sha256
+        ):
+            raise ValueError(f"adopted release shard changed: {binding.relative_path}")
+    return shard_root_relative, bindings
 
 
 def main() -> int:
@@ -127,24 +181,10 @@ def main() -> int:
             raise ValueError("previous release supplement changed")
         if previous.source_run_id != args.run_id:
             raise ValueError("previous release supplement belongs to another run")
-        shard_root = run_root / "tmp" / "release-sealed-shards" / previous.manifest_hash
-        shard_paths = sorted(
-            path for path in shard_root.glob("*.json") if not path.name.startswith("._")
+        shard_root_relative, bindings = _adopted_shard_bindings(
+            run_root=run_root,
+            previous=previous,
         )
-        bindings: list[ReleaseShardBinding] = []
-        for shard_path in shard_paths:
-            shard = json.loads(shard_path.read_text())
-            bindings.append(
-                ReleaseShardBinding(
-                    relative_path=str(shard_path.relative_to(run_root)),
-                    physical_sha256=sha256_file(shard_path),
-                    inventory_fingerprint=shard["inventory_fingerprint"],
-                    instrument=shard["instrument"],
-                    variant=shard["variant"],
-                    dataset=shard["dataset"],
-                    entry_count=len(shard["entries"]),
-                )
-            )
         aggregate = hashlib.sha256()
         for binding in bindings:
             aggregate.update(binding.relative_path.encode())
@@ -160,8 +200,8 @@ def main() -> int:
                 "previous_release_supplement_hash": previous.manifest_hash,
                 "previous_release_tool_commit": previous.release_tool_commit,
                 "adoption_tool_commit": head,
-                "shard_root_relative_path": str(shard_root.relative_to(run_root)),
-                "shards": tuple(bindings),
+                "shard_root_relative_path": shard_root_relative,
+                "shards": bindings,
                 "aggregate_sha256": aggregate.hexdigest(),
                 "prohibited_actions": (
                     "MODIFY_ADOPTED_SHARDS",

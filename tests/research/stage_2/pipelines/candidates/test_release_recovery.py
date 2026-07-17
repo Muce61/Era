@@ -21,6 +21,7 @@ from era100x.research.stage_2.pipelines.candidates.release_recovery import (
     sha256_file,
     single_scan_release,
 )
+from scripts.prepare_stage2_release_supplement import _adopted_shard_bindings
 
 DAY_START = 1_577_836_800_000_000_000
 
@@ -369,3 +370,21 @@ def test_hardened_release_rejects_concurrent_writer(tmp_path: Path) -> None:
         with pytest.raises(RuntimeError, match="active writer"):
             ReleaseRecovery(run_root, supplement_path).release(expected_partition_count=1)
     assert not (run_root / "published/data").exists()
+
+
+def test_new_supplement_inherits_previous_adoption_without_copying_shards(
+    tmp_path: Path,
+) -> None:
+    run_root, supplement_path, shard_root = _hardened_recovery(tmp_path)
+    previous = Stage2ReleaseSupplementManifest.model_validate_json(supplement_path.read_bytes())
+
+    relative_root, bindings = _adopted_shard_bindings(
+        run_root=run_root,
+        previous=previous,
+    )
+
+    assert relative_root == str(shard_root.relative_to(run_root))
+    assert len(bindings) == 26
+    assert {item.relative_path for item in bindings} == {
+        str(path.relative_to(run_root)) for path in shard_root.glob("*.json")
+    }
