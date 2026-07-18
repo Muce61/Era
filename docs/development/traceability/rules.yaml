@@ -2228,7 +2228,7 @@ rules:
     event_construction_decision_ref: docs/development/decisions/ADR-S2-005-event-construction-baseline.md
     change_request_ref: docs/development/changes/CR-2026-005.md
     implemented_change_request_ref: docs/development/changes/CR-2026-003.md
-    s2_t10_recovery_task_version: '1.8'
+    s2_t10_recovery_task_version: '1.9'
     cr_s2_004_status: RESOLVED_IMPLEMENTED_VALIDATED_L2
     cr_s2_004_validation: docs/development/validations/stage_2/CR-2026-004.md
     cr_s2_005_status: RESOLVED_IMPLEMENTED_VALIDATED_L2
@@ -2248,7 +2248,7 @@ rules:
     cr_s2_010_status: APPROVED_IMPLEMENTED_VALIDATED
     cr_s2_010_validation: docs/development/validations/stage_2/CR-2026-010.md
     foundation_rss_change_request_ref: docs/development/changes/CR-2026-011.md
-    cr_s2_011_status: APPROVED_L2_RUNTIME_RESOURCE_CORRECTION
+    cr_s2_011_status: APPROVED_IMPLEMENTED_VALIDATED_L2_RUNTIME_RESOURCE_CORRECTION
     cr_s2_011_validation: docs/development/validations/stage_2/CR-2026-011.md
     formal_run_a_id: stage2-g1-full-a-20260716T144233Z-366a541b7956
     formal_run_a_status: PUBLISHED_QUALITY_PASS
@@ -2264,13 +2264,17 @@ rules:
     v2_run_b_id: stage2-g1-v2-b-20260718T092459Z-85a6a71ab953
     v2_run_b_completed_tasks: 0
     v2_run_b_published_files: 0
-    next_authorized_state_after_authority_validation: READY_FOR_CR_2026_011_IMPLEMENTATION
+    cr_s2_011_memory_profile_evidence_sha256: e722601ce60cc929693b6bde799b9c61118517127a2c3b76ead629891142b789
+    cr_s2_011_arrow_inflight_limit_bytes: 1073741824
+    cr_s2_011_current_rss_limit_bytes: 3221225472
+    cr_s2_011_peak_rss_delta_limit_bytes: 1073741824
+    next_authorized_state_after_authority_validation: READY_FOR_CR_2026_011_AUTHORITY_REFREEZE_AND_REPLACEMENT_RUN_B
     hybrid_architecture_decision_ref: docs/development/decisions/ADR-S2-006-hybrid-v2-feature-foundation.md
     plan_dag_change: NONE
     legacy_run_b_authorized: false
     later_group_execution_authorized: false
-    execution_blocker: CR_2026_011_IMPLEMENTATION_AND_VALIDATION_REQUIRED
-    execution_state: READY_FOR_CR_2026_011_IMPLEMENTATION
+    execution_blocker: REPLACEMENT_RUN_B_NOT_YET_BUILT_OR_COMPARED
+    execution_state: READY_FOR_CR_2026_011_AUTHORITY_REFREEZE_AND_REPLACEMENT_RUN_B
   state: PLANNED
 - rule_id: GATE-STAGE-3
   rule_status: FROZEN

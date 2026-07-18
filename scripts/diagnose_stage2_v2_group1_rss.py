@@ -46,6 +46,7 @@ from era100x.research.stage_2.runtime_v2.group1_pipeline import (
     _stream_owner_day_to_writers,
 )
 from era100x.research.stage_2.runtime_v2.models import MAX_PROCESS_RSS_BYTES
+from era100x.research.stage_2.runtime_v2.memory import ProcessMemoryBudget
 
 Instrument = Literal["BTCUSDT", "ETHUSDT"]
 
@@ -276,6 +277,7 @@ def _measure(args: argparse.Namespace, instrument: Instrument) -> dict[str, Any]
         for variant, dataset in GROUP1_BINDINGS
     }
     distributions: Counter[tuple[str, str]] = Counter()
+    memory_budget = ProcessMemoryBudget()
     with ThreadPoolExecutor(max_workers=3) as pool:
         max_arrow, measured_inside = _stream_owner_day_to_writers(
             config=config,
@@ -287,6 +289,7 @@ def _measure(args: argparse.Namespace, instrument: Instrument) -> dict[str, Any]
             writers=writers,
             distributions=distributions,
             compute_pool=pool,
+            memory_budget=memory_budget,
         )
     seals = {key: writer.finalize() for key, writer in sorted(writers.items())}
     peak_rss = _peak_rss_bytes()

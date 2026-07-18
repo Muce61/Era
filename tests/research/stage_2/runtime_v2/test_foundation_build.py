@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+import inspect
 from pathlib import Path
 
 import polars as pl
@@ -57,6 +58,94 @@ def test_trade_seconds_are_half_open_and_decimal_exact(tmp_path: Path) -> None:
         Decimal("0.750000000000000000"),
         Decimal("2.000000000000000000"),
     ]
+
+
+def test_trade_seconds_merge_row_groups_without_changing_semantics(tmp_path: Path) -> None:
+    source = tmp_path / "multi-row-group-trades.parquet"
+    pl.DataFrame(
+        {
+            "ts_event_ns": [
+                0,
+                500_000_000,
+                999_999_999,
+                1_000_000_000,
+                1_500_000_000,
+                2_000_000_000,
+            ],
+            "quantity": [
+                Decimal("1"),
+                Decimal("2"),
+                Decimal("3"),
+                Decimal("4"),
+                Decimal("5"),
+                Decimal("6"),
+            ],
+            "aggressor_side": ["BUY", "SELL", "BUY", "SELL", "BUY", "SELL"],
+        },
+        schema={
+            "ts_event_ns": pl.Int64,
+            "quantity": pl.Decimal(38, 18),
+            "aggressor_side": pl.String,
+        },
+    ).write_parquet(source, row_group_size=2)
+
+    table = aggregate_trade_seconds(
+        path=source,
+        instrument="ETHUSDT",
+        source_logical_hash=H,
+        expected_source_rows=6,
+    )
+
+    assert table.column("event_ts_ns").to_pylist() == [0, 1_000_000_000, 2_000_000_000]
+    assert table.column("trade_count").to_pylist() == [3, 2, 1]
+    assert table.column("aggressor_buy_qty").to_pylist() == [
+        Decimal("4.000000000000000000"),
+        Decimal("5.000000000000000000"),
+        Decimal("0E-18"),
+    ]
+    assert table.column("aggressor_sell_qty").to_pylist() == [
+        Decimal("2.000000000000000000"),
+        Decimal("4.000000000000000000"),
+        Decimal("6.000000000000000000"),
+    ]
+    assert table.column("signed_qty").to_pylist() == [
+        Decimal("2.000000000000000000"),
+        Decimal("1.000000000000000000"),
+        Decimal("-6.000000000000000000"),
+    ]
+
+
+def test_trade_seconds_reject_source_row_count_drift_across_row_groups(tmp_path: Path) -> None:
+    source = tmp_path / "row-count-drift.parquet"
+    pl.DataFrame(
+        {
+            "ts_event_ns": [0, 1_000_000_000, 2_000_000_000],
+            "quantity": [Decimal("1"), Decimal("1"), Decimal("1")],
+            "aggressor_side": ["BUY", "BUY", "BUY"],
+        },
+        schema={
+            "ts_event_ns": pl.Int64,
+            "quantity": pl.Decimal(38, 18),
+            "aggressor_side": pl.String,
+        },
+    ).write_parquet(source, row_group_size=1)
+
+    with pytest.raises(ValueError, match="source row mismatch"):
+        aggregate_trade_seconds(
+            path=source,
+            instrument="BTCUSDT",
+            source_logical_hash=H,
+            expected_source_rows=4,
+        )
+
+
+def test_trade_seconds_production_path_is_explicit_row_group_streaming() -> None:
+    source = inspect.getsource(aggregate_trade_seconds)
+
+    assert "ParquetFile" in source
+    assert "read_row_group" in source
+    assert "scan_parquet" not in source
+    assert "read_table" not in source
 
 
 def test_trade_seconds_fail_on_unknown_aggressor_side(tmp_path: Path) -> None:

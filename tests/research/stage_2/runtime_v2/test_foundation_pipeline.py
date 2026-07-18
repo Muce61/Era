@@ -38,11 +38,13 @@ from era100x.research.stage_2.runtime_v2.manifest_factory import (
     FOUNDATION_VARIANTS,
 )
 from era100x.research.stage_2.runtime_v2.models import (
-    MAX_PROCESS_RSS_BYTES,
+    MAX_PROCESS_CURRENT_RSS_BYTES,
+    MAX_PROCESS_RSS_DELTA_BYTES,
     DatasetPlan,
     DigestBinding,
     ManifestV2,
 )
+from era100x.research.stage_2.runtime_v2.memory import ProcessMemoryBudget
 
 H = "a" * 64
 DAY_NS = 86_400_000_000_000
@@ -572,20 +574,31 @@ def test_fixed_resource_and_global_object_budget() -> None:
 
 
 def test_process_rss_gate_accepts_exact_limit_and_rejects_one_byte_over() -> None:
+    current_values = iter((MAX_PROCESS_CURRENT_RSS_BYTES, MAX_PROCESS_CURRENT_RSS_BYTES))
+    peak_values = iter((100, 100 + MAX_PROCESS_RSS_DELTA_BYTES))
     at_limit = _InflightBudget(
         MAX_INFLIGHT_BYTES,
-        rss_limit=MAX_PROCESS_RSS_BYTES,
-        rss_reader=lambda: MAX_PROCESS_RSS_BYTES,
+        process_memory=ProcessMemoryBudget(
+            current_limit_bytes=MAX_PROCESS_CURRENT_RSS_BYTES,
+            delta_limit_bytes=MAX_PROCESS_RSS_DELTA_BYTES,
+            current_reader=lambda: next(current_values),
+            peak_reader=lambda: next(peak_values),
+        ),
     )
     at_limit.check(())
-    assert at_limit.rss_observed == MAX_PROCESS_RSS_BYTES
+    assert at_limit.rss_observed == 100 + MAX_PROCESS_RSS_DELTA_BYTES
 
+    current_values = iter((MAX_PROCESS_CURRENT_RSS_BYTES, MAX_PROCESS_CURRENT_RSS_BYTES + 1))
     over_limit = _InflightBudget(
         MAX_INFLIGHT_BYTES,
-        rss_limit=MAX_PROCESS_RSS_BYTES,
-        rss_reader=lambda: MAX_PROCESS_RSS_BYTES + 1,
+        process_memory=ProcessMemoryBudget(
+            current_limit_bytes=MAX_PROCESS_CURRENT_RSS_BYTES,
+            delta_limit_bytes=MAX_PROCESS_RSS_DELTA_BYTES,
+            current_reader=lambda: next(current_values),
+            peak_reader=lambda: 100,
+        ),
     )
-    with pytest.raises(MemoryError, match="process RSS"):
+    with pytest.raises(MemoryError, match="current RSS"):
         over_limit.check(())
 
 

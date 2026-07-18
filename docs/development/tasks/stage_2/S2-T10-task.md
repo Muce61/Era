@@ -107,6 +107,12 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 
 ## 20. 变更历史
 
+- 2026-07-18：v1.9，Muce批准CR-2026-011。Runtime V2 Foundation改为逐Parquet row-group
+  聚合Trades，价格、bars、row-group index与秒级结果分阶段密封并显式释放；1 GiB Arrow、
+  3 GiB当前RSS与1 GiB相对阶段基线峰值增量分别硬门控。真实失败日、跨月日及BTC/ETH
+  最大交易量日剖析和确定性重放PASS；失败Run B永久终态，仅允许最终提交冻结的新Authority
+  创建一个replacement Run B。
+
 - 2026-07-17：v1.8，Muce批准CR-2026-007与CR-2026-008的混合切换：当前Run A发布子进程
   继续，旧CR-2026-006父流程及其legacy Run B停止；新的Run B必须从冻结Stage 1完整构建
   Feature Foundation并全量重算Group 1，随后与正式Run A执行逐owner-day精确语义比较。
@@ -213,4 +219,5 @@ must preserve the 1 GiB Arrow inflight hard limit, stream authoritative Trades r
 source tables after dependent features are sealed, and enforce separately recorded current-RSS and
 baseline-relative peak-RSS gates calibrated from approved real-data profiles. This correction may
 not change any logical row, hash, identity, availability, parameter, source authority or Group-1
-comparison rule. The failed v1.8 Run B is terminal and cannot be resumed or reused.
+comparison rule. The calibrated limits are 3 GiB current RSS and 1 GiB baseline-relative peak RSS
+delta. The failed v1.8 Run B is terminal and cannot be resumed or reused.

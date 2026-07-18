@@ -18,8 +18,6 @@ from __future__ import annotations
 import hashlib
 import heapq
 import os
-import resource
-import sys
 import threading
 import uuid
 from collections import Counter
@@ -74,7 +72,8 @@ from .hashing import (
     normalize_table,
 )
 from .models import (
-    MAX_PROCESS_RSS_BYTES,
+    MAX_PROCESS_CURRENT_RSS_BYTES,
+    MAX_PROCESS_RSS_DELTA_BYTES,
     SHA256_PATTERN,
     ZERO_SHA256,
     ArtifactRef,
@@ -88,6 +87,7 @@ from .models import (
     canonical_metadata_bytes,
     metadata_sha256,
 )
+from .memory import ProcessMemoryBudget, process_peak_rss_bytes
 
 Instrument = Literal["BTCUSDT", "ETHUSDT"]
 
@@ -130,7 +130,8 @@ class Group1PipelineConfig(FrozenModel):
     compute_worker_count: Literal[3] = 3
     deterministic_writer_count: Literal[1] = 1
     max_inflight_bytes: Literal[1_073_741_824] = 1_073_741_824
-    max_process_rss_bytes: Literal[943_718_400] = MAX_PROCESS_RSS_BYTES
+    max_process_current_rss_bytes: Literal[3_221_225_472] = MAX_PROCESS_CURRENT_RSS_BYTES
+    max_process_rss_delta_bytes: Literal[1_073_741_824] = MAX_PROCESS_RSS_DELTA_BYTES
     packed_target_bytes: Literal[268_435_456] = 268_435_456
     packed_min_bytes: Literal[134_217_728] = 134_217_728
     packed_max_bytes: Literal[536_870_912] = 536_870_912
@@ -665,6 +666,10 @@ class Group1FeaturePipeline:
             checkpoints=foundation_checkpoints,
             max_inflight_bytes=config.max_inflight_bytes,
         )
+        self._memory_budget = ProcessMemoryBudget(
+            current_limit_bytes=config.max_process_current_rss_bytes,
+            delta_limit_bytes=config.max_process_rss_delta_bytes,
+        )
 
     def build(
         self,
@@ -796,7 +801,7 @@ class Group1FeaturePipeline:
                     max_rss_observed = max(
                         max_rss_observed,
                         checkpoint.max_process_rss_bytes_observed,
-                        _process_peak_rss_bytes(),
+                        process_peak_rss_bytes(),
                     )
                     distributions.update(
                         {(item.name, item.value): item.count for item in checkpoint.distributions}
@@ -817,7 +822,7 @@ class Group1FeaturePipeline:
         max_rss_observed = max(
             max_rss_observed,
             packed.max_process_rss_bytes_observed,
-            _process_peak_rss_bytes(),
+            process_peak_rss_bytes(),
         )
         self._enforce_production_rss("formal component packing")
         return Group1StreamingPipelineResult(
@@ -934,7 +939,7 @@ class Group1FeaturePipeline:
         total_object_count = 0
         receipt_count = 0
         max_observed = 0
-        max_rss_observed = _process_peak_rss_bytes()
+        max_rss_observed = process_peak_rss_bytes()
         variants = tuple(dict.fromkeys(variant for variant, _dataset in GROUP1_BINDINGS))
         for instrument in instruments:
             for variant in variants:
@@ -1018,7 +1023,7 @@ class Group1FeaturePipeline:
                 )
                 aggregate_seal_hashes.extend(item.seal_hash for item in component.seals)
                 del component
-                max_rss_observed = max(max_rss_observed, _process_peak_rss_bytes())
+                max_rss_observed = max(max_rss_observed, process_peak_rss_bytes())
                 self._enforce_production_rss("component sealing")
 
         if total_object_count > self.group1_object_budget:
@@ -1049,7 +1054,7 @@ class Group1FeaturePipeline:
             }
         )
         _write_once_model(self.config.packed_aggregate_path, aggregate)
-        max_rss_observed = max(max_rss_observed, _process_peak_rss_bytes())
+        max_rss_observed = max(max_rss_observed, process_peak_rss_bytes())
         return Group1StreamingPipelineResult(
             snapshot_id=self.snapshot_id,
             object_counts=aggregate.object_counts,
@@ -1060,11 +1065,7 @@ class Group1FeaturePipeline:
         )
 
     def _enforce_production_rss(self, phase: str) -> None:
-        peak = _process_peak_rss_bytes()
-        if peak > self.config.max_process_rss_bytes:
-            raise MemoryError(
-                f"Group-1 {phase} exceeded the {self.config.max_process_rss_bytes}-byte RSS gate"
-            )
+        self._memory_budget.check(f"Group-1 {phase}")
 
     def _build_or_resume_month(
         self,
@@ -1107,7 +1108,7 @@ class Group1FeaturePipeline:
         distributions: Counter[tuple[str, str]] = Counter()
         observed_authority: set[str] = set()
         max_observed = 0
-        max_rss_observed = _process_peak_rss_bytes()
+        max_rss_observed = process_peak_rss_bytes()
         try:
             # A single dataset spool for one owner day is the maximum Python
             # record-state unit.  Seven PRICE facts stream directly out of the
@@ -1133,6 +1134,7 @@ class Group1FeaturePipeline:
                     writers=writers,
                     distributions=distributions,
                     compute_pool=compute_pool,
+                    memory_budget=self._memory_budget,
                 )
                 max_observed = max(max_observed, day_observed)
                 max_rss_observed = max(max_rss_observed, day_rss)
@@ -1343,6 +1345,7 @@ def _stream_owner_day_to_writers(
     writers: Mapping[tuple[str, str], _MonthlyBindingWriter],
     distributions: Counter[tuple[str, str]],
     compute_pool: ThreadPoolExecutor,
+    memory_budget: ProcessMemoryBudget,
 ) -> tuple[int, int]:
     """Stream one owner day without a monolithic thirteen-dataset result."""
 
@@ -1354,6 +1357,7 @@ def _stream_owner_day_to_writers(
             instrument=instrument,
             dataset=dataset,
             owner_date=owner_date,
+            memory_budget=memory_budget,
         )
         for dataset in PRICE_DATASETS[:7]
     }
@@ -1512,7 +1516,12 @@ def _stream_owner_day_to_writers(
             writers[("V1_FLOW", dataset)].append(prepared)
         if max_arrow > config.max_inflight_bytes:
             raise MemoryError("Group-1 streamed owner-day Arrow bytes exceed 1 GiB")
-        return max_arrow, _require_rss_within_limit(config)
+        return max_arrow, _require_rss_within_limit(
+            config,
+            memory_budget,
+            phase=f"Group-1 {instrument} {owner_date.isoformat()} owner day",
+            arrow_inflight_bytes=max_arrow,
+        )
     except BaseException:
         for spool in spools.values():
             spool.close_after_failure()
@@ -1575,12 +1584,14 @@ class _DailyRecordSpool:
         instrument: Instrument,
         dataset: str,
         owner_date: date,
+        memory_budget: ProcessMemoryBudget,
     ) -> None:
         self.config = config
         self.snapshot_id = snapshot_id
         self.instrument = instrument
         self.dataset = dataset
         self.owner_date = owner_date
+        self.memory_budget = memory_budget
         self.binding = group1_dataset_binding("V1_PRICE", dataset)
         self._buffer: list[Mapping[str, Any]] = []
         self._writer: pq.ParquetWriter | None = None
@@ -1626,7 +1637,12 @@ class _DailyRecordSpool:
             source_record_count=self._row_count,
             legacy_logical_sha256=legacy_digest,
         )
-        _require_rss_within_limit(self.config)
+        _require_rss_within_limit(
+            self.config,
+            self.memory_budget,
+            phase=f"Group-1 {self.instrument} {self.owner_date.isoformat()} spool finish",
+            arrow_inflight_bytes=table.nbytes,
+        )
         self.path.unlink(missing_ok=True)
         for run in self._legacy_runs:
             run.path.unlink(missing_ok=True)
@@ -1677,7 +1693,12 @@ class _DailyRecordSpool:
             self._writer.write_table(table, row_group_size=ROW_GROUP_SIZE)
             self._row_count += table.num_rows
         self._buffer.clear()
-        _require_rss_within_limit(self.config)
+        _require_rss_within_limit(
+            self.config,
+            self.memory_budget,
+            phase=f"Group-1 {self.instrument} {self.owner_date.isoformat()} spool flush",
+            arrow_inflight_bytes=table.nbytes,
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -2467,24 +2488,20 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _process_peak_rss_bytes() -> int:
-    """Return process high-water RSS in bytes on macOS and POSIX test hosts."""
-
-    value = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
-    # Darwin reports bytes; Linux and the other supported CI POSIX hosts
-    # report KiB.  This is high-water evidence, so earlier Foundation memory is
-    # intentionally included rather than hidden by a phase-local reset.
-    return value if sys.platform == "darwin" else value * 1024
-
-
-def _require_rss_within_limit(config: Group1PipelineConfig) -> int:
-    observed = _process_peak_rss_bytes()
-    if observed > config.max_process_rss_bytes:
+def _require_rss_within_limit(
+    config: Group1PipelineConfig,
+    memory_budget: ProcessMemoryBudget,
+    *,
+    phase: str,
+    arrow_inflight_bytes: int = 0,
+) -> int:
+    if arrow_inflight_bytes > config.max_inflight_bytes:
         raise MemoryError(
-            "Group-1 process RSS exceeded the fixed 900 MiB safety gate: "
-            f"observed={observed}, limit={config.max_process_rss_bytes}"
+            "Group-1 Arrow inflight bytes exceed the fixed 1 GiB safety gate: "
+            f"observed={arrow_inflight_bytes}, limit={config.max_inflight_bytes}"
         )
-    return observed
+    sample = memory_budget.check(phase, arrow_inflight_bytes=arrow_inflight_bytes)
+    return sample.peak_rss_bytes
 
 
 def _day_start_ns(owner_date: date) -> int:

@@ -80,6 +80,7 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--transition-run-id", required=True)
     result.add_argument("--destination-run-id")
     result.add_argument("--quality-evidence", type=Path)
+    result.add_argument("--memory-evidence", type=Path)
     result.add_argument("--failure-log", type=Path)
     result.add_argument("--failed-code-commit")
     result.add_argument("--error-type", choices=("ValidationError",), default="ValidationError")
@@ -93,8 +94,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser().parse_args(argv)
     if args.action == "record-failure":
         return _record_failure(args)
-    if args.destination_run_id is None or args.quality_evidence is None:
-        raise ValueError("freeze requires --destination-run-id and --quality-evidence")
+    if (
+        args.destination_run_id is None
+        or args.quality_evidence is None
+        or args.memory_evidence is None
+    ):
+        raise ValueError(
+            "freeze requires --destination-run-id, --quality-evidence and --memory-evidence"
+        )
     transition_root = _bounded_run_root(args.transition_run_id, "stage2-g1-v2-authority-")
     destination_root = _new_destination_root(args.destination_run_id)
     head = _git("rev-parse", "HEAD")
@@ -114,6 +121,24 @@ def main(argv: Sequence[str] | None = None) -> int:
     recorded_at = quality.get("created_at")
     if not isinstance(recorded_at, str) or not recorded_at:
         raise ValueError("quality evidence created_at is missing")
+    memory_path = args.memory_evidence.resolve()
+    if (
+        not memory_path.is_file()
+        or memory_path.is_symlink()
+        or not memory_path.is_relative_to(RUNS_ROOT.resolve())
+        or not memory_path.parent.parent.name.startswith(
+            "stage2-g1-v2-memory-diagnostic-cr-2026-011-"
+        )
+    ):
+        raise ValueError("memory evidence is outside the approved diagnostic authority")
+    memory = _read_object(memory_path)
+    if (
+        memory.get("status") != "PASS"
+        or memory.get("change_request") != "CR-2026-011"
+        or memory.get("deterministic_replay") != "PASS"
+        or memory.get("semantic_regression") != "PASS"
+    ):
+        raise ValueError("CR-2026-011 memory evidence is not PASS")
 
     manifests = transition_root / "manifests"
     price_path = manifests / "contract-price-inventory-v2.json"
@@ -162,6 +187,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "contract_price_inventory": CONTRACT_PRICE_INVENTORY_SHA256,
                 CONTRACT_PRICE_MANIFEST_AUTHORITY: price.manifest_hash,
                 "runtime_v2_quality_evidence": sha256_file(quality_path),
+                "runtime_v2_memory_evidence": sha256_file(memory_path),
                 "stage1_btc_catalog": STAGE1_CATALOG_SHA256S["BTCUSDT"],
                 "stage1_eth_catalog": STAGE1_CATALOG_SHA256S["ETHUSDT"],
                 "stage1_manifest": STAGE1_MANIFEST_SHA256,
@@ -216,8 +242,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         "schema_name": "stage2-v2-authority-bundle-validation-v1",
         "validation_version": "1.0",
         "status": "PASS",
-        "change_request": "CR-2026-010",
-        "superseded_authority_change_request": "CR-2026-009",
+        "change_request": "CR-2026-011",
+        "superseded_authority_change_requests": ["CR-2026-009", "CR-2026-010"],
         "transition_run_id": args.transition_run_id,
         "reserved_destination_run_id": args.destination_run_id,
         "destination_status": "RESERVED_NOT_CREATED",
@@ -228,6 +254,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         "quality_evidence": _component_binding(
             transition_root, quality_path, sha256_file(quality_path)
         ),
+        "memory_evidence": {
+            "source_path": str(memory_path),
+            "physical_sha256": sha256_file(memory_path),
+            "diagnostic_run_id": memory["diagnostic_run_id"],
+        },
         "stage1_data_run_id": STAGE1_DATA_RUN_ID,
         "stage1_manifest_sha256": STAGE1_MANIFEST_SHA256,
         "stage1_physical_manifest_sha256": STAGE1_PHYSICAL_MANIFEST_SHA256,
@@ -283,7 +314,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 def _record_failure(args: argparse.Namespace) -> int:
     if args.failure_log is None or args.failed_code_commit is None:
         raise ValueError("record-failure requires --failure-log and --failed-code-commit")
-    if args.destination_run_id is not None or args.quality_evidence is not None:
+    if (
+        args.destination_run_id is not None
+        or args.quality_evidence is not None
+        or args.memory_evidence is not None
+    ):
         raise ValueError("record-failure does not accept freeze inputs")
     if args.failed_code_commit != FAILED_AUTHORITY_COMMIT:
         raise ValueError("failed code commit differs from the frozen failed authority")

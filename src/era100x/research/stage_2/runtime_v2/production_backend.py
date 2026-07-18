@@ -15,8 +15,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import resource
-import sys
 from collections import defaultdict
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import asdict, dataclass, is_dataclass
@@ -65,6 +63,8 @@ from .group1_pipeline import (
     Group1StreamingPipelineResult,
 )
 from .models import (
+    MAX_PROCESS_CURRENT_RSS_BYTES,
+    MAX_PROCESS_RSS_DELTA_BYTES,
     MAX_PROCESS_RSS_BYTES,
     SHA256_PATTERN,
     ZERO_SHA256,
@@ -75,6 +75,7 @@ from .models import (
     ShardSealV2,
     metadata_sha256,
 )
+from .memory import ProcessMemoryBudget, process_current_rss_bytes, process_peak_rss_bytes
 from .orchestrator import (
     FORMAL_GROUP1_PARTITION_COUNT,
     RUN_A_ID,
@@ -481,6 +482,7 @@ class ProductionRuntimeV2Backend:
         source_index_loader: SourceIndexLoader | None = None,
         run_a_root: Path = RUN_A_ROOT,
         peak_rss_reader: Callable[[], int] | None = None,
+        current_rss_reader: Callable[[], int] | None = None,
         publication_fault: Callable[[str], None] | None = None,
     ) -> None:
         self._task_builder = task_builder or self._build_production_task
@@ -493,7 +495,16 @@ class ProductionRuntimeV2Backend:
         )
         self._source_index_loader = source_index_loader or self._load_authoritative_source_indexes
         self._run_a_root = Path(run_a_root)
-        self._peak_rss_reader = peak_rss_reader or _peak_rss_bytes
+        peak_reader = peak_rss_reader or process_peak_rss_bytes
+        current_reader = current_rss_reader or (
+            peak_rss_reader if peak_rss_reader is not None else process_current_rss_bytes
+        )
+        self._memory_budget = ProcessMemoryBudget(
+            current_limit_bytes=MAX_PROCESS_CURRENT_RSS_BYTES,
+            delta_limit_bytes=MAX_PROCESS_RSS_DELTA_BYTES,
+            current_reader=current_reader,
+            peak_reader=peak_reader,
+        )
         self._publication_fault = publication_fault
         self._source_indexes: (
             tuple[Stage1TradesCatalogIndex, ContractPriceInventoryIndex] | None
@@ -710,9 +721,10 @@ class ProductionRuntimeV2Backend:
         )
 
     def _enforce_compare_rss(self, phase: str) -> None:
-        peak = self._peak_rss_reader()
-        if peak > MAX_PROCESS_RSS_BYTES:
-            raise ProductionBackendError(f"{phase} exceeded the 900 MiB production RSS threshold")
+        try:
+            self._memory_budget.check(phase)
+        except MemoryError as exc:
+            raise ProductionBackendError(str(exc)) from exc
 
     def _seal_task_result(
         self,
@@ -720,13 +732,10 @@ class ProductionRuntimeV2Backend:
         task_id: str,
         result: PipelineTaskResult,
     ) -> TaskAggregateEvidence:
-        peak_rss = self._peak_rss_reader()
+        sample = self._memory_budget.check(f"seal task {task_id}")
+        peak_rss = sample.peak_rss_bytes
         if result.max_inflight_bytes_observed > MAX_INFLIGHT_BYTES:
             raise ProductionBackendError("builder exceeded the approved 1 GiB inflight cap")
-        if peak_rss > MAX_PROCESS_RSS_BYTES:
-            raise ProductionBackendError(
-                "builder exceeded the 900 MiB production RSS safety threshold"
-            )
         distributions = _normalize_distributions(result.global_distributions or {})
         evidence = TaskAggregateEvidence.seal(
             {
@@ -808,8 +817,8 @@ class ProductionRuntimeV2Backend:
             # The publisher has already validated every component, object,
             # partition and index hash.  Reopening the 80,784-partition
             # Catalog in this same process would overlap Arrow allocator
-            # high-water state with publication metadata and breach the
-            # 900 MiB production gate.  The explicit ``verify`` CLI performs
+            # high-water state with publication metadata.  The explicit
+            # ``verify`` CLI performs
             # this reopen in a fresh read-only process after publication.
             self._write_publication_phase(context, catalog.catalog_hash, "CATALOG_SEALED")
         except CatalogIntegrityError as exc:
@@ -1152,11 +1161,7 @@ class ProductionRuntimeV2Backend:
                     component_hash=component.component_hash,
                 )
             )
-        peak_rss = self._peak_rss_reader()
-        if peak_rss > MAX_PROCESS_RSS_BYTES:
-            raise ProductionBackendError(
-                "Group-1 component sealing exceeded the 900 MiB production RSS threshold"
-            )
+        peak_rss = self._memory_budget.check("Group-1 component sealing").peak_rss_bytes
         aggregate = Group1ProductionAggregate.seal(
             {
                 "snapshot_id": context.manifest.snapshot_id,
@@ -1233,11 +1238,10 @@ class ProductionRuntimeV2Backend:
         )
         if tuple(sorted(item.task_id for item in bindings)) != tuple(sorted(GROUP1_TASKS)):
             raise ProductionBackendError("streamed Group-1 build omitted a task component")
-        peak_rss = max(self._peak_rss_reader(), result.max_process_rss_bytes_observed)
-        if peak_rss > MAX_PROCESS_RSS_BYTES:
-            raise ProductionBackendError(
-                "Group-1 streaming build exceeded the 900 MiB production RSS threshold"
-            )
+        peak_rss = max(
+            self._memory_budget.check("Group-1 streaming build").peak_rss_bytes,
+            result.max_process_rss_bytes_observed,
+        )
         distribution_map: dict[str, dict[str, int]] = {}
         for item in result.distributions:
             distribution_map.setdefault(item.name, {})[item.value] = item.count
@@ -1536,11 +1540,6 @@ def _publication_phase_path(
 ) -> Path:
     ordinal = {"CATALOG_SEALED": "01", "DATA_RENAMED": "02", "PUBLISHED": "03"}[phase]
     return run_root / "reports" / "publication-journal" / f"{ordinal}-{phase.lower()}.json"
-
-
-def _peak_rss_bytes() -> int:
-    value = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
-    return value if sys.platform == "darwin" else value * 1024
 
 
 def _jsonable(value: object) -> Any:

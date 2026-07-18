@@ -63,6 +63,8 @@ def test_operator_preparation_commands_have_no_root_or_semantic_overrides() -> N
             "stage2-g1-v2-b-test",
             "--quality-evidence",
             "/Volumes/FuckingLife/era100x_stage2/runs/evidence.json",
+            "--memory-evidence",
+            "/Volumes/FuckingLife/era100x_stage2/runs/memory.json",
         ]
     )
     assert authorities.destination_run_id == "stage2-g1-v2-b-test"
@@ -76,6 +78,8 @@ def test_operator_preparation_commands_have_no_root_or_semantic_overrides() -> N
                 "stage2-g1-v2-b-test",
                 "--quality-evidence",
                 "/Volumes/FuckingLife/era100x_stage2/runs/evidence.json",
+                "--memory-evidence",
+                "/Volumes/FuckingLife/era100x_stage2/runs/memory.json",
                 "--instrument",
                 "BTCUSDT",
             ]
@@ -100,6 +104,7 @@ def test_authority_cli_exposes_explicit_record_failure_action() -> None:
     assert args.failure_field == "archive_partition"
     assert args.destination_run_id is None
     assert args.quality_evidence is None
+    assert args.memory_evidence is None
 
 
 def test_record_failure_receipt_is_write_once(
@@ -157,6 +162,9 @@ def test_freeze_writes_deterministic_authority_bundle_receipt_without_creating_r
     destination_id = "stage2-g1-v2-b-reserved"
     transition_root = runs_root / transition_id
     quality_path = transition_root / "reports" / "quality.json"
+    memory_path = (
+        runs_root / "stage2-g1-v2-memory-diagnostic-cr-2026-011-test" / "reports" / "memory.json"
+    )
     quality_path.parent.mkdir(parents=True)
     commit = "1" * 40
     tree_sha256 = "2" * 64
@@ -167,6 +175,20 @@ def test_freeze_writes_deterministic_authority_bundle_receipt_without_creating_r
                 "code_commit": commit,
                 "runtime_v2_code_tree_sha256": tree_sha256,
                 "created_at": "2026-07-18T00:00:00Z",
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    memory_path.parent.mkdir(parents=True)
+    memory_path.write_text(
+        json.dumps(
+            {
+                "status": "PASS",
+                "change_request": "CR-2026-011",
+                "diagnostic_run_id": "stage2-g1-v2-memory-diagnostic-cr-2026-011-test",
+                "deterministic_replay": "PASS",
+                "semantic_regression": "PASS",
             },
             sort_keys=True,
         ),
@@ -272,6 +294,8 @@ def test_freeze_writes_deterministic_authority_bundle_receipt_without_creating_r
         destination_id,
         "--quality-evidence",
         str(quality_path),
+        "--memory-evidence",
+        str(memory_path),
     ]
 
     assert authority_cli.main(argv) == 0
@@ -282,8 +306,11 @@ def test_freeze_writes_deterministic_authority_bundle_receipt_without_creating_r
 
     assert receipt_path.read_bytes() == first
     assert receipt["status"] == "PASS"
-    assert receipt["change_request"] == "CR-2026-010"
-    assert receipt["superseded_authority_change_request"] == "CR-2026-009"
+    assert receipt["change_request"] == "CR-2026-011"
+    assert receipt["superseded_authority_change_requests"] == [
+        "CR-2026-009",
+        "CR-2026-010",
+    ]
     assert receipt["authority_bundle_id"].startswith("stage2-v2-authority-bundle-")
     assert receipt["reserved_destination_run_id"] == destination_id
     assert receipt["destination_status"] == "RESERVED_NOT_CREATED"

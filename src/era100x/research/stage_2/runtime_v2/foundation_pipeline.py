@@ -14,13 +14,11 @@ caller to publish after every expected month has reached a terminal checkpoint.
 from __future__ import annotations
 
 import hashlib
+import gc
 import os
-import resource
-import sys
 import threading
 import uuid
-from collections.abc import Callable
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path, PurePosixPath
@@ -63,8 +61,10 @@ from .manifest_factory import (
     FOUNDATION_SETUP_ID,
     FOUNDATION_VARIANTS,
 )
+from .memory import ProcessMemoryBudget
 from .models import (
-    MAX_PROCESS_RSS_BYTES,
+    MAX_PROCESS_CURRENT_RSS_BYTES,
+    MAX_PROCESS_RSS_DELTA_BYTES,
     SHA256_PATTERN,
     ZERO_SHA256,
     ArtifactRef,
@@ -108,7 +108,8 @@ class FoundationPipelineConfig(FrozenModel):
     compute_worker_count: Literal[3] = 3
     deterministic_writer_count: Literal[1] = 1
     max_inflight_bytes: Literal[1_073_741_824] = 1_073_741_824
-    max_process_rss_bytes: Literal[943_718_400] = MAX_PROCESS_RSS_BYTES
+    max_process_current_rss_bytes: Literal[3_221_225_472] = MAX_PROCESS_CURRENT_RSS_BYTES
+    max_process_rss_delta_bytes: Literal[1_073_741_824] = MAX_PROCESS_RSS_DELTA_BYTES
     row_group_size: Literal[262_144] = 262_144
     max_month_objects_per_feature_instrument: Literal[79] = 79
 
@@ -306,28 +307,24 @@ class _InflightBudget:
         self,
         limit: int,
         *,
-        rss_limit: int = MAX_PROCESS_RSS_BYTES,
-        rss_reader: Callable[[], int] | None = None,
+        process_memory: ProcessMemoryBudget | None = None,
     ) -> None:
         self.limit = limit
         self.observed = 0
-        self.rss_limit = rss_limit
-        self.rss_observed = 0
-        self.rss_reader = rss_reader or _peak_rss_bytes
+        self.process_memory = process_memory or ProcessMemoryBudget()
 
     def check(self, tables: tuple[pa.Table, ...]) -> None:
-        rss = self.rss_reader()
-        self.rss_observed = max(self.rss_observed, rss)
-        if rss > self.rss_limit:
-            raise MemoryError(
-                f"Feature Foundation process RSS {rss} exceeds fixed limit {self.rss_limit}"
-            )
         current = sum(table.nbytes for table in tables)
         self.observed = max(self.observed, current)
+        self.process_memory.check("Feature Foundation", arrow_inflight_bytes=current)
         if current > self.limit:
             raise MemoryError(
                 f"Feature Foundation inflight Arrow bytes {current} exceed fixed limit {self.limit}"
             )
+
+    @property
+    def rss_observed(self) -> int:
+        return self.process_memory.max_peak_rss_bytes_observed
 
 
 class FoundationSourceReader:
@@ -760,7 +757,10 @@ class FeatureFoundationPipeline:
         monthly_checkpoints: list[FoundationShardCheckpoint] = []
         budget = _InflightBudget(
             self.config.max_inflight_bytes,
-            rss_limit=self.config.max_process_rss_bytes,
+            process_memory=ProcessMemoryBudget(
+                current_limit_bytes=self.config.max_process_current_rss_bytes,
+                delta_limit_bytes=self.config.max_process_rss_delta_bytes,
+            ),
         )
         with ThreadPoolExecutor(
             max_workers=self.config.compute_worker_count,
@@ -893,47 +893,70 @@ class FeatureFoundationPipeline:
         }
         try:
             for owner_date in _dates(start, end_exclusive):
-                raw: dict[str, pa.Table] = {}
                 if _PRICE_FEATURES.intersection(missing):
                     prices = self.reader.read_price(instrument, owner_date)
-                    raw["contract_price_1s"] = prices
+                    budget.check((prices,))
+                    if "contract_price_1s" in writers:
+                        _prepare_and_append(
+                            writer=writers["contract_price_1s"],
+                            table=prices,
+                            spec=self.specs["contract_price_1s"],
+                            snapshot_id=self.snapshot_id,
+                            instrument=instrument,
+                            owner_date=owner_date,
+                            compute_pool=compute_pool,
+                            budget=budget,
+                        )
                     if "causal_price_bars" in missing:
-                        raw["causal_price_bars"] = compute_pool.submit(
-                            aggregate_price_bars, prices
-                        ).result()
-                row_groups: pa.Table | None = None
+                        bars = compute_pool.submit(aggregate_price_bars, prices).result()
+                        budget.check((prices, bars))
+                        _prepare_and_append(
+                            writer=writers["causal_price_bars"],
+                            table=bars,
+                            spec=self.specs["causal_price_bars"],
+                            snapshot_id=self.snapshot_id,
+                            instrument=instrument,
+                            owner_date=owner_date,
+                            compute_pool=compute_pool,
+                            budget=budget,
+                        )
+                        del bars
+                    del prices
+                    _release_columnar_memory()
                 if _TRADE_FEATURES.intersection(missing):
                     row_groups = self.reader.read_trade_row_groups(instrument, owner_date)
-                    if "trade_row_group_index" in missing:
-                        raw["trade_row_group_index"] = row_groups
+                    budget.check((row_groups,))
+                    expected_rows = cast(int | None, pc.sum(row_groups["row_count"]).as_py())
+                    if "trade_row_group_index" in writers:
+                        _prepare_and_append(
+                            writer=writers["trade_row_group_index"],
+                            table=row_groups,
+                            spec=self.specs["trade_row_group_index"],
+                            snapshot_id=self.snapshot_id,
+                            instrument=instrument,
+                            owner_date=owner_date,
+                            compute_pool=compute_pool,
+                            budget=budget,
+                        )
+                    del row_groups
+                    _release_columnar_memory()
                     if "trade_second_primitives" in missing:
                         trade_seconds = self.reader.read_trade_seconds(instrument, owner_date)
-                        expected_rows = cast(int | None, pc.sum(row_groups["row_count"]).as_py())
                         actual_rows = cast(int | None, pc.sum(trade_seconds["trade_count"]).as_py())
                         if (expected_rows or 0) != (actual_rows or 0):
                             raise ValueError("Trades decode row count differs from Parquet footer")
-                        raw["trade_second_primitives"] = trade_seconds
-                budget.check(tuple(raw.values()))
-                futures: dict[str, Future[_PreparedDay]] = {
-                    dataset_name: compute_pool.submit(
-                        _prepare_day,
-                        raw[dataset_name],
-                        self.specs[dataset_name],
-                        self.snapshot_id,
-                        instrument,
-                        owner_date,
-                    )
-                    for dataset_name in missing
-                }
-                prepared = {
-                    dataset_name: futures[dataset_name].result()
-                    for dataset_name in FEATURE_DATASET_NAMES
-                    if dataset_name in futures
-                }
-                budget.check(tuple(item.table for item in prepared.values()))
-                for dataset_name in FEATURE_DATASET_NAMES:
-                    if dataset_name in writers:
-                        writers[dataset_name].append(prepared[dataset_name])
+                        _prepare_and_append(
+                            writer=writers["trade_second_primitives"],
+                            table=trade_seconds,
+                            spec=self.specs["trade_second_primitives"],
+                            snapshot_id=self.snapshot_id,
+                            instrument=instrument,
+                            owner_date=owner_date,
+                            compute_pool=compute_pool,
+                            budget=budget,
+                        )
+                        del trade_seconds
+                        _release_columnar_memory()
 
             for dataset_name in FEATURE_DATASET_NAMES:
                 writer = writers.get(dataset_name)
@@ -1100,6 +1123,9 @@ class FeatureFoundationPipeline:
                         receipt.partition.owner_date
                     ]
                     writers[shard_key].append(prepared)
+                    del prepared, table
+                del monthly_table
+                _release_columnar_memory()
 
             for window_start, window_end in windows:
                 shard_key = _packed_shard_key(window_start, window_end)
@@ -1283,6 +1309,38 @@ def _prepare_day(
     )
 
 
+def _prepare_and_append(
+    *,
+    writer: _ShardObjectWriter,
+    table: pa.Table,
+    spec: DatasetSpec,
+    snapshot_id: str,
+    instrument: Instrument,
+    owner_date: date,
+    compute_pool: ThreadPoolExecutor,
+    budget: _InflightBudget,
+) -> None:
+    budget.check((table,))
+    prepared = compute_pool.submit(
+        _prepare_day,
+        table,
+        spec,
+        snapshot_id,
+        instrument,
+        owner_date,
+    ).result()
+    budget.check((table, prepared.table))
+    writer.append(prepared)
+    del prepared
+
+
+def _release_columnar_memory() -> None:
+    """Release completed source buffers before the next feature is decoded."""
+
+    gc.collect()
+    pa.default_memory_pool().release_unused()
+
+
 def _validate_day_ownership(table: pa.Table, spec: DatasetSpec, owner_date: date) -> None:
     if not table.num_rows:
         return
@@ -1401,11 +1459,6 @@ def planned_packed_object_count(
 def _empty_table(spec: DatasetSpec) -> pa.Table:
     schema = canonical_arrow_schema(spec)
     return pa.Table.from_arrays([pa.array([], type=field.type) for field in schema], schema=schema)
-
-
-def _peak_rss_bytes() -> int:
-    value = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
-    return value if sys.platform == "darwin" else value * 1024
 
 
 def _write_once_model(path: Path, model: BaseModel) -> str:

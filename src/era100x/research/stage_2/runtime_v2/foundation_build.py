@@ -9,6 +9,7 @@ from typing import Literal, cast
 
 import polars as pl
 import pyarrow as pa  # type: ignore[import-untyped]
+import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
 Instrument = Literal["BTCUSDT", "ETHUSDT"]
 SECOND_NS = 1_000_000_000
@@ -65,17 +66,57 @@ def aggregate_trade_seconds(
     source_logical_hash: str,
     expected_source_rows: int | None = None,
 ) -> pa.Table:
-    """Aggregate one authoritative Trades day exactly once using a streaming plan."""
+    """Aggregate one authoritative Trades day one Parquet row group at a time."""
 
     _require_hash(source_logical_hash, "source_logical_hash")
-    zero = pl.lit(Decimal("0"), dtype=DECIMAL)
-    source = (
-        pl.scan_parquet(path)
-        .select("ts_event_ns", "quantity", "aggressor_side")
-        .with_columns(pl.col("quantity").cast(DECIMAL))
-    )
+    parquet = pq.ParquetFile(path)
+    partials: list[pl.DataFrame] = []
+    actual_source_rows = 0
+    for ordinal in range(parquet.metadata.num_row_groups):
+        batch = parquet.read_row_group(
+            ordinal,
+            columns=("ts_event_ns", "quantity", "aggressor_side"),
+            use_threads=False,
+        )
+        actual_source_rows += batch.num_rows
+        partials.append(_aggregate_trade_frame(cast(pl.DataFrame, pl.from_arrow(batch)).lazy()))
+        del batch
+        # Keep the list bounded even for exceptional high-volume days while
+        # preserving exact Decimal sums and second ownership.
+        if len(partials) == 32:
+            partials = [_merge_trade_partials(partials)]
+    grouped = _merge_trade_partials(partials)
     grouped = (
-        source.with_columns(
+        grouped.with_columns(
+            pl.lit(instrument).alias("instrument"),
+            (pl.col("event_ts_ns") + SECOND_NS).alias("second_end_ns"),
+            (pl.col("event_ts_ns") + SECOND_NS).alias("available_at_ns"),
+            (pl.col("aggressor_buy_qty") - pl.col("aggressor_sell_qty")).alias("signed_qty"),
+            pl.lit(source_logical_hash).alias("source_logical_hash"),
+        )
+        .select(TRADE_PRIMITIVE_SCHEMA.names)
+        .sort("event_ts_ns")
+    )
+    if expected_source_rows is not None:
+        if actual_source_rows != expected_source_rows:
+            raise ValueError(
+                f"Trade primitive source row mismatch: {actual_source_rows} != "
+                f"{expected_source_rows}"
+            )
+    invalid_sides = grouped.filter(
+        pl.col("trade_count") != pl.col("aggressor_buy_count") + pl.col("aggressor_sell_count")
+    )
+    if invalid_sides.height:
+        raise ValueError("Stage 1 Trades contain an unsupported aggressor side")
+    return grouped.to_arrow().cast(TRADE_PRIMITIVE_SCHEMA)
+
+
+def _aggregate_trade_frame(source: pl.LazyFrame) -> pl.DataFrame:
+    zero = pl.lit(Decimal("0"), dtype=DECIMAL)
+    return (
+        source.select("ts_event_ns", "quantity", "aggressor_side")
+        .with_columns(pl.col("quantity").cast(DECIMAL))
+        .with_columns(
             ((pl.col("ts_event_ns") // SECOND_NS) * SECOND_NS).alias("event_ts_ns"),
             pl.when(pl.col("aggressor_side") == "BUY")
             .then(pl.col("quantity"))
@@ -96,29 +137,36 @@ def aggregate_trade_seconds(
             pl.col("_buy_qty").sum().alias("aggressor_buy_qty"),
             pl.col("_sell_qty").sum().alias("aggressor_sell_qty"),
         )
-        .with_columns(
-            pl.lit(instrument).alias("instrument"),
-            (pl.col("event_ts_ns") + SECOND_NS).alias("second_end_ns"),
-            (pl.col("event_ts_ns") + SECOND_NS).alias("available_at_ns"),
-            (pl.col("aggressor_buy_qty") - pl.col("aggressor_sell_qty")).alias("signed_qty"),
-            pl.lit(source_logical_hash).alias("source_logical_hash"),
+        .collect(engine="streaming")
+    )
+
+
+def _merge_trade_partials(partials: list[pl.DataFrame]) -> pl.DataFrame:
+    if not partials:
+        return pl.DataFrame(
+            schema={
+                "event_ts_ns": pl.Int64,
+                "trade_count": pl.UInt64,
+                "aggressor_buy_count": pl.UInt64,
+                "aggressor_sell_count": pl.UInt64,
+                "aggressor_buy_qty": DECIMAL,
+                "aggressor_sell_qty": DECIMAL,
+            }
         )
-        .select(TRADE_PRIMITIVE_SCHEMA.names)
+    return (
+        pl.concat(partials, how="vertical", rechunk=False)
+        .lazy()
+        .group_by("event_ts_ns")
+        .agg(
+            pl.col("trade_count").sum(),
+            pl.col("aggressor_buy_count").sum(),
+            pl.col("aggressor_sell_count").sum(),
+            pl.col("aggressor_buy_qty").sum(),
+            pl.col("aggressor_sell_qty").sum(),
+        )
         .sort("event_ts_ns")
         .collect(engine="streaming")
     )
-    if expected_source_rows is not None:
-        actual_rows = int(grouped["trade_count"].sum())
-        if actual_rows != expected_source_rows:
-            raise ValueError(
-                f"Trade primitive source row mismatch: {actual_rows} != {expected_source_rows}"
-            )
-    invalid_sides = grouped.filter(
-        pl.col("trade_count") != pl.col("aggressor_buy_count") + pl.col("aggressor_sell_count")
-    )
-    if invalid_sides.height:
-        raise ValueError("Stage 1 Trades contain an unsupported aggressor side")
-    return grouped.to_arrow().cast(TRADE_PRIMITIVE_SCHEMA)
 
 
 def normalize_contract_price_day(

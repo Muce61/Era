@@ -73,3 +73,19 @@ can advance only after the isolated Run A release reaches Quality PASS, the comp
 Feature Foundation and fresh V2 Run B publish with Quality PASS, and CR-2026-008 proves exact
 semantic equality for all owner-day projections. This internal platform work creates no S2-T21,
 S2-T22 or S2-T23 and authorizes no S2-T11 through S2-T20 execution.
+
+## S2-T10 v1.9 memory correction readiness
+
+Formal Run A is now PUBLISHED / Quality PASS with 61,776 Group-1 logical partitions and immutable
+logical Hash `8583f220dc880bf5b7e7ace1435ca2285e59b80dd48aa7d15bd2f8cacac60870`.
+The first V2 Run B remained `FAILED_UNPUBLISHED` with zero completed tasks after the obsolete
+absolute 900 MiB peak-RSS gate rejected its first BTC Foundation task. It has no reusable staging
+or published output.
+
+CR-2026-011's row-group Trades aggregation, sequential phase sealing/release and separate Arrow,
+current-RSS and baseline-relative RSS gates pass real-data failure-date, archive-boundary and
+highest-volume profiles. Runtime V2 181/181 and unified repository 387/387 tests pass. This makes
+one final-code Authority refreeze and one unique replacement Run B conditionally executable, but
+does not change this Validation conclusion. Group 1 remains **FAIL** until the replacement builds
+all 80,784 V2 partitions, publishes with Quality PASS and matches all 61,776 Run A Group-1
+partitions exactly.

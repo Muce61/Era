@@ -52,13 +52,15 @@ from era100x.research.stage_2.runtime_v2.manifest_factory import (
     FOUNDATION_VARIANTS,
 )
 from era100x.research.stage_2.runtime_v2.models import (
-    MAX_PROCESS_RSS_BYTES,
+    MAX_PROCESS_CURRENT_RSS_BYTES,
+    MAX_PROCESS_RSS_DELTA_BYTES,
     DatasetPlan,
     DigestBinding,
     LogicalPartitionKey,
     ManifestV2,
     QualityFact,
 )
+from era100x.research.stage_2.runtime_v2.memory import ProcessMemoryBudget
 from era100x.research.stage_2.runtime_v2 import group1_pipeline as pipeline_module
 from era100x.research.stage_2.pipelines.candidates.io import records_logical_hash
 
@@ -567,6 +569,7 @@ def test_thirty_day_spool_proxy_preserves_legacy_hash_with_bounded_daily_state(
             instrument="BTCUSDT",
             dataset="arbitration",
             owner_date=owner_date,
+            memory_budget=ProcessMemoryBudget(),
         )
         for record in records:
             spool.add(record)
@@ -598,9 +601,7 @@ def test_group1_uses_only_the_remaining_global_catalog_object_budget() -> None:
         )
 
 
-def test_group1_rss_gate_matches_production_900_mib_boundary(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_group1_memory_gates_are_independent_and_baseline_relative(tmp_path: Path) -> None:
     external = tmp_path / "external"
     external.mkdir()
     run_root = external / "rss-gate"
@@ -609,21 +610,47 @@ def test_group1_rss_gate_matches_production_900_mib_boundary(
         foundation_catalog_root=run_root / "staging" / "snapshot",
         approved_external_root=external,
     )
-    assert config.max_process_rss_bytes == MAX_PROCESS_RSS_BYTES == 900 * 1024 * 1024
+    assert config.max_process_current_rss_bytes == MAX_PROCESS_CURRENT_RSS_BYTES
+    assert config.max_process_rss_delta_bytes == MAX_PROCESS_RSS_DELTA_BYTES
 
-    monkeypatch.setattr(
-        pipeline_module,
-        "_process_peak_rss_bytes",
-        lambda: MAX_PROCESS_RSS_BYTES,
+    current_values = iter((1_700_000_000, 1_700_000_000))
+    peak_values = iter((1_700_000_000, 1_700_000_000 + MAX_PROCESS_RSS_DELTA_BYTES))
+    budget = ProcessMemoryBudget(
+        current_limit_bytes=MAX_PROCESS_CURRENT_RSS_BYTES,
+        delta_limit_bytes=MAX_PROCESS_RSS_DELTA_BYTES,
+        current_reader=lambda: next(current_values),
+        peak_reader=lambda: next(peak_values),
     )
-    assert pipeline_module._require_rss_within_limit(config) == MAX_PROCESS_RSS_BYTES
-    monkeypatch.setattr(
-        pipeline_module,
-        "_process_peak_rss_bytes",
-        lambda: MAX_PROCESS_RSS_BYTES + 1,
+    assert (
+        pipeline_module._require_rss_within_limit(
+            config,
+            budget,
+            phase="fixture",
+        )
+        == 1_700_000_000 + MAX_PROCESS_RSS_DELTA_BYTES
     )
-    with pytest.raises(MemoryError, match="900 MiB"):
-        pipeline_module._require_rss_within_limit(config)
+
+    current_values = iter((100, MAX_PROCESS_CURRENT_RSS_BYTES + 1))
+    over_current = ProcessMemoryBudget(
+        current_limit_bytes=MAX_PROCESS_CURRENT_RSS_BYTES,
+        delta_limit_bytes=MAX_PROCESS_RSS_DELTA_BYTES,
+        current_reader=lambda: next(current_values),
+        peak_reader=lambda: 100,
+    )
+    with pytest.raises(MemoryError, match="current RSS"):
+        pipeline_module._require_rss_within_limit(
+            config,
+            over_current,
+            phase="fixture",
+        )
+
+    with pytest.raises(MemoryError, match="Arrow inflight"):
+        pipeline_module._require_rss_within_limit(
+            config,
+            ProcessMemoryBudget(current_reader=lambda: 100, peak_reader=lambda: 100),
+            phase="fixture",
+            arrow_inflight_bytes=config.max_inflight_bytes + 1,
+        )
 
 
 def test_group1_rss_diagnostic_cli_is_explicitly_non_production() -> None:

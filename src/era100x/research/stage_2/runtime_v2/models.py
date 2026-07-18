@@ -18,7 +18,10 @@ from era100x.research.stage_2.manifests.models import canonical_json
 
 SHA256_PATTERN = r"^[0-9a-f]{64}$"
 ZERO_SHA256 = "0" * 64
-MAX_PROCESS_RSS_BYTES: Final[Literal[943_718_400]] = 943_718_400
+MAX_PROCESS_CURRENT_RSS_BYTES: Final[Literal[3_221_225_472]] = 3_221_225_472
+MAX_PROCESS_RSS_DELTA_BYTES: Final[Literal[1_073_741_824]] = 1_073_741_824
+# Compatibility name for evidence fields that still store absolute peak RSS.
+MAX_PROCESS_RSS_BYTES: Final[Literal[3_221_225_472]] = MAX_PROCESS_CURRENT_RSS_BYTES
 SAFE_NAME_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$"
 _DECIMAL_PATTERN = re.compile(r"^decimal(128|256)\(([1-9][0-9]?),(-?[0-9]+)\)$")
 _FIXED_BINARY_PATTERN = re.compile(r"^fixed_binary\(([1-9][0-9]*)\)$")
