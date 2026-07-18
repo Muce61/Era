@@ -108,7 +108,7 @@ Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～
 
 ## Stage 2 Plan v1.2 APPROVED Coverage
 
-Stage 2 is `IN_PROGRESS / READY_FOR_CR_2026_011_AUTHORITY_REFREEZE_AND_REPLACEMENT_RUN_B`.
+Stage 2 is `IN_PROGRESS / READY_FOR_CR_2026_012_AUTHORITY_REFREEZE_AND_REPLACEMENT_RUN_B`.
 [CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
 approve a bounded hybrid transition without changing Stage 1, preregistration, config, parameters,
 candidate semantics or the Plan v1.2 DAG. Formal Run A is now PUBLISHED with Quality PASS,
@@ -134,6 +134,15 @@ deterministic replays and all quality gates PASS. The failed run remains termina
 Authority and unique replacement Run B are conditionally authorized. Groups 2～4 remain DRAFT and
 were not executed.
 
+The CR-2026-011 replacement then built all 316 BTC monthly and 82 BTC packed Foundation
+checkpoints, but failed before Task sealing because process-lifetime `ru_maxrss` was interpreted
+as a phase-local delta. [CR-2026-012](changes/CR-2026-012.md) approves the bounded v1.10
+correction: lifetime peak remains audit evidence, while Arrow inflight, absolute current RSS and
+continuously sampled phase-current delta remain fail-closed. No research semantics or comparison
+rule changes. The full 82-object/9,504-row-group packing/seal profile and repository quality gates
+PASS; the terminal failed run now awaits its append-only invalidation receipt and a final-code
+Authority refreeze.
+
 | Requirement | Plan v1.2 Tasks | Planned implementation/tests | State |
 | --- | --- | --- | --- |
 | Pre-registration before any Stage 2 implementation/result | S2-T19 | manifest schema, parameter/data/code/time/evidence/metric/output/invalidation contracts; ADR-S2-004 | APPROVED_NOT_EXECUTED_READY |
@@ -152,7 +161,7 @@ were not executed.
 | S2-T08 v1.3 delivered evidence | S2-T08 | Trades-only G4 facts/tests and `validations/stage_2/S2-T08.md` | PASSED |
 | MarketEpisode identity, consume and re-arm | S2-T09 | fixture-only `episodes/identity`; FI-14, UT-EVT-011 | APPROVED_NOT_EXECUTED |
 | S2-T09 v1.4 identity correction | S2-T09 | CR-2026-004 canonical candidate identity/payload hash while preserving FROZEN MarketEpisode identity; `validations/stage_2/CR-2026-004.md` | PASSED |
-| Registry-driven full candidate generation; BTC/ETH, variant and Primary/Exploratory separate | S2-T10 v1.9 | CR-2026-006 formal Run A release child; CR-2026-007 Feature Foundation; CR-2026-008 exact semantic comparison; CR-2026-009 release integrity; CR-2026-010 Run A supplement v1.1 compatibility; CR-2026-011 production memory correction | RUN A PUBLISHED/PASS; FAILED RUN B TERMINAL; REPLACEMENT AUTHORITY/RUN B CONDITIONALLY AUTHORIZED |
+| Registry-driven full candidate generation; BTC/ETH, variant and Primary/Exploratory separate | S2-T10 v1.10 | CR-2026-006 formal Run A release child; CR-2026-007 Feature Foundation; CR-2026-008 exact semantic comparison; CR-2026-009 release integrity; CR-2026-010 Run A supplement v1.1 compatibility; CR-2026-011 row-group memory correction; CR-2026-012 finalization gate correction | RUN A PUBLISHED/PASS; TWO FAILED RUN B TERMINAL; CR-2026-012 VALIDATED READY FOR AUTHORITY REFREEZE |
 | Shared causal Feature Foundation, content DAG, receipts and layout-independent Catalog | S2-T10 v1.8 | `CR-2026-007`; `ADR-S2-006`; current approved setup/context/variants only | APPROVED_IN_PROGRESS |
 | Cross-implementation determinism and future Feature Snapshot Tier F/E/D protocol | S2-T10 v1.8; future separately approved Tasks | `CR-2026-008`; `ADR-S2-006`; current full Run-A/Run-B comparison plus future approval boundary | APPROVED_NOT_VALIDATED |
 | Group-1 small-sample integration | S2-T01～S2-T09 | fixture chain plus six controlled real windows; locked execution Manifest | PASSED |

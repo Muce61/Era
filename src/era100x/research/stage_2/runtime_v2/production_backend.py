@@ -570,9 +570,10 @@ class ProductionRuntimeV2Backend:
         if evidence_path.exists():
             evidence = _read_task_evidence(evidence_path)
         else:
-            result = self._task_builder(context, task_id)
-            evidence = self._seal_task_result(context, task_id, result)
-            write_once_model(evidence_path, evidence)
+            with self._memory_budget.monitor_phase(f"task {task_id}"):
+                result = self._task_builder(context, task_id)
+                evidence = self._seal_task_result(context, task_id, result)
+                write_once_model(evidence_path, evidence)
         self._assert_task_evidence_authority(context, task_id, evidence)
         evidence_file_hash = sha256_file(evidence_path)
         return BackendTaskReceipt.seal(

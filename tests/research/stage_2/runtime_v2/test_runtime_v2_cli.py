@@ -65,6 +65,8 @@ def test_operator_preparation_commands_have_no_root_or_semantic_overrides() -> N
             "/Volumes/FuckingLife/era100x_stage2/runs/evidence.json",
             "--memory-evidence",
             "/Volumes/FuckingLife/era100x_stage2/runs/memory.json",
+            "--finalization-memory-evidence",
+            "/Volumes/FuckingLife/era100x_stage2/runs/finalization-memory.json",
         ]
     )
     assert authorities.destination_run_id == "stage2-g1-v2-b-test"
@@ -80,6 +82,8 @@ def test_operator_preparation_commands_have_no_root_or_semantic_overrides() -> N
                 "/Volumes/FuckingLife/era100x_stage2/runs/evidence.json",
                 "--memory-evidence",
                 "/Volumes/FuckingLife/era100x_stage2/runs/memory.json",
+                "--finalization-memory-evidence",
+                "/Volumes/FuckingLife/era100x_stage2/runs/finalization-memory.json",
                 "--instrument",
                 "BTCUSDT",
             ]
@@ -105,6 +109,7 @@ def test_authority_cli_exposes_explicit_record_failure_action() -> None:
     assert args.destination_run_id is None
     assert args.quality_evidence is None
     assert args.memory_evidence is None
+    assert args.finalization_memory_evidence is None
 
 
 def test_record_failure_receipt_is_write_once(
@@ -165,6 +170,12 @@ def test_freeze_writes_deterministic_authority_bundle_receipt_without_creating_r
     memory_path = (
         runs_root / "stage2-g1-v2-memory-diagnostic-cr-2026-011-test" / "reports" / "memory.json"
     )
+    finalization_memory_path = (
+        runs_root
+        / "stage2-g1-v2-finalization-diagnostic-cr-2026-012-test"
+        / "reports"
+        / "finalization-memory.json"
+    )
     quality_path.parent.mkdir(parents=True)
     commit = "1" * 40
     tree_sha256 = "2" * 64
@@ -189,6 +200,29 @@ def test_freeze_writes_deterministic_authority_bundle_receipt_without_creating_r
                 "diagnostic_run_id": "stage2-g1-v2-memory-diagnostic-cr-2026-011-test",
                 "deterministic_replay": "PASS",
                 "semantic_regression": "PASS",
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    finalization_memory_path.parent.mkdir(parents=True)
+    finalization_memory_path.write_text(
+        json.dumps(
+            {
+                "result": "PASS",
+                "change_request": "CR-2026-012",
+                "read_only_source": True,
+                "packed_row_group_count": 9504,
+                "receipt_count": 9504,
+                "max_arrow_bytes": 15_120_000,
+                "max_current_rss_bytes": 544_030_720,
+                "max_phase_current_rss_delta_bytes": 384_630_784,
+                "limits": {
+                    "arrow_inflight_bytes": 1_073_741_824,
+                    "current_rss_bytes": 3_221_225_472,
+                    "phase_current_rss_delta_bytes": 1_073_741_824,
+                    "lifetime_peak_policy": "AUDIT_ONLY",
+                },
             },
             sort_keys=True,
         ),
@@ -296,6 +330,8 @@ def test_freeze_writes_deterministic_authority_bundle_receipt_without_creating_r
         str(quality_path),
         "--memory-evidence",
         str(memory_path),
+        "--finalization-memory-evidence",
+        str(finalization_memory_path),
     ]
 
     assert authority_cli.main(argv) == 0
@@ -306,10 +342,11 @@ def test_freeze_writes_deterministic_authority_bundle_receipt_without_creating_r
 
     assert receipt_path.read_bytes() == first
     assert receipt["status"] == "PASS"
-    assert receipt["change_request"] == "CR-2026-011"
+    assert receipt["change_request"] == "CR-2026-012"
     assert receipt["superseded_authority_change_requests"] == [
         "CR-2026-009",
         "CR-2026-010",
+        "CR-2026-011",
     ]
     assert receipt["authority_bundle_id"].startswith("stage2-v2-authority-bundle-")
     assert receipt["reserved_destination_run_id"] == destination_id

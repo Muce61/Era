@@ -89,3 +89,17 @@ one final-code Authority refreeze and one unique replacement Run B conditionally
 does not change this Validation conclusion. Group 1 remains **FAIL** until the replacement builds
 all 80,784 V2 partitions, publishes with Quality PASS and matches all 61,776 Run A Group-1
 partitions exactly.
+
+## S2-T10 v1.10 finalization memory-gate correction
+
+The CR-2026-011 replacement Run B completed 316 BTC monthly and 82 BTC packed Foundation
+checkpoints, then failed before Task evidence sealing. The failure used process-lifetime
+`ru_maxrss` delta as a phase-local limit even though no published file or semantic mismatch
+existed. CR-2026-012 is APPROVED to retain lifetime peak as audit-only evidence and enforce
+continuously sampled phase-current RSS. Group 1 remains **FAIL** until a newly frozen replacement
+builds 80,784 partitions, publishes with Quality PASS and exactly matches all 61,776 Run A
+Group-1 partitions. The real finalization diagnostic scanned 82 packed objects and 9,504 row
+groups with maximum Arrow `15,120,000`, current RSS `544,030,720` and phase-current delta
+`384,630,784` bytes; its report SHA-256 is
+`cb84ce635f31d0eb5562602916042d68177ff3c3da0738ec09da7b4ee3c9d691`. Code validation PASS does
+not change the current Group-1 FAIL conclusion.

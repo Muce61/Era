@@ -19,7 +19,11 @@ from era100x.research.stage_2.manifests.models import canonical_json
 SHA256_PATTERN = r"^[0-9a-f]{64}$"
 ZERO_SHA256 = "0" * 64
 MAX_PROCESS_CURRENT_RSS_BYTES: Final[Literal[3_221_225_472]] = 3_221_225_472
-MAX_PROCESS_RSS_DELTA_BYTES: Final[Literal[1_073_741_824]] = 1_073_741_824
+MAX_PROCESS_CURRENT_RSS_DELTA_BYTES: Final[Literal[1_073_741_824]] = 1_073_741_824
+# Compatibility name retained for frozen Manifest/config field names.  CR-2026-012
+# changes the measured quantity from lifetime peak delta to phase-current delta;
+# it does not add a research or dataset field.
+MAX_PROCESS_RSS_DELTA_BYTES: Final[Literal[1_073_741_824]] = MAX_PROCESS_CURRENT_RSS_DELTA_BYTES
 # Compatibility name for evidence fields that still store absolute peak RSS.
 MAX_PROCESS_RSS_BYTES: Final[Literal[3_221_225_472]] = MAX_PROCESS_CURRENT_RSS_BYTES
 SAFE_NAME_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$"

@@ -81,6 +81,7 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--destination-run-id")
     result.add_argument("--quality-evidence", type=Path)
     result.add_argument("--memory-evidence", type=Path)
+    result.add_argument("--finalization-memory-evidence", type=Path)
     result.add_argument("--failure-log", type=Path)
     result.add_argument("--failed-code-commit")
     result.add_argument("--error-type", choices=("ValidationError",), default="ValidationError")
@@ -98,9 +99,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.destination_run_id is None
         or args.quality_evidence is None
         or args.memory_evidence is None
+        or args.finalization_memory_evidence is None
     ):
         raise ValueError(
-            "freeze requires --destination-run-id, --quality-evidence and --memory-evidence"
+            "freeze requires --destination-run-id, --quality-evidence, --memory-evidence "
+            "and --finalization-memory-evidence"
         )
     transition_root = _bounded_run_root(args.transition_run_id, "stage2-g1-v2-authority-")
     destination_root = _new_destination_root(args.destination_run_id)
@@ -139,6 +142,36 @@ def main(argv: Sequence[str] | None = None) -> int:
         or memory.get("semantic_regression") != "PASS"
     ):
         raise ValueError("CR-2026-011 memory evidence is not PASS")
+    finalization_memory_path = args.finalization_memory_evidence.resolve()
+    if (
+        not finalization_memory_path.is_file()
+        or finalization_memory_path.is_symlink()
+        or not finalization_memory_path.is_relative_to(RUNS_ROOT.resolve())
+        or not finalization_memory_path.parent.parent.name.startswith(
+            "stage2-g1-v2-finalization-diagnostic-cr-2026-012-"
+        )
+    ):
+        raise ValueError(
+            "finalization memory evidence is outside the approved diagnostic authority"
+        )
+    finalization_memory = _read_object(finalization_memory_path)
+    limits = finalization_memory.get("limits")
+    if (
+        finalization_memory.get("result") != "PASS"
+        or finalization_memory.get("change_request") != "CR-2026-012"
+        or not isinstance(limits, dict)
+        or finalization_memory.get("read_only_source") is not True
+        or finalization_memory.get("packed_row_group_count") != 9504
+        or finalization_memory.get("receipt_count") != 9504
+        or finalization_memory.get("max_arrow_bytes", 2**63) > 1_073_741_824
+        or finalization_memory.get("max_current_rss_bytes", 2**63) > 3_221_225_472
+        or finalization_memory.get("max_phase_current_rss_delta_bytes", 2**63) > 1_073_741_824
+        or limits.get("arrow_inflight_bytes") != 1_073_741_824
+        or limits.get("current_rss_bytes") != 3_221_225_472
+        or limits.get("phase_current_rss_delta_bytes") != 1_073_741_824
+        or limits.get("lifetime_peak_policy") != "AUDIT_ONLY"
+    ):
+        raise ValueError("CR-2026-012 finalization memory evidence is not PASS")
 
     manifests = transition_root / "manifests"
     price_path = manifests / "contract-price-inventory-v2.json"
@@ -188,6 +221,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 CONTRACT_PRICE_MANIFEST_AUTHORITY: price.manifest_hash,
                 "runtime_v2_quality_evidence": sha256_file(quality_path),
                 "runtime_v2_memory_evidence": sha256_file(memory_path),
+                "runtime_v2_finalization_memory_evidence": sha256_file(finalization_memory_path),
                 "stage1_btc_catalog": STAGE1_CATALOG_SHA256S["BTCUSDT"],
                 "stage1_eth_catalog": STAGE1_CATALOG_SHA256S["ETHUSDT"],
                 "stage1_manifest": STAGE1_MANIFEST_SHA256,
@@ -240,10 +274,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise ValueError("resolved Stage 1 Trades archive layout changed")
     bundle_basis = {
         "schema_name": "stage2-v2-authority-bundle-validation-v1",
-        "validation_version": "1.0",
+        "validation_version": "1.1",
         "status": "PASS",
-        "change_request": "CR-2026-011",
-        "superseded_authority_change_requests": ["CR-2026-009", "CR-2026-010"],
+        "change_request": "CR-2026-012",
+        "superseded_authority_change_requests": [
+            "CR-2026-009",
+            "CR-2026-010",
+            "CR-2026-011",
+        ],
         "transition_run_id": args.transition_run_id,
         "reserved_destination_run_id": args.destination_run_id,
         "destination_status": "RESERVED_NOT_CREATED",
@@ -258,6 +296,19 @@ def main(argv: Sequence[str] | None = None) -> int:
             "source_path": str(memory_path),
             "physical_sha256": sha256_file(memory_path),
             "diagnostic_run_id": memory["diagnostic_run_id"],
+        },
+        "finalization_memory_evidence": {
+            "source_path": str(finalization_memory_path),
+            "physical_sha256": sha256_file(finalization_memory_path),
+            "diagnostic_run_id": finalization_memory_path.parent.parent.name,
+            "packed_row_group_count": finalization_memory["packed_row_group_count"],
+            "receipt_count": finalization_memory["receipt_count"],
+            "max_arrow_bytes": finalization_memory["max_arrow_bytes"],
+            "max_current_rss_bytes": finalization_memory["max_current_rss_bytes"],
+            "max_phase_current_rss_delta_bytes": finalization_memory[
+                "max_phase_current_rss_delta_bytes"
+            ],
+            "lifetime_peak_policy": limits["lifetime_peak_policy"],
         },
         "stage1_data_run_id": STAGE1_DATA_RUN_ID,
         "stage1_manifest_sha256": STAGE1_MANIFEST_SHA256,
@@ -318,6 +369,7 @@ def _record_failure(args: argparse.Namespace) -> int:
         args.destination_run_id is not None
         or args.quality_evidence is not None
         or args.memory_evidence is not None
+        or args.finalization_memory_evidence is not None
     ):
         raise ValueError("record-failure does not accept freeze inputs")
     if args.failed_code_commit != FAILED_AUTHORITY_COMMIT:

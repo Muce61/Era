@@ -3,14 +3,14 @@
 ## Metadata
 
 - task_id: S2-T10
-- task_version: 1.9
+- task_version: 1.10
 - status: IN_PROGRESS
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T01 PASS; S2-T02 PASS; S2-T03 PASS; S2-T04 PASS; S2-T05 PASS; S2-T06 PASS; S2-T07 PASS; S2-T08 PASS; S2-T09 PASS; S2-T19 PASS; locked Group-1 Manifest; CR-2026-007 APPROVED; CR-2026-008 APPROVED
-- supersedes: task_version 1.8
+- supersedes: task_version 1.9
 - approved_by: Muce
 - approved_at: 2026-07-17T19:09:18+08:00
 - execution_started_at: 2026-07-17T19:09:18+08:00
@@ -221,3 +221,13 @@ baseline-relative peak-RSS gates calibrated from approved real-data profiles. Th
 not change any logical row, hash, identity, availability, parameter, source authority or Group-1
 comparison rule. The calibrated limits are 3 GiB current RSS and 1 GiB baseline-relative peak RSS
 delta. The failed v1.8 Run B is terminal and cannot be resumed or reused.
+
+## 27. CR-2026-012 finalization memory-gate correction
+
+S2-T10 v1.10 may change only Runtime V2 Foundation packing/seal resource measurement and evidence.
+The 1 GiB Arrow inflight and 3 GiB current-RSS hard limits remain unchanged. Process-lifetime
+`ru_maxrss` is audit-only; phase-current RSS is sampled continuously and its delta from the phase
+baseline retains the 1 GiB hard limit. The terminal failed Run B
+`stage2-g1-v2-b-20260718T105814Z-cb5c25abd485` may not be resumed, reused, published or cleaned.
+No logical row, Hash, identity, payload, availability, parameter, source authority or Group-1
+comparison rule may change.
