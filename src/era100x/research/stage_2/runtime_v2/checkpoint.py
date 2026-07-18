@@ -183,6 +183,14 @@ class RuntimeV2Checkpoint(_FrozenModel):
     def computed_hash(self) -> str:
         return _metadata_sha256(self.model_dump(mode="json", exclude={"checkpoint_hash"}))
 
+    def computed_legacy_v1_hash(self) -> str:
+        """Recompute pre-CR-2026-013 v1.0 bytes without the optional pause field."""
+
+        payload = self.model_dump(mode="json", exclude={"checkpoint_hash"})
+        if self.resource_pause is None:
+            payload.pop("resource_pause", None)
+        return _metadata_sha256(payload)
+
     @model_validator(mode="after")
     def validate_checkpoint(self) -> Self:
         if SAFE_RUN_ID.fullmatch(self.run_id) is None:
@@ -245,8 +253,12 @@ class RuntimeV2Checkpoint(_FrozenModel):
             raise ValueError("preflight phase has an invalid status")
         if self.phase == "FOUNDATION" and any(item.startswith("GROUP1:") for item in completed_ids):
             raise ValueError("Foundation phase cannot contain Group-1 completion")
-        if self.checkpoint_hash != ZERO_SHA256 and self.checkpoint_hash != self.computed_hash():
-            raise ValueError("checkpoint hash mismatch")
+        if self.checkpoint_hash != ZERO_SHA256:
+            accepted_hashes = {self.computed_hash()}
+            if self.resource_pause is None:
+                accepted_hashes.add(self.computed_legacy_v1_hash())
+            if self.checkpoint_hash not in accepted_hashes:
+                raise ValueError("checkpoint hash mismatch")
         return self
 
     @classmethod

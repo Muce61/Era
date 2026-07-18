@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import signal
 import subprocess
@@ -550,6 +551,24 @@ def test_checkpoint_compare_and_swap_rejects_a_stale_writer(
     store.replace(first, expected_hash=initial.checkpoint_hash)
     with pytest.raises(CheckpointConflict, match="changed"):
         store.replace(second, expected_hash=initial.checkpoint_hash)
+
+
+def test_checkpoint_v1_read_compatibility_excludes_absent_resource_pause(
+    authority_paths: tuple[dict[str, object], Path],
+) -> None:
+    common, root = authority_paths
+    initial = Stage2V2Orchestrator(FakeBackend()).preflight(  # type: ignore[arg-type]
+        **common
+    )
+    legacy = initial.model_dump(mode="json", exclude={"checkpoint_hash", "resource_pause"})
+    legacy["checkpoint_hash"] = initial.computed_legacy_v1_hash()
+    checkpoint_path = root / "runs" / RUN_ID / "checkpoint-v2.json"
+    checkpoint_path.write_text(json.dumps(legacy, sort_keys=True), encoding="utf-8")
+
+    restored = CheckpointStore(checkpoint_path.parent).read()
+
+    assert restored.checkpoint_hash == initial.computed_legacy_v1_hash()
+    assert restored.resource_pause is None
 
 
 def test_checkpoint_lock_is_released_by_kernel_after_sigkill(
