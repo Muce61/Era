@@ -108,20 +108,23 @@ Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～
 
 ## Stage 2 Plan v1.2 APPROVED Coverage
 
-Stage 2 is `IN_PROGRESS / READY_FOR_V2_RUN_B_EXECUTION_APPROVAL`.
+Stage 2 is `IN_PROGRESS / READY_FOR_CR_2026_010_AUTHORITY_REFREEZE_AND_CONDITIONAL_RUN_B`.
 [CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
 approve a bounded hybrid transition without changing Stage 1, preregistration, config, parameters,
 candidate semantics or the Plan v1.2 DAG. Formal Run A is now PUBLISHED with Quality PASS,
 9508/9508 completed work items, zero failed/UNKNOWN work items, 61,776 logical partitions,
 published logical hash `8583f220dc880bf5b7e7ace1435ca2285e59b80dd48aa7d15bd2f8cacac60870` and published physical
 hash `9fe33a4e7fde1ace3281a208c46f7474f66bc5c5a0e538871b273b2f20131578`.
-[CR-2026-009](changes/CR-2026-009.md) remains APPROVED; its bounded release/operator corrections
-are IMPLEMENTED and VALIDATED. The first V2
+[CR-2026-009](changes/CR-2026-009.md) is RESOLVED / IMPLEMENTED / VALIDATED. Its bounded
+release/operator corrections remain authoritative for formal Run A. The first V2
 authority freeze failed because the resolved-entry contract rejected the legitimate
 Catalog-authorized exact-day archive tail `archive=2026-07-01`; the failed run remains immutable.
-A new write-once replacement Bundle resolves all 4,752 instrument-days, including six exact-day
-tails, and repeats deterministically without creating the reserved V2 Run B. Groups 2～4 remain
-DRAFT and were not executed.
+A write-once replacement Bundle resolved all 4,752 instrument-days, including six exact-day tails,
+but its conditionally authorized preflight exposed a separate frozen-parser drift: V2 accepted only
+release supplement v1.0/CR-2026-006 while formal Run A protection binds v1.1/CR-2026-009. The
+preflight consumed no Run B ID. [CR-2026-010](changes/CR-2026-010.md) approves the bounded read
+compatibility correction, exact match-count diagnostics, Authority refreeze and successor Run B
+only after all gates pass. Groups 2～4 remain DRAFT and were not executed.
 
 | Requirement | Plan v1.2 Tasks | Planned implementation/tests | State |
 | --- | --- | --- | --- |
@@ -141,7 +144,7 @@ DRAFT and were not executed.
 | S2-T08 v1.3 delivered evidence | S2-T08 | Trades-only G4 facts/tests and `validations/stage_2/S2-T08.md` | PASSED |
 | MarketEpisode identity, consume and re-arm | S2-T09 | fixture-only `episodes/identity`; FI-14, UT-EVT-011 | APPROVED_NOT_EXECUTED |
 | S2-T09 v1.4 identity correction | S2-T09 | CR-2026-004 canonical candidate identity/payload hash while preserving FROZEN MarketEpisode identity; `validations/stage_2/CR-2026-004.md` | PASSED |
-| Registry-driven full candidate generation; BTC/ETH, variant and Primary/Exploratory separate | S2-T10 v1.8 | CR-2026-006 formal Run A release child; CR-2026-007 Feature Foundation and fresh V2 Run B; CR-2026-008 exact semantic comparison; approved CR-2026-009 release integrity/operator surface | RUN A PUBLISHED/PASS; AUTHORITY BUNDLE VALIDATED; RUN B AWAITS APPROVAL |
+| Registry-driven full candidate generation; BTC/ETH, variant and Primary/Exploratory separate | S2-T10 v1.8 | CR-2026-006 formal Run A release child; CR-2026-007 Feature Foundation; CR-2026-008 exact semantic comparison; CR-2026-009 release integrity; CR-2026-010 Run A supplement v1.1 compatibility | RUN A PUBLISHED/PASS; CR-2026-010 VALIDATED; REPLACEMENT AUTHORITY + CONDITIONAL RUN B AUTHORIZED AFTER GATES |
 | Shared causal Feature Foundation, content DAG, receipts and layout-independent Catalog | S2-T10 v1.8 | `CR-2026-007`; `ADR-S2-006`; current approved setup/context/variants only | APPROVED_IN_PROGRESS |
 | Cross-implementation determinism and future Feature Snapshot Tier F/E/D protocol | S2-T10 v1.8; future separately approved Tasks | `CR-2026-008`; `ADR-S2-006`; current full Run-A/Run-B comparison plus future approval boundary | APPROVED_NOT_VALIDATED |
 | Group-1 small-sample integration | S2-T01～S2-T09 | fixture chain plus six controlled real windows; locked execution Manifest | PASSED |

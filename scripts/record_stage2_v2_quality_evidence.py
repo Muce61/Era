@@ -56,7 +56,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         "schema_name": "stage2-runtime-v2-quality-evidence-v1",
         "evidence_version": "1.0",
         "status": "PASS",
-        "change_requests": ["CR-2026-007", "CR-2026-008", "CR-2026-009"],
+        "change_requests": [
+            "CR-2026-007",
+            "CR-2026-008",
+            "CR-2026-009",
+            "CR-2026-010",
+        ],
         "code_commit": head,
         "repository_tree_sha1": _git("rev-parse", "HEAD^{tree}"),
         "runtime_v2_code_tree_sha256": compute_v2_code_tree_sha256(ROOT),

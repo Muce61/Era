@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -8,6 +9,7 @@ from era100x.research.stage_2.manifests.configuration import config_hash, parame
 from era100x.research.stage_2.manifests.models import (
     Stage2ExecutionManifest,
     Stage2ReleaseSupplementManifest,
+    canonical_json,
 )
 from era100x.research.stage_2.manifests.preflight import estimate_peak_bytes
 from era100x.research.stage_2.manifests.repository import AppendOnlyManifestRepository
@@ -122,6 +124,12 @@ OLD_EXECUTION_MANIFEST = Path(
     "84f6fcdd2d4710fd98112dc7a39d798d0f488accb6e7b2a7962f98ba589e3b74.json"
 )
 
+FORMAL_RUN_A_RELEASE_SUPPLEMENT = Path(
+    "/Volumes/FuckingLife/era100x_stage2/runs/"
+    "stage2-g1-full-a-20260716T144233Z-366a541b7956/manifests/"
+    "5ef20632761acd77ca9836ede3c12f1e48f58e814f96cad56d86646fcc259007.json"
+)
+
 
 def test_release_supplement_is_stable_and_binds_all_finalizers() -> None:
     payload = {
@@ -162,6 +170,35 @@ def test_release_supplement_is_stable_and_binds_all_finalizers() -> None:
         Stage2ReleaseSupplementManifest.seal(
             {**payload, "finalization_report_hashes": {"BTCUSDT/V1_PRICE": "a" * 64}}
         )
+
+
+@pytest.mark.skipif(
+    not FORMAL_RUN_A_RELEASE_SUPPLEMENT.exists(), reason="formal Run A supplement absent"
+)
+def test_formal_run_a_cr009_release_supplement_v11_remains_readable() -> None:
+    manifest = Stage2ReleaseSupplementManifest.model_validate_json(
+        FORMAL_RUN_A_RELEASE_SUPPLEMENT.read_bytes()
+    )
+
+    assert manifest.manifest_version == "1.1"
+    assert manifest.change_request == "CR-2026-009"
+    assert manifest.manifest_hash == manifest.computed_hash()
+    assert manifest.previous_release_supplement_hash is not None
+    assert manifest.shard_adoption_manifest_hash is not None
+    assert manifest.shard_adoption_manifest_physical_sha256 is not None
+    assert manifest.shard_adoption_manifest_path is not None
+
+
+@pytest.mark.skipif(
+    not FORMAL_RUN_A_RELEASE_SUPPLEMENT.exists(), reason="formal Run A supplement absent"
+)
+def test_cr009_release_supplement_requires_complete_shard_adoption() -> None:
+    payload = json.loads(FORMAL_RUN_A_RELEASE_SUPPLEMENT.read_bytes())
+    payload.pop("shard_adoption_manifest_physical_sha256")
+    payload["manifest_hash"] = "0" * 64
+
+    with pytest.raises(ValueError, match="complete shard-adoption authority"):
+        Stage2ReleaseSupplementManifest.model_validate_json(canonical_json(payload))
 
 
 def test_version_separated_execution_requires_both_tree_hashes() -> None:

@@ -923,6 +923,14 @@ def _protected_run_a_manifest_paths(
             release = None
         if release is not None and release.manifest_hash == protection.release_supplement_hash:
             supplement.append(candidate)
-    if len(execution) != 1 or len(supplement) != 1:
-        raise RuntimeV2OrchestrationError("protected Run A Manifest paths are ambiguous")
+    if len(execution) != 1:
+        raise RuntimeV2OrchestrationError(
+            "protected Run A execution Manifest match count differs: "
+            f"expected=1 actual={len(execution)}"
+        )
+    if len(supplement) != 1:
+        raise RuntimeV2OrchestrationError(
+            "protected Run A release supplement match count differs: "
+            f"expected=1 actual={len(supplement)}"
+        )
     return execution[0], supplement[0]

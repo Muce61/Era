@@ -52,6 +52,14 @@ S = "b" * 64
 C = "c" * 64
 COMMIT = "d" * 40
 RUN_ID = "stage2-g1-v2-b-test"
+FORMAL_RUN_A_ROOT = Path(
+    "/Volumes/FuckingLife/era100x_stage2/runs/stage2-g1-full-a-20260716T144233Z-366a541b7956"
+)
+FORMAL_RUN_A_PROTECTION = Path(
+    "/Volumes/FuckingLife/era100x_stage2/runs/"
+    "stage2-g1-v2-authority-20260718T075348Z-e185e643051f/manifests/"
+    "4f29785d5de16ecb8f17b7f45b86f7085d61fcbd63b23e3499d103445d249841.json"
+)
 
 
 class FakeBackend:
@@ -331,6 +339,65 @@ def test_failed_backend_preflight_does_not_consume_run_id(
         Stage2V2Orchestrator(backend).preflight(**common)  # type: ignore[arg-type]
 
     assert not (root / "runs" / RUN_ID).exists()
+
+
+@pytest.mark.skipif(
+    not FORMAL_RUN_A_ROOT.exists() or not FORMAL_RUN_A_PROTECTION.exists(),
+    reason="formal Run A protection authority absent",
+)
+def test_formal_run_a_protection_resolves_exact_cr009_supplement() -> None:
+    protection = RunAPublishedSourceProtectionManifest.model_validate_json(
+        FORMAL_RUN_A_PROTECTION.read_bytes()
+    )
+
+    execution, supplement = module._protected_run_a_manifest_paths(FORMAL_RUN_A_ROOT, protection)
+
+    assert execution.name == f"{protection.execution_manifest_hash}.json"
+    assert supplement.name == f"{protection.release_supplement_hash}.json"
+
+
+@pytest.mark.skipif(
+    not FORMAL_RUN_A_ROOT.exists() or not FORMAL_RUN_A_PROTECTION.exists(),
+    reason="formal Run A protection authority absent",
+)
+def test_run_a_protection_reports_missing_and_duplicate_supplements(
+    tmp_path: Path,
+) -> None:
+    protection = RunAPublishedSourceProtectionManifest.model_validate_json(
+        FORMAL_RUN_A_PROTECTION.read_bytes()
+    )
+    manifests = tmp_path / "manifests"
+    manifests.mkdir()
+    execution_name = f"{protection.execution_manifest_hash}.json"
+    supplement_name = f"{protection.release_supplement_hash}.json"
+    (manifests / execution_name).write_bytes(
+        (FORMAL_RUN_A_ROOT / "manifests" / execution_name).read_bytes()
+    )
+
+    with pytest.raises(
+        RuntimeV2OrchestrationError,
+        match="release supplement match count differs: expected=1 actual=0",
+    ):
+        module._protected_run_a_manifest_paths(tmp_path, protection)
+
+    supplement_bytes = (FORMAL_RUN_A_ROOT / "manifests" / supplement_name).read_bytes()
+    (manifests / supplement_name).write_bytes(supplement_bytes)
+    duplicate_name = "duplicate-release-supplement.json"
+    (manifests / duplicate_name).write_bytes(supplement_bytes)
+    duplicate_protection = protection.model_copy(
+        update={
+            "protected_relative_paths": (
+                *protection.protected_relative_paths,
+                f"manifests/{duplicate_name}",
+            )
+        }
+    )
+
+    with pytest.raises(
+        RuntimeV2OrchestrationError,
+        match="release supplement match count differs: expected=1 actual=2",
+    ):
+        module._protected_run_a_manifest_paths(tmp_path, duplicate_protection)
 
 
 def test_fixed_full_matrix_and_read_only_checks(

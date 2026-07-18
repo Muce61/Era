@@ -243,9 +243,9 @@ class Stage2ReleaseSupplementManifest(FrozenModel):
     """
 
     schema_name: Literal["stage2-group1-release-supplement"]
-    manifest_version: Literal["1.0"]
+    manifest_version: Literal["1.0", "1.1"]
     operation: Literal["RELEASE_EXISTING_STAGING"]
-    change_request: Literal["CR-2026-006"]
+    change_request: Literal["CR-2026-006", "CR-2026-009"]
     source_run_id: str = Field(min_length=1)
     source_execution_manifest_hash: str = Field(pattern=SHA256_PATTERN)
     source_execution_manifest_physical_sha256: str = Field(pattern=SHA256_PATTERN)
@@ -266,12 +266,25 @@ class Stage2ReleaseSupplementManifest(FrozenModel):
     finalization_report_hashes: dict[str, str]
     release_progress_path: str
     prohibited_actions: tuple[str, ...]
+    previous_release_supplement_hash: str | None = Field(default=None, pattern=SHA256_PATTERN)
+    shard_adoption_manifest_hash: str | None = Field(default=None, pattern=SHA256_PATTERN)
+    shard_adoption_manifest_physical_sha256: str | None = Field(
+        default=None, pattern=SHA256_PATTERN
+    )
+    shard_adoption_manifest_path: str | None = None
     manifest_hash: str = Field(pattern=SHA256_PATTERN)
 
     def computed_hash(self) -> str:
-        return sha256_text(
-            canonical_json(self.model_dump(mode="python", exclude={"manifest_hash"}))
-        )
+        payload = self.model_dump(mode="python", exclude={"manifest_hash"})
+        if self.manifest_version == "1.0":
+            for field in (
+                "previous_release_supplement_hash",
+                "shard_adoption_manifest_hash",
+                "shard_adoption_manifest_physical_sha256",
+                "shard_adoption_manifest_path",
+            ):
+                payload.pop(field, None)
+        return sha256_text(canonical_json(payload))
 
     @model_validator(mode="after")
     def validate_release_authority(self) -> Self:
@@ -295,6 +308,17 @@ class Stage2ReleaseSupplementManifest(FrozenModel):
             for value in self.finalization_report_hashes.values()
         ):
             raise ValueError("invalid finalization report hash")
+        hardened = self.manifest_version == "1.1" or self.change_request == "CR-2026-009"
+        adoption = (
+            self.previous_release_supplement_hash,
+            self.shard_adoption_manifest_hash,
+            self.shard_adoption_manifest_physical_sha256,
+            self.shard_adoption_manifest_path,
+        )
+        if hardened and not all(adoption):
+            raise ValueError("CR-2026-009 release requires complete shard-adoption authority")
+        if not hardened and any(adoption):
+            raise ValueError("v1.0 release supplement cannot bind shard adoption")
         return self
 
     @classmethod

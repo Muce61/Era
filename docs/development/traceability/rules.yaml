@@ -2243,7 +2243,10 @@ rules:
     cr_s2_008_status: APPROVED_L3_RESEARCH_VALIDATION_PROTOCOL
     cr_s2_008_validation: docs/development/validations/stage_2/CR-2026-008.md
     authority_release_change_request_ref: docs/development/changes/CR-2026-009.md
-    cr_s2_009_status: APPROVED_IMPLEMENTED_VALIDATED_READY_FOR_RESOLUTION
+    cr_s2_009_status: RESOLVED_IMPLEMENTED_VALIDATED
+    run_a_supplement_compatibility_change_request_ref: docs/development/changes/CR-2026-010.md
+    cr_s2_010_status: APPROVED_IMPLEMENTED_VALIDATED_READY_FOR_AUTHORITY_REFREEZE
+    cr_s2_010_validation: docs/development/validations/stage_2/CR-2026-010.md
     formal_run_a_id: stage2-g1-full-a-20260716T144233Z-366a541b7956
     formal_run_a_status: PUBLISHED_QUALITY_PASS
     formal_run_a_logical_partitions: 61776
@@ -2251,15 +2254,15 @@ rules:
     formal_run_a_published_physical_hash: 9fe33a4e7fde1ace3281a208c46f7474f66bc5c5a0e538871b273b2f20131578
     failed_authority_run_id: stage2-g1-v2-authority-20260717T155227Z-b739106b8dca
     failed_authority_reason: MIXED_ARCHIVE_DAILY_TAIL_REJECTED_BY_MONTH_ONLY_V2_CONTRACT
-    replacement_authority_bundle_status: FROZEN_VALIDATED_EXTERNAL_RECEIPT
-    v2_run_b_status: NOT_CREATED
-    next_authorized_state_after_authority_validation: READY_FOR_V2_RUN_B_EXECUTION_APPROVAL
+    replacement_authority_bundle_status: SUPERSEDED_AFTER_V1_1_PREFLIGHT_CONTRACT_BLOCK
+    v2_run_b_status: RESERVED_ID_SUPERSEDED_NOT_CREATED
+    next_authorized_state_after_authority_validation: CONDITIONAL_V2_RUN_B_EXECUTION
     hybrid_architecture_decision_ref: docs/development/decisions/ADR-S2-006-hybrid-v2-feature-foundation.md
     plan_dag_change: NONE
     legacy_run_b_authorized: false
     later_group_execution_authorized: false
-    execution_blocker: HUMAN_APPROVAL_REQUIRED_FOR_V2_RUN_B
-    execution_state: READY_FOR_V2_RUN_B_EXECUTION_APPROVAL
+    execution_blocker: CR_2026_010_REPLACEMENT_AUTHORITY_REQUIRED
+    execution_state: READY_FOR_CR_2026_010_AUTHORITY_REFREEZE_AND_CONDITIONAL_RUN_B
   state: PLANNED
 - rule_id: GATE-STAGE-3
   rule_status: FROZEN
