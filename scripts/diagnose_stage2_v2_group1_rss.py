@@ -322,7 +322,10 @@ def _measure(args: argparse.Namespace, instrument: Instrument) -> dict[str, Any]
     report = _report_path(args.work_root, instrument, args.owner_date, args.label)
     report.parent.mkdir(parents=True, exist_ok=True)
     report.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
-    if not payload["rss_gate_pass"] or not payload["run_a_all_thirteen_pass"]:
+    payload["resource_anomaly_status"] = (
+        "NONE" if payload["rss_gate_pass"] else "RSS_THRESHOLD_EXCEEDED"
+    )
+    if not payload["run_a_all_thirteen_pass"]:
         raise RuntimeError(f"Group-1 streaming diagnostic failed; evidence={report}")
     return payload
 

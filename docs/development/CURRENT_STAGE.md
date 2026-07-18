@@ -4,11 +4,11 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T10
-Status: READY_FOR_CR_2026_012_AUTHORITY_REFREEZE_AND_REPLACEMENT_RUN_B
+Status: READY_FOR_CR_2026_013_AUTHORITY_FREEZE
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
-S2-T19 and S2-T01～S2-T09 are PASSED. S2-T10 v1.10 is APPROVED / IN_PROGRESS under
+S2-T19 and S2-T01～S2-T09 are PASSED. S2-T10 v1.11 is APPROVED / IN_PROGRESS under
 CR-2026-007 and CR-2026-008. Formal Run A
 `stage2-g1-full-a-20260716T144233Z-366a541b7956` is PUBLISHED with Quality PASS, 9508/9508
 completed work items, zero failed/UNKNOWN work items and 61,776 logical partitions. Its published
@@ -43,3 +43,17 @@ process-lifetime `ru_maxrss` was enforced as a phase-local delta. It remains ter
 sampled phase-current RSS instead. Its real 9,504-row-group packing/seal profile and all code
 quality gates PASS. The only permitted continuation is append-only invalidation of that terminal
 run, a final-code Authority freeze repeated identically and one unique replacement Run B.
+
+The next replacement Run B
+`stage2-g1-v2-b-20260718T141137Z-f0c150bfa1c9` completed all 316 BTC month-level Foundation
+objects, then failed unpublished before packing because the phase-current RSS observation exceeded
+the former 1 GiB delta threshold. Current RSS remained below 3 GiB and no semantic or integrity
+violation was reported. Muce approved [CR-2026-013](changes/CR-2026-013.md): resource and
+performance thresholds become append-only anomaly evidence, unsafe continuation becomes a
+recoverable pause, and integrity failures remain fail-closed. The failed run is immutable; a new
+run may adopt its 316 sealed month objects only through complete per-object verification.
+
+The CR-2026-013 implementation gate is PASS: Runtime V2 191/191 and the unified repository gate
+397/397 passed with Ruff, strict mypy and strict Traceability. S2-T10 remains IN_PROGRESS; the next
+authorized actions are final-code Authority freeze, audited adoption, the unique replacement Run B
+and the unchanged exact comparison.

@@ -81,6 +81,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "CR-2026-010",
             "CR-2026-011",
             "CR-2026-012",
+            "CR-2026-013",
         ],
         "code_commit": head,
         "repository_tree_sha1": _git("rev-parse", "HEAD^{tree}"),
@@ -142,8 +143,6 @@ def _safety_checks() -> dict[str, Any]:
         for path in tracked
         if path.is_file() and path.stat().st_size > 10_000_000
     ]
-    if large:
-        errors.append(f"tracked files over 10MB: {large}")
     secret_patterns = (
         re.compile(rb"AKIA[0-9A-Z]{16}"),
         re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
@@ -170,10 +169,20 @@ def _safety_checks() -> dict[str, Any]:
     if later_stage_hits:
         errors.append(f"forbidden later-stage output hits: {later_stage_hits}")
     free_bytes = shutil.disk_usage(STAGE2_ROOT).free
+    anomalies: list[dict[str, object]] = []
+    if large:
+        anomalies.append({"type": "GIT_LARGE_FILE", "paths": large})
     if free_bytes < RUN_B_REQUIRED_FREE_BYTES:
-        errors.append(f"replacement Run B space gate failed: {free_bytes}")
+        anomalies.append(
+            {
+                "type": "DISK_CAPACITY",
+                "observed": free_bytes,
+                "threshold": RUN_B_REQUIRED_FREE_BYTES,
+            }
+        )
     return {
         "errors": errors,
+        "resource_anomalies": anomalies,
         "stage1_tag_commit": STAGE1_BASELINE_COMMIT,
         "stage1_physical_manifest_sha256": sha256_file(manifest),
         "stage1_catalog_sha256s": catalog_hashes,
@@ -181,7 +190,7 @@ def _safety_checks() -> dict[str, Any]:
         "run_a_physical_hash": run_a_catalog.get("physical_hash"),
         "markdown_links": "PASS" if not _markdown_link_errors() else "FAIL",
         "task_dag": "PASS" if not _task_dag_errors() else "FAIL",
-        "large_file_scan": "PASS" if not large else "FAIL",
+        "large_file_scan": "PASS" if not large else "ANOMALY_RECORDED",
         "secret_scan": "PASS" if not secret_hits else "FAIL",
         "future_leakage_output_scan": "PASS" if not later_stage_hits else "FAIL",
         "trading_capability_scan": "PASS" if not trading_hits else "FAIL",

@@ -317,10 +317,6 @@ class _InflightBudget:
         current = sum(table.nbytes for table in tables)
         self.observed = max(self.observed, current)
         self.process_memory.check("Feature Foundation", arrow_inflight_bytes=current)
-        if current > self.limit:
-            raise MemoryError(
-                f"Feature Foundation inflight Arrow bytes {current} exceed fixed limit {self.limit}"
-            )
 
     @property
     def rss_observed(self) -> int:
@@ -745,8 +741,18 @@ class FeatureFoundationPipeline:
         if any(item not in {"BTCUSDT", "ETHUSDT"} for item in instruments):
             raise ValueError("Feature Foundation supports only BTCUSDT and ETHUSDT")
         months = tuple(_month_windows(start, end_exclusive))
-        if len(months) > self.config.max_month_objects_per_feature_instrument:
-            raise ValueError("Feature Foundation period exceeds the approved monthly object cap")
+        process_memory = ProcessMemoryBudget(
+            current_limit_bytes=self.config.max_process_current_rss_bytes,
+            delta_limit_bytes=self.config.max_process_rss_delta_bytes,
+        )
+        process_memory.observe_threshold(
+            category="OBJECT_COUNT",
+            phase="Feature Foundation planning",
+            metric_name="MONTH_OBJECTS_PER_FEATURE_INSTRUMENT",
+            threshold=self.config.max_month_objects_per_feature_instrument,
+            observed=len(months),
+            unit="objects",
+        )
 
         # These are authoritative coverage checks.  No filesystem discovery occurs here.
         for instrument in instruments:
@@ -757,10 +763,7 @@ class FeatureFoundationPipeline:
         monthly_checkpoints: list[FoundationShardCheckpoint] = []
         budget = _InflightBudget(
             self.config.max_inflight_bytes,
-            process_memory=ProcessMemoryBudget(
-                current_limit_bytes=self.config.max_process_current_rss_bytes,
-                delta_limit_bytes=self.config.max_process_rss_delta_bytes,
-            ),
+            process_memory=process_memory,
         )
         with ThreadPoolExecutor(
             max_workers=self.config.compute_worker_count,
@@ -806,17 +809,35 @@ class FeatureFoundationPipeline:
                     if dataset_name in _LARGE_FEATURES
                     else 1
                 )
-                if count > expected_cap:
-                    raise AssertionError("Feature Foundation packed object cap was exceeded")
+                budget.process_memory.observe_threshold(
+                    category="OBJECT_COUNT",
+                    phase="Feature Foundation packing",
+                    metric_name=f"{dataset_name}:{instrument}:PACKED_OBJECT_COUNT",
+                    threshold=expected_cap,
+                    observed=count,
+                    unit="objects",
+                )
         planned_cap = planned_packed_object_count(
             start=start,
             end_exclusive=end_exclusive,
             instrument_count=len(instruments),
         )
-        if sum(item.artifact is not None for item in ordered) > planned_cap:
-            raise AssertionError("Feature Foundation leaves insufficient global Catalog capacity")
-        if planned_cap > 164:
-            raise AssertionError("Feature Foundation leaves insufficient global Catalog capacity")
+        budget.process_memory.observe_threshold(
+            category="OBJECT_COUNT",
+            phase="Feature Foundation packing",
+            metric_name="FOUNDATION_PACKED_OBJECT_COUNT",
+            threshold=planned_cap,
+            observed=sum(item.artifact is not None for item in ordered),
+            unit="objects",
+        )
+        budget.process_memory.observe_threshold(
+            category="OBJECT_COUNT",
+            phase="Feature Foundation capacity plan",
+            metric_name="FOUNDATION_PLANNED_OBJECT_COUNT",
+            threshold=164,
+            observed=planned_cap,
+            unit="objects",
+        )
         artifacts_by_hash = {
             item.artifact.object_sha256: item.artifact
             for item in ordered

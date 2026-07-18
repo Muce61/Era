@@ -573,7 +573,7 @@ def test_fixed_resource_and_global_object_budget() -> None:
         )
 
 
-def test_process_rss_gate_accepts_exact_limit_and_rejects_one_byte_over() -> None:
+def test_process_rss_threshold_records_one_byte_over_as_anomaly() -> None:
     current_values = iter((MAX_PROCESS_CURRENT_RSS_BYTES, MAX_PROCESS_CURRENT_RSS_BYTES))
     peak_values = iter((100, 100 + MAX_PROCESS_RSS_DELTA_BYTES))
     at_limit = _InflightBudget(
@@ -598,8 +598,8 @@ def test_process_rss_gate_accepts_exact_limit_and_rejects_one_byte_over() -> Non
             peak_reader=lambda: 100,
         ),
     )
-    with pytest.raises(MemoryError, match="current RSS"):
-        over_limit.check(())
+    over_limit.check(())
+    assert over_limit.process_memory.anomalies[0].metric_name == "CURRENT_RSS_BYTES"
 
 
 def test_production_pipeline_contains_no_row_materialization_or_recursive_glob() -> None:

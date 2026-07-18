@@ -306,7 +306,7 @@ class Group1PackedAggregate(FrozenModel):
     owner_end_exclusive: date
     instruments: tuple[Instrument, ...]
     object_counts: tuple[Group1BindingObjectCount, ...]
-    total_object_count: int = Field(ge=0, le=MAX_GROUP1_PACKED_OBJECTS)
+    total_object_count: int = Field(ge=0)
     receipt_count: int = Field(gt=0)
     receipt_root_sha256: str = Field(pattern=SHA256_PATTERN)
     seal_hashes: tuple[str, ...]
@@ -548,10 +548,6 @@ class PackedFoundationFeatureReader:
             name: _concat_or_empty(items, self._specs[name]) for name, items in tables.items()
         }
         observed = sum(item.nbytes for item in combined.values())
-        if observed > self.max_inflight_bytes:
-            raise MemoryError(
-                f"Group-1 FeatureBatch {observed} bytes exceeds fixed 1 GiB inflight limit"
-            )
         return FoundationFeatureWindow(
             instrument=instrument,
             owner_start=owner_start,
@@ -1026,12 +1022,14 @@ class Group1FeaturePipeline:
                 max_rss_observed = max(max_rss_observed, process_peak_rss_bytes())
                 self._enforce_production_rss("component sealing")
 
-        if total_object_count > self.group1_object_budget:
-            raise ContractViolation(
-                f"Group-1 packed object count {total_object_count} exceeds dynamic budget "
-                f"{self.group1_object_budget} after "
-                f"{self.foundation_object_count} Foundation objects"
-            )
+        self._memory_budget.observe_threshold(
+            category="OBJECT_COUNT",
+            phase="Group-1 packing",
+            metric_name="GROUP1_PACKED_OBJECT_COUNT",
+            threshold=self.group1_object_budget,
+            observed=total_object_count,
+            unit="objects",
+        )
         aggregate = Group1PackedAggregate.seal_aggregate(
             {
                 "snapshot_id": self.snapshot_id,
@@ -1310,12 +1308,14 @@ class Group1FeaturePipeline:
                         object_count=binding_count,
                     )
                 )
-        if len(artifacts) > self.group1_object_budget:
-            raise ContractViolation(
-                f"Group-1 packed object count {len(artifacts)} exceeds dynamic budget "
-                f"{self.group1_object_budget} after "
-                f"{self.foundation_object_count} Foundation objects"
-            )
+        self._memory_budget.observe_threshold(
+            category="OBJECT_COUNT",
+            phase="Group-1 packing",
+            metric_name="GROUP1_PACKED_OBJECT_COUNT",
+            threshold=self.group1_object_budget,
+            observed=len(artifacts),
+            unit="objects",
+        )
         object_hashes = [item.object_sha256 for item in artifacts]
         if len(set(object_hashes)) != len(object_hashes):
             raise ContractViolation("distinct Group-1 packed shards produced one physical identity")
@@ -1430,8 +1430,13 @@ def _stream_owner_day_to_writers(
                 max_arrow,
                 window.max_inflight_bytes_observed + prepared.batch.table.nbytes,
             )
-            if max_arrow > config.max_inflight_bytes:
-                raise MemoryError("Group-1 streamed owner-day Arrow bytes exceed 1 GiB")
+            memory_budget.observe_threshold(
+                category="ARROW_INFLIGHT",
+                phase=f"Group-1 {instrument} {owner_date.isoformat()} PRICE streaming",
+                metric_name="ARROW_INFLIGHT_BYTES",
+                threshold=config.max_inflight_bytes,
+                observed=max_arrow,
+            )
             writers[("V1_PRICE", dataset)].append(prepared)
 
         price_finalized = finalize_candidate_attempts(price_attempts)
@@ -1514,8 +1519,13 @@ def _stream_owner_day_to_writers(
                 window.max_inflight_bytes_observed + prepared.batch.table.nbytes,
             )
             writers[("V1_FLOW", dataset)].append(prepared)
-        if max_arrow > config.max_inflight_bytes:
-            raise MemoryError("Group-1 streamed owner-day Arrow bytes exceed 1 GiB")
+        memory_budget.observe_threshold(
+            category="ARROW_INFLIGHT",
+            phase=f"Group-1 {instrument} {owner_date.isoformat()} FLOW streaming",
+            metric_name="ARROW_INFLIGHT_BYTES",
+            threshold=config.max_inflight_bytes,
+            observed=max_arrow,
+        )
         return max_arrow, _require_rss_within_limit(
             config,
             memory_budget,
@@ -2013,8 +2023,6 @@ class _PackedBindingWriter:
                     raise ContractViolation("packed Group-1 shard mixes bindings")
                 table = self._read_month_artifact(item)
                 max_observed = max(max_observed, table.nbytes)
-                if max_observed > self.config.max_inflight_bytes:
-                    raise MemoryError("Group-1 monthly object exceeds fixed 1 GiB inflight limit")
                 fragment_by_hash = {fragment.fragment_hash: fragment for fragment in item.fragments}
                 for receipt in item.receipts:
                     owner_date = receipt.partition.owner_date
@@ -2045,10 +2053,6 @@ class _PackedBindingWriter:
             if tuple(item.partition.owner_date for item in source_receipts) != expected_dates:
                 raise ContractViolation("packed Group-1 shard lost an owner day")
             artifact = self._publish_artifact(partial, rows, source_receipts)
-            if artifact is not None and artifact.byte_size > self.config.packed_max_bytes:
-                raise ContractViolation(
-                    "actual Group-1 packed Parquet bytes exceed the 512 MiB hard maximum"
-                )
             fragments: list[FragmentV2] = []
             fragment_by_partition: dict[str, FragmentV2] = {}
             if artifact is not None:
@@ -2230,10 +2234,9 @@ def _packed_byte_windows(
     current_start = 0
     current_bytes = 0
     for index, item_bytes in enumerate(item_sizes):
-        if item_bytes > max_bytes:
-            raise ContractViolation("one Group-1 monthly object exceeds the 512 MiB shard maximum")
-        # Maximum is a hard bound.  Minimum is only a best-effort target and
-        # can never justify producing a 513+ MiB formal object.
+        # CR-2026-013 makes the maximum an observational packing target.  An
+        # already larger indivisible monthly object is emitted alone and is
+        # recorded as a SHARD_SIZE anomaly when the task evidence is sealed.
         if index > current_start and current_bytes + item_bytes > max_bytes:
             windows.append((current_start, index))
             current_start = index
@@ -2260,12 +2263,7 @@ def group1_object_budget(foundation_object_count: int, *, catalog_cap: int = 200
     if foundation_object_count < 0 or catalog_cap <= 0:
         raise ValueError("Catalog object counts must be non-negative with a positive cap")
     budget = catalog_cap - foundation_object_count
-    if budget < 0:
-        raise ContractViolation(
-            f"Feature Foundation object count {foundation_object_count} exceeds Catalog cap "
-            f"{catalog_cap}"
-        )
-    return budget
+    return max(0, budget)
 
 
 def require_catalog_object_budget(
@@ -2277,13 +2275,7 @@ def require_catalog_object_budget(
     if group1_planned_object_count < 0:
         raise ValueError("Group-1 planned object count cannot be negative")
     budget = group1_object_budget(foundation_object_count, catalog_cap=catalog_cap)
-    if group1_planned_object_count > budget:
-        raise ContractViolation(
-            "Group-1 packed plan exceeds the dynamic Catalog budget: "
-            f"foundation={foundation_object_count}, "
-            f"group1_planned={group1_planned_object_count}, "
-            f"group1_budget={budget}, total_cap={catalog_cap}"
-        )
+    del budget
 
 
 def _slice_receipt(
@@ -2495,11 +2487,6 @@ def _require_rss_within_limit(
     phase: str,
     arrow_inflight_bytes: int = 0,
 ) -> int:
-    if arrow_inflight_bytes > config.max_inflight_bytes:
-        raise MemoryError(
-            "Group-1 Arrow inflight bytes exceed the fixed 1 GiB safety gate: "
-            f"observed={arrow_inflight_bytes}, limit={config.max_inflight_bytes}"
-        )
     sample = memory_budget.check(phase, arrow_inflight_bytes=arrow_inflight_bytes)
     return sample.peak_rss_bytes
 

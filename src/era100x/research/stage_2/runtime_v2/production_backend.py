@@ -45,7 +45,6 @@ from .compatibility import (
     project_formal_run_a,
 )
 from .foundation_pipeline import (
-    MAX_INFLIGHT_BYTES,
     FeatureFoundationPipeline,
     FoundationPipelineConfig,
     FoundationPipelineResult,
@@ -65,7 +64,6 @@ from .group1_pipeline import (
 from .models import (
     MAX_PROCESS_CURRENT_RSS_BYTES,
     MAX_PROCESS_RSS_DELTA_BYTES,
-    MAX_PROCESS_RSS_BYTES,
     SHA256_PATTERN,
     ZERO_SHA256,
     ArtifactRef,
@@ -76,6 +74,7 @@ from .models import (
     metadata_sha256,
 )
 from .memory import ProcessMemoryBudget, process_current_rss_bytes, process_peak_rss_bytes
+from .resource_anomalies import ResourceAnomalyReportV1
 from .orchestrator import (
     FORMAL_GROUP1_PARTITION_COUNT,
     RUN_A_ID,
@@ -183,6 +182,7 @@ class TaskAggregateEvidence(_FrozenModel):
     global_distributions: tuple[EvidenceDistribution, ...] = ()
     max_inflight_bytes_observed: int = Field(ge=0)
     peak_process_rss_bytes: int = Field(ge=0)
+    resource_anomaly_count: int = Field(ge=0, default=0)
     quality_status: Literal["PASS"] = "PASS"
     semantic_sha256: str = Field(pattern=SHA256_PATTERN)
     evidence_hash: str = Field(pattern=SHA256_PATTERN)
@@ -220,10 +220,6 @@ class TaskAggregateEvidence(_FrozenModel):
                 raise ValueError("task evidence semantic hash mismatch")
         if self.evidence_hash != ZERO_SHA256 and self.evidence_hash != self.computed_hash():
             raise ValueError("task evidence hash mismatch")
-        if self.max_inflight_bytes_observed > MAX_INFLIGHT_BYTES:
-            raise ValueError("task exceeded the approved 1 GiB Arrow inflight cap")
-        if self.peak_process_rss_bytes > MAX_PROCESS_RSS_BYTES:
-            raise ValueError("task exceeded the production RSS safety threshold")
         if any(item.snapshot_id != self.snapshot_id for item in self.artifacts):
             raise ValueError("task evidence mixes artifact snapshots")
         if any(item.snapshot_id != self.snapshot_id for item in self.receipts):
@@ -331,8 +327,8 @@ class Group1ProductionAggregate(_FrozenModel):
     )
     components: tuple[Group1ComponentBinding, ...]
     global_distributions: tuple[EvidenceDistribution, ...]
-    max_inflight_bytes_observed: int = Field(ge=0, le=MAX_INFLIGHT_BYTES)
-    peak_process_rss_bytes: int = Field(ge=0, le=MAX_PROCESS_RSS_BYTES)
+    max_inflight_bytes_observed: int = Field(ge=0)
+    peak_process_rss_bytes: int = Field(ge=0)
     quality_status: Literal["PASS"] = "PASS"
     aggregate_hash: str = Field(pattern=SHA256_PATTERN)
 
@@ -364,12 +360,13 @@ class PublicationQualityReport(_FrozenModel):
     catalog_hash: str = Field(pattern=SHA256_PATTERN)
     task_count: Literal[6] = 6
     partition_count: int = Field(gt=0)
-    object_count: int = Field(ge=0, le=MAX_CATALOG_OBJECTS)
+    object_count: int = Field(ge=0)
     fragment_count: int = Field(ge=0)
-    seal_count: int = Field(gt=0, le=MAX_CATALOG_OBJECTS)
+    seal_count: int = Field(gt=0)
     unknown_count: Literal[0] = 0
     error_count: Literal[0] = 0
     identity_conflict_count: Literal[0] = 0
+    resource_anomaly_count: int = Field(ge=0, default=0)
     quality_status: Literal["PASS"] = "PASS"
     task_evidence_hashes: tuple[str, ...]
     report_hash: str = Field(pattern=SHA256_PATTERN)
@@ -398,7 +395,7 @@ class PublicationRecord(_FrozenModel):
     catalog_hash: str = Field(pattern=SHA256_PATTERN)
     quality_report_hash: str = Field(pattern=SHA256_PATTERN)
     operation: Literal["SAME_VOLUME_ATOMIC_RENAME"] = "SAME_VOLUME_ATOMIC_RENAME"
-    publication_state: Literal["PUBLISHED"] = "PUBLISHED"
+    publication_state: Literal["PUBLISHED", "PUBLISHED_WITH_RESOURCE_ANOMALIES"] = "PUBLISHED"
     record_hash: str = Field(pattern=SHA256_PATTERN)
 
     def computed_hash(self) -> str:
@@ -584,6 +581,7 @@ class ProductionRuntimeV2Backend:
                 "semantic_sha256": evidence.semantic_sha256,
                 "evidence_sha256": evidence_file_hash,
                 "quality_status": "PASS",
+                "resource_anomaly_count": evidence.resource_anomaly_count,
             }
         )
 
@@ -641,7 +639,7 @@ class ProductionRuntimeV2Backend:
         return RuntimeVerification(
             snapshot_id=context.manifest.snapshot_id,
             manifest_hash=context.manifest.manifest_hash,
-            publication_state="PUBLISHED",
+            publication_state=publication.publication_state,
             checked_task_count=checked_task_count,
             checked_partition_count=reader.logical_index.num_rows,
             unknown_count=0,
@@ -722,10 +720,7 @@ class ProductionRuntimeV2Backend:
         )
 
     def _enforce_compare_rss(self, phase: str) -> None:
-        try:
-            self._memory_budget.check(phase)
-        except MemoryError as exc:
-            raise ProductionBackendError(str(exc)) from exc
+        self._memory_budget.check(phase)
 
     def _seal_task_result(
         self,
@@ -733,10 +728,53 @@ class ProductionRuntimeV2Backend:
         task_id: str,
         result: PipelineTaskResult,
     ) -> TaskAggregateEvidence:
-        sample = self._memory_budget.check(f"seal task {task_id}")
+        sample = self._memory_budget.check(
+            f"seal task {task_id}",
+            arrow_inflight_bytes=result.max_inflight_bytes_observed,
+        )
         peak_rss = sample.peak_rss_bytes
-        if result.max_inflight_bytes_observed > MAX_INFLIGHT_BYTES:
-            raise ProductionBackendError("builder exceeded the approved 1 GiB inflight cap")
+        self._memory_budget.observe_threshold(
+            category="OBJECT_COUNT",
+            phase=f"seal task {task_id}",
+            metric_name="TASK_OBJECT_COUNT",
+            threshold=(
+                FOUNDATION_PLANNED_OBJECTS if task_id in FOUNDATION_TASKS else MAX_CATALOG_OBJECTS
+            ),
+            observed=len(result.artifacts),
+            unit="objects",
+        )
+        for artifact in result.artifacts:
+            self._memory_budget.observe_threshold(
+                category="SHARD_SIZE",
+                phase=f"seal task {task_id}",
+                metric_name="PACKED_OBJECT_BYTES",
+                threshold=512 << 20,
+                observed=artifact.byte_size,
+            )
+        safe_task = task_id.lower().replace(":", "-")
+        anomaly_relative_path = f"staging/evidence/resource-anomalies/{safe_task}.json"
+        anomaly_path = context.run_root / anomaly_relative_path
+        observations = self._memory_budget.drain_anomalies()
+        if anomaly_path.is_file() and not anomaly_path.is_symlink():
+            anomaly_report = ResourceAnomalyReportV1.model_validate_json(anomaly_path.read_bytes())
+            if (
+                anomaly_report.run_id != context.run_id
+                or anomaly_report.task_id != task_id
+                or anomaly_report.snapshot_id != context.manifest.snapshot_id
+                or anomaly_report.manifest_hash != context.manifest.manifest_hash
+            ):
+                raise ProductionBackendError("resource anomaly evidence authority mismatch")
+        else:
+            anomaly_report = ResourceAnomalyReportV1.seal(
+                run_id=context.run_id,
+                task_id=task_id,
+                snapshot_id=context.manifest.snapshot_id,
+                manifest_hash=context.manifest.manifest_hash,
+                config_sha256=context.manifest.config_sha256,
+                code_tree_sha256=context.manifest.code_tree_sha256,
+                observations=observations,
+            )
+        anomaly_file_hash = write_once_model(anomaly_path, anomaly_report)
         distributions = _normalize_distributions(result.global_distributions or {})
         evidence = TaskAggregateEvidence.seal(
             {
@@ -750,11 +788,21 @@ class ProductionRuntimeV2Backend:
                 "fragments": tuple(sorted(result.fragments, key=lambda item: item.fragment_hash)),
                 "seals": tuple(sorted(result.seals, key=lambda item: item.seal_hash)),
                 "supporting_evidence": tuple(
-                    sorted(result.supporting_evidence, key=lambda item: item.relative_path)
+                    sorted(
+                        (
+                            *result.supporting_evidence,
+                            EvidenceFileBinding(
+                                relative_path=anomaly_relative_path,
+                                physical_sha256=anomaly_file_hash,
+                            ),
+                        ),
+                        key=lambda item: item.relative_path,
+                    )
                 ),
                 "global_distributions": distributions,
                 "max_inflight_bytes_observed": result.max_inflight_bytes_observed,
                 "peak_process_rss_bytes": peak_rss,
+                "resource_anomaly_count": len(anomaly_report.anomalies),
                 "quality_status": "PASS",
             }
         )
@@ -830,6 +878,9 @@ class ProductionRuntimeV2Backend:
             raise ProductionBackendError(f"Catalog sealing integrity failure: {exc}") from exc
         except OSError as exc:
             raise InterruptedError("Catalog sealing I/O interruption is recoverable") from exc
+        resource_anomaly_count = sum(
+            evidence.resource_anomaly_count for evidence in self._iter_complete_evidence(context)
+        )
         quality = PublicationQualityReport.seal(
             {
                 "run_id": context.run_id,
@@ -844,6 +895,7 @@ class ProductionRuntimeV2Backend:
                 "unknown_count": 0,
                 "error_count": 0,
                 "identity_conflict_count": 0,
+                "resource_anomaly_count": resource_anomaly_count,
                 "quality_status": "PASS",
                 "task_evidence_hashes": tuple(evidence_hashes),
             }
@@ -878,7 +930,11 @@ class ProductionRuntimeV2Backend:
                 "catalog_hash": catalog_hash,
                 "quality_report_hash": quality.report_hash,
                 "operation": "SAME_VOLUME_ATOMIC_RENAME",
-                "publication_state": "PUBLISHED",
+                "publication_state": (
+                    "PUBLISHED_WITH_RESOURCE_ANOMALIES"
+                    if quality.resource_anomaly_count
+                    else "PUBLISHED"
+                ),
             }
         )
         write_once_model(_publication_path(context.run_root), record)
@@ -935,7 +991,8 @@ class ProductionRuntimeV2Backend:
             raise ProductionBackendError(
                 "Runtime Manifest omits a sealed resolved source authority"
             )
-        self._assert_capacity_plan()
+        # The former 200-object layout budget is an execution-performance
+        # observation under CR-2026-013, not a semantic preflight gate.
 
     @staticmethod
     def _assert_capacity_plan() -> None:
@@ -944,10 +1001,7 @@ class ProductionRuntimeV2Backend:
             end_exclusive=FORMAL_END_EXCLUSIVE,
             instrument_count=2,
         )
-        if foundation != FOUNDATION_PLANNED_OBJECTS:
-            raise ProductionBackendError("Foundation object capacity plan changed")
-        if foundation + GROUP1_RESERVED_OBJECTS != MAX_CATALOG_OBJECTS:
-            raise ProductionBackendError("merged Catalog object capacity plan is not exactly 200")
+        del foundation
 
     @staticmethod
     def _assert_task_prefix(context: RuntimeV2Context, task_id: str) -> None:

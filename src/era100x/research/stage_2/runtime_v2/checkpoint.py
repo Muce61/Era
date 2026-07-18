@@ -40,9 +40,13 @@ RuntimeStatus = Literal[
     "PREFLIGHT_PASSED",
     "IN_PROGRESS",
     "INTERRUPTED_RECOVERABLE",
+    "RUNNING_WITH_ANOMALIES",
+    "PAUSED_RESOURCE_PRESSURE",
+    "PAUSED_STORAGE_UNAVAILABLE",
     "FOUNDATION_COMPLETE",
     "GROUP1_COMPLETE",
     "FAILED_UNPUBLISHED",
+    "FAILED_INTEGRITY",
 ]
 
 
@@ -82,6 +86,7 @@ class BackendTaskReceipt(_FrozenModel):
     semantic_sha256: str = Field(pattern=SHA256_PATTERN)
     evidence_sha256: str = Field(pattern=SHA256_PATTERN)
     quality_status: Literal["PASS"] = "PASS"
+    resource_anomaly_count: int = Field(ge=0, default=0)
     receipt_hash: str = Field(pattern=SHA256_PATTERN)
 
     def computed_hash(self) -> str:
@@ -107,6 +112,7 @@ class CompletedTask(_FrozenModel):
     receipt_file_sha256: str = Field(pattern=SHA256_PATTERN)
     receipt_hash: str = Field(pattern=SHA256_PATTERN)
     semantic_sha256: str = Field(pattern=SHA256_PATTERN)
+    resource_anomaly_count: int = Field(ge=0, default=0)
 
     @model_validator(mode="after")
     def validate_completion(self) -> Self:
@@ -129,6 +135,20 @@ class FailureRecord(_FrozenModel):
     def validate_failure(self) -> Self:
         if self.task_id not in FULL_TASK_MATRIX:
             raise ValueError("failure task is outside the frozen full matrix")
+        _safe_relative_path(self.report_relative_path, required_prefix="reports")
+        return self
+
+
+class ResourcePauseRecord(_FrozenModel):
+    task_id: str
+    reason: str = Field(min_length=1, max_length=2048)
+    report_relative_path: str
+    report_sha256: str = Field(pattern=SHA256_PATTERN)
+
+    @model_validator(mode="after")
+    def validate_pause(self) -> Self:
+        if self.task_id not in FULL_TASK_MATRIX:
+            raise ValueError("resource pause task is outside the frozen full matrix")
         _safe_relative_path(self.report_relative_path, required_prefix="reports")
         return self
 
@@ -156,6 +176,7 @@ class RuntimeV2Checkpoint(_FrozenModel):
     status: RuntimeStatus
     active_task: str | None
     failure: FailureRecord | None
+    resource_pause: ResourcePauseRecord | None = None
     revision: int = Field(ge=0)
     checkpoint_hash: str = Field(pattern=SHA256_PATTERN)
 
@@ -176,9 +197,24 @@ class RuntimeV2Checkpoint(_FrozenModel):
             if len(completed_ids) == len(FULL_TASK_MATRIX)
             else FULL_TASK_MATRIX[len(completed_ids)]
         )
-        if self.status in {"IN_PROGRESS", "INTERRUPTED_RECOVERABLE"}:
-            if self.active_task != next_task or self.failure is not None:
+        if self.status in {
+            "IN_PROGRESS",
+            "INTERRUPTED_RECOVERABLE",
+            "RUNNING_WITH_ANOMALIES",
+        }:
+            if (
+                self.active_task != next_task
+                or self.failure is not None
+                or self.resource_pause is not None
+            ):
                 raise ValueError("active checkpoint must bind the next deterministic task")
+        elif self.status in {"PAUSED_RESOURCE_PRESSURE", "PAUSED_STORAGE_UNAVAILABLE"}:
+            if (
+                self.active_task != next_task
+                or self.failure is not None
+                or self.resource_pause is None
+            ):
+                raise ValueError("resource-paused checkpoint must bind resumable evidence")
         elif self.active_task is not None:
             raise ValueError("non-active checkpoint cannot retain an active task")
         if self.status == "PREFLIGHT_PASSED":
@@ -198,12 +234,13 @@ class RuntimeV2Checkpoint(_FrozenModel):
                 or self.failure is not None
             ):
                 raise ValueError("invalid Group-1 completion state")
-        elif self.status == "FAILED_UNPUBLISHED":
+        elif self.status in {"FAILED_UNPUBLISHED", "FAILED_INTEGRITY"}:
             if self.failure is None:
                 raise ValueError("terminal failure requires an append-only failure record")
         if self.phase == "PREFLIGHT" and self.status not in {
             "PREFLIGHT_PASSED",
             "FAILED_UNPUBLISHED",
+            "FAILED_INTEGRITY",
         }:
             raise ValueError("preflight phase has an invalid status")
         if self.phase == "FOUNDATION" and any(item.startswith("GROUP1:") for item in completed_ids):

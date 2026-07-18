@@ -1,4 +1,4 @@
-"""Production memory evidence and fail-closed Runtime V2 resource gates."""
+"""Production memory evidence with audit-only resource thresholds."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from .models import (
     MAX_PROCESS_CURRENT_RSS_BYTES,
     MAX_PROCESS_RSS_DELTA_BYTES,
 )
+from .resource_anomalies import ResourceCategory, ResourceThresholdObservation
 
 
 def process_peak_rss_bytes() -> int:
@@ -86,12 +87,13 @@ class ProcessMemorySample:
 
 
 class ProcessMemoryBudget:
-    """Hard current-RSS gates with lifetime peak retained as audit evidence.
+    """Observe resource thresholds without turning them into research failures.
 
     ``ru_maxrss`` is process-lifetime state and cannot be reset at a phase
     boundary.  CR-2026-012 therefore never treats its delta as a phase-local
-    hard limit.  The hard delta is measured from the current RSS sampled at
-    the beginning of the active phase.
+    hard limit. CR-2026-013 also classifies current-RSS and Arrow limits as
+    execution anomalies. Actual inability to continue is represented by an
+    explicit recoverable pause at the orchestrator boundary.
     """
 
     def __init__(
@@ -99,11 +101,13 @@ class ProcessMemoryBudget:
         *,
         current_limit_bytes: int = MAX_PROCESS_CURRENT_RSS_BYTES,
         delta_limit_bytes: int = MAX_PROCESS_RSS_DELTA_BYTES,
+        arrow_limit_bytes: int = 1_073_741_824,
         current_reader: Callable[[], int] = process_current_rss_bytes,
         peak_reader: Callable[[], int] = process_peak_rss_bytes,
     ) -> None:
         self.current_limit_bytes = current_limit_bytes
         self.delta_limit_bytes = delta_limit_bytes
+        self.arrow_limit_bytes = arrow_limit_bytes
         self._current_reader = current_reader
         self._peak_reader = peak_reader
         self._lock = threading.Lock()
@@ -114,6 +118,7 @@ class ProcessMemoryBudget:
         self.max_current_rss_delta_bytes_observed = 0
         self.max_peak_rss_delta_bytes_observed = 0
         self.samples: list[ProcessMemorySample] = []
+        self.anomalies: list[ResourceThresholdObservation] = []
 
     def begin_phase(self, phase: str) -> ProcessMemorySample:
         """Reset only the phase-current baseline; retain lifetime peak audit."""
@@ -159,21 +164,81 @@ class ProcessMemoryBudget:
                 self.max_peak_rss_delta_bytes_observed, peak_delta
             )
         if current > self.current_limit_bytes:
-            raise MemoryError(
-                f"{phase} current RSS {current} exceeds fixed limit {self.current_limit_bytes}"
+            self._record_anomaly(
+                category="MEMORY_RSS",
+                phase=phase,
+                metric_name="CURRENT_RSS_BYTES",
+                threshold=self.current_limit_bytes,
+                observed=current,
             )
         if current_delta > self.delta_limit_bytes:
-            raise MemoryError(
-                f"{phase} current RSS delta {current_delta} exceeds fixed limit "
-                f"{self.delta_limit_bytes}; "
-                f"baseline={self.baseline_current_rss_bytes} current={current}; "
-                f"lifetime_peak={peak}"
+            self._record_anomaly(
+                category="MEMORY_RSS",
+                phase=phase,
+                metric_name="CURRENT_RSS_DELTA_BYTES",
+                threshold=self.delta_limit_bytes,
+                observed=current_delta,
+            )
+        if arrow_inflight_bytes > self.arrow_limit_bytes:
+            self._record_anomaly(
+                category="ARROW_INFLIGHT",
+                phase=phase,
+                metric_name="ARROW_INFLIGHT_BYTES",
+                threshold=self.arrow_limit_bytes,
+                observed=arrow_inflight_bytes,
             )
         return sample
 
+    def observe_threshold(
+        self,
+        *,
+        category: ResourceCategory,
+        phase: str,
+        metric_name: str,
+        threshold: int,
+        observed: int,
+        unit: str = "bytes",
+    ) -> None:
+        if observed > threshold:
+            self._record_anomaly(
+                category=category,
+                phase=phase,
+                metric_name=metric_name,
+                threshold=threshold,
+                observed=observed,
+                unit=unit,
+            )
+
+    def drain_anomalies(self) -> tuple[ResourceThresholdObservation, ...]:
+        with self._lock:
+            values = tuple(self.anomalies)
+            self.anomalies.clear()
+        return values
+
+    def _record_anomaly(
+        self,
+        *,
+        category: ResourceCategory,
+        phase: str,
+        metric_name: str,
+        threshold: int,
+        observed: int,
+        unit: str = "bytes",
+    ) -> None:
+        observation = ResourceThresholdObservation(
+            category=category,
+            phase=phase,
+            metric_name=metric_name,
+            unit=unit,
+            threshold=threshold,
+            observed=observed,
+        ).with_clock()
+        with self._lock:
+            self.anomalies.append(observation)
+
 
 class _ProcessMemoryPhaseMonitor(AbstractContextManager[ProcessMemoryBudget]):
-    """Daemon sampler that propagates a resource violation on phase exit."""
+    """Daemon sampler that records threshold anomalies through phase exit."""
 
     def __init__(
         self,
@@ -187,7 +252,6 @@ class _ProcessMemoryPhaseMonitor(AbstractContextManager[ProcessMemoryBudget]):
         self.phase = phase
         self.interval_seconds = interval_seconds
         self._stop = threading.Event()
-        self._failure: MemoryError | None = None
         self._thread: threading.Thread | None = None
 
     def __enter__(self) -> ProcessMemoryBudget:
@@ -208,18 +272,11 @@ class _ProcessMemoryPhaseMonitor(AbstractContextManager[ProcessMemoryBudget]):
                 raise RuntimeError("memory sampler did not stop")
         if exc is None:
             self.budget.check(f"{self.phase}:complete")
-            if self._failure is not None:
-                raise self._failure
         return False
 
     def _sample(self) -> None:
         while not self._stop.wait(self.interval_seconds):
-            try:
-                self.budget.check(f"{self.phase}:sample")
-            except MemoryError as exc:
-                self._failure = exc
-                self._stop.set()
-                return
+            self.budget.check(f"{self.phase}:sample")
 
 
 MIB: Final = 1024 * 1024

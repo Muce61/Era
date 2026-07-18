@@ -35,12 +35,14 @@ from era100x.research.stage_2.runtime_v2.checkpoint import (
     CheckpointStore,
     CompletedTask,
     FailureRecord,
+    ResourcePauseRecord,
     RuntimeV2Checkpoint,
     read_backend_receipt,
     task_receipt_relative_path,
     write_once_model,
 )
 from era100x.research.stage_2.runtime_v2.models import ManifestV2
+from era100x.research.stage_2.runtime_v2.resource_anomalies import ResourcePause
 from era100x.research.stage_2.runtime_v2.source_authority import (
     CONTRACT_PRICE_MANIFEST_AUTHORITY,
     TRADES_RESOLVED_INDEX_AUTHORITY,
@@ -111,7 +113,7 @@ class RuntimeVerification(_FrozenModel):
     status: Literal["PASS"] = "PASS"
     snapshot_id: str = Field(pattern=r"^[0-9a-f]{64}$")
     manifest_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
-    publication_state: Literal["PUBLISHED"] = "PUBLISHED"
+    publication_state: Literal["PUBLISHED", "PUBLISHED_WITH_RESOURCE_ANOMALIES"] = "PUBLISHED"
     checked_task_count: int = Field(ge=0)
     checked_partition_count: int = Field(ge=0)
     unknown_count: int = Field(ge=0)
@@ -157,7 +159,20 @@ class RuntimeFailureEvidence(_FrozenModel):
     task_id: str
     error_type: str
     reason: str
-    publication_status: Literal["FAILED_UNPUBLISHED"] = "FAILED_UNPUBLISHED"
+    publication_status: Literal["FAILED_INTEGRITY"] = "FAILED_INTEGRITY"
+
+
+class RuntimeResourcePauseEvidence(_FrozenModel):
+    schema_name: Literal["stage2-v2-resource-pause"] = "stage2-v2-resource-pause"
+    pause_version: Literal["1.0"] = "1.0"
+    run_id: str
+    snapshot_id: str = Field(pattern=r"^[0-9a-f]{64}$")
+    manifest_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    task_id: str
+    reason: str
+    status: Literal["PAUSED_RESOURCE_PRESSURE", "PAUSED_STORAGE_UNAVAILABLE"]
+    semantic_impact: Literal["NONE"] = "NONE"
+    integrity_impact: Literal["NONE"] = "NONE"
 
 
 @dataclass(frozen=True, slots=True)
@@ -327,6 +342,7 @@ class Stage2V2Orchestrator:
                 "status": "PREFLIGHT_PASSED",
                 "active_task": None,
                 "failure": None,
+                "resource_pause": None,
                 "revision": 0,
             }
         )
@@ -381,7 +397,13 @@ class Stage2V2Orchestrator:
         context, checkpoint = self._load_run(
             run_id, manifest_path, snapshot_id, protection_path, migration_path, mutating=True
         )
-        if checkpoint.status not in {"IN_PROGRESS", "INTERRUPTED_RECOVERABLE"}:
+        if checkpoint.status not in {
+            "IN_PROGRESS",
+            "INTERRUPTED_RECOVERABLE",
+            "RUNNING_WITH_ANOMALIES",
+            "PAUSED_RESOURCE_PRESSURE",
+            "PAUSED_STORAGE_UNAVAILABLE",
+        }:
             raise RuntimeV2OrchestrationError("resume requires a recoverable interrupted state")
         with self._run_lock(context.run_root):
             self._verify_completed(context, checkpoint)
@@ -483,6 +505,7 @@ class Stage2V2Orchestrator:
                 status="IN_PROGRESS",
                 active_task=task_id,
                 failure=None,
+                resource_pause=None,
             )
             store.replace(active, expected_hash=current.checkpoint_hash)
             current = active
@@ -498,6 +521,7 @@ class Stage2V2Orchestrator:
                     receipt_file_sha256=receipt_file_hash,
                     receipt_hash=receipt.receipt_hash,
                     semantic_sha256=receipt.semantic_sha256,
+                    resource_anomaly_count=receipt.resource_anomaly_count,
                 )
             except InterruptedError:
                 interrupted = current.advance(
@@ -505,6 +529,10 @@ class Stage2V2Orchestrator:
                     active_task=task_id,
                 )
                 store.replace(interrupted, expected_hash=current.checkpoint_hash)
+                raise
+            except ResourcePause as exc:
+                paused = self._resource_pause(context, current, task_id, exc)
+                store.replace(paused, expected_hash=current.checkpoint_hash)
                 raise
             except Exception as exc:
                 failed = self._terminal_failure(context, current, task_id, exc)
@@ -516,13 +544,18 @@ class Stage2V2Orchestrator:
                 status = "FOUNDATION_COMPLETE" if phase == "FOUNDATION" else "GROUP1_COMPLETE"
                 next_task = None
             else:
-                status = "INTERRUPTED_RECOVERABLE"
+                status = (
+                    "RUNNING_WITH_ANOMALIES"
+                    if completion.resource_anomaly_count
+                    else "INTERRUPTED_RECOVERABLE"
+                )
                 next_task = FULL_TASK_MATRIX[len(completions)]
             completed = current.advance(
                 completed_tasks=completions,
                 status=status,
                 active_task=next_task,
                 failure=None,
+                resource_pause=None,
             )
             store.replace(completed, expected_hash=current.checkpoint_hash)
             current = completed
@@ -707,7 +740,10 @@ class Stage2V2Orchestrator:
         if not runs.is_dir() or runs.is_symlink():
             raise RuntimeV2OrchestrationError("approved Stage 2 runs root is unavailable")
         if require_space and shutil.disk_usage(STAGE2_ROOT).free < MINIMUM_V2_FREE_BYTES:
-            raise RuntimeV2OrchestrationError("Runtime V2 full-build space gate failed")
+            raise ResourcePause(
+                "Runtime V2 estimated capacity threshold crossed; execution was not started",
+                storage=True,
+            )
         if write_probe:
             probe = runs / f".{run_id}.v2-write-probe"
             descriptor = os.open(probe, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
@@ -821,9 +857,45 @@ class Stage2V2Orchestrator:
             report_sha256=report_hash,
         )
         return checkpoint.advance(
-            status="FAILED_UNPUBLISHED",
+            status="FAILED_INTEGRITY",
             active_task=None,
             failure=failure,
+            resource_pause=None,
+        )
+
+    @staticmethod
+    def _resource_pause(
+        context: RuntimeV2Context,
+        checkpoint: RuntimeV2Checkpoint,
+        task_id: str,
+        error: ResourcePause,
+    ) -> RuntimeV2Checkpoint:
+        status: Literal["PAUSED_RESOURCE_PRESSURE", "PAUSED_STORAGE_UNAVAILABLE"] = (
+            "PAUSED_STORAGE_UNAVAILABLE" if error.storage else "PAUSED_RESOURCE_PRESSURE"
+        )
+        reason = (str(error).strip() or type(error).__name__)[:2048]
+        evidence = RuntimeResourcePauseEvidence(
+            run_id=context.run_id,
+            snapshot_id=context.manifest.snapshot_id,
+            manifest_hash=context.manifest.manifest_hash,
+            task_id=task_id,
+            reason=reason,
+            status=status,
+        )
+        safe_task = task_id.lower().replace(":", "-")
+        relative_path = f"reports/resource-pause-{safe_task}-r{checkpoint.revision + 1}.json"
+        report_hash = write_once_model(context.run_root / relative_path, evidence)
+        pause = ResourcePauseRecord(
+            task_id=task_id,
+            reason=reason,
+            report_relative_path=relative_path,
+            report_sha256=report_hash,
+        )
+        return checkpoint.advance(
+            status=status,
+            active_task=task_id,
+            failure=None,
+            resource_pause=pause,
         )
 
     @staticmethod

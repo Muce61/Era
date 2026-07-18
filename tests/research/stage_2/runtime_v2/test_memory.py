@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import time
 
-import pytest
-
 from era100x.research.stage_2.runtime_v2.memory import ProcessMemoryBudget
 
 
@@ -43,7 +41,7 @@ def test_memory_budget_retains_lifetime_peak_as_audit_without_false_failure() ->
     assert sample.current_rss_delta_bytes == 0
 
 
-def test_memory_budget_rejects_phase_current_delta() -> None:
+def test_memory_budget_records_phase_current_delta_as_anomaly() -> None:
     current = iter((1_000_000_000, 1_600_000_001))
     budget = ProcessMemoryBudget(
         current_limit_bytes=3_000_000_000,
@@ -52,11 +50,14 @@ def test_memory_budget_rejects_phase_current_delta() -> None:
         peak_reader=lambda: 2_500_000_001,
     )
 
-    with pytest.raises(MemoryError, match="current RSS delta"):
-        budget.check("fixture")
+    sample = budget.check("fixture")
+
+    assert sample.current_rss_delta_bytes == 600_000_001
+    assert [item.metric_name for item in budget.anomalies] == ["CURRENT_RSS_DELTA_BYTES"]
+    assert budget.anomalies[0].action == "CONTINUED"
 
 
-def test_continuous_phase_monitor_catches_transient_current_rss() -> None:
+def test_continuous_phase_monitor_records_transient_current_rss() -> None:
     current = [100]
     budget = ProcessMemoryBudget(
         current_limit_bytes=1_000,
@@ -65,7 +66,24 @@ def test_continuous_phase_monitor_catches_transient_current_rss() -> None:
         peak_reader=lambda: 900,
     )
 
-    with pytest.raises(MemoryError, match="current RSS delta"):
-        with budget.monitor_phase("packing", interval_seconds=0.001):
-            current[0] = 700
-            time.sleep(0.02)
+    with budget.monitor_phase("packing", interval_seconds=0.001):
+        current[0] = 700
+        time.sleep(0.02)
+
+    assert any(item.metric_name == "CURRENT_RSS_DELTA_BYTES" for item in budget.anomalies)
+
+
+def test_real_failure_observation_is_anomaly_not_terminal_failure() -> None:
+    current = iter((245_186_560, 1_639_940_096))
+    budget = ProcessMemoryBudget(
+        current_limit_bytes=3_221_225_472,
+        delta_limit_bytes=1_073_741_824,
+        current_reader=lambda: next(current),
+        peak_reader=lambda: 1_697_202_176,
+    )
+
+    sample = budget.check("Feature Foundation packing")
+
+    assert sample.current_rss_delta_bytes == 1_394_753_536
+    assert budget.anomalies[0].metric_name == "CURRENT_RSS_DELTA_BYTES"
+    assert budget.anomalies[0].semantic_impact == "NONE"

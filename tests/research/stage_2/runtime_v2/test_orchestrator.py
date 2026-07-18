@@ -38,6 +38,7 @@ from era100x.research.stage_2.runtime_v2.orchestrator import (
     Stage2V2Orchestrator,
     compute_v2_code_tree_sha256,
 )
+from era100x.research.stage_2.runtime_v2.resource_anomalies import ResourcePause
 from era100x.research.stage_2.runtime_v2.source_authority import (
     CONTRACT_PRICE_MANIFEST_AUTHORITY,
     TRADES_RESOLVED_INDEX_AUTHORITY,
@@ -68,12 +69,14 @@ class FakeBackend:
         *,
         interrupt_once: str | None = None,
         fail_on: str | None = None,
+        pause_on: str | None = None,
         preflight_error: Exception | None = None,
     ) -> None:
         self.executed: list[str] = []
         self.verified: list[str] = []
         self.interrupt_once = interrupt_once
         self.fail_on = fail_on
+        self.pause_on = pause_on
         self.preflight_error = preflight_error
         self.released = False
 
@@ -93,6 +96,8 @@ class FakeBackend:
             raise InterruptedError("controlled test interruption")
         if self.fail_on == task_id:
             raise ValueError("controlled terminal failure")
+        if self.pause_on == task_id:
+            raise ResourcePause("controlled resource pressure")
         digest = hashlib.sha256(task_id.encode("utf-8")).hexdigest()
         return BackendTaskReceipt.seal(
             {
@@ -482,12 +487,29 @@ def test_terminal_backend_failure_is_unpublished_and_not_resumable(
     with pytest.raises(ValueError, match="controlled terminal"):
         orchestrator.build_foundation(**common)  # type: ignore[arg-type]
     failed = CheckpointStore(root / "runs" / RUN_ID).read()
-    assert failed.status == "FAILED_UNPUBLISHED"
+    assert failed.status == "FAILED_INTEGRITY"
     assert failed.failure is not None
     assert (root / "runs" / RUN_ID / failed.failure.report_relative_path).is_file()
     with pytest.raises(RuntimeV2OrchestrationError, match="recoverable"):
         orchestrator.resume(**common)  # type: ignore[arg-type]
     assert not (root / "runs" / RUN_ID / "published" / "snapshots").exists()
+
+
+def test_resource_pressure_is_checkpointed_and_resumable(
+    authority_paths: tuple[dict[str, object], Path],
+) -> None:
+    common, root = authority_paths
+    backend = FakeBackend(pause_on=FOUNDATION_TASKS[0])
+    orchestrator = Stage2V2Orchestrator(backend)
+    orchestrator.preflight(**common)  # type: ignore[arg-type]
+    with pytest.raises(ResourcePause, match="controlled"):
+        orchestrator.build_foundation(**common)  # type: ignore[arg-type]
+    paused = CheckpointStore(root / "runs" / RUN_ID).read()
+    assert paused.status == "PAUSED_RESOURCE_PRESSURE"
+    assert paused.resource_pause is not None
+    backend.pause_on = None
+    resumed = orchestrator.resume(**common)  # type: ignore[arg-type]
+    assert resumed.status == "FOUNDATION_COMPLETE"
 
 
 def test_explicit_snapshot_or_manifest_drift_fails_before_mutation(

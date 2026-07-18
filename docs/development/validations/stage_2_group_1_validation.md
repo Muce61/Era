@@ -103,3 +103,14 @@ groups with maximum Arrow `15,120,000`, current RSS `544,030,720` and phase-curr
 `384,630,784` bytes; its report SHA-256 is
 `cb84ce635f31d0eb5562602916042d68177ff3c3da0738ec09da7b4ee3c9d691`. Code validation PASS does
 not change the current Group-1 FAIL conclusion.
+
+## S2-T10 v1.11 resource anomaly correction
+
+The next replacement Run B `stage2-g1-v2-b-20260718T141137Z-f0c150bfa1c9` completed all 316 BTC
+month-level Foundation objects and failed unpublished before packing because a resource observation
+threshold was classified as terminal research failure. It has zero published files and remains
+immutable. CR-2026-013 is APPROVED to make memory, Arrow, object-count, object-size, capacity and
+performance thresholds append-only anomalies, while preserving hard failure for integrity and
+exact comparison defects. A new run may adopt the 316 objects only after complete per-object
+verification. This draft remains **FAIL** until the replacement publishes and all 61,776 Group-1
+partitions exactly match Run A.

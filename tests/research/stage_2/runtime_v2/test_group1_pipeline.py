@@ -9,7 +9,6 @@ import sys
 from typing import Literal, cast
 
 import pyarrow as pa  # type: ignore[import-untyped]
-import pytest
 
 from era100x.research.stage_2.runtime_v2.catalog import (
     ArtifactStoreV2,
@@ -22,7 +21,6 @@ from era100x.research.stage_2.runtime_v2.dataset_specs import (
     PRICE_DATASETS,
     group1_dataset_specs,
 )
-from era100x.research.stage_2.runtime_v2.errors import ContractViolation
 from era100x.research.stage_2.runtime_v2.foundation_pipeline import (
     FoundationShardCheckpoint,
     FoundationSourceBinding,
@@ -499,13 +497,13 @@ def test_large_binding_is_split_by_deterministic_128_to_512_mib_boundaries() -> 
         )
 
     oversized = (_SizedMonth(_SizedArtifact(513 * mib)),)
-    with pytest.raises(ContractViolation, match="monthly object exceeds"):
-        _packed_month_windows(
-            cast(tuple[Group1MonthlyDatasetSeal, ...], oversized),
-            target_bytes=256 * mib,
-            min_bytes=128 * mib,
-            max_bytes=512 * mib,
-        )
+    oversized_windows = _packed_month_windows(
+        cast(tuple[Group1MonthlyDatasetSeal, ...], oversized),
+        target_bytes=256 * mib,
+        min_bytes=128 * mib,
+        max_bytes=512 * mib,
+    )
+    assert oversized_windows == (cast(tuple[Group1MonthlyDatasetSeal, ...], oversized),)
 
 
 def test_release_distribution_counts_use_v1_key_value_normalization() -> None:
@@ -588,20 +586,19 @@ def test_binding_registry_is_exactly_ten_price_plus_three_flow() -> None:
     assert len(GROUP1_BINDINGS) == 13
 
 
-def test_group1_uses_only_the_remaining_global_catalog_object_budget() -> None:
+def test_group1_catalog_object_budget_is_observational() -> None:
     assert group1_object_budget(164) == 36
     require_catalog_object_budget(
         foundation_object_count=164,
         group1_planned_object_count=36,
     )
-    with pytest.raises(ContractViolation, match="dynamic Catalog budget"):
-        require_catalog_object_budget(
-            foundation_object_count=164,
-            group1_planned_object_count=37,
-        )
+    require_catalog_object_budget(
+        foundation_object_count=164,
+        group1_planned_object_count=37,
+    )
 
 
-def test_group1_memory_gates_are_independent_and_baseline_relative(tmp_path: Path) -> None:
+def test_group1_memory_thresholds_are_independent_and_audit_only(tmp_path: Path) -> None:
     external = tmp_path / "external"
     external.mkdir()
     run_root = external / "rss-gate"
@@ -637,20 +634,21 @@ def test_group1_memory_gates_are_independent_and_baseline_relative(tmp_path: Pat
         current_reader=lambda: next(current_values),
         peak_reader=lambda: 100,
     )
-    with pytest.raises(MemoryError, match="current RSS"):
-        pipeline_module._require_rss_within_limit(
-            config,
-            over_current,
-            phase="fixture",
-        )
+    pipeline_module._require_rss_within_limit(
+        config,
+        over_current,
+        phase="fixture",
+    )
+    assert over_current.anomalies[0].metric_name == "CURRENT_RSS_BYTES"
 
-    with pytest.raises(MemoryError, match="Arrow inflight"):
-        pipeline_module._require_rss_within_limit(
-            config,
-            ProcessMemoryBudget(current_reader=lambda: 100, peak_reader=lambda: 100),
-            phase="fixture",
-            arrow_inflight_bytes=config.max_inflight_bytes + 1,
-        )
+    over_arrow = ProcessMemoryBudget(current_reader=lambda: 100, peak_reader=lambda: 100)
+    pipeline_module._require_rss_within_limit(
+        config,
+        over_arrow,
+        phase="fixture",
+        arrow_inflight_bytes=config.max_inflight_bytes + 1,
+    )
+    assert over_arrow.anomalies[0].metric_name == "ARROW_INFLIGHT_BYTES"
 
 
 def test_group1_rss_diagnostic_cli_is_explicitly_non_production() -> None:

@@ -163,9 +163,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         or finalization_memory.get("read_only_source") is not True
         or finalization_memory.get("packed_row_group_count") != 9504
         or finalization_memory.get("receipt_count") != 9504
-        or finalization_memory.get("max_arrow_bytes", 2**63) > 1_073_741_824
-        or finalization_memory.get("max_current_rss_bytes", 2**63) > 3_221_225_472
-        or finalization_memory.get("max_phase_current_rss_delta_bytes", 2**63) > 1_073_741_824
+        or not isinstance(finalization_memory.get("max_arrow_bytes"), int)
+        or not isinstance(finalization_memory.get("max_current_rss_bytes"), int)
+        or not isinstance(finalization_memory.get("max_phase_current_rss_delta_bytes"), int)
         or limits.get("arrow_inflight_bytes") != 1_073_741_824
         or limits.get("current_rss_bytes") != 3_221_225_472
         or limits.get("phase_current_rss_delta_bytes") != 1_073_741_824
@@ -276,11 +276,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         "schema_name": "stage2-v2-authority-bundle-validation-v1",
         "validation_version": "1.1",
         "status": "PASS",
-        "change_request": "CR-2026-012",
+        "change_request": "CR-2026-013",
         "superseded_authority_change_requests": [
             "CR-2026-009",
             "CR-2026-010",
             "CR-2026-011",
+            "CR-2026-012",
         ],
         "transition_run_id": args.transition_run_id,
         "reserved_destination_run_id": args.destination_run_id,
@@ -309,6 +310,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "max_phase_current_rss_delta_bytes"
             ],
             "lifetime_peak_policy": limits["lifetime_peak_policy"],
+            "threshold_policy": "AUDIT_ANOMALY_ONLY",
         },
         "stage1_data_run_id": STAGE1_DATA_RUN_ID,
         "stage1_manifest_sha256": STAGE1_MANIFEST_SHA256,

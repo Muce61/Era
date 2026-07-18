@@ -115,8 +115,6 @@ def main() -> int:
             for ordinal in range(parquet.metadata.num_row_groups):
                 table = parquet.read_row_group(ordinal)
                 max_arrow_bytes = max(max_arrow_bytes, table.nbytes)
-                if table.nbytes > MAX_ARROW_BYTES:
-                    raise MemoryError("packed row group exceeds the 1 GiB Arrow hard limit")
                 scanned_rows += table.num_rows
                 scanned_row_groups += 1
                 budget.check("PACKED_OBJECT_ROW_GROUP", arrow_inflight_bytes=table.nbytes)

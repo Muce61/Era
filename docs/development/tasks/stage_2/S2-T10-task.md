@@ -3,14 +3,14 @@
 ## Metadata
 
 - task_id: S2-T10
-- task_version: 1.10
+- task_version: 1.11
 - status: IN_PROGRESS
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T01 PASS; S2-T02 PASS; S2-T03 PASS; S2-T04 PASS; S2-T05 PASS; S2-T06 PASS; S2-T07 PASS; S2-T08 PASS; S2-T09 PASS; S2-T19 PASS; locked Group-1 Manifest; CR-2026-007 APPROVED; CR-2026-008 APPROVED
-- supersedes: task_version 1.9
+- supersedes: task_version 1.10
 - approved_by: Muce
 - approved_at: 2026-07-17T19:09:18+08:00
 - execution_started_at: 2026-07-17T19:09:18+08:00
@@ -106,6 +106,11 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 依赖 Task/Stage 重开、输入哈希变化、映射规则变化、验收测试被推翻或产物不可复现时标记 INVALIDATED，不得继续作为有效证据。
 
 ## 20. 变更历史
+
+- 2026-07-19：v1.11，Muce批准CR-2026-013。内存、Arrow inflight、对象大小/数量、容量估算
+  和性能阈值改为append-only资源异常，不再直接判定研究失败；不能安全继续时进入可恢复
+  资源暂停。完整性、身份、未来泄漏、authority/hash和精确语义比较仍保持硬失败。最新失败
+  Run B永久终态；其316个BTC月级密封对象只允许由新run通过逐对象adoption Manifest验证采用。
 
 - 2026-07-18：v1.9，Muce批准CR-2026-011。Runtime V2 Foundation改为逐Parquet row-group
   聚合Trades，价格、bars、row-group index与秒级结果分阶段密封并显式释放；1 GiB Arrow、
@@ -231,3 +236,17 @@ baseline retains the 1 GiB hard limit. The terminal failed Run B
 `stage2-g1-v2-b-20260718T105814Z-cb5c25abd485` may not be resumed, reused, published or cleaned.
 No logical row, Hash, identity, payload, availability, parameter, source authority or Group-1
 comparison rule may change.
+
+The resource hard-failure clauses in sections 26 and 27 are historical execution records and are
+superseded only for resource classification by section 28. Their research-integrity and semantic
+constraints remain in force.
+
+## 28. CR-2026-013 resource-anomaly semantics
+
+S2-T10 v1.11 records resource and performance threshold crossings as deterministic execution
+anomalies. Threshold crossings do not change semantic quality or research conclusions. If bounded
+mitigation cannot continue safely, the run checkpoints a recoverable resource/storage pause.
+Only authority, hash, schema, checksum, identity, ownership, leakage, append-only, exact comparison
+or actual corruption defects may create `FAILED_INTEGRITY`. The terminal Run B
+`stage2-g1-v2-b-20260718T141137Z-f0c150bfa1c9` remains immutable. Its 316 BTC month objects may
+only be adopted by a new run through the CR-2026-013 sealed per-object verification contract.
