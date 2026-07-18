@@ -38,7 +38,7 @@ CONTRACT_PRICE_MANIFEST_AUTHORITY = "contract_price_inventory_manifest_v2"
 TRADES_RESOLVED_INDEX_AUTHORITY = "stage1_trades_resolved_index_v2"
 _CONTRACT_FORMAT_ORDER = {"CSV": 0, "PARQUET": 1}
 _ARCHIVE_PATH = re.compile(
-    r"^(BTCUSDT|ETHUSDT)/archive=(\d{4}-\d{2})/"
+    r"^(BTCUSDT|ETHUSDT)/archive=(\d{4}-\d{2}(?:-\d{2})?)/"
     r"date=(\d{4}-\d{2}-\d{2})/part-000\.parquet$"
 )
 
@@ -178,7 +178,7 @@ class ContractPriceInventoryManifestV2(_FrozenModel):
 class Stage1TradesResolvedEntryV2(_FrozenModel):
     instrument: Literal["BTCUSDT", "ETHUSDT"]
     partition_date: date
-    archive_partition: str = Field(pattern=r"^\d{4}-\d{2}$")
+    archive_partition: str = Field(pattern=r"^\d{4}-\d{2}(?:-\d{2})?$")
     relative_path: str = Field(min_length=1)
     byte_sha256: str = Field(pattern=SHA256_PATTERN)
     logical_sha256: str = Field(pattern=SHA256_PATTERN)
@@ -191,7 +191,11 @@ class Stage1TradesResolvedEntryV2(_FrozenModel):
         instrument, archive, raw_date = match.groups()
         if instrument != self.instrument or date.fromisoformat(raw_date) != self.partition_date:
             raise ValueError("resolved Stage 1 Trades path field mismatch")
-        if archive != self.archive_partition or archive != self.partition_date.strftime("%Y-%m"):
+        allowed_archives = {
+            self.partition_date.strftime("%Y-%m"),
+            self.partition_date.isoformat(),
+        }
+        if archive != self.archive_partition or archive not in allowed_archives:
             raise ValueError("resolved Stage 1 Trades archive/date mismatch")
         return self
 
@@ -397,6 +401,27 @@ def freeze_stage1_resolved_source_index(
 ) -> Stage1ResolvedSourceIndexV2:
     """Seal already Catalog-authorized archive paths without rehashing source data."""
 
+    by_key: dict[tuple[str, date], Stage1TradesPartition] = {}
+    for item in index.partitions:
+        key = (item.instrument, item.partition_date)
+        existing = by_key.get(key)
+        if existing is None:
+            by_key[key] = item
+        elif existing != item:
+            raise ValueError(
+                "conflicting Stage 1 resolved partition: "
+                f"{item.instrument} {item.partition_date.isoformat()}"
+            )
+    ordered_partitions = tuple(
+        sorted(
+            by_key.values(),
+            key=lambda item: (
+                item.instrument,
+                item.partition_date,
+                item.path.relative_to(index.published_root).as_posix(),
+            ),
+        )
+    )
     entries = tuple(
         Stage1TradesResolvedEntryV2(
             instrument=item.instrument,
@@ -406,7 +431,7 @@ def freeze_stage1_resolved_source_index(
             byte_sha256=item.byte_sha256,
             logical_sha256=item.logical_sha256,
         )
-        for item in sorted(index.partitions)
+        for item in ordered_partitions
     )
     manifest = Stage1ResolvedSourceIndexV2.seal(
         {
