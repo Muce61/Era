@@ -2242,12 +2242,24 @@ rules:
     determinism_protocol_change_request_ref: docs/development/changes/CR-2026-008.md
     cr_s2_008_status: APPROVED_L3_RESEARCH_VALIDATION_PROTOCOL
     cr_s2_008_validation: docs/development/validations/stage_2/CR-2026-008.md
+    authority_release_change_request_ref: docs/development/changes/CR-2026-009.md
+    cr_s2_009_status: APPROVED_IMPLEMENTED_VALIDATED_READY_FOR_RESOLUTION
+    formal_run_a_id: stage2-g1-full-a-20260716T144233Z-366a541b7956
+    formal_run_a_status: PUBLISHED_QUALITY_PASS
+    formal_run_a_logical_partitions: 61776
+    formal_run_a_published_logical_hash: 8583f220dc880bf5b7e7ace1435ca2285e59b80dd48aa7d15bd2f8cacac60870
+    formal_run_a_published_physical_hash: 9fe33a4e7fde1ace3281a208c46f7474f66bc5c5a0e538871b273b2f20131578
+    failed_authority_run_id: stage2-g1-v2-authority-20260717T155227Z-b739106b8dca
+    failed_authority_reason: MIXED_ARCHIVE_DAILY_TAIL_REJECTED_BY_MONTH_ONLY_V2_CONTRACT
+    replacement_authority_bundle_status: FROZEN_VALIDATED_EXTERNAL_RECEIPT
+    v2_run_b_status: NOT_CREATED
+    next_authorized_state_after_authority_validation: READY_FOR_V2_RUN_B_EXECUTION_APPROVAL
     hybrid_architecture_decision_ref: docs/development/decisions/ADR-S2-006-hybrid-v2-feature-foundation.md
     plan_dag_change: NONE
     legacy_run_b_authorized: false
     later_group_execution_authorized: false
-    execution_blocker: NONE
-    execution_state: S2_T10_V1_8_HYBRID_RUN_A_RELEASE_AND_V2_PREPARATION_AUTHORIZED
+    execution_blocker: HUMAN_APPROVAL_REQUIRED_FOR_V2_RUN_B
+    execution_state: READY_FOR_V2_RUN_B_EXECUTION_APPROVAL
   state: PLANNED
 - rule_id: GATE-STAGE-3
   rule_status: FROZEN
