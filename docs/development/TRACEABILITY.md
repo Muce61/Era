@@ -108,7 +108,7 @@ Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～
 
 ## Stage 2 Plan v1.2 APPROVED Coverage
 
-Stage 2 is `BLOCKED / BLOCKED_PENDING_CR_2026_011`.
+Stage 2 is `IN_PROGRESS / READY_FOR_CR_2026_011_IMPLEMENTATION`.
 [CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
 approve a bounded hybrid transition without changing Stage 1, preregistration, config, parameters,
 candidate semantics or the Plan v1.2 DAG. Formal Run A is now PUBLISHED with Quality PASS,
@@ -127,8 +127,10 @@ compatibility correction, exact match-count diagnostics, Authority refreeze and 
 only after all gates pass. The replacement Bundle froze twice identically and preflight passed,
 but the first `FOUNDATION:BTCUSDT` task failed unpublished when process RSS `1,704,640,512`
 exceeded the frozen `943,718,400` byte limit. No task, staging artifact, publication, Group-1 work
-or comparison completed. [CR-2026-011](changes/CR-2026-011.md) records the new human decision
-gate. Groups 2～4 remain DRAFT and were not executed.
+or comparison completed. [CR-2026-011](changes/CR-2026-011.md) approves only profiled row-group
+streaming, explicit source release and separate Arrow/current-RSS/baseline-relative resource
+gates before a new Authority and unique replacement Run B. Groups 2～4 remain DRAFT and were not
+executed.
 
 | Requirement | Plan v1.2 Tasks | Planned implementation/tests | State |
 | --- | --- | --- | --- |

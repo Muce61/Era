@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T10
-Status: BLOCKED_PENDING_CR_2026_011
+Status: READY_FOR_CR_2026_011_IMPLEMENTATION
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
@@ -29,5 +29,6 @@ Authority and reserved ID are superseded after preflight proved the frozen V2 pa
 read formal Run A release supplement v1.1. The successor Run B
 `stage2-g1-v2-b-20260718T092459Z-85a6a71ab953` is `FAILED_UNPUBLISHED`: its first BTC Foundation
 task observed RSS `1,704,640,512` bytes above the frozen `943,718,400` byte process limit. It
-completed no task and wrote no staging or published data. `CR-2026-011` is OPEN pending a human
-memory-contract decision. Groups 2～4 remain DRAFT and unexecuted.
+completed no task and wrote no staging or published data. `CR-2026-011` is APPROVED only for the
+profiled row-group streaming and dual memory-gate correction. Groups 2～4 remain DRAFT and
+unexecuted.
