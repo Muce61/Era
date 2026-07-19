@@ -342,12 +342,13 @@ def test_freeze_writes_deterministic_authority_bundle_receipt_without_creating_r
 
     assert receipt_path.read_bytes() == first
     assert receipt["status"] == "PASS"
-    assert receipt["change_request"] == "CR-2026-013"
+    assert receipt["change_request"] == "CR-2026-014"
     assert receipt["superseded_authority_change_requests"] == [
         "CR-2026-009",
         "CR-2026-010",
         "CR-2026-011",
         "CR-2026-012",
+        "CR-2026-013",
     ]
     assert receipt["authority_bundle_id"].startswith("stage2-v2-authority-bundle-")
     assert receipt["reserved_destination_run_id"] == destination_id
