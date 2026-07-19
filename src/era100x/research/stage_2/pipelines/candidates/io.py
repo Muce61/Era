@@ -3,13 +3,20 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from enum import Enum
-from decimal import Decimal
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
 import polars as pl
+from pydantic_core import to_json
+
+
+_CANONICAL_JSON_ROW_V1_ENCODER = json.JSONEncoder(
+    sort_keys=True,
+    separators=(",", ":"),
+    ensure_ascii=True,
+    default=str,
+)
 
 
 def atomic_json(path: Path, payload: dict[str, Any]) -> None:
@@ -44,6 +51,8 @@ def records_logical_hash(records: list[dict[str, Any]], schema_name: str) -> str
 
 def legacy_sorted_record_bytes(
     records: Sequence[Mapping[str, Any]],
+    *,
+    validated_no_floats: bool = False,
 ) -> tuple[bytes, ...]:
     """Serialize one bounded compatibility batch for an external hash merge.
 
@@ -53,7 +62,12 @@ def legacy_sorted_record_bytes(
     day-sized collection or a composable digest.
     """
 
-    return tuple(sorted(canonical_json_row_v1_bytes(record) for record in records))
+    encoder = (
+        _canonical_json_row_v1_bytes_validated
+        if validated_no_floats
+        else canonical_json_row_v1_bytes
+    )
+    return tuple(sorted(encoder(record) for record in records))
 
 
 def canonical_json_row_v1_bytes(record: Mapping[str, Any]) -> bytes:
@@ -64,41 +78,72 @@ def canonical_json_row_v1_bytes(record: Mapping[str, Any]) -> bytes:
     while rejecting floats from the Runtime V2 hot path.
     """
 
-    return _canonical_json_v1_value(dict(record)).encode("utf-8")
+    _reject_json_v1_float(record)
+    return _CANONICAL_JSON_ROW_V1_ENCODER.encode(record).encode("utf-8")
 
 
-def _canonical_json_v1_value(value: Any) -> str:
-    if value is None:
-        return "null"
-    if value is True:
-        return "true"
-    if value is False:
-        return "false"
-    if isinstance(value, int):
-        return str(value)
+def _canonical_json_row_v1_bytes_validated(record: Mapping[str, Any]) -> bytes:
+    """Encode an already type-validated producer row through the C encoder."""
+
+    # ``json.dumps(sort_keys=True)`` sorts *every* nested map, not only the
+    # top-level schema fields.  Group-1 metadata is small but its insertion
+    # order is not contractual, so normalize nested maps before entering the C
+    # encoder.  This preserves the frozen V1 bytes without paying the much
+    # larger Python JSON encoding cost for every scalar field.
+    normalized, ascii_only = _sorted_json_maps(record)
+    if normalized is record:
+        return _CANONICAL_JSON_ROW_V1_ENCODER.encode(record).encode("utf-8")
+    encoded = to_json(normalized, serialize_unknown=True)
+    if not ascii_only:
+        return _CANONICAL_JSON_ROW_V1_ENCODER.encode(record).encode("utf-8")
+    return encoded
+
+
+def _sorted_json_maps(value: Any) -> tuple[Any, bool]:
+    """Sort approved Group-1 maps, falling back for deeper dynamic shapes."""
+
+    if not isinstance(value, Mapping):
+        return value, not isinstance(value, str) or value.isascii()
+    ordered: dict[str, Any] = {}
+    ascii_only = True
+    for key in sorted(value):
+        item = value[key]
+        ascii_only = ascii_only and key.isascii()
+        if isinstance(item, Mapping):
+            nested: dict[str, Any] = {}
+            for nested_key in sorted(item):
+                nested_item = item[nested_key]
+                if isinstance(nested_item, (Mapping, list, tuple)):
+                    # No approved Group-1 struct is deeper than one level.  A
+                    # future dynamic shape must use the exact general encoder
+                    # until its schema receives an explicit fast-path proof.
+                    return value, False
+                ascii_only = ascii_only and nested_key.isascii()
+                if isinstance(nested_item, str):
+                    ascii_only = ascii_only and nested_item.isascii()
+                nested[nested_key] = nested_item
+            item = nested
+        elif isinstance(item, (list, tuple)):
+            if any(isinstance(member, (Mapping, list, tuple)) for member in item):
+                return value, False
+            ascii_only = ascii_only and all(
+                not isinstance(member, str) or member.isascii() for member in item
+            )
+        elif isinstance(item, str):
+            ascii_only = ascii_only and item.isascii()
+        ordered[key] = item
+    return ordered, ascii_only
+
+
+def _reject_json_v1_float(value: Any) -> None:
     if isinstance(value, float):
         raise TypeError("ERA_CANONICAL_JSON_ROW_V1 hot path forbids float")
-    if isinstance(value, str):
-        return json.encoder.encode_basestring_ascii(value)
     if isinstance(value, Mapping):
-        keys = sorted(value)
-        if any(not isinstance(key, str) for key in keys):
-            raise TypeError("ERA_CANONICAL_JSON_ROW_V1 map keys must be strings")
-        return (
-            "{"
-            + ",".join(
-                f"{json.encoder.encode_basestring_ascii(key)}:{_canonical_json_v1_value(value[key])}"
-                for key in keys
-            )
-            + "}"
-        )
-    if isinstance(value, (list, tuple)):
-        return "[" + ",".join(_canonical_json_v1_value(item) for item in value) + "]"
-    if isinstance(value, Enum):
-        return json.encoder.encode_basestring_ascii(str(value))
-    if isinstance(value, Decimal):
-        return json.encoder.encode_basestring_ascii(str(value))
-    return json.encoder.encode_basestring_ascii(str(value))
+        for item in value.values():
+            _reject_json_v1_float(item)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            _reject_json_v1_float(item)
 
 
 def write_or_verify_partition(

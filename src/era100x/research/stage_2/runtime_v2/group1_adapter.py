@@ -69,6 +69,8 @@ def normalize_group1_record_batch(
     records: Sequence[Mapping[str, Any]],
     setup_id: str = GROUP1_SETUP_ID,
     context_id: str = GROUP1_CONTEXT_ID,
+    sort_rows: bool = True,
+    trusted_internal_records: bool = False,
 ) -> tuple[Group1DatasetBinding, pa.Table]:
     """Validate a bounded producer batch without computing partition hashes."""
 
@@ -80,19 +82,31 @@ def normalize_group1_record_batch(
         binding = group1_dataset_binding(variant, dataset)
     except ValueError as exc:
         raise ContractViolation(str(exc)) from exc
-    normalized_rows = [
-        _normalize_record(
-            dict(record),
-            binding=binding,
-            instrument=instrument,
-            owner_date=owner_date,
-        )
-        for record in records
-    ]
-    if binding.spec.row_multiplicity == "MULTISET_STABLE":
+    if trusted_internal_records:
+        expected = frozenset(field.name for field in binding.spec.fields)
+        if any(record.keys() != expected for record in records):
+            raise ContractViolation(
+                f"{binding.variant}/{binding.dataset} internal producer schema mismatch"
+            )
+        normalized_rows = list(records)
+    else:
+        normalized_rows = [
+            _normalize_record(
+                dict(record),
+                binding=binding,
+                instrument=instrument,
+                owner_date=owner_date,
+            )
+            for record in records
+        ]
+    if binding.spec.row_multiplicity == "MULTISET_STABLE" and not trusted_internal_records:
         _validate_stable_multiset(normalized_rows, binding)
     table = pa.Table.from_pylist(normalized_rows, schema=canonical_arrow_schema(binding.spec))
-    return binding, normalize_table(table, binding.spec)
+    if trusted_internal_records:
+        _validate_trusted_internal_table(table, binding=binding, instrument=instrument)
+    if sort_rows:
+        table = normalize_table(table, binding.spec)
+    return binding, table.combine_chunks()
 
 
 def prepare_group1_partition(
@@ -261,14 +275,23 @@ def prepare_group1_arrow_partition(
 
 
 def _projection_hashes(table: pa.Table, binding: Group1DatasetBinding) -> tuple[str, str]:
-    identity = canonical_projection_hash(
-        table,
-        binding.spec,
-        projection_fields=binding.spec.identity_fields,
-        sort_fields=binding.spec.identity_fields,
-        domain="identity-multiset",
-        require_unique=False,
-    )
+    identity_fields = binding.spec.identity_fields
+    if tuple(binding.spec.stable_sort_keys[: len(identity_fields)]) == identity_fields:
+        identity = canonical_already_normalized_projection_hash(
+            table,
+            binding.spec,
+            projection_fields=identity_fields,
+            domain="identity-multiset",
+        )
+    else:
+        identity = canonical_projection_hash(
+            table,
+            binding.spec,
+            projection_fields=identity_fields,
+            sort_fields=identity_fields,
+            domain="identity-multiset",
+            require_unique=False,
+        )
     payload = canonical_already_normalized_projection_hash(
         table,
         binding.spec,
@@ -291,9 +314,9 @@ def _validate_arrow_stable_multiset(table: pa.Table, binding: Group1DatasetBindi
         duplicate = equal if duplicate is None else pc.and_kleene(duplicate, equal)
     if duplicate is None:
         return
-    for offset in range(table.num_rows - 1):
-        if not bool(duplicate[offset].as_py()):
-            continue
+    duplicate_offsets = pc.indices_nonzero(pc.fill_null(duplicate, False))
+    for scalar in duplicate_offsets:
+        offset = int(scalar.as_py())
         if any(
             not table[name][offset].equals(table[name][offset + 1]) for name in table.column_names
         ):
@@ -339,7 +362,6 @@ def _normalize_record(
             f"{binding.variant}/{binding.dataset} record/schema mismatch; "
             f"missing={sorted(missing)}, extra={sorted(extra)}"
         )
-    _reject_binary_floats(record)
     _validate_semantic_isolation(
         record,
         binding=binding,
@@ -347,6 +369,32 @@ def _normalize_record(
         owner_date=owner_date,
     )
     return {field.name: _coerce(record[field.name], field) for field in fields}
+
+
+def _validate_trusted_internal_table(
+    table: pa.Table,
+    *,
+    binding: Group1DatasetBinding,
+    instrument: str,
+) -> None:
+    """Vector-check the controlled producer columns once per Arrow batch."""
+
+    names = set(table.column_names)
+    if "instrument" in names and table.num_rows:
+        if not bool(pc.all(pc.equal(table["instrument"], instrument)).as_py()):
+            raise ContractViolation("Group-1 partition cannot mix BTC and ETH")
+    if "event_parameter_set_id" in names and table.num_rows:
+        approved = pa.array(sorted(_REGISTERED_PARAMETERS), type=pa.string())
+        if not bool(pc.all(pc.is_in(table["event_parameter_set_id"], value_set=approved)).as_py()):
+            raise ContractViolation("unregistered Group-1 parameter set")
+    if "parameter_set_id" in names and table.num_rows:
+        parameter = table["parameter_set_id"]
+        valid = pc.equal(parameter, KEY_LEVEL_PARAMETER_SET_ID)
+        if "event_parameter_set_id" in names:
+            valid = pc.or_kleene(valid, pc.equal(parameter, table["event_parameter_set_id"]))
+        valid = pc.or_kleene(valid, pc.is_null(parameter))
+        if not bool(pc.all(pc.fill_null(valid, False)).as_py()):
+            raise ContractViolation("event and lineage parameter-set identities disagree")
 
 
 def _validate_stable_multiset(
@@ -437,6 +485,8 @@ def _validate_semantic_isolation(
 
 
 def _coerce(value: Any, field: ArrowFieldSpec) -> Any:
+    if isinstance(value, float):
+        raise ContractViolation("binary floats are forbidden in Group-1 V2 semantic records")
     if value is None:
         if not field.nullable:
             raise ContractViolation(f"non-nullable field {field.name} is null")
@@ -475,17 +525,6 @@ def _coerce(value: Any, field: ArrowFieldSpec) -> Any:
             )
         return {name: _coerce(value[name], child) for name, child in children.items()}
     raise ContractViolation(f"Group-1 adapter does not support field type {field.data_type}")
-
-
-def _reject_binary_floats(value: Any) -> None:
-    if isinstance(value, float):
-        raise ContractViolation("binary floats are forbidden in Group-1 V2 semantic records")
-    if isinstance(value, Mapping):
-        for item in value.values():
-            _reject_binary_floats(item)
-    elif isinstance(value, (list, tuple)):
-        for item in value:
-            _reject_binary_floats(item)
 
 
 def _date_text(value: Any) -> str:

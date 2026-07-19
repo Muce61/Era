@@ -2257,7 +2257,7 @@ rules:
     cr_s2_013_status: APPROVED_IMPLEMENTATION_IN_PROGRESS_L2_RESOURCE_ANOMALY_SEMANTICS
     cr_s2_013_validation: docs/development/validations/stage_2/CR-2026-013.md
     group1_execution_optimization_change_request_ref: docs/development/changes/CR-2026-014.md
-    cr_s2_014_status: APPROVED_IMPLEMENTED_PERFORMANCE_OBJECTIVE_NOT_MET_NOT_READY_FOR_FULL_REEXECUTION
+    cr_s2_014_status: APPROVED_IMPLEMENTED_3_02X_HUMAN_ACCEPTED_READY_FOR_FINAL_QUALITY_GATE
     cr_s2_014_validation: docs/development/validations/stage_2/CR-2026-014.md
     cr_s2_014_decision_ref: docs/development/decisions/ADR-S2-007-group1-price-execution-optimization.md
     formal_run_a_id: stage2-g1-full-a-20260716T144233Z-366a541b7956

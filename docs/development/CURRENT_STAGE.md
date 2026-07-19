@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T10
-Status: NOT_READY_FOR_FULL_REEXECUTION
+Status: READY_FOR_CR_2026_014_FINAL_QUALITY_GATE
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
@@ -65,7 +65,9 @@ with eight completed BTC PRICE months, no publication and no active process. It 
 changed code or provide Group-1 artifacts to the successor. S2-T10 is blocked pending exact
 correctness, performance, recovery and progress-dashboard validation; Groups 2～4 remain DRAFT.
 
-CR-2026-014 correctness and repository quality gates now PASS, but its fixed BTC/ETH July
-benchmark improved only 2.18x versus the approved 4x promotion gate and averaged 1.73 rather than
-2.5 cores. Authority freeze and replacement Run B creation are therefore blocked pending a new
-human decision. No full run was started and Groups 2～4 remain DRAFT and unexecuted.
+CR-2026-014's accepted r8 implementation reproduces all 9,314,723 rows and 806 receipts exactly and
+improves the fixed BTC/ETH July benchmark from 996.78 to 329.69 seconds (3.02x). Muce accepted this
+as the practical external-disk ceiling on 2026-07-19. The original 4x and 2.5-core goals remain
+recorded as unmet performance objectives, not integrity failures. The next permitted actions are
+the final repository quality gate, final-code Authority freeze and one unique replacement Run B.
+No full successor run has started and Groups 2～4 remain DRAFT and unexecuted.

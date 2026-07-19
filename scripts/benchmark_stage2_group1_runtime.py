@@ -19,7 +19,7 @@ import traceback
 from collections.abc import Sequence
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from era100x.research.stage_2.runtime_v2.foundation_pipeline import (
     FoundationShardCheckpoint,
@@ -291,15 +291,22 @@ def run(diagnostic_root: Path, start: date, end_exclusive: date) -> dict[str, An
     if len(snapshot_ids) != 1:
         raise ValueError("benchmark Foundation checkpoints mix snapshots")
     snapshot_id = snapshot_ids.pop()
-    instruments: tuple[Instrument, ...] = ("BTCUSDT", "ETHUSDT")
-    lineage = {
+    selected_instruments = os.environ.get("ERA_STAGE2_BENCHMARK_INSTRUMENTS")
+    parsed_instruments = (
+        tuple(selected_instruments.split(",")) if selected_instruments else ("BTCUSDT", "ETHUSDT")
+    )
+    if not parsed_instruments or set(parsed_instruments) - {"BTCUSDT", "ETHUSDT"}:
+        raise ValueError("diagnostic benchmark instruments must be BTCUSDT and/or ETHUSDT")
+    instruments = cast(tuple[Instrument, ...], parsed_instruments)
+    all_instruments: tuple[Instrument, ...] = ("BTCUSDT", "ETHUSDT")
+    lineage: dict[Instrument, Group1Lineage] = {
         instrument: Group1Lineage(
             data_run_id=STAGE1_DATA_RUN_ID,
             dataset_logical_hash=LOGICAL_HASHES[instrument],
             config_hash=CONFIG_HASH,
             code_version=RUN_A_GENERATOR_COMMIT,
         )
-        for instrument in instruments
+        for instrument in all_instruments
     }
     config = Group1PipelineConfig(
         run_root=diagnostic_root,
@@ -312,6 +319,8 @@ def run(diagnostic_root: Path, start: date, end_exclusive: date) -> dict[str, An
         foundation_checkpoints=checkpoints,
         lineage_by_instrument=lineage,
     )
+    if os.environ.get("ERA_STAGE2_BENCHMARK_SERIAL") == "1":
+        pipeline._allow_process_workers = False  # noqa: SLF001 - diagnostic profiling only.
     component_summaries: list[dict[str, Any]] = []
 
     def collect(component: Group1PackedTaskComponent) -> None:

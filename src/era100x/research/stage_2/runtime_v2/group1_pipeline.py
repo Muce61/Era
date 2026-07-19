@@ -1989,7 +1989,11 @@ def _stream_owner_day_to_writers(
 
         # Trades primitives are deliberately materialized only after all large
         # PRICE facts have been spooled and prepared.
-        trade_seconds = _trade_seconds(window.trade_second_primitives, instrument)
+        trade_seconds = _trade_seconds_for_windows(
+            window.trade_second_primitives,
+            instrument,
+            flow_windows,
+        )
         trade_quality = {
             key: value
             for key, value in window.trade_source_day_status.items()
@@ -2049,6 +2053,34 @@ def _stream_owner_day_to_writers(
         for spool in spools.values():
             spool.close_after_failure()
         raise
+
+
+def _trade_seconds_for_windows(
+    source: pa.Table,
+    instrument: Instrument,
+    windows: Sequence[Mapping[str, Any]],
+) -> dict[int, Mapping[str, Any]]:
+    """Materialize only the five-second primitives that G4 can consume."""
+
+    required = sorted(
+        {
+            timestamp
+            for window in windows
+            for timestamp in range(
+                int(window["window_start_ts"]),
+                int(window["window_end_ts"]),
+                1_000_000_000,
+            )
+        }
+    )
+    if not required:
+        return {}
+    timestamps = source["event_ts_ns"].combine_chunks()
+    selected = pc.is_in(
+        timestamps,
+        value_set=pa.array(required, type=timestamps.type),
+    )
+    return _trade_seconds(source.filter(selected), instrument)
 
 
 def _prepare_formal_records(
@@ -2146,7 +2178,7 @@ class _DailyRecordSpool:
                 owner_date=self.owner_date,
                 records=(),
             )
-        table = pa.concat_tables(self._tables).combine_chunks()
+        table = pa.concat_tables(self._tables)
         if table.num_rows != self._row_count:
             raise ContractViolation("daily Group-1 spool row count changed")
         legacy_digest = _merge_legacy_hash_runs(
@@ -2187,8 +2219,16 @@ class _DailyRecordSpool:
             dataset=self.dataset,
             owner_date=self.owner_date,
             records=self._buffer,
+            sort_rows=False,
+            trusted_internal_records=True,
         )
-        legacy_rows = legacy_sorted_record_bytes(self._buffer)
+        # ``normalize_group1_record_batch`` has already validated every field
+        # type recursively, including the no-binary-float invariant.  Reuse
+        # the module-static C JSON encoder without a second whole-row walk.
+        legacy_rows = legacy_sorted_record_bytes(
+            self._buffer,
+            validated_no_floats=True,
+        )
         self._legacy_runs.append(_LegacyHashRun(rows=legacy_rows))
         if table.num_rows:
             self._tables.append(table)
