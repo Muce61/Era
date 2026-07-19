@@ -108,7 +108,7 @@ Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～
 
 ## Stage 2 Plan v1.2 APPROVED Coverage
 
-Stage 2 is `IN_PROGRESS / READY_FOR_CR_2026_013_AUTHORITY_FREEZE`. The Runtime V2 and repository
+Stage 2 is `IN_PROGRESS / BLOCKED_PENDING_CR_2026_014_VALIDATION`. The Runtime V2 and repository
 implementation gates pass; S2-T10 and Group 1 remain incomplete pending the new Authority,
 audited adoption, replacement Run B and exact comparison.
 [CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
@@ -172,6 +172,7 @@ run is immutable; its sealed objects require a new-run adoption Manifest and ful
 | MarketEpisode identity, consume and re-arm | S2-T09 | fixture-only `episodes/identity`; FI-14, UT-EVT-011 | APPROVED_NOT_EXECUTED |
 | S2-T09 v1.4 identity correction | S2-T09 | CR-2026-004 canonical candidate identity/payload hash while preserving FROZEN MarketEpisode identity; `validations/stage_2/CR-2026-004.md` | PASSED |
 | Registry-driven full candidate generation; BTC/ETH, variant and Primary/Exploratory separate | S2-T10 v1.11 | CR-2026-006 formal Run A release child; CR-2026-007 Feature Foundation; CR-2026-008 exact semantic comparison; CR-2026-009 release integrity; CR-2026-010 Run A supplement v1.1 compatibility; CR-2026-011/012 memory corrections; CR-2026-013 resource anomaly semantics and sealed-object adoption | RUN A PUBLISHED/PASS; LATEST RUN B FAILED_UNPUBLISHED; CR-2026-013 IN PROGRESS |
+| Deterministic Group-1 PRICE/FLOW execution optimization | S2-T10 v1.12 | CR-2026-014; ADR-S2-007; processing-day/Foundation caches, spawn month workers, streaming compatibility Hash and read-only progress | APPROVED / PERFORMANCE VALIDATION PENDING |
 | Shared causal Feature Foundation, content DAG, receipts and layout-independent Catalog | S2-T10 v1.8 | `CR-2026-007`; `ADR-S2-006`; current approved setup/context/variants only | APPROVED_IN_PROGRESS |
 | Cross-implementation determinism and future Feature Snapshot Tier F/E/D protocol | S2-T10 v1.8; future separately approved Tasks | `CR-2026-008`; `ADR-S2-006`; current full Run-A/Run-B comparison plus future approval boundary | APPROVED_NOT_VALIDATED |
 | Group-1 small-sample integration | S2-T01～S2-T09 | fixture chain plus six controlled real windows; locked execution Manifest | PASSED |

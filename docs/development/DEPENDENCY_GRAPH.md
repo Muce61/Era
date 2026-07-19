@@ -47,6 +47,10 @@ S2-T10 v1.8 is APPROVED / IN_PROGRESS. Groups 2～4 remain DRAFT and unexecuted.
 CR-2026-008 change no dependency edge. The DAG remains acyclic; S2-T19 remains first and S2-T10
 remains the sole full candidate builder.
 
+CR-2026-014 advances only the internal S2-T10 execution version to v1.12. Its bounded sequence is
+`processing-day cache → deterministic month workers → Foundation/Group-1 publication → exact Run-A
+comparison`; it changes no Task edge and cannot authorize S2-T11 or any later Task.
+
 ### S2-T10 v1.8 internal hybrid execution
 
 ```text

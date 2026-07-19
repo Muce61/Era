@@ -3,14 +3,14 @@
 ## Metadata
 
 - task_id: S2-T10
-- task_version: 1.11
+- task_version: 1.12
 - status: IN_PROGRESS
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T01 PASS; S2-T02 PASS; S2-T03 PASS; S2-T04 PASS; S2-T05 PASS; S2-T06 PASS; S2-T07 PASS; S2-T08 PASS; S2-T09 PASS; S2-T19 PASS; locked Group-1 Manifest; CR-2026-007 APPROVED; CR-2026-008 APPROVED
-- supersedes: task_version 1.10
+- supersedes: task_version 1.11
 - approved_by: Muce
 - approved_at: 2026-07-17T19:09:18+08:00
 - execution_started_at: 2026-07-17T19:09:18+08:00
@@ -106,6 +106,11 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 依赖 Task/Stage 重开、输入哈希变化、映射规则变化、验收测试被推翻或产物不可复现时标记 INVALIDATED，不得继续作为有效证据。
 
 ## 20. 变更历史
+
+- 2026-07-19：v1.12，Muce批准CR-2026-014。仅优化Runtime V2 Group-1 PRICE/FLOW执行：
+  processing-day缓存、Foundation滑动窗口、spawn月度并行、legacy Hash streaming、用户停止恢复
+  和只读Web进度。研究定义、参数、身份、payload、输出契约及Run A均不变。固定30日正确性与
+  4倍性能门通过前不得冻结新Authority或创建replacement Run B。
 
 - 2026-07-19：v1.11，Muce批准CR-2026-013。内存、Arrow inflight、对象大小/数量、容量估算
   和性能阈值改为append-only资源异常，不再直接判定研究失败；不能安全继续时进入可恢复

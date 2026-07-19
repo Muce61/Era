@@ -4,11 +4,11 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T10
-Status: READY_FOR_CR_2026_013_AUTHORITY_FREEZE
+Status: BLOCKED_PENDING_CR_2026_014_VALIDATION
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
-S2-T19 and S2-T01～S2-T09 are PASSED. S2-T10 v1.11 is APPROVED / IN_PROGRESS under
+S2-T19 and S2-T01～S2-T09 are PASSED. S2-T10 v1.12 is REOPENED_FOR_PERFORMANCE_CORRECTION under
 CR-2026-007 and CR-2026-008. Formal Run A
 `stage2-g1-full-a-20260716T144233Z-366a541b7956` is PUBLISHED with Quality PASS, 9508/9508
 completed work items, zero failed/UNKNOWN work items and 61,776 logical partitions. Its published
@@ -57,3 +57,10 @@ The CR-2026-013 implementation gate is PASS: Runtime V2 191/191 and the unified 
 397/397 passed with Ruff, strict mypy and strict Traceability. S2-T10 remains IN_PROGRESS; the next
 authorized actions are final-code Authority freeze, audited adoption, the unique replacement Run B
 and the unchanged exact comparison.
+
+Muce approved [CR-2026-014](changes/CR-2026-014.md) after the next replacement Run B completed
+both Foundation Tasks but proved Group-1 PRICE too slow. Run
+`stage2-g1-v2-b-20260719T045142Z-0eeb27e0be21` is retained at `INTERRUPTED_RECOVERABLE`, revision 6,
+with eight completed BTC PRICE months, no publication and no active process. It may not resume under
+changed code or provide Group-1 artifacts to the successor. S2-T10 is blocked pending exact
+correctness, performance, recovery and progress-dashboard validation; Groups 2～4 remain DRAFT.

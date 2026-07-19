@@ -114,3 +114,11 @@ performance thresholds append-only anomalies, while preserving hard failure for 
 exact comparison defects. A new run may adopt the 316 objects only after complete per-object
 verification. This draft remains **FAIL** until the replacement publishes and all 61,776 Group-1
 partitions exactly match Run A.
+
+## S2-T10 v1.12 execution optimization
+
+CR-2026-014 is APPROVED to remove duplicate processing-day work, reuse verified Foundation
+fragments, execute isolated instrument-month workers, stream exact compatibility hashes and expose
+read-only progress. The currently stopped Run B remains unpublished evidence and cannot provide
+Group-1 data to the successor. Group 1 remains **FAIL** until performance promotion, complete
+replacement publication and exact Run-A comparison all pass.
