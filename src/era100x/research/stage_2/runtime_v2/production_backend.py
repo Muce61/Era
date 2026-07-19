@@ -1433,7 +1433,25 @@ class ProductionRuntimeV2Backend:
             for binding in evidence.supporting_evidence:
                 path = _bound_path(context.run_root, binding.relative_path)
                 if sha256_file(path) != binding.physical_sha256:
-                    raise ProductionBackendError("Foundation checkpoint bytes changed")
+                    raise ProductionBackendError("Foundation supporting evidence bytes changed")
+                if binding.relative_path.startswith("staging/evidence/resource-anomalies/"):
+                    report = ResourceAnomalyReportV1.model_validate_json(path.read_bytes())
+                    if (
+                        report.run_id != context.run_id
+                        or report.task_id != task_id
+                        or report.snapshot_id != context.manifest.snapshot_id
+                        or report.manifest_hash != context.manifest.manifest_hash
+                        or report.semantic_impact != "NONE"
+                        or report.integrity_impact != "NONE"
+                    ):
+                        raise ProductionBackendError(
+                            "Foundation resource anomaly evidence authority changed"
+                        )
+                    continue
+                if not binding.relative_path.startswith("staging/foundation/packed-checkpoints/"):
+                    raise ProductionBackendError(
+                        "Foundation task binds unsupported supporting evidence"
+                    )
                 checkpoint = FoundationShardCheckpoint.model_validate_json(path.read_bytes())
                 if checkpoint.storage_role != "PACKED_FINAL":
                     raise ProductionBackendError("Group-1 received a non-final Foundation shard")

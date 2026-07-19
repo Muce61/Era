@@ -47,9 +47,15 @@ from era100x.research.stage_2.runtime_v2.source_authority import (
     TRADES_RESOLVED_INDEX_AUTHORITY,
 )
 from era100x.research.stage_2.runtime_v2.production_backend import (
+    EvidenceFileBinding,
     PipelineTaskResult,
     ProductionBackendError,
     ProductionRuntimeV2Backend,
+    TaskAggregateEvidence,
+)
+from era100x.research.stage_2.runtime_v2.resource_anomalies import (
+    ResourceAnomalyReportV1,
+    ResourceThresholdObservation,
 )
 from era100x.research.stage_2.pipelines.candidates.stage1_catalog import (
     Stage1TradesCatalogIndex,
@@ -362,6 +368,64 @@ def test_group1_full_aggregate_is_built_once_then_sliced(tmp_path: Path) -> None
     assert calls == 1
     aggregate = fixture.context.run_root / "staging" / "group1" / "production-aggregate.json"
     assert aggregate.is_file()
+
+
+def test_group1_loader_validates_but_does_not_parse_resource_anomaly_as_checkpoint(
+    tmp_path: Path,
+) -> None:
+    fixture = _fixture(tmp_path)
+    for task_id in FOUNDATION_TASKS:
+        safe = task_id.lower().replace(":", "-")
+        report = ResourceAnomalyReportV1.seal(
+            run_id=fixture.context.run_id,
+            task_id=task_id,
+            snapshot_id=fixture.context.manifest.snapshot_id,
+            manifest_hash=fixture.context.manifest.manifest_hash,
+            config_sha256=fixture.context.manifest.config_sha256,
+            code_tree_sha256=fixture.context.manifest.code_tree_sha256,
+            observations=(
+                ResourceThresholdObservation(
+                    category="OBJECT_COUNT",
+                    phase="Foundation seal",
+                    metric_name="TASK_OBJECT_COUNT",
+                    unit="objects",
+                    threshold=1,
+                    observed=2,
+                    observed_at_ns=1,
+                ),
+            ),
+        )
+        relative = f"staging/evidence/resource-anomalies/{safe}.json"
+        report_path = fixture.context.run_root / relative
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(report.model_dump_json(), encoding="utf-8")
+        evidence = TaskAggregateEvidence.seal(
+            {
+                "task_id": task_id,
+                "snapshot_id": fixture.context.manifest.snapshot_id,
+                "manifest_hash": fixture.context.manifest.manifest_hash,
+                "artifacts": (),
+                "receipts": (),
+                "fragments": (),
+                "seals": (),
+                "supporting_evidence": (
+                    EvidenceFileBinding(
+                        relative_path=relative,
+                        physical_sha256=sha256_file(report_path),
+                    ),
+                ),
+                "max_inflight_bytes_observed": 2,
+                "peak_process_rss_bytes": 2,
+                "resource_anomaly_count": 1,
+            }
+        )
+        evidence_path = fixture.context.run_root / "staging/backend-evidence" / f"{safe}.json"
+        evidence_path.parent.mkdir(parents=True, exist_ok=True)
+        evidence_path.write_text(evidence.model_dump_json(), encoding="utf-8")
+
+    backend = ProductionRuntimeV2Backend(peak_rss_reader=lambda: 1)
+
+    assert backend._load_foundation_checkpoints(fixture.context) == ()
 
 
 def test_same_size_object_tamper_blocks_catalog_seal(tmp_path: Path) -> None:
