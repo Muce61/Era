@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T10
-Status: BLOCKED_PENDING_CR_2026_014_VALIDATION
+Status: NOT_READY_FOR_FULL_REEXECUTION
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
@@ -64,3 +64,8 @@ both Foundation Tasks but proved Group-1 PRICE too slow. Run
 with eight completed BTC PRICE months, no publication and no active process. It may not resume under
 changed code or provide Group-1 artifacts to the successor. S2-T10 is blocked pending exact
 correctness, performance, recovery and progress-dashboard validation; Groups 2～4 remain DRAFT.
+
+CR-2026-014 correctness and repository quality gates now PASS, but its fixed BTC/ETH July
+benchmark improved only 2.18x versus the approved 4x promotion gate and averaged 1.73 rather than
+2.5 cores. Authority freeze and replacement Run B creation are therefore blocked pending a new
+human decision. No full run was started and Groups 2～4 remain DRAFT and unexecuted.

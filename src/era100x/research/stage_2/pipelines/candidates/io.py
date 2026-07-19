@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from enum import Enum
+from decimal import Decimal
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -51,17 +53,52 @@ def legacy_sorted_record_bytes(
     day-sized collection or a composable digest.
     """
 
-    return tuple(
-        sorted(
-            json.dumps(
-                dict(record),
-                sort_keys=True,
-                separators=(",", ":"),
-                default=str,
-            ).encode("utf-8")
-            for record in records
+    return tuple(sorted(canonical_json_row_v1_bytes(record) for record in records))
+
+
+def canonical_json_row_v1_bytes(record: Mapping[str, Any]) -> bytes:
+    """Encode one exact ``ERA_CANONICAL_JSON_ROW_V1`` record without ``json.dumps``.
+
+    The encoder is deliberately narrow.  It preserves the legacy UTF-8, compact
+    separators, recursive map ordering, list order and ``default=str`` behavior
+    while rejecting floats from the Runtime V2 hot path.
+    """
+
+    return _canonical_json_v1_value(dict(record)).encode("utf-8")
+
+
+def _canonical_json_v1_value(value: Any) -> str:
+    if value is None:
+        return "null"
+    if value is True:
+        return "true"
+    if value is False:
+        return "false"
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        raise TypeError("ERA_CANONICAL_JSON_ROW_V1 hot path forbids float")
+    if isinstance(value, str):
+        return json.encoder.encode_basestring_ascii(value)
+    if isinstance(value, Mapping):
+        keys = sorted(value)
+        if any(not isinstance(key, str) for key in keys):
+            raise TypeError("ERA_CANONICAL_JSON_ROW_V1 map keys must be strings")
+        return (
+            "{"
+            + ",".join(
+                f"{json.encoder.encode_basestring_ascii(key)}:{_canonical_json_v1_value(value[key])}"
+                for key in keys
+            )
+            + "}"
         )
-    )
+    if isinstance(value, (list, tuple)):
+        return "[" + ",".join(_canonical_json_v1_value(item) for item in value) + "]"
+    if isinstance(value, Enum):
+        return json.encoder.encode_basestring_ascii(str(value))
+    if isinstance(value, Decimal):
+        return json.encoder.encode_basestring_ascii(str(value))
+    return json.encoder.encode_basestring_ascii(str(value))
 
 
 def write_or_verify_partition(

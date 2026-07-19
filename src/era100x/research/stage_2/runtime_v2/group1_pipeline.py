@@ -17,16 +17,20 @@ from __future__ import annotations
 
 import hashlib
 import heapq
+import fcntl
+import json
+import multiprocessing
 import os
 import threading
 import uuid
 from collections import Counter
 from collections.abc import Callable, Iterator, Mapping, Sequence
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import Executor, Future, ProcessPoolExecutor
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path, PurePosixPath
-from typing import Any, BinaryIO, Literal, Self, cast
+from typing import Any, Literal, Self, cast
 
 import pyarrow as pa  # type: ignore[import-untyped]
 import pyarrow.compute as pc  # type: ignore[import-untyped]
@@ -53,6 +57,7 @@ from .foundation_pipeline import FoundationShardCheckpoint
 from .foundation_specs import feature_foundation_dataset_specs
 from .group1_adapter import (
     PreparedGroup1Partition,
+    normalize_group1_record_batch,
     prepare_group1_arrow_partition,
     prepare_group1_partition,
 )
@@ -67,7 +72,6 @@ from .group1_feature_builder import (
 )
 from .hashing import (
     canonical_arrow_schema,
-    canonical_projection_hash,
     canonical_semantic_hash,
     normalize_table,
 )
@@ -88,6 +92,7 @@ from .models import (
     metadata_sha256,
 )
 from .memory import ProcessMemoryBudget, process_peak_rss_bytes
+from .progress import WorkerProgressV2, utc_now_text
 
 Instrument = Literal["BTCUSDT", "ETHUSDT"]
 
@@ -192,6 +197,14 @@ class Group1PipelineConfig(FrozenModel):
         return self.run_root / "staging" / "group1" / "partials"
 
     @property
+    def processing_day_cache_root(self) -> Path:
+        return self.run_root / "staging" / "group1" / "processing-day-cache"
+
+    @property
+    def worker_progress_root(self) -> Path:
+        return self.run_root / "logs" / "worker-progress"
+
+    @property
     def packed_aggregate_path(self) -> Path:
         return self.run_root / "staging" / "group1" / "packed-aggregate.json"
 
@@ -289,6 +302,40 @@ class Group1MonthCheckpoint(FrozenModel):
     def seal_checkpoint(cls, payload: dict[str, Any]) -> Self:
         provisional = cls.model_validate({**payload, "checkpoint_hash": ZERO_SHA256})
         return provisional.model_copy(update={"checkpoint_hash": provisional.computed_hash()})
+
+
+class ProcessingDayCacheReceiptV1(FrozenModel):
+    """Write-once execution cache for candidate attempts from one processing day."""
+
+    schema_name: Literal["stage2-v2-processing-day-cache"] = "stage2-v2-processing-day-cache"
+    cache_version: Literal["1.0"] = "1.0"
+    snapshot_id: str = Field(pattern=SHA256_PATTERN)
+    instrument: Instrument
+    processing_date: date
+    attempt_count: int = Field(ge=0)
+    attempts_relative_path: str
+    attempts_physical_sha256: str = Field(pattern=SHA256_PATTERN)
+    attempts_semantic_sha256: str = Field(pattern=SHA256_PATTERN)
+    foundation_authority_sha256: str = Field(pattern=SHA256_PATTERN)
+    lineage_sha256: str = Field(pattern=SHA256_PATTERN)
+    receipt_hash: str = Field(pattern=SHA256_PATTERN)
+
+    def computed_hash(self) -> str:
+        return metadata_sha256(self.model_dump(mode="json", exclude={"receipt_hash"}))
+
+    @model_validator(mode="after")
+    def validate_receipt(self) -> Self:
+        path = PurePosixPath(self.attempts_relative_path)
+        if path.is_absolute() or ".." in path.parts:
+            raise ValueError("processing-day cache path must be safe and relative")
+        if self.receipt_hash != ZERO_SHA256 and self.receipt_hash != self.computed_hash():
+            raise ValueError("processing-day cache receipt hash mismatch")
+        return self
+
+    @classmethod
+    def seal_receipt(cls, payload: dict[str, Any]) -> Self:
+        provisional = cls.model_validate({**payload, "receipt_hash": ZERO_SHA256})
+        return provisional.model_copy(update={"receipt_hash": provisional.computed_hash()})
 
 
 class Group1BindingObjectCount(FrozenModel):
@@ -414,6 +461,172 @@ class Group1StreamingPipelineResult:
     max_process_rss_bytes_observed: int
 
 
+@dataclass(frozen=True, slots=True)
+class Group1MonthWorkItemV1:
+    """Spawn-safe, month-owned execution unit with no shared formal writer."""
+
+    instrument: Instrument
+    utc_month: str
+    owner_start: date
+    owner_end_exclusive: date
+
+
+@dataclass(frozen=True, slots=True)
+class Group1MonthResultV1:
+    checkpoint: Group1MonthCheckpoint
+    max_inflight_bytes_observed: int
+    foundation_fragment_reads: int
+    foundation_cache_hits: int
+    processing_day_executions: int
+    legacy_runs_generated: int
+    bytes_written: int
+
+
+_GROUP1_WORKER_PIPELINE: Group1FeaturePipeline | None = None
+
+
+def _initialize_group1_month_worker(
+    config: Group1PipelineConfig,
+    snapshot_id: str,
+    foundation_checkpoints: tuple[FoundationShardCheckpoint, ...],
+    lineage_by_instrument: Mapping[Instrument, Group1Lineage],
+) -> None:
+    """Initialize immutable Foundation authority once per spawn worker."""
+
+    import signal
+
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    global _GROUP1_WORKER_PIPELINE
+    _GROUP1_WORKER_PIPELINE = Group1FeaturePipeline(
+        config=config,
+        snapshot_id=snapshot_id,
+        foundation_checkpoints=foundation_checkpoints,
+        lineage_by_instrument=lineage_by_instrument,
+        _allow_process_workers=False,
+    )
+
+
+def _execute_group1_month_worker(work: Group1MonthWorkItemV1) -> Group1MonthResultV1:
+    """Build one owner month in a spawn child; SIGINT belongs to the parent."""
+
+    pipeline = _GROUP1_WORKER_PIPELINE
+    if pipeline is None:
+        raise RuntimeError("Group-1 month worker lacks its frozen initializer authority")
+    config = pipeline.config
+    worker_id = f"{work.instrument}-{work.utc_month}"
+
+    def report(
+        owner_date: date | None,
+        minute: int,
+        status: Literal["RUNNING", "SEALED", "FAILED"],
+        *,
+        processing_day_executions: int = 0,
+        legacy_runs_generated: int = 0,
+        bytes_written: int = 0,
+    ) -> None:
+        _write_worker_progress(
+            config,
+            WorkerProgressV2(
+                worker_id=worker_id,
+                pid=os.getpid(),
+                status=status,
+                instrument=work.instrument,
+                variant="V1_PRICE",
+                current_month=work.utc_month,
+                current_owner_date=(None if owner_date is None else owner_date.isoformat()),
+                current_processing_minute=minute,
+                foundation_fragment_reads=sum(pipeline.reader.read_counts.values()),
+                foundation_cache_hits=sum(pipeline.reader.cache_hits.values()),
+                processing_day_executions=processing_day_executions,
+                legacy_runs_generated=legacy_runs_generated,
+                bytes_written=bytes_written,
+                updated_at=utc_now_text(),
+            ),
+        )
+
+    report(None, 0, "RUNNING")
+    owner_dates = tuple(_dates(work.owner_start, work.owner_end_exclusive))
+    cache_receipts_before = {
+        owner_date
+        for owner_date in owner_dates
+        if _processing_day_cache_paths(config, work.instrument, owner_date)[1].exists()
+    }
+    prior_date = work.owner_start - timedelta(days=1)
+    prior_was_cached = _processing_day_cache_paths(config, work.instrument, prior_date)[1].exists()
+    try:
+        checkpoint, observed = pipeline._build_or_resume_month(
+            instrument=work.instrument,
+            utc_month=work.utc_month,
+            start=work.owner_start,
+            end_exclusive=work.owner_end_exclusive,
+            compute_pool=None,
+            progress_sink=lambda owner, minute: report(owner, minute, "RUNNING"),
+        )
+    except BaseException:
+        report(None, 0, "FAILED")
+        raise
+    cache_receipts_after = {
+        owner_date
+        for owner_date in owner_dates
+        if _processing_day_cache_paths(config, work.instrument, owner_date)[1].exists()
+    }
+    processing_day_executions = len(cache_receipts_after - cache_receipts_before) + int(
+        not prior_was_cached
+    )
+    legacy_runs_generated = _checkpoint_legacy_run_count(checkpoint)
+    bytes_written = sum(
+        0 if dataset.artifact is None else dataset.artifact.byte_size
+        for dataset in checkpoint.datasets
+    )
+    report(
+        work.owner_end_exclusive - timedelta(days=1),
+        1440,
+        "SEALED",
+        processing_day_executions=processing_day_executions,
+        legacy_runs_generated=legacy_runs_generated,
+        bytes_written=bytes_written,
+    )
+    return Group1MonthResultV1(
+        checkpoint=checkpoint,
+        max_inflight_bytes_observed=observed,
+        foundation_fragment_reads=sum(pipeline.reader.read_counts.values()),
+        foundation_cache_hits=sum(pipeline.reader.cache_hits.values()),
+        processing_day_executions=processing_day_executions,
+        legacy_runs_generated=legacy_runs_generated,
+        bytes_written=bytes_written,
+    )
+
+
+def _checkpoint_legacy_run_count(checkpoint: Group1MonthCheckpoint) -> int:
+    upstream = set(PRICE_DATASETS[:7])
+    return sum(
+        (receipt.row_count + _DailyRecordSpool.BUFFER_ROWS - 1) // _DailyRecordSpool.BUFFER_ROWS
+        for dataset in checkpoint.datasets
+        if dataset.variant == "V1_PRICE" and dataset.dataset in upstream
+        for receipt in dataset.receipts
+        if receipt.row_count
+    )
+
+
+def _write_worker_progress(config: Group1PipelineConfig, progress: WorkerProgressV2) -> None:
+    path = config.worker_progress_root / f"{progress.worker_id}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    payload = (
+        json.JSONEncoder(sort_keys=True, separators=(",", ":")).encode(
+            progress.model_dump(mode="json")
+        )
+        + "\n"
+    ).encode("utf-8")
+    try:
+        with temporary.open("xb") as stream:
+            stream.write(payload)
+            stream.flush()
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
 class PackedFoundationFeatureReader:
     """Explicit fragment reader for immutable PACKED_FINAL Foundation evidence."""
 
@@ -437,7 +650,9 @@ class PackedFoundationFeatureReader:
         ] = {}
         self._artifact_by_hash: dict[str, ArtifactRef] = {}
         self._verified_objects: set[str] = set()
+        self._partition_cache: dict[tuple[str, Instrument, date], pa.Table] = {}
         self.read_counts: Counter[tuple[str, Instrument, date]] = Counter()
+        self.cache_hits: Counter[tuple[str, Instrument, date]] = Counter()
 
         ordered = sorted(
             checkpoints,
@@ -547,6 +762,7 @@ class PackedFoundationFeatureReader:
         combined = {
             name: _concat_or_empty(items, self._specs[name]) for name, items in tables.items()
         }
+        self._evict_partition_cache(instrument)
         observed = sum(item.nbytes for item in combined.values())
         return FoundationFeatureWindow(
             instrument=instrument,
@@ -596,12 +812,19 @@ class PackedFoundationFeatureReader:
         receipt: Receipt,
         fragment: FragmentV2 | None,
     ) -> pa.Table:
-        self.read_counts[(dataset_name, instrument, receipt.partition.owner_date)] += 1
+        cache_key = (dataset_name, instrument, receipt.partition.owner_date)
+        cached = self._partition_cache.get(cache_key)
+        if cached is not None:
+            self.cache_hits[cache_key] += 1
+            return cached
+        self.read_counts[cache_key] += 1
         spec = self._specs[dataset_name]
         if fragment is None:
             if receipt.row_count:
                 raise ContractViolation("non-empty Foundation receipt lacks a fragment")
-            return pa.Table.from_batches([], schema=canonical_arrow_schema(spec))
+            table = pa.Table.from_batches([], schema=canonical_arrow_schema(spec))
+            self._partition_cache[cache_key] = table
+            return table
         artifact = fragment.artifact
         path = _safe_object_path(self.catalog_root, artifact.relative_path)
         if artifact.object_sha256 not in self._verified_objects:
@@ -622,7 +845,26 @@ class PackedFoundationFeatureReader:
             raise ContractViolation("Feature Foundation fragment row count changed")
         if canonical_semantic_hash(table, spec) != receipt.semantic_sha256:
             raise ContractViolation("Feature Foundation fragment semantics changed")
+        self._partition_cache[cache_key] = table
         return table
+
+    def _evict_partition_cache(self, instrument: Instrument) -> None:
+        limits = {
+            "contract_price_1s": 4,
+            "causal_price_bars": 3,
+            "trade_second_primitives": 2,
+        }
+        for dataset_name, limit in limits.items():
+            keys = sorted(
+                (
+                    key
+                    for key in self._partition_cache
+                    if key[0] == dataset_name and key[1] == instrument
+                ),
+                key=lambda key: key[2],
+            )
+            for key in keys[:-limit]:
+                del self._partition_cache[key]
 
     def _assert_reader_thread(self) -> None:
         if threading.get_ident() != self._owner_thread:
@@ -640,12 +882,15 @@ class Group1FeaturePipeline:
         foundation_checkpoints: Sequence[FoundationShardCheckpoint],
         lineage_by_instrument: Mapping[Instrument, Group1Lineage],
         foundation_reader: PackedFoundationFeatureReader | None = None,
+        _allow_process_workers: bool = True,
     ) -> None:
         self.config = config
         self.snapshot_id = snapshot_id
         if set(lineage_by_instrument) != {"BTCUSDT", "ETHUSDT"}:
             raise ValueError("Group-1 lineage must keep BTC and ETH separate and complete")
         self.lineage_by_instrument = dict(lineage_by_instrument)
+        self._foundation_checkpoints = tuple(foundation_checkpoints)
+        self._allow_process_workers = _allow_process_workers and foundation_reader is None
         foundation_artifacts = {
             item.artifact.object_sha256
             for item in foundation_checkpoints
@@ -687,24 +932,11 @@ class Group1FeaturePipeline:
         # semantic aggregate field and a resume must reuse the sealed values
         # instead of injecting the caller process's current high-water mark.
         max_rss_observed = 0
-        with ThreadPoolExecutor(
-            max_workers=self.config.compute_worker_count,
-            thread_name_prefix="stage2-v2-group1-compute",
-        ) as compute_pool:
-            for instrument in instruments:
-                for utc_month, month_start, month_end in _month_windows(start, end_exclusive):
-                    checkpoint, observed = self._build_or_resume_month(
-                        instrument=instrument,
-                        utc_month=utc_month,
-                        start=month_start,
-                        end_exclusive=month_end,
-                        compute_pool=compute_pool,
-                    )
-                    monthly.append(checkpoint)
-                    max_observed = max(max_observed, observed)
-                    max_rss_observed = max(
-                        max_rss_observed, checkpoint.max_process_rss_bytes_observed
-                    )
+        for result in self._iter_month_results(instruments, start, end_exclusive):
+            checkpoint = result.checkpoint
+            monthly.append(checkpoint)
+            max_observed = max(max_observed, result.max_inflight_bytes_observed)
+            max_rss_observed = max(max_rss_observed, checkpoint.max_process_rss_bytes_observed)
 
         packed = self._pack_months(
             instruments=instruments,
@@ -780,31 +1012,20 @@ class Group1FeaturePipeline:
         distributions: Counter[tuple[str, str]] = Counter()
         max_observed = 0
         max_rss_observed = 0
-        with ThreadPoolExecutor(
-            max_workers=self.config.compute_worker_count,
-            thread_name_prefix="stage2-v2-group1-compute",
-        ) as compute_pool:
-            for instrument in instruments:
-                for utc_month, month_start, month_end in _month_windows(start, end_exclusive):
-                    checkpoint, observed = self._build_or_resume_month(
-                        instrument=instrument,
-                        utc_month=utc_month,
-                        start=month_start,
-                        end_exclusive=month_end,
-                        compute_pool=compute_pool,
-                    )
-                    max_observed = max(max_observed, observed)
-                    max_rss_observed = max(
-                        max_rss_observed,
-                        checkpoint.max_process_rss_bytes_observed,
-                        process_peak_rss_bytes(),
-                    )
-                    distributions.update(
-                        {(item.name, item.value): item.count for item in checkpoint.distributions}
-                    )
-                    bindings.extend(self._seal_month_dataset_bindings(checkpoint))
-                    del checkpoint
-                    self._enforce_production_rss("monthly metadata sealing")
+        for result in self._iter_month_results(instruments, start, end_exclusive):
+            checkpoint = result.checkpoint
+            max_observed = max(max_observed, result.max_inflight_bytes_observed)
+            max_rss_observed = max(
+                max_rss_observed,
+                checkpoint.max_process_rss_bytes_observed,
+                process_peak_rss_bytes(),
+            )
+            distributions.update(
+                {(item.name, item.value): item.count for item in checkpoint.distributions}
+            )
+            bindings.extend(self._seal_month_dataset_bindings(checkpoint))
+            del checkpoint
+            self._enforce_production_rss("monthly metadata sealing")
 
         packed = self._pack_streaming_components(
             instruments=instruments,
@@ -829,6 +1050,87 @@ class Group1FeaturePipeline:
             max_inflight_bytes_observed=max_observed,
             max_process_rss_bytes_observed=max_rss_observed,
         )
+
+    def _iter_month_results(
+        self,
+        instruments: tuple[Instrument, ...],
+        start: date,
+        end_exclusive: date,
+    ) -> Iterator[Group1MonthResultV1]:
+        plan = tuple(
+            Group1MonthWorkItemV1(
+                instrument=instrument,
+                utc_month=utc_month,
+                owner_start=month_start,
+                owner_end_exclusive=month_end,
+            )
+            for utc_month, month_start, month_end in _month_windows(start, end_exclusive)
+            for instrument in instruments
+        )
+        if not self._allow_process_workers or len(plan) == 1:
+            for work in plan:
+                checkpoint, observed = self._build_or_resume_month(
+                    instrument=work.instrument,
+                    utc_month=work.utc_month,
+                    start=work.owner_start,
+                    end_exclusive=work.owner_end_exclusive,
+                    compute_pool=None,
+                )
+                yield Group1MonthResultV1(
+                    checkpoint=checkpoint,
+                    max_inflight_bytes_observed=observed,
+                    foundation_fragment_reads=sum(self.reader.read_counts.values()),
+                    foundation_cache_hits=sum(self.reader.cache_hits.values()),
+                    processing_day_executions=len(
+                        tuple(
+                            (
+                                self.config.processing_day_cache_root
+                                / f"instrument={work.instrument}"
+                            ).glob("date=*.receipt.json")
+                        )
+                    ),
+                    legacy_runs_generated=_checkpoint_legacy_run_count(checkpoint),
+                    bytes_written=sum(
+                        0 if dataset.artifact is None else dataset.artifact.byte_size
+                        for dataset in checkpoint.datasets
+                    ),
+                )
+            return
+
+        context = multiprocessing.get_context("spawn")
+        pool = ProcessPoolExecutor(
+            max_workers=self.config.compute_worker_count,
+            mp_context=context,
+            initializer=_initialize_group1_month_worker,
+            initargs=(
+                self.config,
+                self.snapshot_id,
+                self._foundation_checkpoints,
+                self.lineage_by_instrument,
+            ),
+        )
+        try:
+            futures: dict[int, Future[Group1MonthResultV1]] = {}
+            next_submit = 0
+            while next_submit < min(len(plan), self.config.compute_worker_count):
+                futures[next_submit] = pool.submit(_execute_group1_month_worker, plan[next_submit])
+                next_submit += 1
+            for index in range(len(plan)):
+                result = futures.pop(index).result()
+                if next_submit < len(plan):
+                    futures[next_submit] = pool.submit(
+                        _execute_group1_month_worker, plan[next_submit]
+                    )
+                    next_submit += 1
+                yield result
+        except BaseException:
+            for future in futures.values():
+                future.cancel()
+            _terminate_process_pool(pool)
+            pool.shutdown(wait=False, cancel_futures=True)
+            raise
+        else:
+            pool.shutdown(wait=True)
 
     def _seal_month_dataset_bindings(
         self, checkpoint: Group1MonthCheckpoint
@@ -1072,7 +1374,8 @@ class Group1FeaturePipeline:
         utc_month: str,
         start: date,
         end_exclusive: date,
-        compute_pool: ThreadPoolExecutor,
+        compute_pool: Executor | None,
+        progress_sink: Callable[[date, int], None] | None = None,
     ) -> tuple[Group1MonthCheckpoint, int]:
         authority = self.reader.authority_for_window(
             instrument=instrument, owner_start=start, owner_end_exclusive=end_exclusive
@@ -1105,6 +1408,22 @@ class Group1FeaturePipeline:
         }
         distributions: Counter[tuple[str, str]] = Counter()
         observed_authority: set[str] = set()
+        processing_day_cache: dict[date, tuple[dict[str, Any], ...]] = {}
+        prior_date = start - timedelta(days=1)
+        cached_prior = _load_processing_day_cache(
+            config=self.config,
+            snapshot_id=self.snapshot_id,
+            instrument=instrument,
+            processing_date=prior_date,
+            expected_foundation_authority=self.reader.authority_for_window(
+                instrument=instrument,
+                owner_start=prior_date,
+                owner_end_exclusive=prior_date + timedelta(days=1),
+            ),
+            lineage=self.lineage_by_instrument[instrument],
+        )
+        if cached_prior is not None:
+            processing_day_cache[prior_date] = cached_prior
         max_observed = 0
         max_rss_observed = process_peak_rss_bytes()
         try:
@@ -1133,7 +1452,21 @@ class Group1FeaturePipeline:
                     distributions=distributions,
                     compute_pool=compute_pool,
                     memory_budget=self._memory_budget,
+                    processing_day_cache=processing_day_cache,
+                    progress_sink=progress_sink,
                 )
+                _write_or_verify_processing_day_cache(
+                    config=self.config,
+                    snapshot_id=self.snapshot_id,
+                    instrument=instrument,
+                    processing_date=owner_date,
+                    attempts=processing_day_cache[owner_date],
+                    foundation_authority=window.foundation_authority_members,
+                    lineage=self.lineage_by_instrument[instrument],
+                )
+                for cached_date in tuple(processing_day_cache):
+                    if cached_date < owner_date - timedelta(days=1):
+                        del processing_day_cache[cached_date]
                 max_observed = max(max_observed, day_observed)
                 max_rss_observed = max(max_rss_observed, day_rss)
             if tuple(sorted(observed_authority)) != authority:
@@ -1334,6 +1667,165 @@ class Group1FeaturePipeline:
         )
 
 
+def _terminate_process_pool(pool: ProcessPoolExecutor) -> None:
+    """Stop spawn children now; ``shutdown(wait=False)`` alone lets them run on."""
+
+    processes = tuple(getattr(pool, "_processes", {}).values())
+    for process in processes:
+        if process.is_alive():
+            process.terminate()
+    for process in processes:
+        process.join(timeout=5)
+        if process.is_alive():
+            process.kill()
+            process.join(timeout=5)
+
+
+def _processing_day_cache_paths(
+    config: Group1PipelineConfig,
+    instrument: Instrument,
+    processing_date: date,
+) -> tuple[Path, Path]:
+    root = config.processing_day_cache_root / f"instrument={instrument}"
+    stem = f"date={processing_date.isoformat()}"
+    return root / f"{stem}.attempts.json", root / f"{stem}.receipt.json"
+
+
+def _lineage_sha256(lineage: Group1Lineage) -> str:
+    return metadata_sha256(
+        {
+            "data_run_id": lineage.data_run_id,
+            "dataset_logical_hash": lineage.dataset_logical_hash,
+            "config_hash": lineage.config_hash,
+            "code_version": lineage.code_version,
+        }
+    )
+
+
+def _attempts_bytes(attempts: Sequence[Mapping[str, Any]]) -> bytes:
+    return (
+        json.JSONEncoder(
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        )
+        .encode([dict(item) for item in attempts])
+        .encode("utf-8")
+        + b"\n"
+    )
+
+
+def _write_or_verify_processing_day_cache(
+    *,
+    config: Group1PipelineConfig,
+    snapshot_id: str,
+    instrument: Instrument,
+    processing_date: date,
+    attempts: Sequence[Mapping[str, Any]],
+    foundation_authority: tuple[str, ...],
+    lineage: Group1Lineage,
+) -> ProcessingDayCacheReceiptV1:
+    attempts_path, receipt_path = _processing_day_cache_paths(config, instrument, processing_date)
+    payload = _attempts_bytes(attempts)
+    physical = hashlib.sha256(payload).hexdigest()
+    semantic = metadata_sha256(tuple(dict(item) for item in attempts))
+    receipt = ProcessingDayCacheReceiptV1.seal_receipt(
+        {
+            "snapshot_id": snapshot_id,
+            "instrument": instrument,
+            "processing_date": processing_date,
+            "attempt_count": len(attempts),
+            "attempts_relative_path": attempts_path.relative_to(config.run_root).as_posix(),
+            "attempts_physical_sha256": physical,
+            "attempts_semantic_sha256": semantic,
+            "foundation_authority_sha256": metadata_sha256(tuple(sorted(foundation_authority))),
+            "lineage_sha256": _lineage_sha256(lineage),
+        }
+    )
+    attempts_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = receipt_path.with_suffix(".lock")
+    with _processing_cache_lock(lock_path):
+        if attempts_path.exists() or receipt_path.exists():
+            existing = _load_processing_day_cache(
+                config=config,
+                snapshot_id=snapshot_id,
+                instrument=instrument,
+                processing_date=processing_date,
+                expected_foundation_authority=foundation_authority,
+                lineage=lineage,
+            )
+            if existing is None or tuple(dict(item) for item in attempts) != existing:
+                raise ContractViolation("processing-day cache changed during deterministic replay")
+            current = ProcessingDayCacheReceiptV1.model_validate_json(receipt_path.read_bytes())
+            if current != receipt:
+                raise ContractViolation("processing-day cache receipt changed")
+            return current
+        temporary = attempts_path.with_name(
+            f".{attempts_path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp"
+        )
+        try:
+            with temporary.open("xb") as stream:
+                stream.write(payload)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, attempts_path)
+            _write_once_model(receipt_path, receipt)
+        finally:
+            temporary.unlink(missing_ok=True)
+        return receipt
+
+
+@contextmanager
+def _processing_cache_lock(path: Path) -> Iterator[None]:
+    descriptor = os.open(path, os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
+        yield
+    finally:
+        fcntl.flock(descriptor, fcntl.LOCK_UN)
+        os.close(descriptor)
+
+
+def _load_processing_day_cache(
+    *,
+    config: Group1PipelineConfig,
+    snapshot_id: str,
+    instrument: Instrument,
+    processing_date: date,
+    expected_foundation_authority: tuple[str, ...],
+    lineage: Group1Lineage,
+) -> tuple[dict[str, Any], ...] | None:
+    attempts_path, receipt_path = _processing_day_cache_paths(config, instrument, processing_date)
+    if not attempts_path.exists() and not receipt_path.exists():
+        return None
+    if not attempts_path.is_file() or not receipt_path.is_file():
+        raise ContractViolation("processing-day cache is incomplete")
+    receipt = ProcessingDayCacheReceiptV1.model_validate_json(receipt_path.read_bytes())
+    if (
+        receipt.snapshot_id != snapshot_id
+        or receipt.instrument != instrument
+        or receipt.processing_date != processing_date
+        or receipt.attempts_relative_path != attempts_path.relative_to(config.run_root).as_posix()
+        or receipt.foundation_authority_sha256
+        != metadata_sha256(tuple(sorted(expected_foundation_authority)))
+        or receipt.lineage_sha256 != _lineage_sha256(lineage)
+    ):
+        raise ContractViolation("processing-day cache authority changed")
+    payload = attempts_path.read_bytes()
+    if hashlib.sha256(payload).hexdigest() != receipt.attempts_physical_sha256:
+        raise ContractViolation("processing-day cache bytes changed")
+    raw = json.loads(payload)
+    if not isinstance(raw, list) or any(not isinstance(item, dict) for item in raw):
+        raise ContractViolation("processing-day cache payload is not a record list")
+    attempts = tuple(cast(dict[str, Any], item) for item in raw)
+    if (
+        len(attempts) != receipt.attempt_count
+        or metadata_sha256(attempts) != receipt.attempts_semantic_sha256
+    ):
+        raise ContractViolation("processing-day cache semantics changed")
+    return attempts
+
+
 def _stream_owner_day_to_writers(
     *,
     config: Group1PipelineConfig,
@@ -1344,8 +1836,10 @@ def _stream_owner_day_to_writers(
     lineage: Group1Lineage,
     writers: Mapping[tuple[str, str], _MonthlyBindingWriter],
     distributions: Counter[tuple[str, str]],
-    compute_pool: ThreadPoolExecutor,
+    compute_pool: Executor | None,
     memory_budget: ProcessMemoryBudget,
+    processing_day_cache: dict[date, tuple[dict[str, Any], ...]] | None = None,
+    progress_sink: Callable[[date, int], None] | None = None,
 ) -> tuple[int, int]:
     """Stream one owner day without a monolithic thirteen-dataset result."""
 
@@ -1380,24 +1874,37 @@ def _stream_owner_day_to_writers(
 
     try:
         owner_start_ns = _day_start_ns(owner_date)
-        previous_prices = _contract_prices(
-            _slice_event_time(
-                window.contract_price_1s,
-                owner_start_ns - DAY_NS - 5_000_000_000,
-                owner_start_ns + 180_000_000_000,
-            ),
-            instrument,
+        previous_date = owner_date - timedelta(days=1)
+        previous_attempts = (
+            None if processing_day_cache is None else processing_day_cache.get(previous_date)
         )
-        previous = build_price_processing_day_from_features(
-            instrument=instrument,
-            processing_date=owner_date - timedelta(days=1),
-            contract_prices=previous_prices,
-            causal_bars=bars,
-            lineage=lineage,
-            record_sink=lambda _dataset, _record: None,
-            retained_outputs=frozenset({"candidate_attempts"}),
-        )
-        del previous_prices
+        if previous_attempts is None:
+            previous_prices = _contract_prices(
+                _slice_event_time(
+                    window.contract_price_1s,
+                    owner_start_ns - DAY_NS - 5_000_000_000,
+                    owner_start_ns + 180_000_000_000,
+                ),
+                instrument,
+            )
+            previous = build_price_processing_day_from_features(
+                instrument=instrument,
+                processing_date=previous_date,
+                contract_prices=previous_prices,
+                causal_bars=bars,
+                lineage=lineage,
+                record_sink=lambda _dataset, _record: None,
+                retained_outputs=frozenset({"candidate_attempts"}),
+                progress_sink=(
+                    None
+                    if progress_sink is None
+                    else lambda minute: progress_sink(previous_date, minute)
+                ),
+            )
+            previous_attempts = tuple(previous["candidate_attempts"])
+            if processing_day_cache is not None:
+                processing_day_cache[previous_date] = previous_attempts
+            del previous_prices, previous
         current_prices = _contract_prices(
             _slice_event_time(
                 window.contract_price_1s,
@@ -1414,16 +1921,22 @@ def _stream_owner_day_to_writers(
             lineage=lineage,
             record_sink=sink,
             retained_outputs=frozenset({"candidate_attempts"}),
+            progress_sink=(
+                None if progress_sink is None else lambda minute: progress_sink(owner_date, minute)
+            ),
         )
+        current_attempts = tuple(current["candidate_attempts"])
+        if processing_day_cache is not None:
+            processing_day_cache[owner_date] = current_attempts
         price_attempts = [
-            *previous["candidate_attempts"],
-            *current["candidate_attempts"],
+            *previous_attempts,
+            *current_attempts,
         ]
         # ContractPrice/ContractBar Pydantic rows are the dominant non-Arrow
         # context during canonical spooling.  Candidate attempts are the only
         # retained cross-processing-day state, so release the contexts before
         # reconstructing one daily dataset at a time.
-        del previous, current, current_prices, bars
+        del current, current_prices, bars
         for dataset in PRICE_DATASETS[:7]:
             prepared = spools[dataset].finish()
             max_arrow = max(
@@ -1540,7 +2053,7 @@ def _stream_owner_day_to_writers(
 
 def _prepare_formal_records(
     *,
-    compute_pool: ThreadPoolExecutor,
+    compute_pool: Executor | None,
     snapshot_id: str,
     instrument: Instrument,
     variant: Literal["V1_PRICE", "V1_FLOW"],
@@ -1555,6 +2068,15 @@ def _prepare_formal_records(
         dataset=dataset,
         variant=variant,
     )
+    if compute_pool is None:
+        return prepare_group1_partition(
+            snapshot_id=snapshot_id,
+            instrument=instrument,
+            variant=variant,
+            dataset=dataset,
+            owner_date=owner_date,
+            records=records,
+        )
     future: Future[PreparedGroup1Partition] = compute_pool.submit(
         prepare_group1_partition,
         snapshot_id=snapshot_id,
@@ -1584,7 +2106,7 @@ class _MonthlyDayDigest:
 class _DailyRecordSpool:
     """Bounded upstream-record spool for one dataset and processing day."""
 
-    BUFFER_ROWS = 2_048
+    BUFFER_ROWS = 32_768
 
     def __init__(
         self,
@@ -1604,12 +2126,9 @@ class _DailyRecordSpool:
         self.memory_budget = memory_budget
         self.binding = group1_dataset_binding("V1_PRICE", dataset)
         self._buffer: list[Mapping[str, Any]] = []
-        self._writer: pq.ParquetWriter | None = None
+        self._tables: list[pa.Table] = []
         self._row_count = 0
         self._legacy_runs: list[_LegacyHashRun] = []
-        directory = config.partial_root / instrument / "daily-spool" / owner_date.isoformat()
-        directory.mkdir(parents=True, exist_ok=True)
-        self.path = directory / f"{dataset}.{uuid.uuid4().hex}.parquet.partial"
 
     def add(self, record: Mapping[str, Any]) -> None:
         self._buffer.append(record)
@@ -1618,9 +2137,6 @@ class _DailyRecordSpool:
 
     def finish(self) -> PreparedGroup1Partition:
         self._flush()
-        if self._writer is not None:
-            self._writer.close()
-            self._writer = None
         if self._row_count == 0:
             return prepare_group1_partition(
                 snapshot_id=self.snapshot_id,
@@ -1630,7 +2146,7 @@ class _DailyRecordSpool:
                 owner_date=self.owner_date,
                 records=(),
             )
-        table = pq.read_table(self.path).combine_chunks()
+        table = pa.concat_tables(self._tables).combine_chunks()
         if table.num_rows != self._row_count:
             raise ContractViolation("daily Group-1 spool row count changed")
         legacy_digest = _merge_legacy_hash_runs(
@@ -1653,21 +2169,19 @@ class _DailyRecordSpool:
             phase=f"Group-1 {self.instrument} {self.owner_date.isoformat()} spool finish",
             arrow_inflight_bytes=table.nbytes,
         )
-        self.path.unlink(missing_ok=True)
-        for run in self._legacy_runs:
-            run.path.unlink(missing_ok=True)
+        self._tables.clear()
+        self._legacy_runs.clear()
         return prepared
 
     def close_after_failure(self) -> None:
-        if self._writer is not None:
-            self._writer.close()
-            self._writer = None
+        self._tables.clear()
+        self._legacy_runs.clear()
+        self._buffer.clear()
 
     def _flush(self) -> None:
         if not self._buffer:
             return
-        prepared = prepare_group1_partition(
-            snapshot_id=self.snapshot_id,
+        _binding, table = normalize_group1_record_batch(
             instrument=self.instrument,
             variant="V1_PRICE",
             dataset=self.dataset,
@@ -1675,32 +2189,9 @@ class _DailyRecordSpool:
             records=self._buffer,
         )
         legacy_rows = legacy_sorted_record_bytes(self._buffer)
-        legacy_run = self.path.with_name(
-            f"{self.path.name}.legacy-{len(self._legacy_runs):06d}.run"
-        )
-        with legacy_run.open("xb") as stream:
-            for row in legacy_rows:
-                stream.write(row)
-                stream.write(b"\n")
-            stream.flush()
-            os.fsync(stream.fileno())
-        self._legacy_runs.append(
-            _LegacyHashRun(
-                path=legacy_run,
-                byte_sha256=_sha256_file(legacy_run),
-                row_count=len(legacy_rows),
-            )
-        )
-        table = prepared.batch.table
+        self._legacy_runs.append(_LegacyHashRun(rows=legacy_rows))
         if table.num_rows:
-            if self._writer is None:
-                self._writer = pq.ParquetWriter(
-                    self.path,
-                    canonical_arrow_schema(self.binding.spec),
-                    compression="zstd",
-                    write_statistics=True,
-                )
-            self._writer.write_table(table, row_group_size=ROW_GROUP_SIZE)
+            self._tables.append(table)
             self._row_count += table.num_rows
         self._buffer.clear()
         _require_rss_within_limit(
@@ -1713,9 +2204,11 @@ class _DailyRecordSpool:
 
 @dataclass(frozen=True, slots=True)
 class _LegacyHashRun:
-    path: Path
-    byte_sha256: str
-    row_count: int
+    rows: tuple[bytes, ...]
+
+    @property
+    def row_count(self) -> int:
+        return len(self.rows)
 
 
 def _merge_legacy_hash_runs(
@@ -1729,34 +2222,19 @@ def _merge_legacy_hash_runs(
         raise ContractViolation("non-empty Group-1 spool has no legacy hash runs")
     if sum(item.row_count for item in runs) != expected_row_count:
         raise ContractViolation("legacy compatibility run row count changed")
-    for run in runs:
-        if not run.path.is_file() or _sha256_file(run.path) != run.byte_sha256:
-            raise ContractViolation("legacy compatibility run changed before day seal")
-    streams = [item.path.open("rb") for item in runs]
-    try:
-        rows = heapq.merge(*(_legacy_run_rows(stream) for stream in streams))
-        digest = hashlib.sha256()
-        first = True
-        count = 0
-        for row in rows:
-            if not first:
-                digest.update(b"\n")
-            digest.update(row)
-            first = False
-            count += 1
-        if count != expected_row_count:
-            raise ContractViolation("legacy compatibility merge row count changed")
-        return digest.hexdigest()
-    finally:
-        for stream in streams:
-            stream.close()
-
-
-def _legacy_run_rows(stream: BinaryIO) -> Iterator[bytes]:
-    for row in stream:
-        if not row.endswith(b"\n"):
-            raise ContractViolation("legacy compatibility run is truncated")
-        yield row[:-1]
+    rows = heapq.merge(*(iter(run.rows) for run in runs))
+    digest = hashlib.sha256()
+    first = True
+    count = 0
+    for row in rows:
+        if not first:
+            digest.update(b"\n")
+        digest.update(row)
+        first = False
+        count += 1
+    if count != expected_row_count:
+        raise ContractViolation("legacy compatibility merge row count changed")
+    return digest.hexdigest()
 
 
 class _MonthlyBindingWriter:
@@ -1802,26 +2280,10 @@ class _MonthlyBindingWriter:
         expected_date = self.owner_start + timedelta(days=len(self._days))
         if batch.key.owner_date != expected_date:
             raise ContractViolation("monthly Group-1 owner days must arrive once in UTC order")
-        table = normalize_table(batch.table, self.binding.spec)
-        semantic = canonical_semantic_hash(table, self.binding.spec)
-        if semantic != prepared.v2_semantic_sha256:
-            raise ContractViolation("prepared Group-1 semantic hash changed before month write")
-        identity = canonical_projection_hash(
-            table,
-            self.binding.spec,
-            projection_fields=self.binding.spec.identity_fields,
-            sort_fields=self.binding.spec.identity_fields,
-            domain="identity-multiset",
-            require_unique=False,
-        )
-        payload = canonical_projection_hash(
-            table,
-            self.binding.spec,
-            projection_fields=self.binding.spec.payload_association_fields,
-            sort_fields=self.binding.spec.stable_sort_keys,
-            domain="identity-payload-association",
-            require_unique=self.binding.spec.row_multiplicity == "UNIQUE_IDENTITY",
-        )
+        table = batch.table
+        semantic = prepared.v2_semantic_sha256
+        identity = prepared.identity_multiset_sha256
+        payload = prepared.payload_association_sha256
         row_offset = self._rows
         if table.num_rows:
             if self._writer is None:

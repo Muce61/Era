@@ -4,7 +4,7 @@
 
 - task_id: S2-T10
 - task_version: 1.12
-- status: IN_PROGRESS
+- status: BLOCKED
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
@@ -14,6 +14,7 @@
 - approved_by: Muce
 - approved_at: 2026-07-17T19:09:18+08:00
 - execution_started_at: 2026-07-17T19:09:18+08:00
+- blocked_reason: CR-2026-014 PERFORMANCE_OBJECTIVE_NOT_MET; NOT_READY_FOR_FULL_REEXECUTION
 
 ## 1. 目标
 
@@ -111,6 +112,8 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
   processing-day缓存、Foundation滑动窗口、spawn月度并行、legacy Hash streaming、用户停止恢复
   和只读Web进度。研究定义、参数、身份、payload、输出契约及Run A均不变。固定30日正确性与
   4倍性能门通过前不得冻结新Authority或创建replacement Run B。
+  实际语义与806个receipt完全一致，但只达到2.18倍和1.73平均核；Task因此BLOCKED于
+  `NOT_READY_FOR_FULL_REEXECUTION`，未创建Authority或replacement Run B。
 
 - 2026-07-19：v1.11，Muce批准CR-2026-013。内存、Arrow inflight、对象大小/数量、容量估算
   和性能阈值改为append-only资源异常，不再直接判定研究失败；不能安全继续时进入可恢复

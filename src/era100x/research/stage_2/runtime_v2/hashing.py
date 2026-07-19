@@ -304,6 +304,22 @@ def _hash_normalized_projection(
         sort_fields=sort_fields,
         require_unique=require_unique,
     )
+    return _hash_already_sorted_projection(
+        normalized,
+        spec,
+        projection_fields=selected,
+        domain=domain,
+    )
+
+
+def _hash_already_sorted_projection(
+    normalized: pa.Table,
+    spec: DatasetSpec,
+    *,
+    projection_fields: Sequence[str],
+    domain: str,
+) -> str:
+    selected = tuple(projection_fields)
     digest = hashlib.sha256()
     _feed(digest, _HASH_DOMAIN)
     _feed(digest, domain.encode("utf-8"))
@@ -323,6 +339,38 @@ def _hash_normalized_projection(
         for component in components:
             _feed(digest, component)
     return digest.hexdigest()
+
+
+def canonical_already_normalized_projection_hash(
+    table: pa.Table,
+    spec: DatasetSpec,
+    *,
+    projection_fields: Sequence[str],
+    domain: str,
+) -> str:
+    """Hash a table already normalized in ``stable_sort_keys`` order.
+
+    This internal fast path is safe only for immutable tables returned by
+    ``normalize_table``.  It preserves the exact canonical binary bytes while
+    avoiding a second Arrow sort for projections using the same row order.
+    """
+
+    if sys.byteorder != "little":
+        raise ContractViolation("canonical Arrow V2 currently requires a little-endian host")
+    if table.schema != canonical_arrow_schema(spec):
+        raise ContractViolation("already-normalized projection schema changed")
+    selected = tuple(projection_fields)
+    if not selected or len(set(selected)) != len(selected):
+        raise ContractViolation("projection fields must be non-empty and unique")
+    known = {field.name for field in spec.fields}
+    if set(selected) - known:
+        raise ContractViolation("projection contains unknown fields")
+    return _hash_already_sorted_projection(
+        table,
+        spec,
+        projection_fields=selected,
+        domain=domain,
+    )
 
 
 def canonical_projection_hash(

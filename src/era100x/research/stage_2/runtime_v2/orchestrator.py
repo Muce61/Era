@@ -42,6 +42,13 @@ from era100x.research.stage_2.runtime_v2.checkpoint import (
     write_once_model,
 )
 from era100x.research.stage_2.runtime_v2.models import ManifestV2
+from era100x.research.stage_2.runtime_v2.progress import (
+    ProgressHeartbeat,
+    ProgressStore,
+    UserStopReportV1,
+    progress_from_checkpoint,
+    utc_now_text,
+)
 from era100x.research.stage_2.runtime_v2.resource_anomalies import ResourcePause
 from era100x.research.stage_2.runtime_v2.source_authority import (
     CONTRACT_PRICE_MANIFEST_AUTHORITY,
@@ -347,6 +354,7 @@ class Stage2V2Orchestrator:
             }
         )
         CheckpointStore(run_root).create(checkpoint)
+        _try_write_progress(run_root)
         return checkpoint
 
     def build_foundation(
@@ -510,7 +518,8 @@ class Stage2V2Orchestrator:
             store.replace(active, expected_hash=current.checkpoint_hash)
             current = active
             try:
-                receipt = self.backend.execute_task(context, task_id)
+                with ProgressHeartbeat(context.run_root):
+                    receipt = self.backend.execute_task(context, task_id)
                 self._validate_backend_receipt(context, task_id, receipt)
                 receipt_path = context.run_root / task_receipt_relative_path(task_id)
                 receipt_file_hash = write_once_model(receipt_path, receipt)
@@ -529,14 +538,26 @@ class Stage2V2Orchestrator:
                     active_task=task_id,
                 )
                 store.replace(interrupted, expected_hash=current.checkpoint_hash)
+                _try_write_progress(context.run_root)
+                raise
+            except KeyboardInterrupt:
+                interrupted = current.advance(
+                    status="INTERRUPTED_RECOVERABLE",
+                    active_task=task_id,
+                )
+                self._record_user_stop(context, current, interrupted, task_id)
+                store.replace(interrupted, expected_hash=current.checkpoint_hash)
+                _try_write_progress(context.run_root)
                 raise
             except ResourcePause as exc:
                 paused = self._resource_pause(context, current, task_id, exc)
                 store.replace(paused, expected_hash=current.checkpoint_hash)
+                _try_write_progress(context.run_root)
                 raise
             except Exception as exc:
                 failed = self._terminal_failure(context, current, task_id, exc)
                 store.replace(failed, expected_hash=current.checkpoint_hash)
+                _try_write_progress(context.run_root)
                 raise
             completions = (*current.completed_tasks, completion)
             phase_complete = task_id == phase_tasks[-1]
@@ -558,6 +579,7 @@ class Stage2V2Orchestrator:
                 resource_pause=None,
             )
             store.replace(completed, expected_hash=current.checkpoint_hash)
+            _try_write_progress(context.run_root)
             current = completed
         return current
 
@@ -899,6 +921,54 @@ class Stage2V2Orchestrator:
         )
 
     @staticmethod
+    def _record_user_stop(
+        context: RuntimeV2Context,
+        before: RuntimeV2Checkpoint,
+        after: RuntimeV2Checkpoint,
+        task_id: str,
+    ) -> None:
+        partial_root = context.run_root / "staging" / "group1" / "partials"
+        partial_files = (
+            tuple(
+                sorted(
+                    path.relative_to(context.run_root).as_posix()
+                    for path in partial_root.rglob("*")
+                    if path.is_file() and not path.name.startswith("._")
+                )
+            )
+            if partial_root.is_dir()
+            else ()
+        )
+        monthly_root = context.run_root / "staging" / "group1" / "monthly-checkpoints"
+        completed_months = (
+            tuple(
+                sorted(
+                    path.stem
+                    for path in monthly_root.rglob("*.json")
+                    if path.is_file() and not path.name.startswith("._")
+                )
+            )
+            if monthly_root.is_dir()
+            else ()
+        )
+        report = UserStopReportV1(
+            run_id=context.run_id,
+            task_id=task_id,
+            instrument=(task_id.split(":")[1] if ":" in task_id else None),
+            variant=(task_id.split(":")[2] if task_id.count(":") >= 2 else None),
+            completed_months=completed_months,
+            partial_files=partial_files,
+            checkpoint_before_hash=before.checkpoint_hash,
+            checkpoint_after_hash=after.checkpoint_hash,
+            code_commit=context.migration.v2_code_commit,
+            authority_bundle_id=context.migration.manifest_hash,
+            stopped_at=utc_now_text(),
+        )
+        safe_task = task_id.lower().replace(":", "-")
+        relative_path = f"reports/user-stop-{safe_task}-r{after.revision}.json"
+        write_once_model(context.run_root / relative_path, report)
+
+    @staticmethod
     @contextmanager
     def _run_lock(run_root: Path) -> Iterator[None]:
         path = run_root / "orchestration-v2.lock"
@@ -914,6 +984,17 @@ class Stage2V2Orchestrator:
         finally:
             fcntl.flock(descriptor, fcntl.LOCK_UN)
             os.close(descriptor)
+
+
+def _try_write_progress(run_root: Path) -> None:
+    """Progress evidence is best-effort and cannot redefine run integrity."""
+
+    try:
+        store = ProgressStore(run_root)
+        previous = store.read() if store.path.is_file() else None
+        store.replace(progress_from_checkpoint(run_root=run_root, previous=previous))
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return
 
 
 def compute_v2_code_tree_sha256(repo_root: Path = REPO_ROOT) -> str:

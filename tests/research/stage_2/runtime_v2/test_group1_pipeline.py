@@ -6,9 +6,11 @@ from decimal import Decimal
 from pathlib import Path
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from typing import Literal, cast
 
 import pyarrow as pa  # type: ignore[import-untyped]
+import pytest
 
 from era100x.research.stage_2.runtime_v2.catalog import (
     ArtifactStoreV2,
@@ -39,7 +41,9 @@ from era100x.research.stage_2.runtime_v2.group1_pipeline import (
     _DailyRecordSpool,
     _count_release_distributions,
     _distribution_models,
+    _load_processing_day_cache,
     _packed_month_windows,
+    _write_or_verify_processing_day_cache,
     group1_object_budget,
     require_catalog_object_budget,
 )
@@ -280,6 +284,32 @@ def test_explicit_foundation_reader_uses_fixed_causal_halo_across_midnight(
     assert all(count == 1 for count in reader.read_counts.values())
 
 
+def test_foundation_sliding_cache_reuses_adjacent_owner_day_fragments(tmp_path: Path) -> None:
+    dates = tuple(date(2020, 1, 27) + timedelta(days=offset) for offset in range(7))
+    root = tmp_path / "external" / "cache" / "staging" / "snapshot"
+    checkpoints = _foundation_checkpoints(root, instruments=("BTCUSDT",), dates=dates)
+    reader = PackedFoundationFeatureReader(
+        snapshot_id=H1,
+        catalog_root=root,
+        checkpoints=checkpoints,
+    )
+
+    reader.read_window(
+        instrument="BTCUSDT",
+        owner_start=date(2020, 1, 30),
+        owner_end_exclusive=date(2020, 1, 31),
+    )
+    reader.read_window(
+        instrument="BTCUSDT",
+        owner_start=date(2020, 1, 31),
+        owner_end_exclusive=date(2020, 2, 1),
+    )
+
+    assert sum(reader.cache_hits.values()) >= 6
+    assert all(count == 1 for count in reader.read_counts.values())
+    assert len(reader._partition_cache) <= 9  # noqa: SLF001 - bounded-cache contract.
+
+
 def test_cross_month_pipeline_emits_thirteen_bindings_and_resumes_without_source_reads(
     tmp_path: Path,
 ) -> None:
@@ -332,6 +362,154 @@ def test_cross_month_pipeline_emits_thirteen_bindings_and_resumes_without_source
     assert resumed.packed_aggregate == first.packed_aggregate
     assert aggregate_path.read_bytes() == aggregate_bytes
     assert resumed_reader.read_counts == {}
+
+
+def test_processing_day_cache_eliminates_cross_month_duplicate_compute(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dates = tuple(date(2020, 1, 29) + timedelta(days=offset) for offset in range(5))
+    foundation_root = tmp_path / "external" / "once" / "staging" / "snapshot"
+    checkpoints = _foundation_checkpoints(
+        foundation_root,
+        instruments=("BTCUSDT",),
+        dates=dates,
+    )
+    pipeline, _reader, _run_root = _pipeline(
+        tmp_path,
+        run_name="once",
+        checkpoints=checkpoints,
+    )
+    original = pipeline_module.build_price_processing_day_from_features
+    calls: list[date] = []
+
+    def counted(**kwargs: object) -> dict[str, list[dict[str, object]]]:
+        calls.append(cast(date, kwargs["processing_date"]))
+        return original(**kwargs)  # type: ignore[arg-type,return-value]
+
+    monkeypatch.setattr(
+        pipeline_module,
+        "build_price_processing_day_from_features",
+        counted,
+    )
+
+    pipeline.build(
+        instruments=("BTCUSDT",),
+        start=date(2020, 1, 31),
+        end_exclusive=date(2020, 2, 2),
+    )
+
+    assert calls == [date(2020, 1, 30), date(2020, 1, 31), date(2020, 2, 1)]
+    assert len(set(calls)) == len(calls)
+
+
+def test_month_scheduler_keeps_three_spawn_futures_in_flight(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dates = tuple(date(2020, 1, 1) + timedelta(days=offset) for offset in range(5))
+    foundation_root = tmp_path / "external" / "parallel" / "staging" / "snapshot"
+    checkpoints = _foundation_checkpoints(
+        foundation_root,
+        instruments=("BTCUSDT",),
+        dates=dates,
+    )
+    pipeline, _reader, _run_root = _pipeline(
+        tmp_path,
+        run_name="parallel",
+        checkpoints=checkpoints,
+    )
+    pipeline._allow_process_workers = True  # noqa: SLF001 - scheduler contract.
+    events: list[tuple[str, str]] = []
+
+    class ImmediateFuture:
+        def __init__(self, value: object) -> None:
+            self.value = value
+
+        def result(self) -> object:
+            events.append(("result", cast(str, self.value)))
+            return self.value
+
+        def cancel(self) -> bool:
+            return True
+
+    class FakePool:
+        def __init__(self, **kwargs: object) -> None:
+            assert kwargs["max_workers"] == 3
+
+        def submit(self, _function: object, work: object) -> ImmediateFuture:
+            month = cast(pipeline_module.Group1MonthWorkItemV1, work).utc_month
+            events.append(("submit", month))
+            return ImmediateFuture(month)
+
+        def shutdown(self, *, wait: bool, cancel_futures: bool = False) -> None:
+            events.append(("shutdown", f"{wait}:{cancel_futures}"))
+
+    monkeypatch.setattr(pipeline_module, "ProcessPoolExecutor", FakePool)
+    results = list(
+        pipeline._iter_month_results(  # noqa: SLF001 - deterministic scheduler contract.
+            ("BTCUSDT",),
+            date(2020, 1, 1),
+            date(2020, 5, 1),
+        )
+    )
+
+    assert results == ["2020-01", "2020-02", "2020-03", "2020-04"]
+    assert events[:4] == [
+        ("submit", "2020-01"),
+        ("submit", "2020-02"),
+        ("submit", "2020-03"),
+        ("result", "2020-01"),
+    ]
+
+
+def test_processing_day_cache_concurrent_same_payload_is_write_once(tmp_path: Path) -> None:
+    external = tmp_path / "external"
+    external.mkdir()
+    run_root = external / "cache-race"
+    config = Group1PipelineConfig(
+        run_root=run_root,
+        foundation_catalog_root=run_root / "staging" / "snapshot",
+        approved_external_root=external,
+    )
+    lineage = Group1Lineage(
+        data_run_id="stage1-fixture",
+        dataset_logical_hash=H1,
+        config_hash=H2,
+        code_version="abcdef0",
+    )
+    attempts = ({"canonical_candidate_id": "candidate", "available_at_ts": 1},)
+    kwargs = {
+        "config": config,
+        "snapshot_id": H1,
+        "instrument": "BTCUSDT",
+        "processing_date": date(2020, 1, 31),
+        "attempts": attempts,
+        "foundation_authority": (H3,),
+        "lineage": lineage,
+    }
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        receipts = tuple(
+            future.result()
+            for future in (
+                pool.submit(_write_or_verify_processing_day_cache, **kwargs),  # type: ignore[arg-type]
+                pool.submit(_write_or_verify_processing_day_cache, **kwargs),  # type: ignore[arg-type]
+            )
+        )
+
+    assert receipts[0] == receipts[1]
+    assert (
+        _load_processing_day_cache(
+            config=config,
+            snapshot_id=H1,
+            instrument="BTCUSDT",
+            processing_date=date(2020, 1, 31),
+            expected_foundation_authority=(H3,),
+            lineage=lineage,
+        )
+        == attempts
+    )
 
 
 def test_streaming_component_build_matches_compatibility_graph_and_resumes(

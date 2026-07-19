@@ -144,6 +144,16 @@ class FakeBackend:
         )
 
 
+class UserStopBackend(FakeBackend):
+    def execute_task(
+        self,
+        context: RuntimeV2Context,
+        task_id: str,
+    ) -> BackendTaskReceipt:
+        del context, task_id
+        raise KeyboardInterrupt
+
+
 def _manifest(snapshot_id: str = S) -> ManifestV2:
     spec = DatasetSpec.seal(
         {
@@ -631,6 +641,27 @@ def test_checkpoint_rejects_any_runtime_matrix_override(
     payload["planned_tasks"] = (*FULL_TASK_MATRIX, "GROUP1:BTCUSDT:UNAPPROVED")
     with pytest.raises(ValueError, match="frozen full matrix"):
         RuntimeV2Checkpoint.seal(payload)
+
+
+def test_keyboard_interrupt_is_recoverable_and_writes_user_stop(
+    authority_paths: tuple[dict[str, object], Path],
+) -> None:
+    common, root = authority_paths
+    orchestrator = Stage2V2Orchestrator(UserStopBackend())
+    orchestrator.preflight(**common)  # type: ignore[arg-type]
+
+    with pytest.raises(KeyboardInterrupt):
+        orchestrator.build_foundation(**common)  # type: ignore[arg-type]
+
+    run_root = root / "runs" / RUN_ID
+    checkpoint = CheckpointStore(run_root).read()
+    assert checkpoint.status == "INTERRUPTED_RECOVERABLE"
+    assert checkpoint.failure is None
+    reports = tuple((run_root / "reports").glob("user-stop-*.json"))
+    assert len(reports) == 1
+    payload = json.loads(reports[0].read_text(encoding="utf-8"))
+    assert payload["checkpoint_before_hash"] != payload["checkpoint_after_hash"]
+    assert payload["status"] == "INTERRUPTED_RECOVERABLE"
 
 
 def test_group1_task_order_keeps_instrument_and_variant_isolated() -> None:

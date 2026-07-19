@@ -122,3 +122,8 @@ fragments, execute isolated instrument-month workers, stream exact compatibility
 read-only progress. The currently stopped Run B remains unpublished evidence and cannot provide
 Group-1 data to the successor. Group 1 remains **FAIL** until performance promotion, complete
 replacement publication and exact Run-A comparison all pass.
+
+The actual frozen July benchmark preserved all legacy/V2/identity/payload Hashes but achieved only
+2.18x against the required 4x and 1.73 average cores against the required 2.5. CR-2026-014 is
+therefore `PERFORMANCE_OBJECTIVE_NOT_MET`; Group 1 remains **FAIL / NOT_READY_FOR_FULL_REEXECUTION**.
+No replacement Run B or later-group artifact exists.

@@ -289,6 +289,7 @@ def build_price_processing_day_from_features(
     lineage: Group1Lineage,
     record_sink: Callable[[str, Mapping[str, Any]], None] | None = None,
     retained_outputs: frozenset[str] | None = None,
+    progress_sink: Callable[[int], None] | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
     """Build one processing day with an optional bounded upstream-record sink.
 
@@ -352,6 +353,9 @@ def build_price_processing_day_from_features(
     timings = {item.timing_id: item for item in timing_configurations()}
     parameter_family = parameter_sets()
     for minute_start in range(day_start, day_end, MINUTE_NS):
+        minute_ordinal = (minute_start - day_start) // MINUTE_NS
+        if progress_sink is not None and minute_ordinal % 60 == 0:
+            progress_sink(minute_ordinal)
         available = minute_start + MINUTE_NS
         for item in by_available.get(available, []):
             active[(item.source_type, item.source_timeframe)] = item
@@ -490,6 +494,8 @@ def build_price_processing_day_from_features(
                         ),
                     }
                 )
+    if progress_sink is not None:
+        progress_sink(1440)
     return output
 
 

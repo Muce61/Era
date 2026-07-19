@@ -34,7 +34,12 @@ from .dataset_specs import (
     group1_dataset_binding,
 )
 from .errors import ContractViolation
-from .hashing import canonical_arrow_schema, canonical_semantic_hash, normalize_table
+from .hashing import (
+    canonical_already_normalized_projection_hash,
+    canonical_arrow_schema,
+    canonical_projection_hash,
+    normalize_table,
+)
 from .models import ArrowFieldSpec, LogicalPartitionKey, QualityFact
 
 DAY_NS = 86_400_000_000_000
@@ -51,6 +56,43 @@ class PreparedGroup1Partition:
     row_count: int
     legacy_logical_sha256: str
     v2_semantic_sha256: str
+    identity_multiset_sha256: str
+    payload_association_sha256: str
+
+
+def normalize_group1_record_batch(
+    *,
+    instrument: str,
+    variant: str,
+    dataset: str,
+    owner_date: date,
+    records: Sequence[Mapping[str, Any]],
+    setup_id: str = GROUP1_SETUP_ID,
+    context_id: str = GROUP1_CONTEXT_ID,
+) -> tuple[Group1DatasetBinding, pa.Table]:
+    """Validate a bounded producer batch without computing partition hashes."""
+
+    if setup_id != GROUP1_SETUP_ID or context_id != GROUP1_CONTEXT_ID:
+        raise ContractViolation("S2-T10 v1.8 only permits the approved Group-1 setup/context")
+    if instrument not in {"BTCUSDT", "ETHUSDT"}:
+        raise ContractViolation(f"unapproved Group-1 instrument: {instrument}")
+    try:
+        binding = group1_dataset_binding(variant, dataset)
+    except ValueError as exc:
+        raise ContractViolation(str(exc)) from exc
+    normalized_rows = [
+        _normalize_record(
+            dict(record),
+            binding=binding,
+            instrument=instrument,
+            owner_date=owner_date,
+        )
+        for record in records
+    ]
+    if binding.spec.row_multiplicity == "MULTISET_STABLE":
+        _validate_stable_multiset(normalized_rows, binding)
+    table = pa.Table.from_pylist(normalized_rows, schema=canonical_arrow_schema(binding.spec))
+    return binding, normalize_table(table, binding.spec)
 
 
 def prepare_group1_partition(
@@ -71,32 +113,24 @@ def prepare_group1_partition(
     empty Parquet object for that day.
     """
 
-    if setup_id != GROUP1_SETUP_ID or context_id != GROUP1_CONTEXT_ID:
-        raise ContractViolation("S2-T10 v1.8 only permits the approved Group-1 setup/context")
-    if instrument not in {"BTCUSDT", "ETHUSDT"}:
-        raise ContractViolation(f"unapproved Group-1 instrument: {instrument}")
-    try:
-        binding = group1_dataset_binding(variant, dataset)
-    except ValueError as exc:
-        raise ContractViolation(str(exc)) from exc
-
     source_records = [dict(record) for record in records]
-    normalized_rows = [
-        _normalize_record(
-            record,
-            binding=binding,
-            instrument=instrument,
-            owner_date=owner_date,
-        )
-        for record in source_records
-    ]
-    if binding.spec.row_multiplicity == "MULTISET_STABLE":
-        _validate_stable_multiset(normalized_rows, binding)
-    schema = canonical_arrow_schema(binding.spec)
-    table = pa.Table.from_pylist(normalized_rows, schema=schema)
-    table = normalize_table(table, binding.spec)
+    binding, table = normalize_group1_record_batch(
+        instrument=instrument,
+        variant=variant,
+        dataset=dataset,
+        owner_date=owner_date,
+        records=source_records,
+        setup_id=setup_id,
+        context_id=context_id,
+    )
     legacy_digest = records_logical_hash(source_records, dataset)
-    v2_digest = canonical_semantic_hash(table, binding.spec)
+    v2_digest = canonical_already_normalized_projection_hash(
+        table,
+        binding.spec,
+        projection_fields=tuple(field.name for field in binding.spec.fields),
+        domain="dataset-semantic",
+    )
+    identity_digest, payload_digest = _projection_hashes(table, binding)
     partition = LogicalPartitionKey(
         snapshot_id=snapshot_id,
         dataset_name=binding.spec.dataset_name,
@@ -136,6 +170,8 @@ def prepare_group1_partition(
         row_count=table.num_rows,
         legacy_logical_sha256=legacy_digest,
         v2_semantic_sha256=v2_digest,
+        identity_multiset_sha256=identity_digest,
+        payload_association_sha256=payload_digest,
     )
 
 
@@ -179,7 +215,13 @@ def prepare_group1_arrow_partition(
     if binding.spec.row_multiplicity == "MULTISET_STABLE":
         _validate_arrow_stable_multiset(normalized, binding)
     legacy_id_hash = _legacy_id_set_hash(normalized, binding)
-    v2_digest = canonical_semantic_hash(normalized, binding.spec)
+    v2_digest = canonical_already_normalized_projection_hash(
+        normalized,
+        binding.spec,
+        projection_fields=tuple(field.name for field in binding.spec.fields),
+        domain="dataset-semantic",
+    )
+    identity_digest, payload_digest = _projection_hashes(normalized, binding)
     partition = LogicalPartitionKey(
         snapshot_id=snapshot_id,
         dataset_name=binding.spec.dataset_name,
@@ -213,7 +255,27 @@ def prepare_group1_arrow_partition(
         row_count=normalized.num_rows,
         legacy_logical_sha256=legacy_logical_sha256,
         v2_semantic_sha256=v2_digest,
+        identity_multiset_sha256=identity_digest,
+        payload_association_sha256=payload_digest,
     )
+
+
+def _projection_hashes(table: pa.Table, binding: Group1DatasetBinding) -> tuple[str, str]:
+    identity = canonical_projection_hash(
+        table,
+        binding.spec,
+        projection_fields=binding.spec.identity_fields,
+        sort_fields=binding.spec.identity_fields,
+        domain="identity-multiset",
+        require_unique=False,
+    )
+    payload = canonical_already_normalized_projection_hash(
+        table,
+        binding.spec,
+        projection_fields=binding.spec.payload_association_fields,
+        domain="identity-payload-association",
+    )
+    return identity, payload
 
 
 def _validate_arrow_stable_multiset(table: pa.Table, binding: Group1DatasetBinding) -> None:
