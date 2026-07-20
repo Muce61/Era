@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T10
-Status: BLOCKED_PENDING_CR_2026_016_APPROVAL
+Status: CR_2026_016_APPROVED_READY_FOR_FINAL_CODE_GATE
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
@@ -82,6 +82,8 @@ The CR-2026-015 successor `stage2-g1-v2-b-20260720T084846Z-3885667a` passed pref
 the implementation incorrectly treated 632 monthly Foundation checkpoints as the complete
 Foundation coverage, while the source has 632 monthly plus 164 packed checkpoints. Candidate
 commit `b8a1c79` corrects the exact 796-checkpoint contract and streams checkpoint decoding; Runtime
-V2 208/208 and the repository gate 419/419 pass. [CR-2026-016](changes/CR-2026-016.md) is DRAFT.
-The preflight-only Run B may not resume under changed code, and no successor Authority or Run B is
-authorized before explicit CR-2026-016 approval.
+V2 208/208 and the repository gate 419/419 pass. Muce approved
+[CR-2026-016](changes/CR-2026-016.md) on 2026-07-20. The preflight-only Run B must remain
+immutable and receive append-only disablement evidence. The authorized continuation is the final
+code gate, two identical Authority freezes and exactly one successor Run B; S2-T10 remains
+IN_PROGRESS and Groups 2～4 remain DRAFT.

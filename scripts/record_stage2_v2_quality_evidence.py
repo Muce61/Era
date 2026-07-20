@@ -84,6 +84,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "CR-2026-013",
             "CR-2026-014",
             "CR-2026-015",
+            "CR-2026-016",
         ],
         "code_commit": head,
         "repository_tree_sha1": _git("rev-parse", "HEAD^{tree}"),

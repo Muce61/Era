@@ -2228,7 +2228,7 @@ rules:
     event_construction_decision_ref: docs/development/decisions/ADR-S2-005-event-construction-baseline.md
     change_request_ref: docs/development/changes/CR-2026-005.md
     implemented_change_request_ref: docs/development/changes/CR-2026-003.md
-    s2_t10_recovery_task_version: '1.12'
+    s2_t10_recovery_task_version: '1.13'
     cr_s2_004_status: RESOLVED_IMPLEMENTED_VALIDATED_L2
     cr_s2_004_validation: docs/development/validations/stage_2/CR-2026-004.md
     cr_s2_005_status: RESOLVED_IMPLEMENTED_VALIDATED_L2
@@ -2271,6 +2271,15 @@ rules:
     cr_s2_015_packed_artifact_count: 19
     cr_s2_015_duplicate_packed_artifact_count: 0
     cr_s2_015_packed_artifact_audit_sha256: c3f45a60524c1959618c9e0c714b46ed30ece5ca6e9b4929caaf9750ec9f00bd
+    cr_s2_016_status: APPROVED_L2_RECOVERY_COVERAGE_AND_UNIQUE_SUCCESSOR_AUTHORIZATION
+    cr_s2_016_change_request_ref: docs/development/changes/CR-2026-016.md
+    cr_s2_016_validation: docs/development/validations/stage_2/CR-2026-016.md
+    cr_s2_016_preflight_run_b_id: stage2-g1-v2-b-20260720T084846Z-3885667a
+    cr_s2_016_preflight_run_b_status: PREFLIGHT_PASSED_ZERO_STAGING_DISABLEMENT_REQUIRED
+    cr_s2_016_foundation_monthly_checkpoint_count: 632
+    cr_s2_016_foundation_packed_checkpoint_count: 164
+    cr_s2_016_group1_monthly_checkpoint_count: 158
+    cr_s2_016_group1_monthly_dataset_seal_count: 2054
     formal_run_a_id: stage2-g1-full-a-20260716T144233Z-366a541b7956
     formal_run_a_status: PUBLISHED_QUALITY_PASS
     formal_run_a_logical_partitions: 61776
