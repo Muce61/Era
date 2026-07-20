@@ -14,7 +14,7 @@
 - approved_by: Muce
 - approved_at: 2026-07-17T19:09:18+08:00
 - execution_started_at: 2026-07-17T19:09:18+08:00
-- blocked_reason: CR-2026-015 final component sorting and audited packing recovery in progress
+- blocked_reason: CR-2026-016 approval required after CR-2026-015 preflight-only recovery coverage stop
 
 ## 1. 目标
 

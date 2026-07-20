@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T10
-Status: BLOCKED_PENDING_CR_2026_015_VALIDATION
+Status: BLOCKED_PENDING_CR_2026_016_APPROVAL
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
@@ -76,3 +76,12 @@ the producer and consumer used different artifact sort keys. CR-2026-015 is appr
 objects are proven physically unique, the ordering contract is being corrected, and a new Run B may
 adopt only verified monthly evidence before repeating packing, release, verify and comparison.
 Groups 2～4 remain DRAFT and unexecuted.
+
+The CR-2026-015 successor `stage2-g1-v2-b-20260720T084846Z-3885667a` passed preflight at commit
+`388566742b2bcc32eb478d376fbff25a637415fc` but its adoption stopped before writing staging data:
+the implementation incorrectly treated 632 monthly Foundation checkpoints as the complete
+Foundation coverage, while the source has 632 monthly plus 164 packed checkpoints. Candidate
+commit `b8a1c79` corrects the exact 796-checkpoint contract and streams checkpoint decoding; Runtime
+V2 208/208 and the repository gate 419/419 pass. [CR-2026-016](changes/CR-2026-016.md) is DRAFT.
+The preflight-only Run B may not resume under changed code, and no successor Authority or Run B is
+authorized before explicit CR-2026-016 approval.
