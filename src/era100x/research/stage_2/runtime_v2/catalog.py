@@ -960,8 +960,8 @@ class CatalogPublisherV2:
             )
         artifacts = tuple(sorted(artifacts_by_id.values(), key=lambda item: item.object_sha256))
         seals = tuple(sorted(seals_by_id.values(), key=lambda item: item.seal_hash))
-        if len(artifacts) > 200 or len(seals) > 200:
-            raise CatalogIntegrityError("catalog object/seal summaries must each remain <= 200")
+        # CR-2026-018 release-only correction: object and Seal counts remain
+        # sealed publication evidence, never a semantic publication gate.
 
         logical_table = _concat_component_tables(logical_tables, schema=_LOGICAL_PARTITIONS_SCHEMA)
         logical_tables.clear()
