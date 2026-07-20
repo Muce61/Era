@@ -14,10 +14,26 @@ from typing import Any, Final, Literal, Self
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
 from pydantic import Field, model_validator
 
+from .catalog import SealReducerV2
 from .checkpoint import CheckpointStore, write_once_model
 from .foundation_pipeline import FoundationShardCheckpoint
-from .group1_pipeline import Group1MonthCheckpoint, Group1MonthlyDatasetSeal
-from .models import FrozenModel, ManifestV2, SHA256_PATTERN, ZERO_SHA256, metadata_sha256
+from .group1_pipeline import (
+    GROUP1_BINDINGS,
+    Group1MonthCheckpoint,
+    Group1MonthlyDatasetSeal,
+    PackedFoundationFeatureReader,
+)
+from .models import (
+    ArtifactRef,
+    FragmentV2,
+    FrozenModel,
+    LogicalPartitionKey,
+    ManifestV2,
+    Receipt,
+    SHA256_PATTERN,
+    ZERO_SHA256,
+    metadata_sha256,
+)
 from .progress import PipelineProgressStore
 from .transition import sha256_file
 
@@ -181,8 +197,6 @@ def adopt_completed_monthly_results(
         raise ValueError("destination must be a fresh PREFLIGHT_PASSED run")
     if destination_checkpoint.manifest_hash != destination_manifest.manifest_hash:
         raise ValueError("destination checkpoint and Runtime Manifest differ")
-    if source_checkpoint.snapshot_id != destination_manifest.snapshot_id:
-        raise ValueError("source and destination snapshots differ")
     if source_checkpoint.stage1_data_run_id != destination_manifest.stage1_data_run_id:
         raise ValueError("source and destination Stage 1 authorities differ")
     if source_checkpoint.config_sha256 != destination_manifest.config_sha256:
@@ -197,39 +211,135 @@ def adopt_completed_monthly_results(
     if _semantic_authority(source_manifest) != _semantic_authority(destination_manifest):
         raise ValueError("source and destination semantic authorities differ")
 
-    files = _validated_adoption_files(source_root)
+    source_foundation = tuple(
+        FoundationShardCheckpoint.model_validate_json(path.read_bytes())
+        for path in (
+            _json_paths(source_root / "staging" / "foundation" / "checkpoints")
+            + _json_paths(source_root / "staging" / "foundation" / "packed-checkpoints")
+        )
+    )
+    source_months = tuple(
+        Group1MonthCheckpoint.model_validate_json(path.read_bytes())
+        for path in _json_paths(source_root / "staging" / "group1" / "monthly-checkpoints")
+    )
+    if len(source_foundation) != EXPECTED_FOUNDATION_CHECKPOINTS:
+        raise ValueError("Foundation checkpoint coverage is not 632")
+    if len(source_months) != EXPECTED_GROUP1_MONTHS:
+        raise ValueError("Group-1 month coverage is not 158")
+    source_dataset_paths = _group1_dataset_path_index(source_root)
+    if len(source_dataset_paths) != EXPECTED_GROUP1_DATASET_SEALS:
+        raise ValueError("Group-1 monthly dataset coverage is not 2,054")
+    estimated_total = (
+        len(source_foundation) * 3 + len(source_dataset_paths) * 3 + len(source_months)
+    )
     progress = PipelineProgressStore(destination_root)
     progress.update(
         name="MONTHLY_RESULT_ADOPTION",
         status="RUNNING",
         done=0,
-        total=len(files),
+        total=estimated_total,
         message="monthly adoption started",
     )
-    adopted: list[AdoptedFileV1] = []
-    for ordinal, (relative, category) in enumerate(files, start=1):
-        source = source_root / relative
-        destination = destination_root / relative
-        digest = sha256_file(source)
-        _copy_verified(source, destination, digest)
-        adopted.append(
-            AdoptedFileV1(
-                relative_path=relative.as_posix(),
-                physical_sha256=digest,
-                byte_size=source.stat().st_size,
-                category=category,
-            )
+    adopted: dict[str, AdoptedFileV1] = {}
+    completed = 0
+    destination_foundation: list[FoundationShardCheckpoint] = []
+    for source in sorted(
+        source_foundation,
+        key=lambda item: (item.storage_role, item.instrument, item.dataset_name, item.shard_key),
+    ):
+        adopted_checkpoint, entries = _adopt_foundation_checkpoint(
+            source_root=source_root,
+            destination_root=destination_root,
+            source=source,
+            destination_snapshot_id=destination_manifest.snapshot_id,
         )
-        if ordinal == len(files) or ordinal % 50 == 0:
+        destination_foundation.append(adopted_checkpoint)
+        _record_adopted(adopted, entries)
+        completed += len(entries)
+        if completed % 50 == 0:
             progress.update(
                 name="MONTHLY_RESULT_ADOPTION",
                 status="RUNNING",
-                done=ordinal,
-                total=len(files),
-                current_item=relative.as_posix(),
-                message=f"verified and copied {ordinal}/{len(files)} files",
+                done=completed,
+                total=estimated_total,
+                current_item=f"foundation:{source.instrument}:{source.dataset_name}:{source.shard_key}",
+                message=f"re-signed Foundation evidence ({completed} files)",
             )
-    ordered = tuple(sorted(adopted, key=lambda item: item.relative_path))
+
+    packed_foundation = tuple(
+        item for item in destination_foundation if item.storage_role == "PACKED_FINAL"
+    )
+    reader = PackedFoundationFeatureReader(
+        snapshot_id=destination_manifest.snapshot_id,
+        catalog_root=destination_root / "staging" / "snapshot",
+        checkpoints=packed_foundation,
+    )
+    dataset_count = 0
+    for source_month in sorted(source_months, key=lambda item: (item.instrument, item.owner_start)):
+        destination_datasets: list[Group1MonthlyDatasetSeal] = []
+        for source_dataset in source_month.datasets:
+            key = (
+                source_month.instrument,
+                source_month.utc_month,
+                source_dataset.variant,
+                source_dataset.dataset,
+            )
+            source_dataset_path = source_dataset_paths[key]
+            destination_dataset, entries = _adopt_group1_dataset(
+                source_root=source_root,
+                destination_root=destination_root,
+                source=source_dataset,
+                source_dataset_relative_path=source_dataset_path.relative_to(source_root),
+                destination_snapshot_id=destination_manifest.snapshot_id,
+            )
+            destination_datasets.append(destination_dataset)
+            _record_adopted(adopted, entries)
+            dataset_count += 1
+            completed += len(entries)
+            if dataset_count % 50 == 0:
+                progress.update(
+                    name="MONTHLY_RESULT_ADOPTION",
+                    status="RUNNING",
+                    done=completed,
+                    total=estimated_total,
+                    current_item=(
+                        f"{source_month.instrument}:{source_month.utc_month}:"
+                        f"{source_dataset.variant}:{source_dataset.dataset}"
+                    ),
+                    message=f"re-signed {dataset_count}/{EXPECTED_GROUP1_DATASET_SEALS} datasets",
+                )
+        authority = reader.authority_for_window(
+            instrument=source_month.instrument,
+            owner_start=source_month.owner_start,
+            owner_end_exclusive=source_month.owner_end_exclusive,
+        )
+        destination_month = Group1MonthCheckpoint.seal_checkpoint(
+            {
+                **source_month.model_dump(mode="python", exclude={"checkpoint_hash"}),
+                "snapshot_id": destination_manifest.snapshot_id,
+                "foundation_authority_members": authority,
+                "foundation_authority_sha256": metadata_sha256(authority),
+                "datasets": tuple(destination_datasets),
+            }
+        )
+        month_relative = Path(
+            f"staging/group1/monthly-checkpoints/instrument={source_month.instrument}/"
+            f"{source_month.utc_month}.json"
+        )
+        month_hash = write_once_model(destination_root / month_relative, destination_month)
+        _record_adopted(
+            adopted,
+            (
+                AdoptedFileV1(
+                    relative_path=month_relative.as_posix(),
+                    physical_sha256=month_hash,
+                    byte_size=(destination_root / month_relative).stat().st_size,
+                    category="GROUP1_MONTH_METADATA",
+                ),
+            ),
+        )
+        completed += 1
+    ordered = tuple(sorted(adopted.values(), key=lambda item: item.relative_path))
     manifest = Group1MonthlyAdoptionManifestV1.seal(
         {
             "source_run_id": source_root.name,
@@ -260,8 +370,8 @@ def adopt_completed_monthly_results(
     progress.update(
         name="MONTHLY_RESULT_ADOPTION",
         status="PASS",
-        done=len(files),
-        total=len(files),
+        done=completed,
+        total=completed,
         message="all completed monthly results adopted; packed Group-1 artifacts excluded",
     )
     return manifest
@@ -345,7 +455,6 @@ def _validated_adoption_files(
 
 def _semantic_authority(manifest: ManifestV2) -> tuple[Any, ...]:
     return (
-        manifest.snapshot_id,
         manifest.stage1_data_run_id,
         manifest.preregistration_manifest_sha256,
         manifest.config_sha256,
@@ -356,6 +465,258 @@ def _semantic_authority(manifest: ManifestV2) -> tuple[Any, ...]:
             if not item.name.startswith("runtime_v2_")
         ),
     )
+
+
+def _adopt_foundation_checkpoint(
+    *,
+    source_root: Path,
+    destination_root: Path,
+    source: FoundationShardCheckpoint,
+    destination_snapshot_id: str,
+) -> tuple[FoundationShardCheckpoint, tuple[AdoptedFileV1, ...]]:
+    source_object_root = (
+        source_root / "staging" / "foundation" / "monthly-catalog"
+        if source.storage_role == "MONTHLY_INTERMEDIATE"
+        else source_root / "staging" / "snapshot"
+    )
+    destination_object_root = (
+        destination_root / "staging" / "foundation" / "monthly-catalog"
+        if source.storage_role == "MONTHLY_INTERMEDIATE"
+        else destination_root / "staging" / "snapshot"
+    )
+    artifact, receipts, fragments, seal, object_entry = _resign_graph(
+        source_root=source_root,
+        destination_root=destination_root,
+        source_object_root=source_object_root,
+        destination_object_root=destination_object_root,
+        artifact=source.artifact,
+        receipts=source.receipts,
+        fragments=source.fragments,
+        source_seal_path=source_root / source.seal_relative_path,
+        source_seal_file_sha256=source.seal_file_sha256,
+        source_shard_id=source.seal.shard_id,
+        dataset_spec_hash=source.dataset_spec_hash,
+        destination_snapshot_id=destination_snapshot_id,
+        object_category="FOUNDATION_OBJECT",
+    )
+    seal_path = destination_root / source.seal_relative_path
+    seal_file_hash = write_once_model(seal_path, seal)
+    checkpoint = FoundationShardCheckpoint.seal_checkpoint(
+        {
+            **source.model_dump(mode="python", exclude={"checkpoint_hash"}),
+            "snapshot_id": destination_snapshot_id,
+            "artifact": artifact,
+            "receipts": receipts,
+            "fragments": fragments,
+            "seal": seal,
+            "seal_file_sha256": seal_file_hash,
+        }
+    )
+    checkpoint_kind = (
+        "checkpoints" if source.storage_role == "MONTHLY_INTERMEDIATE" else "packed-checkpoints"
+    )
+    checkpoint_relative = Path(
+        f"staging/foundation/{checkpoint_kind}/instrument={source.instrument}/"
+        f"feature={source.dataset_name}/shard={source.shard_key}.json"
+    )
+    checkpoint_hash = write_once_model(destination_root / checkpoint_relative, checkpoint)
+    entries = [
+        AdoptedFileV1(
+            relative_path=source.seal_relative_path,
+            physical_sha256=seal_file_hash,
+            byte_size=seal_path.stat().st_size,
+            category="FOUNDATION_METADATA",
+        ),
+        AdoptedFileV1(
+            relative_path=checkpoint_relative.as_posix(),
+            physical_sha256=checkpoint_hash,
+            byte_size=(destination_root / checkpoint_relative).stat().st_size,
+            category="FOUNDATION_METADATA",
+        ),
+    ]
+    if object_entry is not None:
+        entries.append(object_entry)
+    return checkpoint, tuple(entries)
+
+
+def _adopt_group1_dataset(
+    *,
+    source_root: Path,
+    destination_root: Path,
+    source: Group1MonthlyDatasetSeal,
+    source_dataset_relative_path: Path,
+    destination_snapshot_id: str,
+) -> tuple[Group1MonthlyDatasetSeal, tuple[AdoptedFileV1, ...]]:
+    artifact, receipts, fragments, seal, object_entry = _resign_graph(
+        source_root=source_root,
+        destination_root=destination_root,
+        source_object_root=source_root / "staging" / "group1" / "monthly-catalog",
+        destination_object_root=destination_root / "staging" / "group1" / "monthly-catalog",
+        artifact=source.artifact,
+        receipts=source.receipts,
+        fragments=source.fragments,
+        source_seal_path=source_root / source.seal_relative_path,
+        source_seal_file_sha256=source.seal_file_sha256,
+        source_shard_id=source.seal.shard_id,
+        dataset_spec_hash=source.dataset_spec_hash,
+        destination_snapshot_id=destination_snapshot_id,
+        object_category="GROUP1_MONTH_OBJECT",
+    )
+    seal_path = destination_root / source.seal_relative_path
+    seal_file_hash = write_once_model(seal_path, seal)
+    dataset = Group1MonthlyDatasetSeal(
+        variant=source.variant,
+        dataset=source.dataset,
+        dataset_spec_hash=source.dataset_spec_hash,
+        artifact=artifact,
+        receipts=receipts,
+        fragments=fragments,
+        seal=seal,
+        seal_relative_path=source.seal_relative_path,
+        seal_file_sha256=seal_file_hash,
+    )
+    destination_path = destination_root / source_dataset_relative_path
+    dataset_hash = write_once_model(destination_path, dataset)
+    entries = [
+        AdoptedFileV1(
+            relative_path=source.seal_relative_path,
+            physical_sha256=seal_file_hash,
+            byte_size=seal_path.stat().st_size,
+            category="GROUP1_MONTH_METADATA",
+        ),
+        AdoptedFileV1(
+            relative_path=source_dataset_relative_path.as_posix(),
+            physical_sha256=dataset_hash,
+            byte_size=destination_path.stat().st_size,
+            category="GROUP1_MONTH_METADATA",
+        ),
+    ]
+    if object_entry is not None:
+        entries.append(object_entry)
+    return dataset, tuple(entries)
+
+
+def _resign_graph(
+    *,
+    source_root: Path,
+    destination_root: Path,
+    source_object_root: Path,
+    destination_object_root: Path,
+    artifact: ArtifactRef | None,
+    receipts: tuple[Receipt, ...],
+    fragments: tuple[FragmentV2, ...],
+    source_seal_path: Path,
+    source_seal_file_sha256: str,
+    source_shard_id: str,
+    dataset_spec_hash: str,
+    destination_snapshot_id: str,
+    object_category: Literal["FOUNDATION_OBJECT", "GROUP1_MONTH_OBJECT"],
+) -> tuple[
+    ArtifactRef | None,
+    tuple[Receipt, ...],
+    tuple[FragmentV2, ...],
+    Any,
+    AdoptedFileV1 | None,
+]:
+    if sha256_file(source_seal_path) != source_seal_file_sha256:
+        raise ValueError("source Seal physical hash changed")
+    destination_artifact: ArtifactRef | None = None
+    object_entry: AdoptedFileV1 | None = None
+    if artifact is not None:
+        source_object = source_object_root / artifact.relative_path
+        _validate_object(source_object, artifact.object_sha256, artifact.row_count)
+        destination_object = destination_object_root / artifact.relative_path
+        _copy_verified(source_object, destination_object, artifact.object_sha256)
+        destination_artifact = ArtifactRef.model_validate(
+            {**artifact.model_dump(mode="python"), "snapshot_id": destination_snapshot_id}
+        )
+        object_entry = AdoptedFileV1(
+            relative_path=destination_object.relative_to(destination_root).as_posix(),
+            physical_sha256=artifact.object_sha256,
+            byte_size=artifact.byte_size,
+            category=object_category,
+        )
+    partition_map: dict[str, LogicalPartitionKey] = {}
+    for receipt in receipts:
+        partition_map[receipt.partition.partition_id] = LogicalPartitionKey.model_validate(
+            {
+                **receipt.partition.model_dump(mode="python"),
+                "snapshot_id": destination_snapshot_id,
+            }
+        )
+    fragment_map: dict[str, FragmentV2] = {}
+    destination_fragments: list[FragmentV2] = []
+    for fragment in fragments:
+        new_fragment = FragmentV2.seal(
+            {
+                **fragment.model_dump(mode="python", exclude={"fragment_hash"}),
+                "snapshot_id": destination_snapshot_id,
+                "partition_id": partition_map[fragment.partition_id].partition_id,
+                "artifact": destination_artifact,
+            }
+        )
+        fragment_map[fragment.fragment_hash] = new_fragment
+        destination_fragments.append(new_fragment)
+    destination_receipts = tuple(
+        Receipt.seal(
+            {
+                **receipt.model_dump(mode="python", exclude={"receipt_hash"}),
+                "snapshot_id": destination_snapshot_id,
+                "partition": partition_map[receipt.partition.partition_id],
+                "fragment_hashes": tuple(
+                    fragment_map[value].fragment_hash for value in receipt.fragment_hashes
+                ),
+            }
+        )
+        for receipt in receipts
+    )
+    seal = SealReducerV2.reduce(
+        snapshot_id=destination_snapshot_id,
+        dataset_spec_hash=dataset_spec_hash,
+        shard_id=source_shard_id,
+        receipts=destination_receipts,
+    )
+    return (
+        destination_artifact,
+        destination_receipts,
+        tuple(destination_fragments),
+        seal,
+        object_entry,
+    )
+
+
+def _group1_dataset_path_index(
+    source_root: Path,
+) -> dict[tuple[str, str, str, str], Path]:
+    result: dict[tuple[str, str, str, str], Path] = {}
+    for path in _json_paths(source_root / "staging" / "group1" / "monthly-dataset-checkpoints"):
+        model = Group1MonthlyDatasetSeal.model_validate_json(path.read_bytes())
+        parts = path.relative_to(
+            source_root / "staging" / "group1" / "monthly-dataset-checkpoints"
+        ).parts
+        if len(parts) != 4:
+            raise ValueError("unexpected Group-1 monthly dataset path")
+        instrument = parts[0].removeprefix("instrument=")
+        month = parts[1].removeprefix("utc_month=")
+        if parts[2] != f"variant={model.variant}" or parts[3] != f"dataset={model.dataset}.json":
+            raise ValueError("Group-1 monthly dataset path disagrees with metadata")
+        key = (instrument, month, model.variant, model.dataset)
+        if key in result:
+            raise ValueError("duplicate Group-1 monthly dataset metadata")
+        result[key] = path
+    expected_keys = {
+        (instrument, month, variant, dataset)
+        for instrument in ("BTCUSDT", "ETHUSDT")
+        for month in {
+            path.parts[-3].removeprefix("utc_month=")
+            for path in result.values()
+            if path.parts[-4] == f"instrument={instrument}"
+        }
+        for variant, dataset in GROUP1_BINDINGS
+    }
+    if set(result) != expected_keys:
+        raise ValueError("Group-1 monthly dataset matrix is incomplete")
+    return result
 
 
 def _foundation_packed_object_hashes(source_root: Path) -> set[str]:
@@ -404,6 +765,16 @@ def _select(
     previous = selected.setdefault(path, category)
     if previous != category:
         raise ValueError(f"adoption path has conflicting categories: {path}")
+
+
+def _record_adopted(
+    adopted: dict[str, AdoptedFileV1],
+    entries: tuple[AdoptedFileV1, ...] | list[AdoptedFileV1],
+) -> None:
+    for entry in entries:
+        previous = adopted.setdefault(entry.relative_path, entry)
+        if previous != entry:
+            raise ValueError(f"adoption path has conflicting evidence: {entry.relative_path}")
 
 
 def _copy_verified(source: Path, destination: Path, digest: str) -> None:

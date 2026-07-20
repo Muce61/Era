@@ -110,6 +110,29 @@ def test_worker_snapshot_and_sealed_month_drive_fine_progress(tmp_path: Path) ->
     assert status["flow_partitions_done"] == 90
 
 
+def test_sealed_month_progress_uses_atomic_checkpoint_path_without_loading_payload(
+    tmp_path: Path,
+) -> None:
+    run_root = tmp_path / "runs" / RUN_ID
+    _checkpoint(run_root)
+    checkpoint_path = (
+        run_root
+        / "staging"
+        / "group1"
+        / "monthly-checkpoints"
+        / "instrument=ETHUSDT"
+        / "2026-07.json"
+    )
+    checkpoint_path.parent.mkdir(parents=True)
+    checkpoint_path.write_text("not loaded by the read-only dashboard", encoding="utf-8")
+
+    status = read_progress_status(run_root)
+
+    assert status["instrument_months_done"] == 1
+    assert status["owner_days_done"] == 3
+    assert status["eth_group1_partitions_done"] == 39
+
+
 def test_progress_store_atomic_round_trip(tmp_path: Path) -> None:
     run_root = tmp_path / "runs" / RUN_ID
     _checkpoint(run_root)

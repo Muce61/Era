@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import threading
 import time
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any, Literal, Self
 
@@ -575,10 +575,15 @@ def _sealed_month_progress(
         if path.name.startswith("._") or path.is_symlink():
             continue
         try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
-            start = datetime.fromisoformat(str(payload["owner_start"])).date()
-            end = datetime.fromisoformat(str(payload["owner_end_exclusive"])).date()
-        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+            start = date.fromisoformat(f"{path.stem}-01")
+            next_month = (
+                date(start.year + 1, 1, 1)
+                if start.month == 12
+                else date(start.year, start.month + 1, 1)
+            )
+            start = max(start, date(2020, 1, 1))
+            end = min(next_month, date(2026, 7, 4))
+        except ValueError:
             continue
         if end <= start:
             continue
