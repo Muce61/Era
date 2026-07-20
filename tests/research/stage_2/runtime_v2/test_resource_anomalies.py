@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from era100x.research.stage_2.runtime_v2.resource_anomalies import (
+    ResourceCategory,
     ResourceAnomalyReportV1,
     ResourceThresholdObservation,
 )
+from era100x.research.stage_2.runtime_v2.memory import ProcessMemoryBudget
 from era100x.research.stage_2.runtime_v2.production_backend import (
     EvidenceFileBinding,
     PublicationQualityReport,
@@ -131,3 +133,28 @@ def test_quality_report_accepts_resource_anomalies_and_more_than_200_objects() -
     assert report.quality_status == "PASS"
     assert report.object_count == 316
     assert report.resource_anomaly_count == 7
+
+
+def test_every_resource_threshold_category_is_audit_only() -> None:
+    budget = ProcessMemoryBudget(current_reader=lambda: 0, peak_reader=lambda: 0)
+    categories: tuple[ResourceCategory, ...] = (
+        "MEMORY_RSS",
+        "ARROW_INFLIGHT",
+        "SHARD_SIZE",
+        "OBJECT_COUNT",
+        "DISK_CAPACITY",
+        "STORAGE_AVAILABILITY",
+        "PERFORMANCE",
+        "MONITOR_STALL",
+    )
+
+    for category in categories:
+        budget.observe_threshold(
+            category=category,
+            phase="repository audit",
+            metric_name=f"{category}_TEST",
+            threshold=1,
+            observed=2,
+        )
+
+    assert {item.category for item in budget.drain_anomalies()} == set(categories)

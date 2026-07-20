@@ -34,7 +34,6 @@ from era100x.research.stage_2.runtime_v2.foundation_specs import (
 from era100x.research.stage_2.runtime_v2.group1_feature_builder import Group1Lineage
 from era100x.research.stage_2.runtime_v2.group1_pipeline import (
     GROUP1_BINDINGS,
-    MAX_GROUP1_PACKED_OBJECTS,
     Group1FeaturePipeline,
     Group1MonthlyDatasetSeal,
     Group1PipelineConfig,
@@ -46,8 +45,7 @@ from era100x.research.stage_2.runtime_v2.group1_pipeline import (
     _load_processing_day_cache,
     _packed_month_windows,
     _write_or_verify_processing_day_cache,
-    group1_object_budget,
-    require_catalog_object_budget,
+    group1_object_count_observation_threshold,
 )
 from era100x.research.stage_2.runtime_v2.hashing import canonical_arrow_schema
 from era100x.research.stage_2.runtime_v2.manifest_factory import (
@@ -367,7 +365,6 @@ def test_cross_month_pipeline_emits_thirteen_bindings_and_resumes_without_source
     )
     assert len(first.receipts) == 2 * 13
     assert len(first.object_counts) == 13
-    assert len(first.artifacts) <= MAX_GROUP1_PACKED_OBJECTS
     assert first.packed_aggregate.total_object_count == len(first.artifacts)
     assert first.packed_aggregate.receipt_count == 26
     assert first.max_inflight_bytes_observed < 1 << 30
@@ -792,16 +789,8 @@ def test_binding_registry_is_exactly_ten_price_plus_three_flow() -> None:
     assert len(GROUP1_BINDINGS) == 13
 
 
-def test_group1_catalog_object_budget_is_observational() -> None:
-    assert group1_object_budget(164) == 36
-    require_catalog_object_budget(
-        foundation_object_count=164,
-        group1_planned_object_count=36,
-    )
-    require_catalog_object_budget(
-        foundation_object_count=164,
-        group1_planned_object_count=37,
-    )
+def test_group1_object_count_threshold_is_observational() -> None:
+    assert group1_object_count_observation_threshold(164) == 36
 
 
 def test_group1_memory_thresholds_are_independent_and_audit_only(tmp_path: Path) -> None:
@@ -875,7 +864,7 @@ def test_group1_rss_diagnostic_cli_is_explicitly_non_production() -> None:
     assert "paths" in completed.stdout
 
 
-def test_foundation_and_group1_publish_as_one_catalog_below_the_global_cap(
+def test_foundation_and_group1_publish_as_one_catalog_without_a_count_gate(
     tmp_path: Path,
 ) -> None:
     dates = tuple(date(2020, 1, 29) + timedelta(days=offset) for offset in range(5))
@@ -951,6 +940,6 @@ def test_foundation_and_group1_publish_as_one_catalog_below_the_global_cap(
         seals=seals,
     )
 
-    assert len(artifacts) <= 200
-    assert len(seals) <= 200
+    assert catalog.objects_index.row_count == len(artifacts)
+    assert len(catalog.seals) == len(seals)
     assert sum(item.partition_count for item in catalog.dataset_roots) == len(all_receipts)

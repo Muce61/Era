@@ -83,7 +83,6 @@ SINGLE_SOURCE_READER = 1
 COMPUTE_WORKERS = 3
 SINGLE_DETERMINISTIC_WRITER = 1
 MAX_INFLIGHT_BYTES = 1 << 30
-MAX_MONTH_OBJECTS_PER_FEATURE_INSTRUMENT = 79
 PACKED_LARGE_SHARD_DAYS = 60
 ROW_GROUP_SIZE = 262_144
 FEATURE_DATASET_NAMES = (
@@ -111,7 +110,7 @@ class FoundationPipelineConfig(FrozenModel):
     max_process_current_rss_bytes: Literal[3_221_225_472] = MAX_PROCESS_CURRENT_RSS_BYTES
     max_process_rss_delta_bytes: Literal[1_073_741_824] = MAX_PROCESS_RSS_DELTA_BYTES
     row_group_size: Literal[262_144] = 262_144
-    max_month_objects_per_feature_instrument: Literal[79] = 79
+    month_object_count_observation_threshold: Literal[79] = 79
 
     @model_validator(mode="after")
     def validate_external_root(self) -> Self:
@@ -749,7 +748,7 @@ class FeatureFoundationPipeline:
             category="OBJECT_COUNT",
             phase="Feature Foundation planning",
             metric_name="MONTH_OBJECTS_PER_FEATURE_INSTRUMENT",
-            threshold=self.config.max_month_objects_per_feature_instrument,
+            threshold=self.config.month_object_count_observation_threshold,
             observed=len(months),
             unit="objects",
         )

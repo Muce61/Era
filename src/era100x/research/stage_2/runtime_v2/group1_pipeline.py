@@ -104,7 +104,7 @@ MAX_INFLIGHT_BYTES = 1 << 30
 PACKED_TARGET_BYTES = 256 << 20
 PACKED_MIN_BYTES = 128 << 20
 PACKED_MAX_BYTES = 512 << 20
-MAX_GROUP1_PACKED_OBJECTS = 200
+GROUP1_OBJECT_COUNT_OBSERVATION_THRESHOLD = 200
 ROW_GROUP_SIZE = 262_144
 DAY_NS = 86_400_000_000_000
 
@@ -140,7 +140,7 @@ class Group1PipelineConfig(FrozenModel):
     packed_target_bytes: Literal[268_435_456] = 268_435_456
     packed_min_bytes: Literal[134_217_728] = 134_217_728
     packed_max_bytes: Literal[536_870_912] = 536_870_912
-    max_group1_packed_objects: Literal[200] = 200
+    group1_object_count_observation_threshold: Literal[200] = 200
 
     @model_validator(mode="after")
     def approved_roots_only(self) -> Self:
@@ -897,9 +897,9 @@ class Group1FeaturePipeline:
             if item.storage_role == "PACKED_FINAL" and item.artifact is not None
         }
         self.foundation_object_count = len(foundation_artifacts)
-        self.group1_object_budget = group1_object_budget(
+        self.group1_object_count_observation_threshold = group1_object_count_observation_threshold(
             self.foundation_object_count,
-            catalog_cap=self.config.max_group1_packed_objects,
+            catalog_observation_threshold=(self.config.group1_object_count_observation_threshold),
         )
         self.reader = foundation_reader or PackedFoundationFeatureReader(
             snapshot_id=snapshot_id,
@@ -1195,7 +1195,6 @@ class Group1FeaturePipeline:
     ) -> Group1StreamingPipelineResult:
         expected_months = tuple(_month_windows(start, end_exclusive))
         by_key: dict[tuple[Instrument, str, str], tuple[Group1MonthlyDatasetBinding, ...]] = {}
-        planned_objects = 0
         for instrument in instruments:
             for variant, dataset in GROUP1_BINDINGS:
                 selected = tuple(
@@ -1217,20 +1216,6 @@ class Group1FeaturePipeline:
                 if actual != expected_months:
                     raise ContractViolation("Group-1 dataset binding coverage is incomplete")
                 by_key[(instrument, variant, dataset)] = selected
-                planned_objects += len(
-                    _packed_byte_windows(
-                        tuple(item.artifact_byte_size for item in selected),
-                        target_bytes=self.config.packed_target_bytes,
-                        min_bytes=self.config.packed_min_bytes,
-                        max_bytes=self.config.packed_max_bytes,
-                    )
-                )
-        require_catalog_object_budget(
-            foundation_object_count=self.foundation_object_count,
-            group1_planned_object_count=planned_objects,
-            catalog_cap=self.config.max_group1_packed_objects,
-        )
-
         object_counts: list[Group1BindingObjectCount] = []
         aggregate_receipts: list[tuple[tuple[Any, ...], str]] = []
         aggregate_seal_hashes: list[str] = []
@@ -1323,7 +1308,7 @@ class Group1FeaturePipeline:
             category="OBJECT_COUNT",
             phase="Group-1 packing",
             metric_name="GROUP1_PACKED_OBJECT_COUNT",
-            threshold=self.group1_object_budget,
+            threshold=self.group1_object_count_observation_threshold,
             observed=total_object_count,
             unit="objects",
         )
@@ -1566,7 +1551,6 @@ class Group1FeaturePipeline:
             tuple[Instrument, str, str],
             tuple[tuple[Group1MonthlyDatasetSeal, ...], ...],
         ] = {}
-        planned_objects = 0
         for instrument in instruments:
             for variant, dataset in GROUP1_BINDINGS:
                 inputs = tuple(
@@ -1584,14 +1568,6 @@ class Group1FeaturePipeline:
                     max_bytes=self.config.packed_max_bytes,
                 )
                 planned_windows[(instrument, variant, dataset)] = windows
-                planned_objects += sum(
-                    any(item.artifact is not None for item in window) for window in windows
-                )
-        require_catalog_object_budget(
-            foundation_object_count=self.foundation_object_count,
-            group1_planned_object_count=planned_objects,
-            catalog_cap=self.config.max_group1_packed_objects,
-        )
         artifacts: list[ArtifactRef] = []
         receipts: list[Receipt] = []
         fragments: list[FragmentV2] = []
@@ -1640,7 +1616,7 @@ class Group1FeaturePipeline:
             category="OBJECT_COUNT",
             phase="Group-1 packing",
             metric_name="GROUP1_PACKED_OBJECT_COUNT",
-            threshold=self.group1_object_budget,
+            threshold=self.group1_object_count_observation_threshold,
             observed=len(artifacts),
             unit="objects",
         )
@@ -2756,23 +2732,18 @@ def _packed_byte_windows(
     return tuple(windows)
 
 
-def group1_object_budget(foundation_object_count: int, *, catalog_cap: int = 200) -> int:
-    if foundation_object_count < 0 or catalog_cap <= 0:
-        raise ValueError("Catalog object counts must be non-negative with a positive cap")
-    budget = catalog_cap - foundation_object_count
-    return max(0, budget)
-
-
-def require_catalog_object_budget(
-    *,
+def group1_object_count_observation_threshold(
     foundation_object_count: int,
-    group1_planned_object_count: int,
-    catalog_cap: int = 200,
-) -> None:
-    if group1_planned_object_count < 0:
-        raise ValueError("Group-1 planned object count cannot be negative")
-    budget = group1_object_budget(foundation_object_count, catalog_cap=catalog_cap)
-    del budget
+    *,
+    catalog_observation_threshold: int = GROUP1_OBJECT_COUNT_OBSERVATION_THRESHOLD,
+) -> int:
+    """Return an anomaly threshold, never a packing or publication budget."""
+
+    if foundation_object_count < 0 or catalog_observation_threshold <= 0:
+        raise ValueError(
+            "Catalog object observations require non-negative counts and a positive threshold"
+        )
+    return max(0, catalog_observation_threshold - foundation_object_count)
 
 
 def _slice_receipt(

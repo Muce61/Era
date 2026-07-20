@@ -2291,7 +2291,7 @@ rules:
     cr_s2_016_foundation_packed_checkpoint_count: 164
     cr_s2_016_group1_monthly_checkpoint_count: 158
     cr_s2_016_group1_monthly_dataset_seal_count: 2054
-    cr_s2_017_status: DRAFT_AWAITING_MUCE_APPROVAL_CANDIDATE_RUNTIME_V2_211_PASS
+    cr_s2_017_status: CODE_CORRECTION_APPROVED_SUCCESSOR_AUTHORIZATION_REQUIRED
     cr_s2_017_change_request_ref: docs/development/changes/CR-2026-017.md
     cr_s2_017_validation: docs/development/validations/stage_2/CR-2026-017.md
     cr_s2_017_failed_release_run_b_id: stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04
@@ -2303,6 +2303,9 @@ rules:
     cr_s2_017_completed_v2_logical_partitions: 80784
     cr_s2_017_completed_group1_logical_partitions: 61776
     cr_s2_017_publication_record_present: false
+    cr_s2_017_resource_semantics_audit: docs/development/validations/resource_threshold_semantics_audit.md
+    cr_s2_017_runtime_v2_test_count: 212
+    cr_s2_017_repository_test_count: 425
     formal_run_a_id: stage2-g1-full-a-20260716T144233Z-366a541b7956
     formal_run_a_status: PUBLISHED_QUALITY_PASS
     formal_run_a_logical_partitions: 61776

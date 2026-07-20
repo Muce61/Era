@@ -121,9 +121,8 @@ RUN_A_GENERATOR_COMMIT = "366a541b7956030d1a0ea2b5c67b4b30e2154c76"
 
 FORMAL_START = date(2020, 1, 1)
 FORMAL_END_EXCLUSIVE = date(2026, 7, 4)
-MAX_CATALOG_OBJECTS = 200
+GROUP1_TASK_OBJECT_COUNT_OBSERVATION_THRESHOLD = 200
 FOUNDATION_PLANNED_OBJECTS = 164
-GROUP1_RESERVED_OBJECTS = 36
 FORMAL_FOUNDATION_PARTITION_COUNT = 19_008
 FORMAL_TOTAL_PARTITION_COUNT = 80_784
 # Leave a deterministic safety margin below the approved absolute 1 GiB cap.
@@ -738,7 +737,9 @@ class ProductionRuntimeV2Backend:
             phase=f"seal task {task_id}",
             metric_name="TASK_OBJECT_COUNT",
             threshold=(
-                FOUNDATION_PLANNED_OBJECTS if task_id in FOUNDATION_TASKS else MAX_CATALOG_OBJECTS
+                FOUNDATION_PLANNED_OBJECTS
+                if task_id in FOUNDATION_TASKS
+                else GROUP1_TASK_OBJECT_COUNT_OBSERVATION_THRESHOLD
             ),
             observed=len(result.artifacts),
             unit="objects",
