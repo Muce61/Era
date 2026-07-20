@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pyarrow as pa
@@ -460,6 +460,73 @@ def test_catalog_component_publisher_streams_and_sorts_task_shards(tmp_path: Pat
     assert set(reader.logical_index["partition_id"].to_pylist()) == {
         key.partition_id for key in keys
     }
+
+
+def test_catalog_component_publisher_accepts_more_than_200_objects(tmp_path: Path) -> None:
+    spec = _partition_only_spec()
+    results = []
+    keys = []
+    for offset in range(201):
+        key = _partition(spec, H1, date(2020, 1, 1) + timedelta(days=offset))
+        keys.append(key)
+        results.append(
+            CatalogCompactorV2(ArtifactStoreV2(tmp_path)).compact(
+                spec=spec,
+                snapshot_id=H1,
+                shard_id=f"object-count-{offset:03d}",
+                partitions=(
+                    PartitionBatch(
+                        key=key,
+                        table=pa.Table.from_pylist(
+                            [
+                                {
+                                    "canonical_candidate_id": offset,
+                                    "research_role": "PRIMARY",
+                                    "parameter_set_id": "KEY_LOW_SWEEP_RECLAIM_HOLD_V1",
+                                    "payload": str(offset),
+                                }
+                            ],
+                            schema=canonical_arrow_schema(spec),
+                        ),
+                        legacy_hash_algorithm="NOT_APPLICABLE",
+                        legacy_logical_sha256=None,
+                    ),
+                ),
+            )
+        )
+    manifest = ManifestV2.seal(
+        {
+            "snapshot_id": H1,
+            "stage1_data_run_id": "stage1-baseline-v1",
+            "stage1_authorities": (DigestBinding(name="stage1_manifest", sha256=H2),),
+            "preregistration_manifest_sha256": H1,
+            "config_sha256": H2,
+            "code_tree_sha256": H1,
+            "dataset_specs": (spec,),
+            "dataset_plans": (
+                DatasetPlan(
+                    dataset_spec_hash=spec.spec_hash,
+                    expected_partition_ids=tuple(sorted(key.partition_id for key in keys)),
+                ),
+            ),
+            "invalidation_conditions": ("SOURCE_OR_SCHEMA_CHANGED",),
+        }
+    )
+    component = CatalogComponentV2(
+        artifacts=tuple(result.artifact for result in results if result.artifact is not None),
+        receipts=tuple(receipt for result in results for receipt in result.receipts),
+        fragments=tuple(fragment for result in results for fragment in result.fragments),
+        seals=tuple(result.seal for result in results),
+    )
+
+    catalog = CatalogPublisherV2(tmp_path).publish_components(
+        manifest,
+        components=(component,),
+    )
+
+    assert len(catalog.objects) == 201
+    assert len(catalog.seals) == 201
+    assert catalog.logical_partitions_index.row_count == 201
 
 
 def test_catalog_component_publisher_rejects_cross_shard_duplicates(tmp_path: Path) -> None:

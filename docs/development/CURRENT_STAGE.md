@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T10
-Status: CR_2026_016_UNIQUE_SUCCESSOR_PREFLIGHT_PASSED_READY_FOR_ADOPTION
+Status: CR_2026_017_APPROVAL_REQUIRED_RELEASE_OBJECT_COUNT_GATE
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
@@ -98,3 +98,12 @@ Traceability and all safety scans PASS. The preflight-only Run B
 `stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04` passed preflight at revision 0 with zero completed
 tasks, staging files or published files. Audited adoption, recovery, packing, release, verification
 and exact comparison have not run; S2-T10 and Group 1 remain incomplete and Groups 2～4 remain DRAFT.
+
+That successor subsequently adopted 8,708 authorized files, completed all 80,784 logical
+partitions and recreated 44 Group-1 packed objects, but release failed unpublished because
+`CatalogPublisherV2` retained a stale hard limit of 200 object/Seal summaries while the real
+Catalog contains 208 (164 Foundation + 44 Group 1). This is an implementation contradiction of
+approved CR-2026-013 resource-observation semantics, not a semantic or data-integrity mismatch.
+[CR-2026-017](changes/CR-2026-017.md) is DRAFT with a 211/211 Runtime V2 candidate gate. No new
+Authority or successor is authorized until Muce explicitly approves it. S2-T10, Group 1,
+S2-T11～S2-T20 and Stage 3 remain blocked/locked.

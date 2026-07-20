@@ -2271,7 +2271,7 @@ rules:
     cr_s2_015_packed_artifact_count: 19
     cr_s2_015_duplicate_packed_artifact_count: 0
     cr_s2_015_packed_artifact_audit_sha256: c3f45a60524c1959618c9e0c714b46ed30ece5ca6e9b4929caaf9750ec9f00bd
-    cr_s2_016_status: UNIQUE_SUCCESSOR_PREFLIGHT_PASSED_READY_FOR_ADOPTION
+    cr_s2_016_status: SUCCESSOR_RELEASE_FAILED_UNPUBLISHED_SUPERSEDED_BY_DRAFT_CR_2026_017
     cr_s2_016_change_request_ref: docs/development/changes/CR-2026-016.md
     cr_s2_016_validation: docs/development/validations/stage_2/CR-2026-016.md
     cr_s2_016_preflight_run_b_id: stage2-g1-v2-b-20260720T084846Z-3885667a
@@ -2291,6 +2291,18 @@ rules:
     cr_s2_016_foundation_packed_checkpoint_count: 164
     cr_s2_016_group1_monthly_checkpoint_count: 158
     cr_s2_016_group1_monthly_dataset_seal_count: 2054
+    cr_s2_017_status: DRAFT_AWAITING_MUCE_APPROVAL_CANDIDATE_RUNTIME_V2_211_PASS
+    cr_s2_017_change_request_ref: docs/development/changes/CR-2026-017.md
+    cr_s2_017_validation: docs/development/validations/stage_2/CR-2026-017.md
+    cr_s2_017_failed_release_run_b_id: stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04
+    cr_s2_017_failed_release_run_b_status: RELEASE_FAILED_UNPUBLISHED_STALE_200_OBJECT_GATE
+    cr_s2_017_catalog_object_count: 208
+    cr_s2_017_catalog_seal_count: 208
+    cr_s2_017_foundation_object_count: 164
+    cr_s2_017_group1_object_count: 44
+    cr_s2_017_completed_v2_logical_partitions: 80784
+    cr_s2_017_completed_group1_logical_partitions: 61776
+    cr_s2_017_publication_record_present: false
     formal_run_a_id: stage2-g1-full-a-20260716T144233Z-366a541b7956
     formal_run_a_status: PUBLISHED_QUALITY_PASS
     formal_run_a_logical_partitions: 61776

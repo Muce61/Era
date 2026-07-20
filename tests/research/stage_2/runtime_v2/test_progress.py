@@ -221,7 +221,8 @@ def test_read_only_web_endpoints(tmp_path: Path) -> None:
             assert "证据轨道" in page
             assert "Stage 3 LOCKED" in page
             assert "Group 1 NOT PASSED" in page
-            assert "运行最终代码门" in page
+            assert "Successor Run B · 实时执行子流程" in page
+            assert "查看执行说明" in page
             assert "只读" in page
             assert "恢复运行" not in page
             assert "停止任务" not in page

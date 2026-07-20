@@ -88,6 +88,29 @@
     .step.failed { color: #ff9297; }
     .step-label { display: block; white-space: normal; }
     .track-note { margin-top: 10px; text-align: center; color: var(--dim); font-size: 11px; }
+    .live-flow { margin-top: 16px; padding: 13px; border: 1px solid #28527f; border-radius: 10px; background: #071726; box-shadow: inset 0 1px 0 #3972aa18; }
+    .live-flow-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 11px; }
+    .live-flow-head strong { color: #dbe9f8; font-size: 14px; }
+    .live-flow-head span { color: #6fa9f6; font: 11px/1.3 var(--mono); text-align: right; }
+    .flow-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .flow-card { min-height: 82px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #081522; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 8px; align-items: start; }
+    .flow-card.pass { border-color: #24724f; background: #081b18; }
+    .flow-card.running { border-color: #347bd4; background: #0a2038; box-shadow: 0 0 15px #2577d51f; }
+    .flow-card.failed { border-color: #a73943; background: #25151a; }
+    .flow-icon { width: 28px; height: 28px; border: 1px solid #53647a; border-radius: 50%; color: #8091a7; display: grid; place-items: center; font-size: 11px; }
+    .pass .flow-icon { border-color: var(--green); color: var(--green); }
+    .running .flow-icon { border-color: #5b9dff; color: #a9cfff; background: #12365d; box-shadow: 0 0 12px #4f94ff3b; }
+    .failed .flow-icon { border-color: var(--red); color: var(--red); }
+    .flow-name { display: block; color: #d7e2ee; font-size: 12px; font-weight: 600; }
+    .flow-state { display: block; margin-top: 2px; color: var(--dim); font: 600 10px/1.2 var(--mono); letter-spacing: .04em; }
+    .pass .flow-state { color: var(--green); }
+    .running .flow-state { color: #6fa9ff; }
+    .failed .flow-state { color: var(--red); }
+    .flow-detail { grid-column: 1 / -1; color: var(--muted); font: 10px/1.35 var(--mono); overflow-wrap: anywhere; }
+    .flow-bar { grid-column: 1 / -1; height: 4px; border-radius: 3px; background: #1a2b3d; overflow: hidden; }
+    .flow-bar span { display: block; height: 100%; width: 0; background: #4c8ff4; border-radius: inherit; transition: width .25s ease; }
+    .pass .flow-bar span { background: var(--green); }
+    .failed .flow-bar span { background: var(--red); }
     .authority { min-height: 138px; margin-top: 26px; padding: 14px 12px 13px; border: 1px solid #2b4258; border-radius: 9px; background: #081725; }
     .subhead { color: #c3d0df; font-size: 14px; font-weight: 600; }
     .authority-flow { margin-top: 16px; display: grid; grid-template-columns: 1fr 30px 1fr 30px 1fr 30px 1.15fr; align-items: center; }
@@ -136,7 +159,7 @@
     .recovery-list li { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line-soft); color: var(--muted); }
     .recovery-list b { color: #dbe5f0; font: 500 14px/1 var(--mono); }
     .recovery-list .sum { color: var(--green); }
-    .live-evidence { display: none; margin-top: 14px; padding: 10px; border-radius: 8px; background: #081725; border: 1px solid var(--line); color: var(--dim); font-size: 11px; }
+    .live-evidence { display: block; margin-top: 14px; padding: 10px; border-radius: 8px; background: #081725; border: 1px solid var(--line); color: var(--dim); font-size: 11px; }
     .live-evidence b { display: block; color: #aebfd1; margin-bottom: 4px; }
     .decision { margin-top: 23px; min-height: 168px; border: 1px solid #643238; border-radius: 12px; background: #0b1724; display: grid; grid-template-columns: 325px 1fr 355px; overflow: hidden; }
     .locked { border-right: 1px solid var(--line); padding: 22px 24px; display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-content: center; color: var(--red); }
@@ -203,6 +226,7 @@
       .task-hint { display: none; }
       .execution { overflow-x: auto; padding-bottom: 8px; }
       .step-track { min-width: 760px; }
+      .flow-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .authority { overflow-x: auto; }
       .authority-flow { min-width: 690px; }
       .lane { min-width: 720px; }
@@ -214,6 +238,11 @@
       .locked, .actions { border: 0; border-bottom: 1px solid var(--line); }
       .conclusion { display: block; padding: 20px; }
       .next { margin-top: 18px; }
+    }
+    @media (max-width: 520px) {
+      .live-flow-head { display: block; }
+      .live-flow-head span { display: block; margin-top: 5px; text-align: left; }
+      .flow-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -228,7 +257,7 @@
       <div class="top-status">
         <div class="tag approved">Plan v1.2<b>APPROVED</b></div>
         <div class="tag progress">S2-T10 v1.13<b>IN PROGRESS</b></div>
-        <div class="gate-chip">FINAL CODE GATE</div>
+        <div id="gateChip" class="gate-chip">FINAL CODE GATE</div>
       </div>
       <div id="processNote" class="process-note">无活动进程 · successor Run B 尚未创建</div>
     </header>
@@ -270,19 +299,24 @@
             <li class="step"><span class="step-circle">10</span><span class="step-label">Verify</span></li>
             <li class="step"><span class="step-circle">11</span><span class="step-label">Exact<br>Compare</span></li>
           </ol>
-          <div class="track-note">上方为不可变历史 Run B 的密封证据；successor Run B 尚未创建，不能继承此执行百分比。</div>
+          <div id="trackNote" class="track-note">上方为不可变历史 Run B 的密封证据；下方为 successor Run B 实时执行轨道。</div>
         </div>
 
+        <section class="live-flow" aria-labelledby="liveFlowTitle">
+          <div class="live-flow-head"><strong id="liveFlowTitle">Successor Run B · 实时执行子流程</strong><span id="liveFlowSummary">正在读取 append-only 证据…</span></div>
+          <div id="runtimeFlowGrid" class="flow-grid" aria-live="polite"></div>
+        </section>
+
         <section class="authority">
-          <div class="subhead">当前授权指针（在唯一后继执行之前）</div>
+          <div class="subhead">当前冻结授权链（successor 执行中）</div>
           <div class="authority-flow">
-            <div class="auth-step current"><span class="auth-icon"><i class="fa-solid fa-shield-halved"></i></span><span><strong>最终代码门</strong><small>待运行</small></span></div>
+            <div class="auth-step current"><span class="auth-icon"><i class="fa-solid fa-shield-halved"></i></span><span><strong>最终代码门</strong><small id="authorityCodeGate">待运行</small></span></div>
             <div class="auth-arrow"><i class="fa-solid fa-arrow-right"></i></div>
-            <div class="auth-step"><span class="auth-icon"><i class="fa-solid fa-ban"></i></span><span><strong>禁用预检专用运行</strong><small>待执行</small></span></div>
+            <div class="auth-step"><span class="auth-icon"><i class="fa-solid fa-ban"></i></span><span><strong>禁用预检专用运行</strong><small id="authorityDisabled">待执行</small></span></div>
             <div class="auth-arrow"><i class="fa-solid fa-arrow-right"></i></div>
-            <div class="auth-step"><span class="auth-icon"><i class="fa-solid fa-snowflake"></i></span><span><strong>Authority 冻结 ×2</strong><small>必须完全一致</small></span></div>
+            <div class="auth-step"><span class="auth-icon"><i class="fa-solid fa-snowflake"></i></span><span><strong>Authority 冻结 ×2</strong><small id="authorityFrozen">必须完全一致</small></span></div>
             <div class="auth-arrow"><i class="fa-solid fa-arrow-right"></i></div>
-            <div class="auth-step"><span class="auth-icon"><i class="fa-solid fa-people-group"></i></span><span><strong>恰好一个后继 Run B</strong><small>尚未创建</small></span></div>
+            <div class="auth-step"><span class="auth-icon"><i class="fa-solid fa-people-group"></i></span><span><strong>恰好一个后继 Run B</strong><small id="authoritySuccessor">尚未创建</small></span></div>
           </div>
         </section>
 
@@ -309,11 +343,11 @@
             <article class="lane pending" id="successorLane">
               <div class="lane-cell"><span class="lane-label">后继运行<br>Run B</span></div>
               <div class="lane-cell"><span class="cell-k">状态</span><span id="successorStatus" class="cell-v">NOT CREATED</span></div>
-              <div class="lane-cell"><span class="cell-k">发布</span><span class="cell-v">—</span></div>
+              <div class="lane-cell"><span class="cell-k">发布</span><span id="successorPublication" class="cell-v">—</span></div>
               <div class="lane-cell"><span class="cell-k">分区进度</span><span id="successorProgress" class="cell-v">0 / 80,784</span><div class="bar"><span id="successorBar" style="width:0"></span></div></div>
               <div class="lane-cell"><span class="cell-k">目标总数</span><span class="cell-v">80,784</span></div>
             </article>
-            <div class="side-status"><i class="fa-regular fa-hourglass-half"></i><span>当前合法延迟运行<br>尚未创建</span></div>
+            <div id="successorSideStatus" class="side-status"><i class="fa-regular fa-hourglass-half"></i><span>当前合法延迟运行<br>尚未创建</span></div>
           </div>
         </div>
       </section>
@@ -337,20 +371,20 @@
 
     <footer class="decision">
       <section class="locked"><i class="fa-solid fa-lock"></i><div><strong>Stage 3 LOCKED</strong><b>Group 1 NOT PASSED</b><small>最终代码门和唯一后继 Run B 完成前，不得进入下一组或 Stage 3。</small></div></section>
-      <section class="conclusion"><div><h3>当前结论</h3><p>S2-T10 最终代码门尚未运行。Group 1 未通过，治理验证确认与后继 Run B 尚未创建。</p></div><div class="next"><h3>下一步（当前唯一授权动作）</h3><p><b>运行最终代码门</b>，完成后才能生成 Authority 并创建唯一 successor Run B。</p><small>本页面只读，不会执行恢复、发布、停止或清理操作。</small></div></section>
-      <section class="actions"><button id="evidenceBtn" class="action" type="button"><i class="fa-solid fa-file-shield"></i> 查看证据</button><button id="codeGateBtn" class="action primary" type="button"><i class="fa-solid fa-shield-halved"></i> 运行最终代码门</button></section>
+      <section class="conclusion"><div><h3>当前结论</h3><p id="currentConclusion">正在读取 successor Run B 的实时证据。</p></div><div class="next"><h3 id="nextTitle">下一步（当前唯一授权动作）</h3><p id="nextAction"><b>继续只读观察</b>，等待当前受控命令完成。</p><small>本页面只读，不会执行恢复、发布、停止或清理操作。</small></div></section>
+      <section class="actions"><button id="evidenceBtn" class="action" type="button"><i class="fa-solid fa-file-shield"></i> 查看证据</button><button id="codeGateBtn" class="action primary" type="button"><i class="fa-solid fa-route"></i> 查看执行说明</button></section>
     </footer>
   </main>
 
   <dialog id="gateDialog">
-    <div class="dialog-head"><h2>最终代码门 · 只读说明</h2><button class="icon-button" data-close-dialog type="button" aria-label="关闭"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="dialog-head"><h2>Successor Run B · 只读执行说明</h2><button class="icon-button" data-close-dialog type="button" aria-label="关闭"><i class="fa-solid fa-xmark"></i></button></div>
     <div class="dialog-body">
-      <p>此监控页不执行任何变更。最终代码门必须在受控终端中运行并保留完整证据；通过后仍不能自动创建后继运行。</p>
+      <p>此监控页只展示 append-only 证据，不执行恢复、打包、发布或比较命令。每个阶段由受控终端推进，完成后自动在实时子流程轨道变为 PASS。</p>
       <ul class="checklist">
-        <li><i class="fa-regular fa-circle"></i><span>完整代码质量门与定向 Runtime V2 测试通过</span></li>
-        <li><i class="fa-regular fa-circle"></i><span>append-only 停用 preflight-only Run B</span></li>
-        <li><i class="fa-regular fa-circle"></i><span>同一最终代码 Authority 连续冻结两次且 byte-identical</span></li>
-        <li><i class="fa-regular fa-circle"></i><span>仅创建一个 successor Run B，并保持 Stage 3 锁定</span></li>
+        <li><i class="fa-regular fa-circle"></i><span>旧 Run 月度成果验证、重新签名接收与排除边界</span></li>
+        <li><i class="fa-regular fa-circle"></i><span>Foundation BTC / ETH 与四个 Group 1 组件收据</span></li>
+        <li><i class="fa-regular fa-circle"></i><span>最终打包、Release、Verify 与 Exact Compare</span></li>
+        <li><i class="fa-regular fa-circle"></i><span>全链完成后仍保持 Stage 3 LOCKED，等待治理评审</span></li>
       </ul>
     </div>
     <div class="dialog-foot"><button class="action" data-close-dialog type="button">我知道了</button></div>
@@ -368,6 +402,7 @@
     const byId = (id) => document.getElementById(id);
     const number = (value) => (Number(value) || 0).toLocaleString("en-US");
     const escapeText = (value) => String(value == null ? "—" : value);
+    const escapeHtml = (value) => escapeText(value).replace(/[&<>"']/g, (character) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[character]);
     const dateTime = (value) => {
       if (!value) return "—";
       const parsed = new Date(value);
@@ -399,26 +434,121 @@
       if (event.key === "Escape" && drawer.classList.contains("open")) setDrawer(false);
     });
 
+    const normalizeState = (value) => {
+      if (value === "PASS") return "pass";
+      if (value === "RUNNING") return "running";
+      if (value === "FAILED") return "failed";
+      return "pending";
+    };
+    const stateLabel = {pass:"PASS", running:"RUNNING", failed:"FAILED", pending:"PENDING"};
+    const stateIcon = {pass:"fa-check", running:"fa-play", failed:"fa-xmark", pending:"fa-circle"};
+    const subflowByName = (status, name) => (status.pipeline_subflows || []).find((item) => item.name === name);
+    const receiptState = (receipts, key, activeTask, taskId) => receipts[key] ? "pass" : activeTask === taskId ? "running" : "pending";
+    const componentState = (receipts, components, key, activeTask, taskId) => receipts[key] ? "pass" : components[key] || activeTask === taskId ? "running" : "pending";
+    const flowCard = ({name, icon, state, detail, progress}) => {
+      const safeProgress = Math.max(0, Math.min(100, Number(progress) || 0));
+      return `<article class="flow-card ${state}"><span class="flow-icon"><i class="fa-solid ${icon || stateIcon[state]}"></i></span><span><span class="flow-name">${escapeHtml(name)}</span><span class="flow-state">${stateLabel[state]}</span></span><span class="flow-detail">${escapeHtml(detail)}</span><span class="flow-bar"><span style="width:${safeProgress}%"></span></span></article>`;
+    };
+
+    function renderRuntimeFlow(status) {
+      const observability = status.execution_observability || {};
+      const receipts = observability.task_receipts || {};
+      const components = observability.group1_components || {};
+      const anomalies = observability.resource_anomalies || {};
+      const activeTask = status.active_task || "";
+      const adoption = subflowByName(status, "MONTHLY_RESULT_ADOPTION");
+      const packing = subflowByName(status, "FINAL_PACKING");
+      const release = subflowByName(status, "RELEASE");
+      const verify = subflowByName(status, "VERIFY");
+      const compare = subflowByName(status, "RUN_A_RUN_B_COMPARE");
+      const foundationDone = Number(status.foundation_logical_partitions_done) || 0;
+      const packedDone = Number(observability.packed_seal_count) || 0;
+      const adoptionEvidence = observability.adoption || {};
+      const adoptionDone = Number(adoptionEvidence.adopted_file_count) || Number(adoption && adoption.done) || 0;
+      const adoptionTotal = Number(adoptionEvidence.adopted_file_count) || Number(adoption && adoption.total) || 8708;
+      const releaseState = observability.publication_record_present ? "pass" : normalizeState(release && release.status);
+      const compareState = observability.comparison_report_present ? "pass" : normalizeState(compare && compare.status);
+      const groupDetail = (label, partitions, taskId, sealed) => {
+        if (sealed) return "组件已密封 · 等待任务收据";
+        const anomalyCount = Number(anomalies[taskId]) || 0;
+        return `${label} · ${partitions} 分区组件${anomalyCount ? ` · 资源告警 ${number(anomalyCount)}` : ""}`;
+      };
+      const flows = [
+        {name:"月度成果接收", icon:"fa-box-archive", state:normalizeState(adoption && adoption.status), detail:`${number(adoptionDone)} 项 · ${number(adoptionEvidence.group1_month_count)} 个月 · 旧打包已排除`, progress:100 * adoptionDone / adoptionTotal},
+        {name:"Foundation · BTC", icon:"fa-database", state:receiptState(receipts, "foundation_btc", activeTask, "FOUNDATION:BTCUSDT"), detail:`${number(Math.min(foundationDone, 9504))} / 9,504 分区`, progress:100 * Math.min(foundationDone, 9504) / 9504},
+        {name:"Foundation · ETH", icon:"fa-database", state:receiptState(receipts, "foundation_eth", activeTask, "FOUNDATION:ETHUSDT"), detail:`${number(Math.max(0, foundationDone - 9504))} / 9,504 分区`, progress:100 * Math.max(0, foundationDone - 9504) / 9504},
+        {name:"最终打包", icon:"fa-boxes-stacked", state:normalizeState(packing && packing.status), detail:`已生成 ${number(packedDone)} 个 packed seals · 当前 ${number(observability.partial_file_count)} 个 partials`, progress:packing && packing.status === "PASS" ? 100 : 0},
+        {name:"Group 1 · BTC Price", icon:"fa-bitcoin-sign", state:componentState(receipts, components, "group1_btc_price", activeTask, "GROUP1:BTCUSDT:V1_PRICE"), detail:groupDetail("V1_PRICE", "23,760", "GROUP1:BTCUSDT:V1_PRICE", components.group1_btc_price && !receipts.group1_btc_price), progress:receipts.group1_btc_price ? 100 : 0},
+        {name:"Group 1 · BTC Flow", icon:"fa-arrow-trend-up", state:componentState(receipts, components, "group1_btc_flow", activeTask, "GROUP1:BTCUSDT:V1_FLOW"), detail:groupDetail("V1_FLOW", "7,128", "GROUP1:BTCUSDT:V1_FLOW", components.group1_btc_flow && !receipts.group1_btc_flow), progress:receipts.group1_btc_flow ? 100 : 0},
+        {name:"Group 1 · ETH Price", icon:"fa-diamond", state:componentState(receipts, components, "group1_eth_price", activeTask, "GROUP1:ETHUSDT:V1_PRICE"), detail:groupDetail("V1_PRICE", "23,760", "GROUP1:ETHUSDT:V1_PRICE", components.group1_eth_price && !receipts.group1_eth_price), progress:receipts.group1_eth_price ? 100 : 0},
+        {name:"Group 1 · ETH Flow", icon:"fa-water", state:componentState(receipts, components, "group1_eth_flow", activeTask, "GROUP1:ETHUSDT:V1_FLOW"), detail:groupDetail("V1_FLOW", "7,128", "GROUP1:ETHUSDT:V1_FLOW", components.group1_eth_flow && !receipts.group1_eth_flow), progress:receipts.group1_eth_flow ? 100 : 0},
+        {name:"发布", icon:"fa-cloud-arrow-up", state:releaseState, detail:observability.publication_record_present ? "PUBLISHED · 原子发布记录已落盘" : escapeText(release && release.message), progress:releaseState === "pass" ? 100 : 0},
+        {name:"验证", icon:"fa-shield-halved", state:normalizeState(verify && verify.status), detail:escapeText(verify && verify.message), progress:verify && verify.status === "PASS" ? 100 : 0},
+        {name:"精确比较", icon:"fa-code-compare", state:compareState, detail:observability.comparison_report_present ? "Run A × Run B · 61,776 分区报告已落盘" : escapeText(compare && compare.message), progress:compareState === "pass" ? 100 : 0},
+      ];
+      byId("runtimeFlowGrid").innerHTML = flows.map(flowCard).join("");
+      const passed = flows.filter((item) => item.state === "pass").length;
+      const running = flows.find((item) => item.state === "running");
+      const failed = flows.find((item) => item.state === "failed");
+      byId("liveFlowSummary").textContent = `${passed} / ${flows.length} PASS${failed ? " · " + failed.name + " FAILED" : running ? " · 当前 " + running.name : ""}`;
+      return {flows, packing, releaseState, compareState, verifyState:normalizeState(verify && verify.status)};
+    }
+
     async function refresh() {
       try {
         const response = await fetch("/api/status", {cache:"no-store"});
         if (!response.ok) throw new Error("status unavailable");
         const status = await response.json();
+        const flow = renderRuntimeFlow(status);
+        const observability = status.execution_observability || {};
+        const liveSubflow = [...(status.pipeline_subflows || [])].reverse().find((item) => item.status === "RUNNING");
         byId("updatedAt").textContent = "数据更新：" + dateTime(status.updated_at);
-        const active = Boolean(status.active_task);
-        byId("processNote").textContent = active ? "运行中 · " + escapeText(status.active_task) : "无活动进程 · successor Run B 尚未创建";
-        byId("liveEvidence").textContent = escapeText(status.status) + " · " + escapeText(status.phase) + " · health " + escapeText(status.health) + "（仅 Run 监控，不代表 Stage 2 通过）";
-        const isSuccessor = active || (Number(status.overall_logical_partitions_done) || 0) > 0;
+        const activeLabel = status.active_task || (liveSubflow && liveSubflow.current_item);
+        const failedFlow = flow.flows.find((item) => item.state === "failed");
+        byId("processNote").textContent = activeLabel ? "运行中 · " + escapeText(activeLabel) : "successor 已创建 · " + escapeText(status.status);
+        const resourceAnomalyCount = Number(observability.resource_anomaly_count) || 0;
+        byId("liveEvidence").textContent = escapeText(status.status) + " · " + escapeText(status.phase) + " · health " + escapeText(status.health) + (resourceAnomalyCount ? " · 资源告警 " + number(resourceAnomalyCount) : "") + "（仅 Run 监控，不代表 Stage 2 通过）";
+        const isSuccessor = Boolean(observability.successor_created || status.run_id);
         if (isSuccessor) {
           const done = Number(status.overall_logical_partitions_done) || 0;
           const total = Number(status.overall_logical_partitions_total) || 80784;
-          byId("successorStatus").textContent = escapeText(status.status);
+          byId("successorStatus").textContent = failedFlow ? failedFlow.name.toUpperCase() + " FAILED" : escapeText(status.status);
           byId("successorProgress").textContent = number(done) + " / " + number(total);
           byId("successorBar").style.width = Math.max(0, Math.min(100, 100 * done / total)) + "%";
+          byId("successorPublication").textContent = observability.publication_record_present ? "PUBLISHED" : "UNPUBLISHED";
+          byId("successorPublication").classList.toggle("good", Boolean(observability.publication_record_present));
+          byId("successorSideStatus").innerHTML = `<i class="fa-solid fa-satellite-dish"></i><span>当前 successor Run B<br>${failedFlow ? escapeHtml(failedFlow.name.toUpperCase() + " FAILED") : escapeHtml(status.status)}</span>`;
+          byId("trackNote").textContent = "上方为不可变历史证据；实时执行子流程以 successor 的 checkpoint、收据和 append-only 文件为准。";
+          byId("authorityCodeGate").textContent = "PASS";
+          byId("authorityDisabled").textContent = "RECORDED";
+          byId("authorityFrozen").textContent = "2× IDENTICAL";
+          byId("authoritySuccessor").textContent = "EXISTS";
+        }
+        const activeFlow = flow.flows.find((item) => item.state === "running");
+        byId("gateChip").textContent = failedFlow ? failedFlow.name.toUpperCase() + " FAILED" : activeFlow ? activeFlow.name.toUpperCase() : escapeText(status.status);
+        if (failedFlow) {
+          byId("currentConclusion").textContent = `${failedFlow.name} 已失败，successor 保持 UNPUBLISHED；失败详情已保留在对应流程卡和 append-only 日志中。`;
+          byId("nextAction").innerHTML = "<b>停止发布链</b>，修正并重新通过 Authority 授权前，不创建新的 successor。";
+        } else if (flow.compareState === "pass") {
+          byId("currentConclusion").textContent = "Successor Run B 已完成发布、验证和 Run A 精确比较；证据链已齐，Stage 3 仍保持锁定。";
+          byId("nextAction").innerHTML = "<b>提交 S2-T10 证据评审</b>，不得自动进入下一组或 Stage 3。";
+        } else if (flow.verifyState === "pass") {
+          byId("currentConclusion").textContent = "发布与验证已通过，正在等待 61,776 个 Group 1 分区的 Run A 精确比较。";
+          byId("nextAction").innerHTML = "<b>执行 Exact Compare</b>，生成逐分区零容差比较证据。";
+        } else if (flow.releaseState === "pass") {
+          byId("currentConclusion").textContent = "Successor Run B 已发布，等待独立验证与精确比较。";
+          byId("nextAction").innerHTML = "<b>执行 Verify</b>，确认发布目录和 80,784 个逻辑分区。";
+        } else if (flow.packing && flow.packing.status === "PASS") {
+          byId("currentConclusion").textContent = "Foundation、Group 1 与最终打包已完成，successor 尚未发布。";
+          byId("nextAction").innerHTML = "<b>执行 Release</b>，在独立进程中完成同卷原子发布。";
+        } else {
+          byId("currentConclusion").textContent = `Successor Run B 正在执行 ${escapeText(activeLabel || status.phase)}；实时子流程和证据计数见上方。`;
+          byId("nextAction").innerHTML = "<b>继续只读观察</b>，等待当前受控命令完成。";
         }
       } catch (error) {
         byId("updatedAt").textContent = "数据更新：不可用";
         byId("liveEvidence").textContent = "checkpoint 暂时不可用；治理状态保持 FINAL CODE GATE。";
+        byId("liveFlowSummary").textContent = "实时证据暂时不可用";
       }
     }
     refresh();
