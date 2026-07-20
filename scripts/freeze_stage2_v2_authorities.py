@@ -62,6 +62,7 @@ RUN_A_RELEASE_SUPPLEMENT = (
 )
 FAILED_AUTHORITY_COMMIT = "18d6660bd75a0ba6750d55c29ba45df0cfa1de51"
 FAILED_RESERVED_RUN_B_ID = "stage2-g1-v2-b-20260717T160947Z-18d6660bd75a"
+FAILED_RELEASE_RUN_B_ID = "stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04"
 EXPECTED_RESOLVED_PARTITION_COUNT = 4752
 EXPECTED_ARCHIVE_COUNTS = {
     "BTCUSDT": {"monthly_archive_count": 78, "daily_archive_count": 3},
@@ -82,6 +83,7 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--quality-evidence", type=Path)
     result.add_argument("--memory-evidence", type=Path)
     result.add_argument("--finalization-memory-evidence", type=Path)
+    result.add_argument("--failed-release-disablement-evidence", type=Path)
     result.add_argument("--failure-log", type=Path)
     result.add_argument("--failed-code-commit")
     result.add_argument("--error-type", choices=("ValidationError",), default="ValidationError")
@@ -100,10 +102,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         or args.quality_evidence is None
         or args.memory_evidence is None
         or args.finalization_memory_evidence is None
+        or args.failed_release_disablement_evidence is None
     ):
         raise ValueError(
             "freeze requires --destination-run-id, --quality-evidence, --memory-evidence "
-            "and --finalization-memory-evidence"
+            "--finalization-memory-evidence and --failed-release-disablement-evidence"
         )
     transition_root = _bounded_run_root(args.transition_run_id, "stage2-g1-v2-authority-")
     destination_root = _new_destination_root(args.destination_run_id)
@@ -172,6 +175,33 @@ def main(argv: Sequence[str] | None = None) -> int:
         or limits.get("lifetime_peak_policy") != "AUDIT_ONLY"
     ):
         raise ValueError("CR-2026-012 finalization memory evidence is not PASS")
+    failed_release_disablement_path = args.failed_release_disablement_evidence.resolve()
+    expected_disablement_path = (
+        RUNS_ROOT / FAILED_RELEASE_RUN_B_ID / "reports" / "disablement-cr-2026-017.json"
+    ).resolve()
+    if (
+        not failed_release_disablement_path.is_file()
+        or failed_release_disablement_path.is_symlink()
+        or failed_release_disablement_path != expected_disablement_path
+    ):
+        raise ValueError("CR-2026-017 failed-release disablement evidence is not authoritative")
+    failed_release_disablement = _read_object(failed_release_disablement_path)
+    if (
+        failed_release_disablement.get("schema_name") != "stage2-v2-failed-release-run-disablement"
+        or failed_release_disablement.get("status") != "INVALIDATED_RELEASE_FAILED_UNPUBLISHED"
+        or failed_release_disablement.get("change_request") != "CR-2026-017"
+        or failed_release_disablement.get("failed_run_id") != FAILED_RELEASE_RUN_B_ID
+        or failed_release_disablement.get("replacement_authority_run_id") != args.transition_run_id
+        or failed_release_disablement.get("replacement_run_id") != args.destination_run_id
+        or failed_release_disablement.get("replacement_code_commit") != head
+        or failed_release_disablement.get("logical_partitions") != 80_784
+        or failed_release_disablement.get("packed_seals") != 44
+        or failed_release_disablement.get("published_files") != 0
+        or failed_release_disablement.get("resume_allowed") is not False
+        or failed_release_disablement.get("reuse_allowed") is not False
+        or failed_release_disablement.get("delete_allowed") is not False
+    ):
+        raise ValueError("CR-2026-017 failed-release disablement evidence changed")
 
     manifests = transition_root / "manifests"
     price_path = manifests / "contract-price-inventory-v2.json"
@@ -222,6 +252,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "runtime_v2_quality_evidence": sha256_file(quality_path),
                 "runtime_v2_memory_evidence": sha256_file(memory_path),
                 "runtime_v2_finalization_memory_evidence": sha256_file(finalization_memory_path),
+                "runtime_v2_failed_release_disablement_evidence": sha256_file(
+                    failed_release_disablement_path
+                ),
                 "stage1_btc_catalog": STAGE1_CATALOG_SHA256S["BTCUSDT"],
                 "stage1_eth_catalog": STAGE1_CATALOG_SHA256S["ETHUSDT"],
                 "stage1_manifest": STAGE1_MANIFEST_SHA256,
@@ -274,9 +307,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise ValueError("resolved Stage 1 Trades archive layout changed")
     bundle_basis = {
         "schema_name": "stage2-v2-authority-bundle-validation-v1",
-        "validation_version": "1.1",
+        "validation_version": "1.2",
         "status": "PASS",
-        "change_request": "CR-2026-015",
+        "change_request": "CR-2026-017",
         "superseded_authority_change_requests": [
             "CR-2026-009",
             "CR-2026-010",
@@ -284,6 +317,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             "CR-2026-012",
             "CR-2026-013",
             "CR-2026-014",
+            "CR-2026-015",
+            "CR-2026-016",
         ],
         "transition_run_id": args.transition_run_id,
         "reserved_destination_run_id": args.destination_run_id,
@@ -313,6 +348,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             ],
             "lifetime_peak_policy": limits["lifetime_peak_policy"],
             "threshold_policy": "AUDIT_ANOMALY_ONLY",
+        },
+        "failed_release_disablement_evidence": {
+            "source_path": str(failed_release_disablement_path),
+            "physical_sha256": sha256_file(failed_release_disablement_path),
+            "failed_run_id": FAILED_RELEASE_RUN_B_ID,
+            "status": failed_release_disablement["status"],
+            "resume_allowed": False,
+            "reuse_allowed": False,
+            "delete_allowed": False,
         },
         "stage1_data_run_id": STAGE1_DATA_RUN_ID,
         "stage1_manifest_sha256": STAGE1_MANIFEST_SHA256,
@@ -374,6 +418,7 @@ def _record_failure(args: argparse.Namespace) -> int:
         or args.quality_evidence is not None
         or args.memory_evidence is not None
         or args.finalization_memory_evidence is not None
+        or args.failed_release_disablement_evidence is not None
     ):
         raise ValueError("record-failure does not accept freeze inputs")
     if args.failed_code_commit != FAILED_AUTHORITY_COMMIT:

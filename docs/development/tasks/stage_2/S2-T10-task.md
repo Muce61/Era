@@ -14,7 +14,7 @@
 - approved_by: Muce
 - approved_at: 2026-07-17T19:09:18+08:00
 - execution_started_at: 2026-07-17T19:09:18+08:00
-- blocked_reason: CR-2026-017 code correction approved; separate Authority/successor execution authorization remains required
+- blocked_reason: NONE; CR-2026-017 authorizes the final-code gate, append-only disablement, two identical Authority freezes and exactly one successor
 
 ## 1. 目标
 
@@ -279,3 +279,13 @@ Run `stage2-g1-v2-b-20260719T141315Z-bf8c6a186f66` remains terminal and unpublis
 adopt its fully verified Foundation and Group-1 monthly evidence, but never its Group-1 packed
 objects, partials or processing cache. The new run repeats final packing, release, verification and
 the complete Run A comparison. Recovery subflows and logs are visible in the read-only Web page.
+
+## 31. CR-2026-017 release correction and successor boundary
+
+The stale Catalog object/Seal count gate is removed while all semantic and integrity publication
+checks remain fail-closed. The failed-release Run
+`stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04` must receive append-only disablement evidence with
+resume, reuse and deletion all false. That evidence must be bound into two byte-identical final-code
+Authority freezes before exactly one successor is created. The successor may adopt only the already
+authorized monthly evidence and must recreate packing, release, verify and all 61,776 exact Run-A
+comparisons. Approval does not itself mark this Task PASS or unlock a later Task or Stage.

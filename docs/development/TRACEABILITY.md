@@ -108,8 +108,8 @@ Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～
 
 ## Stage 2 Plan v1.2 APPROVED Coverage
 
-Stage 2 is `IN_PROGRESS / BLOCKED_PENDING_CR_2026_014_VALIDATION`. The Runtime V2 and repository
-implementation gates pass; S2-T10 and Group 1 remain incomplete pending the new Authority,
+Stage 2 is `IN_PROGRESS / CR_2026_017_APPROVED_READY_FOR_FINAL_CODE_GATE`. The Runtime V2 and repository
+candidate implementation gates pass; S2-T10 and Group 1 remain incomplete pending the new Authority,
 audited adoption, replacement Run B and exact comparison.
 [CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
 approve a bounded hybrid transition without changing Stage 1, preregistration, config, parameters,
@@ -175,7 +175,7 @@ run is immutable; its sealed objects require a new-run adoption Manifest and ful
 | Deterministic Group-1 PRICE/FLOW execution optimization | S2-T10 v1.12 | CR-2026-014; ADR-S2-007; processing-day/Foundation caches, spawn month workers, streaming compatibility Hash, read-only progress and performance history | IMPLEMENTED / SEMANTIC PASS / 3.02X HUMAN-ACCEPTED / READY_FOR_FINAL_QUALITY_GATE |
 | Group-1 final packing sorting and audited monthly-result recovery | S2-T10 v1.13 | CR-2026-015; ADR-S2-008; packed-artifact audit; monthly adoption Manifest; read-only recovery subflows | APPROVED / IMPLEMENTATION IN PROGRESS / 19 UNIQUE ARTIFACTS / NO DUPLICATES |
 | CR-015 Foundation recovery coverage and successor authorization | S2-T10 v1.13 | CR-2026-016; exact 632 monthly + 164 packed Foundation checkpoint coverage; preflight-only Run B protection; validation `docs/development/validations/stage_2/CR-2026-016.md` | SUCCESSOR BUILT 80,784 / RELEASE FAILED UNPUBLISHED ON STALE 200-OBJECT GATE |
-| Catalog object-count observation correction | S2-T10 v1.13 | APPROVED code-only CR-2026-017; remove the CR-2026-013-superseded Catalog count hard gate and misleading budget APIs; real 201-object publisher regression; cross-Stage audit; validation `docs/development/validations/stage_2/CR-2026-017.md` | CODE CORRECTION APPROVED / SUCCESSOR NOT AUTHORIZED |
+| Catalog object-count observation correction | S2-T10 v1.13 | APPROVED CR-2026-017; remove the CR-2026-013-superseded Catalog count hard gate and misleading budget APIs; append-only failed-Run disablement; Authority evidence binding; real 201-object publisher regression; cross-Stage audit; validation `docs/development/validations/stage_2/CR-2026-017.md` | FULL EXECUTION APPROVED / FINAL CODE GATE PENDING / SUCCESSOR NOT CREATED |
 | Shared causal Feature Foundation, content DAG, receipts and layout-independent Catalog | S2-T10 v1.8 | `CR-2026-007`; `ADR-S2-006`; current approved setup/context/variants only | APPROVED_IN_PROGRESS |
 | Cross-implementation determinism and future Feature Snapshot Tier F/E/D protocol | S2-T10 v1.8; future separately approved Tasks | `CR-2026-008`; `ADR-S2-006`; current full Run-A/Run-B comparison plus future approval boundary | APPROVED_NOT_VALIDATED |
 | Group-1 small-sample integration | S2-T01～S2-T09 | fixture chain plus six controlled real windows; locked execution Manifest | PASSED |

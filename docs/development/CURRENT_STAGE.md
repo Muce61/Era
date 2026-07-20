@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T10
-Status: CR_2026_017_CODE_CORRECTION_APPROVED_SUCCESSOR_AUTHORIZATION_REQUIRED
+Status: CR_2026_017_APPROVED_READY_FOR_FINAL_CODE_GATE
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
@@ -106,6 +106,7 @@ Catalog contains 208 (164 Foundation + 44 Group 1). This is an implementation co
 approved CR-2026-013 resource-observation semantics, not a semantic or data-integrity mismatch.
 [CR-2026-017](changes/CR-2026-017.md) code correction and cross-Stage resource-threshold audit are
 approved. The stale hard gate and misleading object-budget APIs are removed and protected by a
-repository-wide regression. No new Authority or successor is authorized until Muce separately
-approves that execution. S2-T10, Group 1,
-S2-T11～S2-T20 and Stage 3 remain blocked/locked.
+repository-wide regression. Muce separately approved append-only disablement, the final-code gate,
+two byte-identical Authority freezes and exactly one successor on 2026-07-20. No successor has yet
+been created under that approval. S2-T10 and Group 1 remain IN_PROGRESS; S2-T11～S2-T20 and Stage 3
+remain locked.

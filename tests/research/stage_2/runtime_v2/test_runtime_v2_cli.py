@@ -67,6 +67,8 @@ def test_operator_preparation_commands_have_no_root_or_semantic_overrides() -> N
             "/Volumes/FuckingLife/era100x_stage2/runs/memory.json",
             "--finalization-memory-evidence",
             "/Volumes/FuckingLife/era100x_stage2/runs/finalization-memory.json",
+            "--failed-release-disablement-evidence",
+            "/Volumes/FuckingLife/era100x_stage2/runs/disablement.json",
         ]
     )
     assert authorities.destination_run_id == "stage2-g1-v2-b-test"
@@ -84,6 +86,8 @@ def test_operator_preparation_commands_have_no_root_or_semantic_overrides() -> N
                 "/Volumes/FuckingLife/era100x_stage2/runs/memory.json",
                 "--finalization-memory-evidence",
                 "/Volumes/FuckingLife/era100x_stage2/runs/finalization-memory.json",
+                "--failed-release-disablement-evidence",
+                "/Volumes/FuckingLife/era100x_stage2/runs/disablement.json",
                 "--instrument",
                 "BTCUSDT",
             ]
@@ -110,6 +114,7 @@ def test_authority_cli_exposes_explicit_record_failure_action() -> None:
     assert args.quality_evidence is None
     assert args.memory_evidence is None
     assert args.finalization_memory_evidence is None
+    assert args.failed_release_disablement_evidence is None
 
 
 def test_record_failure_receipt_is_write_once(
@@ -176,6 +181,12 @@ def test_freeze_writes_deterministic_authority_bundle_receipt_without_creating_r
         / "reports"
         / "finalization-memory.json"
     )
+    failed_release_disablement_path = (
+        runs_root
+        / authority_cli.FAILED_RELEASE_RUN_B_ID
+        / "reports"
+        / "disablement-cr-2026-017.json"
+    )
     quality_path.parent.mkdir(parents=True)
     commit = "1" * 40
     tree_sha256 = "2" * 64
@@ -223,6 +234,28 @@ def test_freeze_writes_deterministic_authority_bundle_receipt_without_creating_r
                     "phase_current_rss_delta_bytes": 1_073_741_824,
                     "lifetime_peak_policy": "AUDIT_ONLY",
                 },
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    failed_release_disablement_path.parent.mkdir(parents=True)
+    failed_release_disablement_path.write_text(
+        json.dumps(
+            {
+                "schema_name": "stage2-v2-failed-release-run-disablement",
+                "status": "INVALIDATED_RELEASE_FAILED_UNPUBLISHED",
+                "change_request": "CR-2026-017",
+                "failed_run_id": authority_cli.FAILED_RELEASE_RUN_B_ID,
+                "replacement_authority_run_id": transition_id,
+                "replacement_run_id": destination_id,
+                "replacement_code_commit": commit,
+                "logical_partitions": 80_784,
+                "packed_seals": 44,
+                "published_files": 0,
+                "resume_allowed": False,
+                "reuse_allowed": False,
+                "delete_allowed": False,
             },
             sort_keys=True,
         ),
@@ -332,6 +365,8 @@ def test_freeze_writes_deterministic_authority_bundle_receipt_without_creating_r
         str(memory_path),
         "--finalization-memory-evidence",
         str(finalization_memory_path),
+        "--failed-release-disablement-evidence",
+        str(failed_release_disablement_path),
     ]
 
     assert authority_cli.main(argv) == 0
@@ -342,7 +377,7 @@ def test_freeze_writes_deterministic_authority_bundle_receipt_without_creating_r
 
     assert receipt_path.read_bytes() == first
     assert receipt["status"] == "PASS"
-    assert receipt["change_request"] == "CR-2026-015"
+    assert receipt["change_request"] == "CR-2026-017"
     assert receipt["superseded_authority_change_requests"] == [
         "CR-2026-009",
         "CR-2026-010",
@@ -350,7 +385,12 @@ def test_freeze_writes_deterministic_authority_bundle_receipt_without_creating_r
         "CR-2026-012",
         "CR-2026-013",
         "CR-2026-014",
+        "CR-2026-015",
+        "CR-2026-016",
     ]
+    assert receipt["failed_release_disablement_evidence"]["status"] == (
+        "INVALIDATED_RELEASE_FAILED_UNPUBLISHED"
+    )
     assert receipt["authority_bundle_id"].startswith("stage2-v2-authority-bundle-")
     assert receipt["reserved_destination_run_id"] == destination_id
     assert receipt["destination_status"] == "RESERVED_NOT_CREATED"
