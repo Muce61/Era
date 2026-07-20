@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ERA / Stage 2 · Event Research</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #06111f;
+      --surface: #091827;
+      --surface-2: #0b1b2d;
+      --surface-3: #0d2034;
+      --line: #21364b;
+      --line-soft: #172a3d;
+      --text: #eef4fb;
+      --muted: #91a3b9;
+      --dim: #667a91;
+      --blue: #3984f7;
+      --blue-soft: #102e58;
+      --green: #42da8c;
+      --green-soft: #0c3025;
+      --amber: #ffb020;
+      --amber-soft: #38270a;
+      --red: #ff646b;
+      --red-soft: #35171d;
+      --radius: 12px;
+      --mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+      --sans: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { min-width: 320px; background: var(--bg); }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font: 14px/1.45 var(--sans); -webkit-font-smoothing: antialiased; }
+    button { font: inherit; }
+    button:focus-visible, a:focus-visible { outline: 2px solid #82b5ff; outline-offset: 3px; }
+    .app { min-height: 100vh; padding: 0 16px 16px; }
+    .topbar { min-height: 70px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 20px; padding: 0 8px; }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 240px; }
+    .brand-icon { width: 34px; height: 40px; display: grid; place-items: center; color: #f5f8fc; font-size: 30px; }
+    .brand-copy strong { display: block; font-size: 15px; letter-spacing: .05em; }
+    .brand-copy small { display: block; color: var(--dim); font: 9px/1.2 var(--mono); letter-spacing: .08em; }
+    .title { font-size: 20px; font-weight: 600; white-space: nowrap; margin-right: auto; }
+    .top-status { display: flex; align-items: center; gap: 10px; }
+    .tag { min-height: 44px; min-width: 138px; padding: 7px 13px; border: 1px solid var(--line); border-radius: 8px; background: #071522; display: flex; flex-direction: column; justify-content: center; font: 12px/1.25 var(--mono); color: var(--muted); }
+    .tag b { margin-top: 2px; font-weight: 600; letter-spacing: .05em; }
+    .tag.approved b { color: var(--green); }
+    .tag.progress b { color: #65a3ff; }
+    .gate-chip { min-height: 44px; border: 1px solid #8b620a; border-radius: 8px; padding: 0 18px; display: inline-flex; align-items: center; color: var(--amber); background: #181507; font: 600 18px/1 var(--mono); box-shadow: 0 0 20px #c383001c; white-space: nowrap; }
+    .process-note { color: var(--amber); font: 12px/1.3 var(--mono); white-space: nowrap; }
+    .snapshot { height: 36px; padding: 8px 8px 0; color: var(--dim); font: 12px/1 var(--mono); display: flex; justify-content: space-between; }
+    .layout { display: grid; grid-template-columns: 318px minmax(620px, 1fr) 252px; gap: 12px; align-items: stretch; }
+    .panel { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+    .panel-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; font-size: 17px; font-weight: 600; }
+    .passed-count { color: var(--green); font: 600 15px/1 var(--mono); white-space: nowrap; }
+    .task-rail { position: relative; padding: 16px 12px 10px; min-height: 706px; overflow: hidden; }
+    .task-list { position: relative; list-style: none; margin: 14px 0 0; padding: 0; }
+    .task-list::before { content: ""; position: absolute; left: 17px; top: 20px; bottom: 26px; width: 2px; background: #277d58; }
+    .task-item { position: relative; min-height: 51px; }
+    .task-item.branch { margin-left: 38px; min-height: 45px; }
+    .task-item.branch::before { content: ""; position: absolute; left: -21px; top: 21px; width: 22px; border-top: 2px dashed #3aae79; }
+    .task-button { width: 100%; min-height: 47px; padding: 7px 8px 7px 45px; border: 0; border-bottom: 1px solid var(--line-soft); color: var(--text); background: transparent; text-align: left; cursor: pointer; border-radius: 8px; position: relative; }
+    .task-button:hover { background: #0d2033; }
+    .task-button[aria-current="step"] { border: 1px solid #2661a9; background: #0b213c; box-shadow: 0 0 18px #1c6fd226; }
+    .task-item.branch .task-button { padding-left: 40px; }
+    .node { position: absolute; z-index: 2; left: 4px; top: 10px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #2b9c6b; background: #071827; display: grid; place-items: center; color: var(--green); font-size: 12px; }
+    .branch .node { left: 0; width: 27px; height: 27px; }
+    .active .node { width: 36px; height: 36px; left: 0; top: 5px; border-color: #397fe0; color: #fff; background: #2469bd; box-shadow: 0 0 0 7px #193d6880, 0 0 18px #2f7bd8; }
+    .task-code { color: #d9e5f3; font: 600 13px/1.2 var(--mono); }
+    .task-name { margin-left: 8px; color: #ccd8e7; }
+    .task-state { display: block; margin-top: 3px; color: var(--green); font: 600 11px/1.2 var(--mono); letter-spacing: .05em; }
+    .active .task-state { color: #62a4ff; }
+    .active-dot { position: absolute; right: 10px; top: 20px; width: 8px; height: 8px; border-radius: 50%; background: #3f8dff; box-shadow: 0 0 10px #3f8dff; }
+    .task-hint { margin: 8px 5px 0 44px; color: var(--dim); font-size: 11px; min-height: 17px; }
+    .workspace { min-height: 706px; padding: 16px 14px 14px; overflow: hidden; }
+    .execution { margin-top: 18px; padding: 8px 8px 0; }
+    .step-track { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(11, minmax(48px, 1fr)); }
+    .step { min-width: 0; position: relative; text-align: center; color: var(--dim); font: 11px/1.25 var(--sans); }
+    .step::after { content: ""; position: absolute; z-index: 0; left: calc(50% + 14px); right: calc(-50% + 14px); top: 13px; height: 2px; background: #435267; }
+    .step:last-child::after { display: none; }
+    .step.complete::after { background: var(--green); }
+    .step-circle { position: relative; z-index: 1; width: 28px; height: 28px; border: 1px solid #75849a; border-radius: 50%; margin: 0 auto 8px; display: grid; place-items: center; background: var(--surface); color: #a9b7c9; font: 600 12px/1 var(--mono); }
+    .step.complete .step-circle { border-color: var(--green); color: var(--green); background: #082319; }
+    .step.failed .step-circle { width: 34px; height: 34px; margin-top: -3px; margin-bottom: 5px; border-color: var(--red); color: var(--red); background: #32141a; box-shadow: 0 0 0 6px #4d1c2455, 0 0 16px #ff545455; }
+    .step.failed { color: #ff9297; }
+    .step-label { display: block; white-space: normal; }
+    .track-note { margin-top: 10px; text-align: center; color: var(--dim); font-size: 11px; }
+    .authority { min-height: 138px; margin-top: 26px; padding: 14px 12px 13px; border: 1px solid #2b4258; border-radius: 9px; background: #081725; }
+    .subhead { color: #c3d0df; font-size: 14px; font-weight: 600; }
+    .authority-flow { margin-top: 16px; display: grid; grid-template-columns: 1fr 30px 1fr 30px 1fr 30px 1.15fr; align-items: center; }
+    .auth-step { display: grid; grid-template-columns: 38px 1fr; align-items: center; gap: 10px; min-width: 0; }
+    .auth-icon { width: 38px; height: 38px; border: 1px solid #53647a; border-radius: 50%; display: grid; place-items: center; color: #c1cedd; font-size: 16px; }
+    .auth-step.current .auth-icon { border-color: #c58608; border-radius: 10px; color: var(--amber); background: #241b05; }
+    .auth-step strong { display: block; color: #dfe8f3; font-size: 13px; font-weight: 500; }
+    .auth-step small { display: block; margin-top: 2px; color: var(--dim); }
+    .auth-arrow { text-align: center; color: #71839a; font-size: 16px; }
+    .evidence-title { margin: 18px 0 10px; color: #c7d2df; font-size: 15px; font-weight: 600; }
+    .lane { display: grid; grid-template-columns: 105px 122px 126px minmax(170px,1fr) 112px; min-height: 86px; align-items: stretch; border: 1px solid #2c445c; border-radius: 9px; margin-bottom: 16px; overflow: hidden; background: #081725; }
+    .lane.run-a { border-color: #255a89; }
+    .lane.failed { border-color: #a73943; background: #15141b; }
+    .lane.pending { border-color: #4e5d70; background: #0a1723; }
+    .lane-cell { padding: 12px 10px; border-right: 1px solid #27394d; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+    .lane-cell:last-child { border-right: 0; }
+    .lane-label { color: #7eb1ff; font: 600 14px/1.2 var(--mono); }
+    .failed .lane-label { color: var(--red); }
+    .pending .lane-label { color: #c4cedb; }
+    .cell-k { color: var(--dim); font-size: 10px; margin-bottom: 5px; }
+    .cell-v { color: #dce5ef; font: 500 12px/1.35 var(--mono); overflow-wrap: anywhere; }
+    .good { color: var(--green) !important; }
+    .bad { color: var(--red) !important; }
+    .bar { height: 7px; border-radius: 4px; background: #1b2b3d; overflow: hidden; margin-top: 8px; }
+    .bar > span { display: block; height: 100%; background: var(--blue); border-radius: inherit; }
+    .failed .bar > span { background: var(--red); }
+    .lane-row { display: grid; grid-template-columns: minmax(0, 1fr) 126px; gap: 10px; margin-bottom: 16px; }
+    .lane-row:last-child { margin-bottom: 0; }
+    .lane-row .lane { min-height: 96px; margin-bottom: 0; }
+    .side-status { border: 1px solid #53647a; border-radius: 9px; background: #081725; color: #8798ad; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center; font: 11px/1.45 var(--mono); }
+    .side-status i { font-size: 17px; }
+    .side-status.failed { border-color: #a73943; background: #35171d; color: #ff747b; }
+    .metrics { min-height: 706px; padding: 16px 14px; }
+    .metric-hero { padding: 18px 0 16px; border-bottom: 1px solid var(--line); }
+    .metric-hero small { color: var(--muted); }
+    .metric-hero strong { display: block; margin-top: 10px; font: 600 36px/1 var(--mono); }
+    .metric-hero em { font-style: normal; color: var(--muted); margin-left: 5px; }
+    .metric-split, .asset-grid { display: grid; grid-template-columns: 1fr 1fr; }
+    .metric-split { margin-top: 15px; }
+    .metric-split div, .asset-grid div { padding: 10px 8px 10px 0; border-bottom: 1px solid var(--line-soft); }
+    .metric-split div:nth-child(even), .asset-grid div:nth-child(even) { padding-left: 12px; border-left: 1px solid var(--line); }
+    .metric-split span, .asset-grid span { display: block; color: var(--muted); font-size: 11px; }
+    .metric-split b, .asset-grid b { display: block; margin-top: 4px; font: 500 17px/1.2 var(--mono); }
+    .metric-section { margin-top: 18px; color: #b9c6d5; font-size: 13px; }
+    .recovery-list { margin: 8px 0 0; padding: 0; list-style: none; }
+    .recovery-list li { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line-soft); color: var(--muted); }
+    .recovery-list b { color: #dbe5f0; font: 500 14px/1 var(--mono); }
+    .recovery-list .sum { color: var(--green); }
+    .live-evidence { display: none; margin-top: 14px; padding: 10px; border-radius: 8px; background: #081725; border: 1px solid var(--line); color: var(--dim); font-size: 11px; }
+    .live-evidence b { display: block; color: #aebfd1; margin-bottom: 4px; }
+    .decision { margin-top: 23px; min-height: 168px; border: 1px solid #643238; border-radius: 12px; background: #0b1724; display: grid; grid-template-columns: 325px 1fr 355px; overflow: hidden; }
+    .locked { border-right: 1px solid var(--line); padding: 22px 24px; display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-content: center; color: var(--red); }
+    .locked i { font-size: 38px; align-self: center; }
+    .locked strong { display: block; white-space: nowrap; font: 600 26px/1.1 var(--mono); letter-spacing: -.02em; }
+    .locked b { display: block; margin-top: 11px; font: 600 18px/1 var(--mono); }
+    .locked small { display: block; margin-top: 13px; color: var(--muted); }
+    .conclusion { padding: 20px 28px; align-content: center; display: grid; grid-template-columns: 1fr 1.3fr; gap: 30px; }
+    .conclusion h3 { margin: 0 0 10px; color: var(--muted); font-size: 14px; font-weight: 500; }
+    .conclusion p { margin: 0; color: #b7c4d3; }
+    .next h3 { color: var(--amber); }
+    .next b { color: var(--amber); }
+    .next small { display: block; margin-top: 7px; color: var(--dim); }
+    .actions { border-left: 1px solid var(--line); padding: 19px 17px; display: grid; gap: 12px; align-content: center; }
+    .action { min-height: 48px; border: 1px solid #2c65ae; border-radius: 7px; background: transparent; color: #77adfb; cursor: pointer; font-weight: 600; }
+    .action:hover { background: #0c2544; }
+    .action.primary { border-color: #a8750d; background: #2b210a; color: var(--amber); font-size: 16px; }
+    .action.primary:hover { background: #382a0b; }
+    dialog { width: min(560px, calc(100vw - 32px)); border: 1px solid #8d6515; border-radius: 12px; padding: 0; background: #091827; color: var(--text); box-shadow: 0 24px 80px #000b; }
+    dialog::backdrop { background: #020811c7; }
+    .dialog-head { padding: 18px 20px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+    .dialog-head h2 { margin: 0; color: var(--amber); font-size: 19px; }
+    .icon-button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; }
+    .dialog-body { padding: 20px; }
+    .dialog-body p { color: var(--muted); }
+    .checklist { margin: 16px 0 0; padding: 0; list-style: none; }
+    .checklist li { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line-soft); }
+    .checklist i { color: var(--amber); margin-top: 3px; }
+    .dialog-foot { padding: 14px 20px 20px; display: flex; justify-content: flex-end; }
+    .drawer { position: fixed; z-index: 20; top: 0; right: 0; width: min(460px, 100vw); height: 100vh; background: #081624; border-left: 1px solid var(--line); box-shadow: -24px 0 80px #0009; transform: translateX(102%); transition: transform .25s ease; padding: 18px; overflow: auto; }
+    .drawer.open { transform: translateX(0); }
+    .drawer-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+    .drawer-head h2 { margin: 0; font-size: 19px; }
+    .evidence-block { margin-top: 18px; }
+    .evidence-block h3 { color: #c8d5e3; font-size: 14px; }
+    .evidence-block p { color: var(--muted); }
+    .evidence-block code { display: block; color: #8db7e9; background: #06111f; border: 1px solid var(--line-soft); border-radius: 8px; padding: 10px; overflow-wrap: anywhere; font: 11px/1.5 var(--mono); }
+    @media (max-width: 1180px) {
+      .brand { min-width: auto; }
+      .brand-copy { display: none; }
+      .title { font-size: 17px; }
+      .process-note { display: none; }
+      .layout { grid-template-columns: 270px minmax(580px,1fr); }
+      .metrics { grid-column: 1 / -1; min-height: 0; display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 20px; }
+      .metric-section, .live-evidence { margin-top: 0; }
+      .decision { grid-template-columns: 290px 1fr 300px; }
+    }
+    @media (max-width: 820px) {
+      .app { padding: 0 10px 12px; }
+      .topbar { min-height: 64px; flex-wrap: wrap; gap: 8px; padding: 10px 2px; }
+      .title { order: 2; width: calc(100% - 48px); }
+      .top-status { width: 100%; order: 3; overflow-x: auto; padding-bottom: 3px; }
+      .tag { min-width: 126px; }
+      .gate-chip { font-size: 15px; }
+      .snapshot { height: 40px; }
+      .layout { display: block; }
+      .task-rail, .workspace, .metrics { min-height: 0; margin-bottom: 10px; }
+      .task-list { display: flex; overflow-x: auto; gap: 8px; padding-bottom: 6px; }
+      .task-list::before, .task-item.branch::before { display: none; }
+      .task-item, .task-item.branch { flex: 0 0 190px; min-height: 70px; margin-left: 0; }
+      .task-button, .task-item.branch .task-button { min-height: 66px; padding: 10px 8px 10px 44px; border: 1px solid var(--line-soft); }
+      .node, .branch .node { left: 8px; top: 17px; }
+      .active .node { left: 5px; top: 14px; }
+      .task-hint { display: none; }
+      .execution { overflow-x: auto; padding-bottom: 8px; }
+      .step-track { min-width: 760px; }
+      .authority { overflow-x: auto; }
+      .authority-flow { min-width: 690px; }
+      .lane { min-width: 720px; }
+      .lane-row { min-width: 856px; }
+      .evidence-scroll { overflow-x: auto; }
+      .metrics { display: block; }
+      .metric-hero { display: inline-block; width: 100%; }
+      .decision { display: block; }
+      .locked, .actions { border: 0; border-bottom: 1px solid var(--line); }
+      .conclusion { display: block; padding: 20px; }
+      .next { margin-top: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true"><i class="fa-solid fa-shield-halved"></i></div>
+        <div class="brand-copy"><strong>治理轨道指挥中心</strong><small>GOVERNANCE RAIL COMMAND CENTER</small></div>
+      </div>
+      <div class="title">ERA / Stage 2 · Event Research</div>
+      <div class="top-status">
+        <div class="tag approved">Plan v1.2<b>APPROVED</b></div>
+        <div class="tag progress">S2-T10 v1.13<b>IN PROGRESS</b></div>
+        <div class="gate-chip">FINAL CODE GATE</div>
+      </div>
+      <div id="processNote" class="process-note">无活动进程 · successor Run B 尚未创建</div>
+    </header>
+
+    <div class="snapshot"><span>治理快照：2026-07-20</span><span id="updatedAt">数据更新：—</span></div>
+
+    <section class="layout">
+      <aside class="panel task-rail" aria-label="阶段任务轨道">
+        <h2 class="panel-title"><span>阶段任务轨道</span><span class="passed-count">9 / 10 PASSED</span></h2>
+        <ol class="task-list">
+          <li class="task-item"><button class="task-button" data-task="Manifest：冻结预注册输入、输出布局与 Group-1 执行边界。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">S2-T19</span><span class="task-name">Manifest（前置）</span><span class="task-state">PASSED</span></button></li>
+          <li class="task-item"><button class="task-button" data-task="Contracts：Stage 2 输入边界、注册表与 CanonicalKeyLevel 契约。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">01 S2-T01</span><span class="task-name">Contracts</span><span class="task-state">PASSED</span></button></li>
+          <li class="task-item"><button class="task-button" data-task="Key-level Sources：1m、5m 与 Range Low 三类独立因果来源。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">02 S2-T02</span><span class="task-name">Key-level Sources</span><span class="task-state">PASSED</span></button></li>
+          <li class="task-item"><button class="task-button" data-task="Arbitration：关键位归一化、确定性优先级与来源保留。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">03 S2-T03</span><span class="task-name">Arbitration</span><span class="task-state">PASSED</span></button></li>
+          <li class="task-item"><button class="task-button" data-task="Sweep：首次向下穿越关键位的因果 Episode 事实。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">04 S2-T04</span><span class="task-name">Sweep</span><span class="task-state">PASSED</span></button></li>
+          <li class="task-item"><button class="task-button" data-task="Reclaim：Sweep 后的收复条件、窗口与可审计失效原因。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">05 S2-T05</span><span class="task-name">Reclaim</span><span class="task-state">PASSED</span></button></li>
+          <li class="task-item"><button class="task-button" data-task="Hold：连续价格窗口内的保持事实或显式 invalidation。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">06 S2-T06</span><span class="task-name">Hold</span><span class="task-state">PASSED</span></button></li>
+          <li class="task-item"><button class="task-button" data-task="Price G0–G3：数据、上下文、结构与价格启动门。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">07a S2-T07</span><span class="task-name">Price G0–G3</span><span class="task-state">PASSED</span></button></li>
+          <li class="task-item branch"><button class="task-button" data-task="Flow G4：基于 Stage 1 H2 Trades 的流量研究门，与 PRICE 路径隔离。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">07b S2-T08</span><span class="task-name">Flow G4（并行）</span><span class="task-state">PASSED</span></button></li>
+          <li class="task-item"><button class="task-button" data-task="MarketEpisode：冻结身份、去重、一次消费与 re-arm 规则。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">08 S2-T09</span><span class="task-name">MarketEpisode（汇聚）</span><span class="task-state">PASSED</span></button></li>
+          <li class="task-item active"><button class="task-button" aria-current="step" data-task="Full Generation：BTC/ETH × PRICE/FLOW 全量、可恢复、append-only 生成与零容差比较。"><span class="node">10</span><span class="task-code">S2-T10</span><span class="task-name">Full Generation</span><span class="task-state">IN PROGRESS</span><span class="active-dot"></span></button></li>
+        </ol>
+        <div id="taskHint" class="task-hint">选择节点查看职责。</div>
+      </aside>
+
+      <section class="panel workspace">
+        <h2 class="panel-title"><span>S2-T10 执行路线（确定性）</span><span class="passed-count" style="color:#6b9ee8">历史密封证据</span></h2>
+        <div class="execution">
+          <ol class="step-track" aria-label="Runtime V2 确定性执行路线">
+            <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">Preflight</span></li>
+            <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">Foundation<br>BTC</span></li>
+            <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">Foundation<br>ETH</span></li>
+            <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">BTC<br>Price</span></li>
+            <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">BTC<br>Flow</span></li>
+            <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">ETH<br>Price</span></li>
+            <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">ETH<br>Flow</span></li>
+            <li class="step failed"><span class="step-circle"><i class="fa-solid fa-xmark"></i></span><span class="step-label">Final<br>Packing</span></li>
+            <li class="step"><span class="step-circle">9</span><span class="step-label">Release</span></li>
+            <li class="step"><span class="step-circle">10</span><span class="step-label">Verify</span></li>
+            <li class="step"><span class="step-circle">11</span><span class="step-label">Exact<br>Compare</span></li>
+          </ol>
+          <div class="track-note">上方为不可变历史 Run B 的密封证据；successor Run B 尚未创建，不能继承此执行百分比。</div>
+        </div>
+
+        <section class="authority">
+          <div class="subhead">当前授权指针（在唯一后继执行之前）</div>
+          <div class="authority-flow">
+            <div class="auth-step current"><span class="auth-icon"><i class="fa-solid fa-shield-halved"></i></span><span><strong>最终代码门</strong><small>待运行</small></span></div>
+            <div class="auth-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+            <div class="auth-step"><span class="auth-icon"><i class="fa-solid fa-ban"></i></span><span><strong>禁用预检专用运行</strong><small>待执行</small></span></div>
+            <div class="auth-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+            <div class="auth-step"><span class="auth-icon"><i class="fa-solid fa-snowflake"></i></span><span><strong>Authority 冻结 ×2</strong><small>必须完全一致</small></span></div>
+            <div class="auth-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+            <div class="auth-step"><span class="auth-icon"><i class="fa-solid fa-people-group"></i></span><span><strong>恰好一个后继 Run B</strong><small>尚未创建</small></span></div>
+          </div>
+        </section>
+
+        <h3 class="evidence-title">证据轨道（相互独立）</h3>
+        <div class="evidence-scroll">
+          <article class="lane run-a">
+            <div class="lane-cell"><span class="lane-label">正式运行<br>Run A</span></div>
+            <div class="lane-cell"><span class="cell-k">状态</span><span class="cell-v good">PUBLISHED</span></div>
+            <div class="lane-cell"><span class="cell-k">质量</span><span class="cell-v good">QUALITY PASS</span></div>
+            <div class="lane-cell"><span class="cell-k">工作项</span><span class="cell-v">9,508 / 9,508</span><div class="bar"><span style="width:100%"></span></div></div>
+            <div class="lane-cell"><span class="cell-k">Group 1</span><span class="cell-v">61,776</span></div>
+          </article>
+          <div class="lane-row">
+            <article class="lane failed">
+              <div class="lane-cell"><span class="lane-label">历史运行<br>Run B</span></div>
+              <div class="lane-cell"><span class="cell-k">终态</span><span class="cell-v bad">FAILED_INTEGRITY</span></div>
+              <div class="lane-cell"><span class="cell-k">发布</span><span class="cell-v bad">UNPUBLISHED</span></div>
+              <div class="lane-cell"><span class="cell-k">密封分区</span><span class="cell-v">80,784 / 80,784</span><div class="bar"><span style="width:100%"></span></div></div>
+              <div class="lane-cell"><span class="cell-k">分区总数</span><span class="cell-v">80,784</span></div>
+            </article>
+            <div class="side-status failed"><i class="fa-solid fa-circle-exclamation"></i><strong>最终打包排序失败<br>终止 · 无法恢复</strong></div>
+          </div>
+          <div class="lane-row">
+            <article class="lane pending" id="successorLane">
+              <div class="lane-cell"><span class="lane-label">后继运行<br>Run B</span></div>
+              <div class="lane-cell"><span class="cell-k">状态</span><span id="successorStatus" class="cell-v">NOT CREATED</span></div>
+              <div class="lane-cell"><span class="cell-k">发布</span><span class="cell-v">—</span></div>
+              <div class="lane-cell"><span class="cell-k">分区进度</span><span id="successorProgress" class="cell-v">0 / 80,784</span><div class="bar"><span id="successorBar" style="width:0"></span></div></div>
+              <div class="lane-cell"><span class="cell-k">目标总数</span><span class="cell-v">80,784</span></div>
+            </article>
+            <div class="side-status"><i class="fa-regular fa-hourglass-half"></i><span>当前合法延迟运行<br>尚未创建</span></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="panel metrics" aria-label="权威计数">
+        <h2 class="panel-title">权威计数（确定性）</h2>
+        <div class="metric-hero"><small>总体分区</small><strong>80,784 <em>总计</em></strong><div class="metric-split"><div><span>Foundation</span><b>19,008</b></div><div><span>Group 1</span><b>61,776</b></div></div></div>
+        <h3 class="metric-section">资产与域（Group 1）</h3>
+        <div class="asset-grid"><div><span>BTC</span><b>30,888</b></div><div><span>ETH</span><b>30,888</b></div><div><span>PRICE (G0–G3)</span><b>47,520</b></div><div><span>FLOW (G4)</span><b>14,256</b></div></div>
+        <h3 class="metric-section">恢复与检查点</h3>
+        <ul class="recovery-list">
+          <li><span>月度恢复片段</span><b>632</b></li>
+          <li><span>已打包恢复片段</span><b>164</b></li>
+          <li><span>恢复片段总计</span><b class="sum">796</b></li>
+          <li><span>月度检查点（总）</span><b>158</b></li>
+          <li><span>数据集封印（总）</span><b>2,054</b></li>
+        </ul>
+        <div class="live-evidence"><b>最后监控证据</b><span id="liveEvidence">正在读取 checkpoint…</span></div>
+      </aside>
+    </section>
+
+    <footer class="decision">
+      <section class="locked"><i class="fa-solid fa-lock"></i><div><strong>Stage 3 LOCKED</strong><b>Group 1 NOT PASSED</b><small>最终代码门和唯一后继 Run B 完成前，不得进入下一组或 Stage 3。</small></div></section>
+      <section class="conclusion"><div><h3>当前结论</h3><p>S2-T10 最终代码门尚未运行。Group 1 未通过，治理验证确认与后继 Run B 尚未创建。</p></div><div class="next"><h3>下一步（当前唯一授权动作）</h3><p><b>运行最终代码门</b>，完成后才能生成 Authority 并创建唯一 successor Run B。</p><small>本页面只读，不会执行恢复、发布、停止或清理操作。</small></div></section>
+      <section class="actions"><button id="evidenceBtn" class="action" type="button"><i class="fa-solid fa-file-shield"></i> 查看证据</button><button id="codeGateBtn" class="action primary" type="button"><i class="fa-solid fa-shield-halved"></i> 运行最终代码门</button></section>
+    </footer>
+  </main>
+
+  <dialog id="gateDialog">
+    <div class="dialog-head"><h2>最终代码门 · 只读说明</h2><button class="icon-button" data-close-dialog type="button" aria-label="关闭"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="dialog-body">
+      <p>此监控页不执行任何变更。最终代码门必须在受控终端中运行并保留完整证据；通过后仍不能自动创建后继运行。</p>
+      <ul class="checklist">
+        <li><i class="fa-regular fa-circle"></i><span>完整代码质量门与定向 Runtime V2 测试通过</span></li>
+        <li><i class="fa-regular fa-circle"></i><span>append-only 停用 preflight-only Run B</span></li>
+        <li><i class="fa-regular fa-circle"></i><span>同一最终代码 Authority 连续冻结两次且 byte-identical</span></li>
+        <li><i class="fa-regular fa-circle"></i><span>仅创建一个 successor Run B，并保持 Stage 3 锁定</span></li>
+      </ul>
+    </div>
+    <div class="dialog-foot"><button class="action" data-close-dialog type="button">我知道了</button></div>
+  </dialog>
+
+  <aside id="evidenceDrawer" class="drawer" aria-hidden="true">
+    <div class="drawer-head"><h2>Stage 2 证据台账</h2><button id="drawerClose" class="icon-button" type="button" aria-label="关闭证据台账"><i class="fa-solid fa-xmark"></i></button></div>
+    <section class="evidence-block"><h3>Formal Run A</h3><p>PUBLISHED / QUALITY PASS · 9,508 / 9,508 · Group 1 61,776</p><code>stage2-g1-full-a-20260716T144233Z-366a541b7956</code></section>
+    <section class="evidence-block"><h3>Terminal historical Run B</h3><p>80,784 V2 partitions sealed; FAILED_INTEGRITY at Final Packing; UNPUBLISHED; cannot resume.</p><code>stage2-g1-v2-b-20260719T141315Z-bf8c6a186f66</code></section>
+    <section class="evidence-block"><h3>Preflight-only Run B</h3><p>PREFLIGHT_PASSED · revision 0 · 0 completed tasks · must receive append-only disablement before successor creation.</p><code>stage2-g1-v2-b-20260720T084846Z-3885667a</code></section>
+    <section class="evidence-block"><h3>Governance authority</h3><p>CR-2026-016 approved final-code gate, exact 796 Foundation recovery coverage and exactly one successor Run B.</p></section>
+  </aside>
+
+  <script>
+    const byId = (id) => document.getElementById(id);
+    const number = (value) => (Number(value) || 0).toLocaleString("en-US");
+    const escapeText = (value) => String(value == null ? "—" : value);
+    const dateTime = (value) => {
+      if (!value) return "—";
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.valueOf()) ? "—" : parsed.toLocaleString("zh-CN", {hour12:false, timeZone:"Asia/Shanghai"}) + " (UTC+8)";
+    };
+
+    document.querySelectorAll(".task-button").forEach((button) => {
+      button.addEventListener("click", () => {
+        byId("taskHint").textContent = button.dataset.task;
+      });
+    });
+
+    const gateDialog = byId("gateDialog");
+    byId("codeGateBtn").addEventListener("click", () => gateDialog.showModal());
+    document.querySelectorAll("[data-close-dialog]").forEach((button) => button.addEventListener("click", () => gateDialog.close()));
+    gateDialog.addEventListener("click", (event) => {
+      if (event.target === gateDialog) gateDialog.close();
+    });
+
+    const drawer = byId("evidenceDrawer");
+    const setDrawer = (open) => {
+      drawer.classList.toggle("open", open);
+      drawer.setAttribute("aria-hidden", String(!open));
+      if (open) byId("drawerClose").focus();
+    };
+    byId("evidenceBtn").addEventListener("click", () => setDrawer(true));
+    byId("drawerClose").addEventListener("click", () => setDrawer(false));
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && drawer.classList.contains("open")) setDrawer(false);
+    });
+
+    async function refresh() {
+      try {
+        const response = await fetch("/api/status", {cache:"no-store"});
+        if (!response.ok) throw new Error("status unavailable");
+        const status = await response.json();
+        byId("updatedAt").textContent = "数据更新：" + dateTime(status.updated_at);
+        const active = Boolean(status.active_task);
+        byId("processNote").textContent = active ? "运行中 · " + escapeText(status.active_task) : "无活动进程 · successor Run B 尚未创建";
+        byId("liveEvidence").textContent = escapeText(status.status) + " · " + escapeText(status.phase) + " · health " + escapeText(status.health) + "（仅 Run 监控，不代表 Stage 2 通过）";
+        const isSuccessor = active || (Number(status.overall_logical_partitions_done) || 0) > 0;
+        if (isSuccessor) {
+          const done = Number(status.overall_logical_partitions_done) || 0;
+          const total = Number(status.overall_logical_partitions_total) || 80784;
+          byId("successorStatus").textContent = escapeText(status.status);
+          byId("successorProgress").textContent = number(done) + " / " + number(total);
+          byId("successorBar").style.width = Math.max(0, Math.min(100, 100 * done / total)) + "%";
+        }
+      } catch (error) {
+        byId("updatedAt").textContent = "数据更新：不可用";
+        byId("liveEvidence").textContent = "checkpoint 暂时不可用；治理状态保持 FINAL CODE GATE。";
+      }
+    }
+    refresh();
+    setInterval(refresh, 5000);
+  </script>
+</body>
+</html>

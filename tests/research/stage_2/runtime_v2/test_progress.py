@@ -213,11 +213,20 @@ def test_read_only_web_endpoints(tmp_path: Path) -> None:
                 time.sleep(0.1)
         with urllib.request.urlopen(f"http://127.0.0.1:{port}/") as response:
             page = response.read().decode("utf-8")
-            assert "总进度条" not in page
-            assert "总进度" in page
-            assert "只读页面" in page
-            assert "恢复、发布与验收小流程" in page
-            assert "小流程实时日志" in page
+            assert "Stage 2 · Event Research" in page
+            assert "S2-T01" in page
+            assert "S2-T10" in page
+            assert "Full Generation" in page
+            assert "FINAL CODE GATE" in page
+            assert "证据轨道" in page
+            assert "Stage 3 LOCKED" in page
+            assert "Group 1 NOT PASSED" in page
+            assert "运行最终代码门" in page
+            assert "只读" in page
+            assert "恢复运行" not in page
+            assert "停止任务" not in page
+            assert "发布数据" not in page
+            assert "清理产物" not in page
         with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/status") as response:
             status = json.load(response)
             assert status["health"] == "INTERRUPTED_RECOVERABLE"
