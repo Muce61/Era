@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T10
-Status: CR_2026_016_APPROVED_READY_FOR_FINAL_CODE_GATE
+Status: CR_2026_016_UNIQUE_SUCCESSOR_PREFLIGHT_PASSED_READY_FOR_ADOPTION
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
@@ -87,3 +87,14 @@ V2 208/208 and the repository gate 419/419 pass. Muce approved
 immutable and receive append-only disablement evidence. The authorized continuation is the final
 code gate, two identical Authority freezes and exactly one successor Run B; S2-T10 remains
 IN_PROGRESS and Groups 2～4 remain DRAFT.
+
+At final code commit `9c4b7c423a0479e3d1eb8b6f6423c2d09f2f2813`, complete quality evidence
+passed Runtime V2 210/210, Stage 2 302/302 and the unified repository gate 421/421 with strict
+Traceability and all safety scans PASS. The preflight-only Run B
+`stage2-g1-v2-b-20260720T084846Z-3885667a` received append-only CR-2026-016 disablement with
+`resume_allowed=false`, `reuse_allowed=false` and `delete_allowed=false`. Authority
+`stage2-g1-v2-authority-20260720T111704Z-9c4b7c423a04` froze twice byte-identically as Bundle
+`stage2-v2-authority-bundle-f8e44c9f04b7fd218e88667d`; its unique successor
+`stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04` passed preflight at revision 0 with zero completed
+tasks, staging files or published files. Audited adoption, recovery, packing, release, verification
+and exact comparison have not run; S2-T10 and Group 1 remain incomplete and Groups 2～4 remain DRAFT.

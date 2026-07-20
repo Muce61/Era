@@ -2271,11 +2271,22 @@ rules:
     cr_s2_015_packed_artifact_count: 19
     cr_s2_015_duplicate_packed_artifact_count: 0
     cr_s2_015_packed_artifact_audit_sha256: c3f45a60524c1959618c9e0c714b46ed30ece5ca6e9b4929caaf9750ec9f00bd
-    cr_s2_016_status: APPROVED_L2_RECOVERY_COVERAGE_AND_UNIQUE_SUCCESSOR_AUTHORIZATION
+    cr_s2_016_status: UNIQUE_SUCCESSOR_PREFLIGHT_PASSED_READY_FOR_ADOPTION
     cr_s2_016_change_request_ref: docs/development/changes/CR-2026-016.md
     cr_s2_016_validation: docs/development/validations/stage_2/CR-2026-016.md
     cr_s2_016_preflight_run_b_id: stage2-g1-v2-b-20260720T084846Z-3885667a
-    cr_s2_016_preflight_run_b_status: PREFLIGHT_PASSED_ZERO_STAGING_DISABLEMENT_REQUIRED
+    cr_s2_016_preflight_run_b_status: INVALIDATED_PRECHECK_ONLY_RESUME_REUSE_DELETE_FALSE
+    cr_s2_016_preflight_run_b_disablement_sha256: 1fd87e60ebd834d2bee3f25853cc9c14274c74b14c5f05591c744cc6b4fbd41a
+    cr_s2_016_final_code_commit: 9c4b7c423a0479e3d1eb8b6f6423c2d09f2f2813
+    cr_s2_016_quality_evidence_sha256: dc95c05ec7643f97d53f47ee2b0447d1280da2096319bb6508364c54b03a004c
+    cr_s2_016_authority_run_id: stage2-g1-v2-authority-20260720T111704Z-9c4b7c423a04
+    cr_s2_016_authority_bundle_hash: f8e44c9f04b7fd218e88667dedfd07ecf9cb3d54bb471d461204cab5b87ba1e9
+    cr_s2_016_authority_receipt_physical_sha256: 523c60ea68b479c23181a7b19a60c750e33c21897e01c6c67fcfe789aa819563
+    cr_s2_016_authority_tree_sha256: 4c326f9336578e70ca38ded4b4a8a71914be477694602032fea49448af62451a
+    cr_s2_016_successor_run_b_id: stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04
+    cr_s2_016_successor_run_b_status: PREFLIGHT_PASSED_ZERO_COMPLETED_ZERO_STAGING_ZERO_PUBLISHED
+    cr_s2_016_successor_snapshot_id: df15b9cbb208a6f921b3a68bee24be44f77e83eb2c8ac1582ef942b108708d33
+    cr_s2_016_successor_runtime_manifest_hash: 7c4c40c482b309108ae821cdd8185d6f5674721a71411bae4163fd4184cddb53
     cr_s2_016_foundation_monthly_checkpoint_count: 632
     cr_s2_016_foundation_packed_checkpoint_count: 164
     cr_s2_016_group1_monthly_checkpoint_count: 158
