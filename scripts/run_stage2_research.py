@@ -19,6 +19,7 @@ from era100x.research.stage_2.runtime_v2.orchestrator import (
     Stage2V2Orchestrator,
 )
 from era100x.research.stage_2.runtime_v2.checkpoint import RuntimeV2Checkpoint
+from era100x.research.stage_2.runtime_v2.progress import PipelineProgressStore
 
 COMMANDS = (
     "preflight",
@@ -68,22 +69,60 @@ def main(
         "protection_path": args.run_a_protection,
         "migration_path": args.migration_manifest,
     }
-    if args.command == "preflight":
-        result = orchestrator.preflight(**common)
-    elif args.command == "build-foundation":
-        result = orchestrator.build_foundation(**common)
-    elif args.command == "run-group1":
-        result = orchestrator.run_group1(**common)
-    elif args.command == "resume":
-        result = orchestrator.resume(**common)
-    elif args.command == "release":
-        result = orchestrator.release(**common)
-    elif args.command == "verify":
-        result = orchestrator.verify(**common)
-    elif args.command == "compare":
-        result = orchestrator.compare(**common)
-    else:  # pragma: no cover - argparse rejects unknown commands.
-        raise AssertionError(f"unreachable command: {args.command}")
+    subflow = {
+        "preflight": "FAILED_RUN_PROTECTION",
+        "build-foundation": "MONTHLY_RESULT_ADOPTION",
+        "run-group1": "FINAL_PACKING",
+        "resume": "FINAL_PACKING",
+        "release": "RELEASE",
+        "verify": "VERIFY",
+        "compare": "RUN_A_RUN_B_COMPARE",
+    }[args.command]
+    run_root = Path("/Volumes/FuckingLife/era100x_stage2/runs") / args.run_id
+    progress = PipelineProgressStore(run_root)
+    if run_root.is_dir():
+        progress.update(
+            name=subflow,
+            status="RUNNING",
+            current_item=args.command,
+            message=f"{args.command} started",
+        )
+    try:
+        if args.command == "preflight":
+            result = orchestrator.preflight(**common)
+        elif args.command == "build-foundation":
+            result = orchestrator.build_foundation(**common)
+        elif args.command == "run-group1":
+            result = orchestrator.run_group1(**common)
+        elif args.command == "resume":
+            result = orchestrator.resume(**common)
+        elif args.command == "release":
+            result = orchestrator.release(**common)
+        elif args.command == "verify":
+            result = orchestrator.verify(**common)
+        elif args.command == "compare":
+            result = orchestrator.compare(**common)
+        else:  # pragma: no cover - argparse rejects unknown commands.
+            raise AssertionError(f"unreachable command: {args.command}")
+    except Exception as exc:
+        if run_root.is_dir():
+            progress.update(
+                name=subflow,
+                status="FAILED",
+                current_item=args.command,
+                message=f"{args.command} failed: {type(exc).__name__}: {exc}",
+                level="ERROR",
+            )
+        raise
+    if run_root.is_dir():
+        progress.update(
+            name=subflow,
+            status="PASS",
+            done=1,
+            total=1,
+            current_item=args.command,
+            message=f"{args.command} completed",
+        )
     print(canonical_json(result.model_dump(mode="json")))
     return 0
 

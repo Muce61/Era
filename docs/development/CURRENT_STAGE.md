@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T10
-Status: READY_FOR_CR_2026_014_FINAL_QUALITY_GATE
+Status: BLOCKED_PENDING_CR_2026_015_VALIDATION
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
@@ -70,4 +70,9 @@ improves the fixed BTC/ETH July benchmark from 996.78 to 329.69 seconds (3.02x).
 as the practical external-disk ceiling on 2026-07-19. The original 4x and 2.5-core goals remain
 recorded as unmet performance objectives, not integrity failures. The next permitted actions are
 the final repository quality gate, final-code Authority freeze and one unique replacement Run B.
-No full successor run has started and Groups 2～4 remain DRAFT and unexecuted.
+The successor Run B `stage2-g1-v2-b-20260719T141315Z-bf8c6a186f66` completed and sealed all
+80,784 V2 logical partitions, then failed unpublished during final component construction because
+the producer and consumer used different artifact sort keys. CR-2026-015 is approved: the 19 packed
+objects are proven physically unique, the ordering contract is being corrected, and a new Run B may
+adopt only verified monthly evidence before repeating packing, release, verify and comparison.
+Groups 2～4 remain DRAFT and unexecuted.

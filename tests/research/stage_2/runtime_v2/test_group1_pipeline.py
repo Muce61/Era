@@ -23,6 +23,7 @@ from era100x.research.stage_2.runtime_v2.dataset_specs import (
     PRICE_DATASETS,
     group1_dataset_specs,
 )
+from era100x.research.stage_2.runtime_v2.errors import ContractViolation
 from era100x.research.stage_2.runtime_v2.foundation_pipeline import (
     FoundationShardCheckpoint,
     FoundationSourceBinding,
@@ -40,6 +41,7 @@ from era100x.research.stage_2.runtime_v2.group1_pipeline import (
     PackedFoundationFeatureReader,
     _DailyRecordSpool,
     _count_release_distributions,
+    _canonical_component_artifacts,
     _distribution_models,
     _load_processing_day_cache,
     _packed_month_windows,
@@ -61,6 +63,7 @@ from era100x.research.stage_2.runtime_v2.models import (
     LogicalPartitionKey,
     ManifestV2,
     QualityFact,
+    ArtifactRef,
 )
 from era100x.research.stage_2.runtime_v2.memory import ProcessMemoryBudget
 from era100x.research.stage_2.runtime_v2 import group1_pipeline as pipeline_module
@@ -70,6 +73,31 @@ H1 = "1" * 64
 H2 = "2" * 64
 H3 = "3" * 64
 DAY_NS = 86_400_000_000_000
+
+
+def _artifact(object_hash: str, dataset_hash: str) -> ArtifactRef:
+    return ArtifactRef(
+        snapshot_id=H1,
+        dataset_spec_hash=dataset_hash,
+        object_sha256=object_hash,
+        relative_path=f"objects/{object_hash[:2]}/{object_hash}.parquet",
+        byte_size=1,
+        row_count=1,
+        semantic_sha256=H3,
+    )
+
+
+def test_component_artifact_order_follows_consumer_contract_and_rejects_duplicates() -> None:
+    # Composite dataset/object ordering yields b,a here and reproduces the
+    # production failure fixed by CR-2026-015.
+    first = _artifact("b" * 64, "1" * 64)
+    second = _artifact("a" * 64, "2" * 64)
+
+    assert tuple(
+        item.object_sha256 for item in _canonical_component_artifacts([first, second])
+    ) == ("a" * 64, "b" * 64)
+    with pytest.raises(ContractViolation, match="duplicate physical artifacts"):
+        _canonical_component_artifacts([first, first])
 
 
 def _start_ns(owner_date: date) -> int:

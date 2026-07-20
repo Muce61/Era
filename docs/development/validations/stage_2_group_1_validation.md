@@ -128,3 +128,10 @@ time from 996.78 to 329.69 seconds (3.02x). Muce accepted this as the current ex
 the unmet 4x and 2.5-core objectives remain performance history rather than blockers. Group 1
 remains **FAIL / IN_PROGRESS** until the replacement Run B and exact comparison pass. No replacement
 Run B or later-group artifact exists yet.
+## S2-T10 v1.13 final packing recovery
+
+CR-2026-015 is APPROVED. The latest Run B computed all Group-1 logical partitions but failed
+unpublished at final component packing because producer and consumer sort contracts differed. The
+19 packed artifacts are physically unique; no data duplicate was found. Group 1 remains **FAIL /
+INCOMPLETE** until a new run adopts verified monthly evidence, repeats final packing and passes
+release, verification and all 61,776 Run A/Run B semantic comparisons.

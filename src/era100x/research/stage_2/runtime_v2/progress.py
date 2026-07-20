@@ -32,6 +32,16 @@ FOUNDATION_LOGICAL_PARTITIONS = 19_008
 GROUP1_LOGICAL_PARTITIONS = 61_776
 OVERALL_LOGICAL_PARTITIONS = 80_784
 
+PIPELINE_SUBFLOW_ORDER = (
+    "FAILED_RUN_PROTECTION",
+    "DUPLICATE_ARTIFACT_AUDIT",
+    "MONTHLY_RESULT_ADOPTION",
+    "FINAL_PACKING",
+    "RELEASE",
+    "VERIFY",
+    "RUN_A_RUN_B_COMPARE",
+)
+
 
 class WorkerProgressV2(FrozenModel):
     worker_id: str
@@ -57,6 +67,54 @@ class ProgressEventV2(FrozenModel):
     level: Literal["INFO", "ANOMALY", "ERROR"]
     phase: str
     message: str
+
+
+class PipelineSubflowV1(FrozenModel):
+    """One observable recovery subflow; it never changes research semantics."""
+
+    name: str
+    status: Literal["PENDING", "RUNNING", "PASS", "FAILED", "BLOCKED", "SKIPPED"]
+    done: int = Field(default=0, ge=0)
+    total: int = Field(default=0, ge=0)
+    current_item: str | None = None
+    started_at: str | None = None
+    ended_at: str | None = None
+    elapsed_seconds: float = Field(default=0.0, ge=0.0)
+    message: str | None = None
+
+
+class PipelineProgressV1(FrozenModel):
+    schema_name: Literal["stage2-v2-recovery-pipeline-progress"] = (
+        "stage2-v2-recovery-pipeline-progress"
+    )
+    progress_version: Literal["1.0"] = "1.0"
+    run_id: str
+    subflows: tuple[PipelineSubflowV1, ...]
+    recent_logs: tuple[ProgressEventV2, ...] = Field(default=(), max_length=50)
+    updated_at: str
+    progress_hash: str = Field(pattern=SHA256_PATTERN)
+
+    def computed_hash(self) -> str:
+        return hashlib.sha256(
+            _progress_json(self.model_dump(mode="json", exclude={"progress_hash"})).encode()
+        ).hexdigest()
+
+    @model_validator(mode="after")
+    def valid_pipeline(self) -> Self:
+        if SAFE_RUN_ID.fullmatch(self.run_id) is None:
+            raise ValueError("pipeline progress run_id is invalid")
+        names = tuple(item.name for item in self.subflows)
+        expected = tuple(name for name in PIPELINE_SUBFLOW_ORDER if name in names)
+        if names != expected or len(names) != len(set(names)):
+            raise ValueError("pipeline subflows must be unique and canonically ordered")
+        if self.progress_hash != ZERO_SHA256 and self.progress_hash != self.computed_hash():
+            raise ValueError("pipeline progress hash mismatch")
+        return self
+
+    @classmethod
+    def seal(cls, payload: dict[str, Any]) -> Self:
+        provisional = cls.model_validate({**payload, "progress_hash": ZERO_SHA256})
+        return provisional.model_copy(update={"progress_hash": provisional.computed_hash()})
 
 
 class ProgressV2(FrozenModel):
@@ -178,6 +236,88 @@ class ProgressStore:
             _fsync_directory(self.path.parent)
         finally:
             temporary.unlink(missing_ok=True)
+
+
+class PipelineProgressStore:
+    """Atomic, execution-only progress for adoption through comparison."""
+
+    def __init__(self, run_root: Path) -> None:
+        self.run_root = run_root
+        self.path = run_root / "logs" / "pipeline-progress-v1.json"
+
+    def read(self) -> PipelineProgressV1:
+        return PipelineProgressV1.model_validate_json(self.path.read_bytes())
+
+    def replace(self, progress: PipelineProgressV1) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self.path.with_name(f".{self.path.name}.{os.getpid()}.tmp")
+        payload = (_progress_json(progress.model_dump(mode="json")) + "\n").encode()
+        try:
+            with temporary.open("xb") as stream:
+                stream.write(payload)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, self.path)
+            _fsync_directory(self.path.parent)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+    def update(
+        self,
+        *,
+        name: str,
+        status: Literal["PENDING", "RUNNING", "PASS", "FAILED", "BLOCKED", "SKIPPED"],
+        done: int | None = None,
+        total: int | None = None,
+        current_item: str | None = None,
+        message: str | None = None,
+        level: Literal["INFO", "ANOMALY", "ERROR"] = "INFO",
+    ) -> PipelineProgressV1:
+        if name not in PIPELINE_SUBFLOW_ORDER:
+            raise ValueError(f"unknown pipeline subflow: {name}")
+        now = utc_now_text()
+        previous = self.read() if self.path.is_file() else None
+        existing = {item.name: item for item in (previous.subflows if previous else ())}
+        old = existing.get(name)
+        started_at = old.started_at if old is not None else None
+        if status == "RUNNING" and started_at is None:
+            started_at = now
+        ended_at = now if status in {"PASS", "FAILED", "BLOCKED", "SKIPPED"} else None
+        elapsed = 0.0
+        if started_at is not None:
+            elapsed = max(
+                0.0,
+                (
+                    datetime.fromisoformat((ended_at or now).replace("Z", "+00:00"))
+                    - datetime.fromisoformat(started_at.replace("Z", "+00:00"))
+                ).total_seconds(),
+            )
+        existing[name] = PipelineSubflowV1(
+            name=name,
+            status=status,
+            done=(old.done if done is None and old is not None else done or 0),
+            total=(old.total if total is None and old is not None else total or 0),
+            current_item=current_item,
+            started_at=started_at,
+            ended_at=ended_at,
+            elapsed_seconds=elapsed,
+            message=message,
+        )
+        logs = list(previous.recent_logs if previous else ())
+        if message:
+            logs.append(progress_event(timestamp=now, level=level, phase=name, message=message))
+        progress = PipelineProgressV1.seal(
+            {
+                "run_id": self.run_root.name,
+                "subflows": tuple(
+                    existing[item] for item in PIPELINE_SUBFLOW_ORDER if item in existing
+                ),
+                "recent_logs": tuple(logs[-50:]),
+                "updated_at": now,
+            }
+        )
+        self.replace(progress)
+        return progress
 
 
 class ProgressHeartbeat:
@@ -361,6 +501,18 @@ def read_progress_status(run_root: Path, *, now: datetime | None = None) -> dict
         for path in (run_root / "reports").glob("*.json")
         if not path.name.startswith("._")
     )
+    pipeline_path = run_root / "logs" / "pipeline-progress-v1.json"
+    try:
+        pipeline = PipelineProgressV1.model_validate_json(pipeline_path.read_bytes())
+        result["pipeline_subflows"] = [item.model_dump(mode="json") for item in pipeline.subflows]
+        result["pipeline_recent_logs"] = [
+            item.model_dump(mode="json") for item in pipeline.recent_logs
+        ]
+        result["pipeline_progress_present"] = True
+    except (OSError, ValueError):
+        result["pipeline_subflows"] = []
+        result["pipeline_recent_logs"] = []
+        result["pipeline_progress_present"] = False
     return result
 
 

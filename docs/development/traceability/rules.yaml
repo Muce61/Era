@@ -2260,6 +2260,17 @@ rules:
     cr_s2_014_status: APPROVED_IMPLEMENTED_3_02X_HUMAN_ACCEPTED_READY_FOR_FINAL_QUALITY_GATE
     cr_s2_014_validation: docs/development/validations/stage_2/CR-2026-014.md
     cr_s2_014_decision_ref: docs/development/decisions/ADR-S2-007-group1-price-execution-optimization.md
+    group1_packing_recovery_change_request_ref: docs/development/changes/CR-2026-015.md
+    cr_s2_015_status: APPROVED_IMPLEMENTATION_IN_PROGRESS_L2_PACKING_RECOVERY
+    cr_s2_015_validation: docs/development/validations/stage_2/CR-2026-015.md
+    cr_s2_015_decision_ref: docs/development/decisions/ADR-S2-008-group1-packing-recovery.md
+    cr_s2_015_failed_run_b_id: stage2-g1-v2-b-20260719T141315Z-bf8c6a186f66
+    cr_s2_015_failed_run_b_status: FAILED_INTEGRITY_UNPUBLISHED_FINAL_COMPONENT_SORT
+    cr_s2_015_completed_v2_logical_partitions: 80784
+    cr_s2_015_completed_group1_logical_partitions: 61776
+    cr_s2_015_packed_artifact_count: 19
+    cr_s2_015_duplicate_packed_artifact_count: 0
+    cr_s2_015_packed_artifact_audit_sha256: c3f45a60524c1959618c9e0c714b46ed30ece5ca6e9b4929caaf9750ec9f00bd
     formal_run_a_id: stage2-g1-full-a-20260716T144233Z-366a541b7956
     formal_run_a_status: PUBLISHED_QUALITY_PASS
     formal_run_a_logical_partitions: 61776
@@ -2270,9 +2281,9 @@ rules:
     replacement_authority_bundle_status: CR_2026_010_FROZEN_REPEATED_HASH_PASS
     replacement_authority_bundle_id: stage2-v2-authority-bundle-c1cfc26395ab34736ce2706b
     replacement_authority_bundle_hash: c1cfc26395ab34736ce2706b0b5254c8deea4120b705c2092e6dbafdf49393e4
-    v2_run_b_status: FAILED_UNPUBLISHED_FOUNDATION_RSS_GATE
-    v2_run_b_id: stage2-g1-v2-b-20260718T092459Z-85a6a71ab953
-    v2_run_b_completed_tasks: 0
+    v2_run_b_status: FAILED_INTEGRITY_UNPUBLISHED_FINAL_COMPONENT_SORT
+    v2_run_b_id: stage2-g1-v2-b-20260719T141315Z-bf8c6a186f66
+    v2_run_b_completed_tasks: 2
     v2_run_b_published_files: 0
     cr_s2_011_memory_profile_evidence_sha256: e722601ce60cc929693b6bde799b9c61118517127a2c3b76ead629891142b789
     cr_s2_011_arrow_inflight_limit_bytes: 1073741824

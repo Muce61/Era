@@ -15,6 +15,7 @@ from era100x.research.stage_2.runtime_v2.checkpoint import (
     RuntimeV2Checkpoint,
 )
 from era100x.research.stage_2.runtime_v2.progress import (
+    PipelineProgressStore,
     ProgressStore,
     WorkerProgressV2,
     checkpoint_health,
@@ -123,6 +124,35 @@ def test_progress_store_atomic_round_trip(tmp_path: Path) -> None:
     assert store.read() == progress
 
 
+def test_pipeline_subflows_and_logs_are_projected_to_web_status(tmp_path: Path) -> None:
+    run_root = tmp_path / "runs" / RUN_ID
+    _checkpoint(run_root)
+    pipeline = PipelineProgressStore(run_root)
+    pipeline.update(
+        name="DUPLICATE_ARTIFACT_AUDIT",
+        status="RUNNING",
+        done=9,
+        total=19,
+        current_item="object-09",
+        message="verified object 9",
+    )
+    pipeline.update(
+        name="DUPLICATE_ARTIFACT_AUDIT",
+        status="PASS",
+        done=19,
+        total=19,
+        message="all physical hashes are unique",
+    )
+
+    status = read_progress_status(run_root)
+
+    assert status["pipeline_progress_present"] is True
+    assert status["pipeline_subflows"][0]["name"] == "DUPLICATE_ARTIFACT_AUDIT"
+    assert status["pipeline_subflows"][0]["status"] == "PASS"
+    assert status["pipeline_subflows"][0]["done"] == 19
+    assert status["pipeline_recent_logs"][-1]["message"] == "all physical hashes are unique"
+
+
 def test_read_only_web_endpoints(tmp_path: Path) -> None:
     root = tmp_path / "external"
     run_root = root / "runs" / RUN_ID
@@ -163,6 +193,8 @@ def test_read_only_web_endpoints(tmp_path: Path) -> None:
             assert "总进度条" not in page
             assert "总进度" in page
             assert "只读页面" in page
+            assert "恢复、发布与验收小流程" in page
+            assert "小流程实时日志" in page
         with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/status") as response:
             status = json.load(response)
             assert status["health"] == "INTERRUPTED_RECOVERABLE"

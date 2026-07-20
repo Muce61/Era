@@ -3,18 +3,18 @@
 ## Metadata
 
 - task_id: S2-T10
-- task_version: 1.12
+- task_version: 1.13
 - status: IN_PROGRESS
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T01 PASS; S2-T02 PASS; S2-T03 PASS; S2-T04 PASS; S2-T05 PASS; S2-T06 PASS; S2-T07 PASS; S2-T08 PASS; S2-T09 PASS; S2-T19 PASS; locked Group-1 Manifest; CR-2026-007 APPROVED; CR-2026-008 APPROVED
-- supersedes: task_version 1.11
+- supersedes: task_version 1.12
 - approved_by: Muce
 - approved_at: 2026-07-17T19:09:18+08:00
 - execution_started_at: 2026-07-17T19:09:18+08:00
-- blocked_reason: NONE; final quality gate, Authority freeze and replacement Run B remain pending
+- blocked_reason: CR-2026-015 final component sorting and audited packing recovery in progress
 
 ## 1. 目标
 
@@ -262,3 +262,20 @@ Only authority, hash, schema, checksum, identity, ownership, leakage, append-onl
 or actual corruption defects may create `FAILED_INTEGRITY`. The terminal Run B
 `stage2-g1-v2-b-20260718T141137Z-f0c150bfa1c9` remains immutable. Its 316 BTC month objects may
 only be adopted by a new run through the CR-2026-013 sealed per-object verification contract.
+
+## 29. CR-2026-014 execution optimization
+
+S2-T10 v1.12 preserves every formal Group-1 row and Hash while eliminating repeated owner-day
+work, adding bounded Foundation caches, deterministic month workers, streaming compatibility Hash
+spools, recoverable user stops and the read-only progress dashboard. Muce accepted the measured
+3.02x result as the practical external-disk ceiling; the performance miss is anomaly evidence and
+does not weaken any semantic or integrity gate.
+
+## 30. CR-2026-015 final packing recovery
+
+S2-T10 v1.13 changes only final component artifact ordering and audited execution recovery. The
+component tuple is sorted by unique physical object SHA-256, exactly as its consumer validates.
+Run `stage2-g1-v2-b-20260719T141315Z-bf8c6a186f66` remains terminal and unpublished. A new run may
+adopt its fully verified Foundation and Group-1 monthly evidence, but never its Group-1 packed
+objects, partials or processing cache. The new run repeats final packing, release, verification and
+the complete Run A comparison. Recovery subflows and logs are visible in the read-only Web page.

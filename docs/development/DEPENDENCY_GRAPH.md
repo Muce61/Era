@@ -63,3 +63,7 @@ Stage 1 + locked prereg/config + CR-2026-007/008         │
 The legacy CR-2026-006 parent and its legacy Run B are suppressed. These are internal phases of
 S2-T10, not additional Task nodes, and do not authorize S2-T11 through S2-T20. A Run A failure, V2
 Foundation failure, Run B failure or semantic mismatch stops S2-T10; no branch can rescue another.
+
+CR-2026-015 advances only the internal S2-T10 execution version to v1.13. It adds no Task edge:
+terminal Run B audit → new Authority/preflight → verified monthly evidence adoption → final packing
+→ release → verify → exact Run A/Run B comparison. It never authorizes S2-T11 through S2-T20.

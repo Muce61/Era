@@ -1292,12 +1292,7 @@ class Group1FeaturePipeline:
                 component = Group1PackedTaskComponent(
                     instrument=instrument,
                     variant=cast(Literal["V1_PRICE", "V1_FLOW"], variant),
-                    artifacts=tuple(
-                        sorted(
-                            component_artifacts,
-                            key=lambda item: (item.dataset_spec_hash, item.object_sha256),
-                        )
-                    ),
+                    artifacts=_canonical_component_artifacts(component_artifacts),
                     receipts=tuple(
                         sorted(
                             component_receipts,
@@ -2951,6 +2946,20 @@ def _month_windows(start: date, end_exclusive: date) -> list[tuple[str, date, da
 
 def _dates(start: date, end_exclusive: date) -> list[date]:
     return [start + timedelta(days=offset) for offset in range((end_exclusive - start).days)]
+
+
+def _canonical_component_artifacts(items: list[ArtifactRef]) -> tuple[ArtifactRef, ...]:
+    """Enforce the exact ordering consumed by Group1TaskComponent.
+
+    A repeated physical object is never silently removed here.  It indicates
+    an invalid packing graph and must be diagnosed before publication.
+    """
+
+    ordered = tuple(sorted(items, key=lambda item: item.object_sha256))
+    hashes = tuple(item.object_sha256 for item in ordered)
+    if len(hashes) != len(set(hashes)):
+        raise ContractViolation("Group-1 component contains duplicate physical artifacts")
+    return ordered
 
 
 def _write_once_model(path: Path, model: Any) -> str:
