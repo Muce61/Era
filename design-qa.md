@@ -1,65 +1,56 @@
 # Stage 2 Progress Web — Design QA
 
-## Evidence
+- source visual truth path:
+  `/var/folders/1q/_1nljgv15tlfqqzl4xwbtjv00000gn/T/codex-clipboard-d5b45115-1cf2-4c0d-b41b-f47c9c48d1e6.png`
+- implementation screenshot path:
+  `/private/tmp/Era-stage2-v2-planning/docs/development/validations/stage_2/assets/stage2-progress-cr018-failed.png`
+- side-by-side comparison evidence:
+  `/private/tmp/Era-stage2-v2-planning/docs/development/validations/stage_2/assets/stage2-progress-cr018-comparison.png`
+- viewport: 1514 × 1078; implementation full-page height 1515
+- state: CR-2026-018 Release and Verify PASS; Exact Compare FAILED; Stage 3 LOCKED
 
-- source: `/private/tmp/Era-stage2-v2-planning/design-source-current.png`
-- implementation: `/private/tmp/Era-stage2-v2-planning/design-implementation-live.png`
-- source capture: 1329 × 1019
-- implementation full-page capture: 1280 × 1483
-- implementation URL: `http://127.0.0.1:8765/`
-- compared state: successor final packing complete; independent Release running at capture time
-- current API state after capture: Release failed unpublished on the stale 200-object Catalog gate
+## Findings
 
-The source and implementation images were opened together in one comparison input. The 49-pixel
-capture-width difference does not change the responsive desktop layout; the added full-page height
-is intentional because the implementation exposes every execution subflow instead of hiding the
-release chain below one aggregate status.
+No actionable P0, P1 or P2 visual mismatch remains for the requested release-only workflow
+update. The implementation intentionally expands the source's compact current-stage rail into the
+approved S2-T01 through S2-T10 governance rail; it retains the source's dark navy palette, dense
+three-column operational hierarchy, monospace evidence values, blue active state, green PASS and
+red failure semantics.
 
-## Full-page comparison
+The new core flow is visible and unambiguous: release-only Authority, 208 sealed-result preflight,
+Foundation and four Group-1 components, Release, Verify and Exact Compare. The failed comparison
+is red and names the exact contract failure. The superseded successor is independently shown as
+no-resume/no-reuse/no-delete, while the fixed Run remains PUBLISHED and Stage 3 remains locked.
 
-The dark navy governance dashboard, dense monospace data treatment, blue active-state emphasis,
-green PASS state, one-pixel separators, square card geometry and compact evidence hierarchy remain
-consistent with the reference. The new 11-card execution grid is inserted into the existing
-information architecture and uses the established tokens rather than introducing a second visual
-language.
+## Required fidelity surfaces
 
-## Focused region
-
-The live execution section exposes these distinct cards: monthly adoption, Foundation BTC,
-Foundation ETH, final packing, four Group-1 components, Release, Verify and exact comparison. Each
-card has a state, evidence summary and progress rail. Release failure now overrides the otherwise
-complete checkpoint summary so the page visibly reports `RELEASE FAILED / UNPUBLISHED`.
-
-## Fidelity surfaces
-
-| Surface | Result |
-| --- | --- |
-| Layout and hierarchy | PASS — original authority/run structure preserved; execution grid extends it |
-| Typography and density | PASS — compact sans/mono pairing and numeric hierarchy preserved |
-| Color, borders and states | PASS — navy surfaces, blue RUNNING, green PASS and red FAILED are consistent |
-| Data truthfulness | PASS — 8,708 adopted files, 44 packed seals and 27 resource anomalies are exposed |
-| Responsive behavior | PASS — desktop capture remains aligned with no clipping or overlap |
+- Fonts and typography: IBM Plex Sans/Mono preserve the source's technical hierarchy; Chinese and
+  English fallbacks render without clipping in the tested state.
+- Spacing and layout rhythm: the 318px task rail, flexible workflow workspace and 252px evidence
+  metrics rail fit the 1514px viewport with measured document width equal to viewport width.
+- Colors and visual tokens: navy surfaces, low-contrast dividers, blue active state, green PASS,
+  amber authority and red FAILED states remain consistent with the source language.
+- Image and asset fidelity: the interface uses Font Awesome icons and no placeholder, emoji,
+  handcrafted SVG or CSS-drawn image substitute.
+- Copy and content: all CR-2026-018 constraints, 208-object counts, 80,784 verification coverage,
+  61,776 comparison target and current contract failure are visible in plain language.
 
 ## Interaction and runtime checks
 
-- execution-explanation dialog: opened and content verified;
-- evidence drawer: opened and closed successfully;
-- Escape/drawer behavior: verified;
-- automatic `/api/status` refresh: verified;
-- browser page-error watch after reload: none;
-- browser console-event watch after reload: none;
-- HTML JavaScript compilation through Node `new Function`: PASS;
-- current `/healthz`: PASS;
-- current failure projection: Release `FAILED`, publication record absent, comparison report absent.
+- read-only status API rendered 11 flow cards with 10 PASS and Exact Compare FAILED;
+- execution-instructions dialog opened and closed correctly;
+- evidence drawer opened and closed correctly;
+- browser console errors/warnings: none;
+- horizontal document overflow at the tested viewport: none;
+- focused-region comparison was not separately required after the full-page evidence and DOM
+  measurement showed the complete core workflow; the browser's clipped raster preview was
+  cross-checked against exact element bounds and the accessible DOM snapshot.
 
-## Fix history
+## Comparison history
 
-1. Removed the false assumption that final packing should stop at 19 seals; completion now follows
-   the actual `FINAL_PACKING PASS` evidence and displays the real 44-seal result.
-2. Split the aggregate progress into 11 user-visible execution cards.
-3. Added append-only evidence counters and per-task resource anomaly counts.
-4. Made Release, Verify and exact comparison independently visible.
-5. Made a failed downstream flow override the completed build checkpoint in the page conclusion,
-   while preserving the underlying checkpoint status for audit.
+The first CR-2026-018 pass replaced the obsolete successor/repacking path with the fixed old-Run
+release-only path. Post-fix evidence shows the exact live failure state and no remaining P0/P1/P2
+design findings. A P3 follow-up could shorten the raw English comparator exception in the card
+while keeping the complete text in the evidence drawer.
 
 final result: passed

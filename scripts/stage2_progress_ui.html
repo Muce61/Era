@@ -257,9 +257,9 @@
       <div class="top-status">
         <div class="tag approved">Plan v1.2<b>APPROVED</b></div>
         <div class="tag progress">S2-T10 v1.13<b>IN PROGRESS</b></div>
-        <div id="gateChip" class="gate-chip">FINAL CODE GATE</div>
+        <div id="gateChip" class="gate-chip">RELEASE-ONLY</div>
       </div>
-      <div id="processNote" class="process-note">无活动进程 · successor Run B 尚未创建</div>
+      <div id="processNote" class="process-note">CR-2026-018 · 旧 Run 仅发布</div>
     </header>
 
     <div class="snapshot"><span>治理快照：2026-07-20</span><span id="updatedAt">数据更新：—</span></div>
@@ -287,36 +287,36 @@
         <h2 class="panel-title"><span>S2-T10 执行路线（确定性）</span><span class="passed-count" style="color:#6b9ee8">历史密封证据</span></h2>
         <div class="execution">
           <ol class="step-track" aria-label="Runtime V2 确定性执行路线">
-            <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">Preflight</span></li>
+            <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">Authority<br>Amendment</span></li>
             <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">Foundation<br>BTC</span></li>
             <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">Foundation<br>ETH</span></li>
             <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">BTC<br>Price</span></li>
             <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">BTC<br>Flow</span></li>
             <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">ETH<br>Price</span></li>
             <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">ETH<br>Flow</span></li>
-            <li class="step failed"><span class="step-circle"><i class="fa-solid fa-xmark"></i></span><span class="step-label">Final<br>Packing</span></li>
+            <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">208 Seals<br>Accepted</span></li>
             <li class="step"><span class="step-circle">9</span><span class="step-label">Release</span></li>
             <li class="step"><span class="step-circle">10</span><span class="step-label">Verify</span></li>
             <li class="step"><span class="step-circle">11</span><span class="step-label">Exact<br>Compare</span></li>
           </ol>
-          <div id="trackNote" class="track-note">上方为不可变历史 Run B 的密封证据；下方为 successor Run B 实时执行轨道。</div>
+          <div id="trackNote" class="track-note">CR-2026-018：复用旧 Run 的 208 个密封结果，不 resume、不重新打包，只执行发布、验证和精确比较。</div>
         </div>
 
         <section class="live-flow" aria-labelledby="liveFlowTitle">
-          <div class="live-flow-head"><strong id="liveFlowTitle">Successor Run B · 实时执行子流程</strong><span id="liveFlowSummary">正在读取 append-only 证据…</span></div>
+          <div class="live-flow-head"><strong id="liveFlowTitle">固定旧 Run · Release-only 实时流水线</strong><span id="liveFlowSummary">正在读取 append-only 证据…</span></div>
           <div id="runtimeFlowGrid" class="flow-grid" aria-live="polite"></div>
         </section>
 
         <section class="authority">
-          <div class="subhead">当前冻结授权链（successor 执行中）</div>
+          <div class="subhead">CR-2026-018 最小恢复授权链</div>
           <div class="authority-flow">
             <div class="auth-step current"><span class="auth-icon"><i class="fa-solid fa-shield-halved"></i></span><span><strong>最终代码门</strong><small id="authorityCodeGate">待运行</small></span></div>
             <div class="auth-arrow"><i class="fa-solid fa-arrow-right"></i></div>
-            <div class="auth-step"><span class="auth-icon"><i class="fa-solid fa-ban"></i></span><span><strong>禁用预检专用运行</strong><small id="authorityDisabled">待执行</small></span></div>
+            <div class="auth-step"><span class="auth-icon"><i class="fa-solid fa-ban"></i></span><span><strong>停用当前 successor</strong><small id="authorityDisabled">待记录</small></span></div>
             <div class="auth-arrow"><i class="fa-solid fa-arrow-right"></i></div>
-            <div class="auth-step"><span class="auth-icon"><i class="fa-solid fa-snowflake"></i></span><span><strong>Authority 冻结 ×2</strong><small id="authorityFrozen">必须完全一致</small></span></div>
+            <div class="auth-step"><span class="auth-icon"><i class="fa-solid fa-file-shield"></i></span><span><strong>仅发布 Amendment</strong><small id="authorityFrozen">待授权</small></span></div>
             <div class="auth-arrow"><i class="fa-solid fa-arrow-right"></i></div>
-            <div class="auth-step"><span class="auth-icon"><i class="fa-solid fa-people-group"></i></span><span><strong>恰好一个后继 Run B</strong><small id="authoritySuccessor">尚未创建</small></span></div>
+            <div class="auth-step"><span class="auth-icon"><i class="fa-solid fa-box-archive"></i></span><span><strong>固定 208 个 Seals</strong><small id="authoritySuccessor">待预检</small></span></div>
           </div>
         </section>
 
@@ -331,23 +331,23 @@
           </article>
           <div class="lane-row">
             <article class="lane failed">
-              <div class="lane-cell"><span class="lane-label">历史运行<br>Run B</span></div>
-              <div class="lane-cell"><span class="cell-k">终态</span><span class="cell-v bad">FAILED_INTEGRITY</span></div>
-              <div class="lane-cell"><span class="cell-k">发布</span><span class="cell-v bad">UNPUBLISHED</span></div>
-              <div class="lane-cell"><span class="cell-k">密封分区</span><span class="cell-v">80,784 / 80,784</span><div class="bar"><span style="width:100%"></span></div></div>
-              <div class="lane-cell"><span class="cell-k">分区总数</span><span class="cell-v">80,784</span></div>
+              <div class="lane-cell"><span class="lane-label">已停用<br>successor</span></div>
+              <div class="lane-cell"><span class="cell-k">状态</span><span class="cell-v bad">SUPERSEDED</span></div>
+              <div class="lane-cell"><span class="cell-k">复用</span><span class="cell-v bad">FORBIDDEN</span></div>
+              <div class="lane-cell"><span class="cell-k">现场保留</span><span class="cell-v">2 packed · 3 partials</span><div class="bar"><span style="width:4%"></span></div></div>
+              <div class="lane-cell"><span class="cell-k">删除</span><span class="cell-v">FORBIDDEN</span></div>
             </article>
-            <div class="side-status failed"><i class="fa-solid fa-circle-exclamation"></i><strong>最终打包排序失败<br>终止 · 无法恢复</strong></div>
+            <div class="side-status failed"><i class="fa-solid fa-ban"></i><strong>不再 resume<br>不复用 · 不删除</strong></div>
           </div>
           <div class="lane-row">
             <article class="lane pending" id="successorLane">
-              <div class="lane-cell"><span class="lane-label">后继运行<br>Run B</span></div>
+              <div class="lane-cell"><span class="lane-label">固定旧 Run<br>Release-only</span></div>
               <div class="lane-cell"><span class="cell-k">状态</span><span id="successorStatus" class="cell-v">NOT CREATED</span></div>
               <div class="lane-cell"><span class="cell-k">发布</span><span id="successorPublication" class="cell-v">—</span></div>
               <div class="lane-cell"><span class="cell-k">分区进度</span><span id="successorProgress" class="cell-v">0 / 80,784</span><div class="bar"><span id="successorBar" style="width:0"></span></div></div>
               <div class="lane-cell"><span class="cell-k">目标总数</span><span class="cell-v">80,784</span></div>
             </article>
-            <div id="successorSideStatus" class="side-status"><i class="fa-regular fa-hourglass-half"></i><span>当前合法延迟运行<br>尚未创建</span></div>
+            <div id="successorSideStatus" class="side-status"><i class="fa-solid fa-file-shield"></i><span>CR-2026-018<br>只发布 · 不打包</span></div>
           </div>
         </div>
       </section>
@@ -357,33 +357,33 @@
         <div class="metric-hero"><small>总体分区</small><strong>80,784 <em>总计</em></strong><div class="metric-split"><div><span>Foundation</span><b>19,008</b></div><div><span>Group 1</span><b>61,776</b></div></div></div>
         <h3 class="metric-section">资产与域（Group 1）</h3>
         <div class="asset-grid"><div><span>BTC</span><b>30,888</b></div><div><span>ETH</span><b>30,888</b></div><div><span>PRICE (G0–G3)</span><b>47,520</b></div><div><span>FLOW (G4)</span><b>14,256</b></div></div>
-        <h3 class="metric-section">恢复与检查点</h3>
+        <h3 class="metric-section">密封输入（只读接收）</h3>
         <ul class="recovery-list">
-          <li><span>月度恢复片段</span><b>632</b></li>
-          <li><span>已打包恢复片段</span><b>164</b></li>
-          <li><span>恢复片段总计</span><b class="sum">796</b></li>
-          <li><span>月度检查点（总）</span><b>158</b></li>
-          <li><span>数据集封印（总）</span><b>2,054</b></li>
+          <li><span>Foundation 对象</span><b>164</b></li>
+          <li><span>Group 1 对象</span><b>44</b></li>
+          <li><span>密封对象总计</span><b class="sum">208</b></li>
+          <li><span>Seals 总计</span><b>208</b></li>
+          <li><span>Fragments</span><b>77,265</b></li>
         </ul>
         <div class="live-evidence"><b>最后监控证据</b><span id="liveEvidence">正在读取 checkpoint…</span></div>
       </aside>
     </section>
 
     <footer class="decision">
-      <section class="locked"><i class="fa-solid fa-lock"></i><div><strong>Stage 3 LOCKED</strong><b>Group 1 NOT PASSED</b><small>最终代码门和唯一后继 Run B 完成前，不得进入下一组或 Stage 3。</small></div></section>
-      <section class="conclusion"><div><h3>当前结论</h3><p id="currentConclusion">正在读取 successor Run B 的实时证据。</p></div><div class="next"><h3 id="nextTitle">下一步（当前唯一授权动作）</h3><p id="nextAction"><b>继续只读观察</b>，等待当前受控命令完成。</p><small>本页面只读，不会执行恢复、发布、停止或清理操作。</small></div></section>
+      <section class="locked"><i class="fa-solid fa-lock"></i><div><strong>Stage 3 LOCKED</strong><b>Group 1 NOT PASSED</b><small>Release、Verify 和 61,776 个分区精确比较完成前，不得进入下一组或 Stage 3。</small></div></section>
+      <section class="conclusion"><div><h3>当前结论</h3><p id="currentConclusion">正在读取固定旧 Run 的 release-only 证据。</p></div><div class="next"><h3 id="nextTitle">下一步（当前唯一授权动作）</h3><p id="nextAction"><b>物理预检 208 个密封成果</b>，通过后执行 Release。</p><small>本页面只读，只展示自动执行流程，不会触发恢复、打包、停止或清理。</small></div></section>
       <section class="actions"><button id="evidenceBtn" class="action" type="button"><i class="fa-solid fa-file-shield"></i> 查看证据</button><button id="codeGateBtn" class="action primary" type="button"><i class="fa-solid fa-route"></i> 查看执行说明</button></section>
     </footer>
   </main>
 
   <dialog id="gateDialog">
-    <div class="dialog-head"><h2>Successor Run B · 只读执行说明</h2><button class="icon-button" data-close-dialog type="button" aria-label="关闭"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="dialog-head"><h2>CR-2026-018 · Release-only 执行说明</h2><button class="icon-button" data-close-dialog type="button" aria-label="关闭"><i class="fa-solid fa-xmark"></i></button></div>
     <div class="dialog-body">
-      <p>此监控页只展示 append-only 证据，不执行恢复、打包、发布或比较命令。每个阶段由受控终端推进，完成后自动在实时子流程轨道变为 PASS。</p>
+      <p>此监控页只展示 append-only 证据。后台受控流程直接接收旧 Run 的 208 个密封成果，不 resume、不重新打包，只推进发布、验证与精确比较。</p>
       <ul class="checklist">
-        <li><i class="fa-regular fa-circle"></i><span>旧 Run 月度成果验证、重新签名接收与排除边界</span></li>
-        <li><i class="fa-regular fa-circle"></i><span>Foundation BTC / ETH 与四个 Group 1 组件收据</span></li>
-        <li><i class="fa-regular fa-circle"></i><span>最终打包、Release、Verify 与 Exact Compare</span></li>
+        <li><i class="fa-regular fa-circle"></i><span>停用当前 successor，现场保留且禁止复用或删除</span></li>
+        <li><i class="fa-regular fa-circle"></i><span>物理核验旧 Run 的 208 个对象、208 个 Seal 与 80,784 个分区</span></li>
+        <li><i class="fa-regular fa-circle"></i><span>Release、Verify 与 61,776 个 Group-1 分区 Exact Compare</span></li>
         <li><i class="fa-regular fa-circle"></i><span>全链完成后仍保持 Stage 3 LOCKED，等待治理评审</span></li>
       </ul>
     </div>
@@ -394,8 +394,10 @@
     <div class="drawer-head"><h2>Stage 2 证据台账</h2><button id="drawerClose" class="icon-button" type="button" aria-label="关闭证据台账"><i class="fa-solid fa-xmark"></i></button></div>
     <section class="evidence-block"><h3>Formal Run A</h3><p>PUBLISHED / QUALITY PASS · 9,508 / 9,508 · Group 1 61,776</p><code>stage2-g1-full-a-20260716T144233Z-366a541b7956</code></section>
     <section class="evidence-block"><h3>Terminal historical Run B</h3><p>80,784 V2 partitions sealed; FAILED_INTEGRITY at Final Packing; UNPUBLISHED; cannot resume.</p><code>stage2-g1-v2-b-20260719T141315Z-bf8c6a186f66</code></section>
-    <section class="evidence-block"><h3>Preflight-only Run B</h3><p>PREFLIGHT_PASSED · revision 0 · 0 completed tasks · must receive append-only disablement before successor creation.</p><code>stage2-g1-v2-b-20260720T084846Z-3885667a</code></section>
-    <section class="evidence-block"><h3>Governance authority</h3><p>CR-2026-016 approved final-code gate, exact 796 Foundation recovery coverage and exactly one successor Run B.</p></section>
+    <section class="evidence-block"><h3>Fixed release-only Run B</h3><p>GROUP1_COMPLETE · 80,784 partitions · 208 objects · 208 Seals · no repacking.</p><code>stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04</code></section>
+    <section class="evidence-block"><h3>Superseded successor</h3><p>INTERRUPTED_RECOVERABLE · preserved in place · resume/reuse/delete all forbidden.</p><code>stage2-g1-v2-b-20260720T143327Z-de804cf61e81</code></section>
+    <section class="evidence-block"><h3>Governance authority</h3><p>CR-2026-018 permits only release, verify and exact compare against the fixed sealed input set.</p></section>
+    <section class="evidence-block"><h3>Current blocker</h3><p>CR-2026-019 is DRAFT / NOT APPROVED. Compare stopped before consuming the partition stream because the production call passed the Receipt marker as the comparator algorithm authority.</p></section>
   </aside>
 
   <script>
@@ -456,17 +458,15 @@
       const components = observability.group1_components || {};
       const anomalies = observability.resource_anomalies || {};
       const activeTask = status.active_task || "";
-      const adoption = subflowByName(status, "MONTHLY_RESULT_ADOPTION");
-      const packing = subflowByName(status, "FINAL_PACKING");
       const release = subflowByName(status, "RELEASE");
       const verify = subflowByName(status, "VERIFY");
       const compare = subflowByName(status, "RUN_A_RUN_B_COMPARE");
       const foundationDone = Number(status.foundation_logical_partitions_done) || 0;
-      const packedDone = Number(observability.packed_seal_count) || 0;
-      const adoptionEvidence = observability.adoption || {};
-      const adoptionDone = Number(adoptionEvidence.adopted_file_count) || Number(adoption && adoption.done) || 0;
-      const adoptionTotal = Number(adoptionEvidence.adopted_file_count) || Number(adoption && adoption.total) || 8708;
-      const releaseState = observability.publication_record_present ? "pass" : normalizeState(release && release.status);
+      const releaseOnly = Boolean(observability.release_only);
+      const authorityState = observability.release_only_status === "AUTHORIZED_RELEASE_ONLY" ? "pass" : "pending";
+      const preflightState = observability.release_only_preflight_status === "PASS" ? "pass" : authorityState === "pass" ? "running" : "pending";
+      const rawReleaseState = normalizeState(release && release.status);
+      const releaseState = observability.publication_record_present ? "pass" : releaseOnly && rawReleaseState === "failed" ? "pending" : rawReleaseState;
       const compareState = observability.comparison_report_present ? "pass" : normalizeState(compare && compare.status);
       const groupDetail = (label, partitions, taskId, sealed) => {
         if (sealed) return "组件已密封 · 等待任务收据";
@@ -474,10 +474,10 @@
         return `${label} · ${partitions} 分区组件${anomalyCount ? ` · 资源告警 ${number(anomalyCount)}` : ""}`;
       };
       const flows = [
-        {name:"月度成果接收", icon:"fa-box-archive", state:normalizeState(adoption && adoption.status), detail:`${number(adoptionDone)} 项 · ${number(adoptionEvidence.group1_month_count)} 个月 · 旧打包已排除`, progress:100 * adoptionDone / adoptionTotal},
+        {name:"Release-only Authority", icon:"fa-file-shield", state:authorityState, detail:authorityState === "pass" ? "CR-2026-018 · 仅允许 release / verify / compare" : "等待追加式 Authority amendment", progress:authorityState === "pass" ? 100 : 0},
         {name:"Foundation · BTC", icon:"fa-database", state:receiptState(receipts, "foundation_btc", activeTask, "FOUNDATION:BTCUSDT"), detail:`${number(Math.min(foundationDone, 9504))} / 9,504 分区`, progress:100 * Math.min(foundationDone, 9504) / 9504},
         {name:"Foundation · ETH", icon:"fa-database", state:receiptState(receipts, "foundation_eth", activeTask, "FOUNDATION:ETHUSDT"), detail:`${number(Math.max(0, foundationDone - 9504))} / 9,504 分区`, progress:100 * Math.max(0, foundationDone - 9504) / 9504},
-        {name:"最终打包", icon:"fa-boxes-stacked", state:normalizeState(packing && packing.status), detail:`已生成 ${number(packedDone)} 个 packed seals · 当前 ${number(observability.partial_file_count)} 个 partials`, progress:packing && packing.status === "PASS" ? 100 : 0},
+        {name:"208 个密封成果预检", icon:"fa-boxes-stacked", state:preflightState, detail:`${number(observability.sealed_object_count)} objects · ${number(observability.sealed_seal_count)} Seals · 不重新打包`, progress:preflightState === "pass" ? 100 : 0},
         {name:"Group 1 · BTC Price", icon:"fa-bitcoin-sign", state:componentState(receipts, components, "group1_btc_price", activeTask, "GROUP1:BTCUSDT:V1_PRICE"), detail:groupDetail("V1_PRICE", "23,760", "GROUP1:BTCUSDT:V1_PRICE", components.group1_btc_price && !receipts.group1_btc_price), progress:receipts.group1_btc_price ? 100 : 0},
         {name:"Group 1 · BTC Flow", icon:"fa-arrow-trend-up", state:componentState(receipts, components, "group1_btc_flow", activeTask, "GROUP1:BTCUSDT:V1_FLOW"), detail:groupDetail("V1_FLOW", "7,128", "GROUP1:BTCUSDT:V1_FLOW", components.group1_btc_flow && !receipts.group1_btc_flow), progress:receipts.group1_btc_flow ? 100 : 0},
         {name:"Group 1 · ETH Price", icon:"fa-diamond", state:componentState(receipts, components, "group1_eth_price", activeTask, "GROUP1:ETHUSDT:V1_PRICE"), detail:groupDetail("V1_PRICE", "23,760", "GROUP1:ETHUSDT:V1_PRICE", components.group1_eth_price && !receipts.group1_eth_price), progress:receipts.group1_eth_price ? 100 : 0},
@@ -491,7 +491,7 @@
       const running = flows.find((item) => item.state === "running");
       const failed = flows.find((item) => item.state === "failed");
       byId("liveFlowSummary").textContent = `${passed} / ${flows.length} PASS${failed ? " · " + failed.name + " FAILED" : running ? " · 当前 " + running.name : ""}`;
-      return {flows, packing, releaseState, compareState, verifyState:normalizeState(verify && verify.status)};
+      return {flows, preflightState, releaseState, compareState, verifyState:normalizeState(verify && verify.status)};
     }
 
     async function refresh() {
@@ -505,11 +505,11 @@
         byId("updatedAt").textContent = "数据更新：" + dateTime(status.updated_at);
         const activeLabel = status.active_task || (liveSubflow && liveSubflow.current_item);
         const failedFlow = flow.flows.find((item) => item.state === "failed");
-        byId("processNote").textContent = activeLabel ? "运行中 · " + escapeText(activeLabel) : "successor 已创建 · " + escapeText(status.status);
+        byId("processNote").textContent = activeLabel ? "Release-only · " + escapeText(activeLabel) : "固定旧 Run · " + escapeText(status.status);
         const resourceAnomalyCount = Number(observability.resource_anomaly_count) || 0;
         byId("liveEvidence").textContent = escapeText(status.status) + " · " + escapeText(status.phase) + " · health " + escapeText(status.health) + (resourceAnomalyCount ? " · 资源告警 " + number(resourceAnomalyCount) : "") + "（仅 Run 监控，不代表 Stage 2 通过）";
-        const isSuccessor = Boolean(observability.successor_created || status.run_id);
-        if (isSuccessor) {
+        const isTrackedRun = Boolean(status.run_id);
+        if (isTrackedRun) {
           const done = Number(status.overall_logical_partitions_done) || 0;
           const total = Number(status.overall_logical_partitions_total) || 80784;
           byId("successorStatus").textContent = failedFlow ? failedFlow.name.toUpperCase() + " FAILED" : escapeText(status.status);
@@ -517,32 +517,33 @@
           byId("successorBar").style.width = Math.max(0, Math.min(100, 100 * done / total)) + "%";
           byId("successorPublication").textContent = observability.publication_record_present ? "PUBLISHED" : "UNPUBLISHED";
           byId("successorPublication").classList.toggle("good", Boolean(observability.publication_record_present));
-          byId("successorSideStatus").innerHTML = `<i class="fa-solid fa-satellite-dish"></i><span>当前 successor Run B<br>${failedFlow ? escapeHtml(failedFlow.name.toUpperCase() + " FAILED") : escapeHtml(status.status)}</span>`;
-          byId("trackNote").textContent = "上方为不可变历史证据；实时执行子流程以 successor 的 checkpoint、收据和 append-only 文件为准。";
+          byId("successorSideStatus").innerHTML = `<i class="fa-solid fa-file-shield"></i><span>固定旧 Run · Release-only<br>${failedFlow ? escapeHtml(failedFlow.name.toUpperCase() + " FAILED") : escapeHtml(status.status)}</span>`;
+          byId("trackNote").textContent = "CR-2026-018：208 个密封成果已固定，不 resume、不重新打包；只推进 Release、Verify 与 Exact Compare。";
           byId("authorityCodeGate").textContent = "PASS";
-          byId("authorityDisabled").textContent = "RECORDED";
-          byId("authorityFrozen").textContent = "2× IDENTICAL";
-          byId("authoritySuccessor").textContent = "EXISTS";
+          byId("authorityDisabled").textContent = observability.superseded_run_id ? "RECORDED" : "PENDING";
+          byId("authorityFrozen").textContent = observability.release_only_status === "AUTHORIZED_RELEASE_ONLY" ? "AUTHORIZED" : "PENDING";
+          byId("authoritySuccessor").textContent = observability.release_only_preflight_status === "PASS" ? "208 / 208 PASS" : "CHECKING";
         }
         const activeFlow = flow.flows.find((item) => item.state === "running");
         byId("gateChip").textContent = failedFlow ? failedFlow.name.toUpperCase() + " FAILED" : activeFlow ? activeFlow.name.toUpperCase() : escapeText(status.status);
         if (failedFlow) {
-          byId("currentConclusion").textContent = `${failedFlow.name} 已失败，successor 保持 UNPUBLISHED；失败详情已保留在对应流程卡和 append-only 日志中。`;
-          byId("nextAction").innerHTML = "<b>停止发布链</b>，修正并重新通过 Authority 授权前，不创建新的 successor。";
+          const compareAuthorityFailure = failedFlow.name === "精确比较" && failedFlow.detail.includes("approved legacy hash algorithm");
+          byId("currentConclusion").textContent = compareAuthorityFailure ? "Release 与 80,784 分区 Verify 已通过；Exact Compare 因算法 Authority 接线错误在读取分区流前停止，尚未产生 61,776 比较结论。" : `${failedFlow.name} 已失败，固定旧 Run 的发布链停止；密封输入保持不变。`;
+          byId("nextAction").innerHTML = compareAuthorityFailure ? "<b>等待 CR-2026-019 人工批准</b>，批准前不改代码、不重跑 Compare。" : "<b>停止自动流程</b>，保留证据并检查完整性或比较差异。";
         } else if (flow.compareState === "pass") {
-          byId("currentConclusion").textContent = "Successor Run B 已完成发布、验证和 Run A 精确比较；证据链已齐，Stage 3 仍保持锁定。";
+          byId("currentConclusion").textContent = `固定旧 Run 已发布并完成验证；Run A 精确比较 ${number(observability.matched_partition_count)} / 61,776，差异 ${number(observability.difference_count)}。`;
           byId("nextAction").innerHTML = "<b>提交 S2-T10 证据评审</b>，不得自动进入下一组或 Stage 3。";
         } else if (flow.verifyState === "pass") {
           byId("currentConclusion").textContent = "发布与验证已通过，正在等待 61,776 个 Group 1 分区的 Run A 精确比较。";
           byId("nextAction").innerHTML = "<b>执行 Exact Compare</b>，生成逐分区零容差比较证据。";
         } else if (flow.releaseState === "pass") {
-          byId("currentConclusion").textContent = "Successor Run B 已发布，等待独立验证与精确比较。";
+          byId("currentConclusion").textContent = "固定旧 Run 已原子发布，等待独立验证与精确比较。";
           byId("nextAction").innerHTML = "<b>执行 Verify</b>，确认发布目录和 80,784 个逻辑分区。";
-        } else if (flow.packing && flow.packing.status === "PASS") {
-          byId("currentConclusion").textContent = "Foundation、Group 1 与最终打包已完成，successor 尚未发布。";
+        } else if (flow.preflightState === "pass") {
+          byId("currentConclusion").textContent = "208 个旧 Run 密封成果已完成物理预检，未重新打包，当前尚未发布。";
           byId("nextAction").innerHTML = "<b>执行 Release</b>，在独立进程中完成同卷原子发布。";
         } else {
-          byId("currentConclusion").textContent = `Successor Run B 正在执行 ${escapeText(activeLabel || status.phase)}；实时子流程和证据计数见上方。`;
+          byId("currentConclusion").textContent = `固定旧 Run 正在执行 ${escapeText(activeLabel || "208 个密封成果预检")}；实时子流程和证据计数见上方。`;
           byId("nextAction").innerHTML = "<b>继续只读观察</b>，等待当前受控命令完成。";
         }
       } catch (error) {

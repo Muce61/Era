@@ -47,12 +47,25 @@ def _safe_file_count(root: Path, pattern: str = "*") -> int:
     )
 
 
+def _safe_json_object(path: Path) -> dict[str, Any]:
+    if not path.is_file() or path.is_symlink():
+        return {}
+    try:
+        value = json.loads(path.read_bytes())
+    except (OSError, ValueError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
 def _execution_observability(run_root: Path) -> dict[str, Any]:
     """Project append-only execution evidence into compact UI counters."""
 
+    amendment = _safe_json_object(run_root / "reports/release-only-authority-cr-2026-018.json")
     adoption: dict[str, Any] = {}
     resource_anomalies: dict[str, int] = {}
-    adoption_paths = sorted((run_root / "manifests").glob("group1-monthly-adoption-*.json"))
+    adoption_paths = (
+        [] if amendment else sorted((run_root / "manifests").glob("group1-monthly-adoption-*.json"))
+    )
     if (
         len(adoption_paths) == 1
         and adoption_paths[0].is_file()
@@ -89,8 +102,19 @@ def _execution_observability(run_root: Path) -> dict[str, Any]:
                 count = task.get("resource_anomaly_count", 0)
                 if isinstance(task_id, str) and isinstance(count, int) and count >= 0:
                     resource_anomalies[task_id] = count
+    preflight = _safe_json_object(run_root / "reports/release-only-preflight-cr-2026-018.json")
+    publication = _safe_json_object(run_root / "reports/v2-publication-record.json")
+    comparison = _safe_json_object(run_root / "reports/v2-run-a-comparison.json")
     return {
-        "successor_created": True,
+        "successor_created": not bool(amendment),
+        "release_only": bool(amendment),
+        "release_only_status": amendment.get("status"),
+        "release_only_preflight_status": preflight.get("status"),
+        "release_only_allowed_commands": amendment.get("allowed_commands", []),
+        "sealed_object_count": amendment.get("object_count"),
+        "sealed_seal_count": amendment.get("seal_count"),
+        "sealed_partition_count": amendment.get("partition_count"),
+        "superseded_run_id": amendment.get("superseded_run_id"),
         "adoption": adoption,
         "packed_seal_count": _safe_file_count(run_root / "staging/group1/packed-seals", "*.json"),
         "partial_file_count": _safe_file_count(run_root / "staging/group1/partials"),
@@ -102,8 +126,11 @@ def _execution_observability(run_root: Path) -> dict[str, Any]:
         "task_receipts": receipts,
         "resource_anomalies": resource_anomalies,
         "resource_anomaly_count": sum(resource_anomalies.values()),
-        "publication_record_present": (run_root / "reports/v2-publication-record.json").is_file(),
-        "comparison_report_present": (run_root / "reports/v2-run-a-comparison.json").is_file(),
+        "publication_record_present": bool(publication),
+        "publication_state": publication.get("publication_state"),
+        "comparison_report_present": bool(comparison),
+        "matched_partition_count": comparison.get("matched_partition_count"),
+        "difference_count": comparison.get("difference_count"),
     }
 
 

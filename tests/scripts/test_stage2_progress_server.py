@@ -45,8 +45,14 @@ def test_execution_observability_projects_append_only_evidence(tmp_path: Path) -
             }
         ),
     )
-    _write(tmp_path / "reports/v2-publication-record.json")
-    _write(tmp_path / "reports/v2-run-a-comparison.json")
+    _write(
+        tmp_path / "reports/v2-publication-record.json",
+        json.dumps({"publication_state": "PUBLISHED"}),
+    )
+    _write(
+        tmp_path / "reports/v2-run-a-comparison.json",
+        json.dumps({"matched_partition_count": 61776, "difference_count": 0}),
+    )
 
     result = _execution_observability(tmp_path)
 
@@ -65,4 +71,39 @@ def test_execution_observability_projects_append_only_evidence(tmp_path: Path) -
     }
     assert result["resource_anomaly_count"] == 7
     assert result["publication_record_present"] is True
+    assert result["publication_state"] == "PUBLISHED"
     assert result["comparison_report_present"] is True
+    assert result["matched_partition_count"] == 61776
+    assert result["difference_count"] == 0
+
+
+def test_execution_observability_projects_cr018_release_only_evidence(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "reports/release-only-authority-cr-2026-018.json",
+        json.dumps(
+            {
+                "status": "AUTHORIZED_RELEASE_ONLY",
+                "allowed_commands": ["release", "verify", "compare"],
+                "object_count": 208,
+                "seal_count": 208,
+                "partition_count": 80784,
+                "superseded_run_id": "stage2-g1-v2-b-superseded",
+            }
+        ),
+    )
+    _write(
+        tmp_path / "reports/release-only-preflight-cr-2026-018.json",
+        json.dumps({"status": "PASS"}),
+    )
+
+    result = _execution_observability(tmp_path)
+
+    assert result["successor_created"] is False
+    assert result["release_only"] is True
+    assert result["release_only_status"] == "AUTHORIZED_RELEASE_ONLY"
+    assert result["release_only_preflight_status"] == "PASS"
+    assert result["release_only_allowed_commands"] == ["release", "verify", "compare"]
+    assert result["sealed_object_count"] == 208
+    assert result["sealed_seal_count"] == 208
+    assert result["sealed_partition_count"] == 80784
+    assert result["superseded_run_id"] == "stage2-g1-v2-b-superseded"
