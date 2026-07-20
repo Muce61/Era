@@ -10,6 +10,9 @@ import pytest
 from era100x.research.stage_2.runtime_v2.catalog import SealReducerV2
 from era100x.research.stage_2.runtime_v2.group1_packing_recovery import (
     AdoptedFileV1,
+    EXPECTED_FOUNDATION_CHECKPOINTS,
+    EXPECTED_FOUNDATION_MONTHLY_CHECKPOINTS,
+    EXPECTED_FOUNDATION_PACKED_CHECKPOINTS,
     _record_adopted,
     _resign_graph,
 )
@@ -25,6 +28,12 @@ SOURCE_SNAPSHOT = "1" * 64
 DESTINATION_SNAPSHOT = "2" * 64
 DATASET_HASH = "3" * 64
 SEMANTIC_HASH = "4" * 64
+
+
+def test_foundation_recovery_coverage_includes_monthly_and_packed_checkpoints() -> None:
+    assert EXPECTED_FOUNDATION_MONTHLY_CHECKPOINTS == 632
+    assert EXPECTED_FOUNDATION_PACKED_CHECKPOINTS == 164
+    assert EXPECTED_FOUNDATION_CHECKPOINTS == 796
 
 
 def test_resign_graph_preserves_physical_and_semantic_evidence(tmp_path: Path) -> None:

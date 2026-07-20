@@ -37,7 +37,9 @@ from .models import (
 from .progress import PipelineProgressStore
 from .transition import sha256_file
 
-EXPECTED_FOUNDATION_CHECKPOINTS: Final[Literal[632]] = 632
+EXPECTED_FOUNDATION_MONTHLY_CHECKPOINTS: Final[Literal[632]] = 632
+EXPECTED_FOUNDATION_PACKED_CHECKPOINTS: Final[Literal[164]] = 164
+EXPECTED_FOUNDATION_CHECKPOINTS: Final[Literal[796]] = 796
 EXPECTED_GROUP1_MONTHS: Final[Literal[158]] = 158
 EXPECTED_GROUP1_DATASET_SEALS: Final[Literal[2054]] = 2_054
 
@@ -71,7 +73,7 @@ class Group1MonthlyAdoptionManifestV1(FrozenModel):
     config_sha256: str = Field(pattern=SHA256_PATTERN)
     source_checkpoint_sha256: str = Field(pattern=SHA256_PATTERN)
     source_failure_sha256: str = Field(pattern=SHA256_PATTERN)
-    foundation_checkpoint_count: Literal[632] = EXPECTED_FOUNDATION_CHECKPOINTS
+    foundation_checkpoint_count: Literal[796] = EXPECTED_FOUNDATION_CHECKPOINTS
     group1_month_count: Literal[158] = EXPECTED_GROUP1_MONTHS
     group1_dataset_count: Literal[2054] = EXPECTED_GROUP1_DATASET_SEALS
     adopted_files: tuple[AdoptedFileV1, ...]
@@ -211,26 +213,25 @@ def adopt_completed_monthly_results(
     if _semantic_authority(source_manifest) != _semantic_authority(destination_manifest):
         raise ValueError("source and destination semantic authorities differ")
 
-    source_foundation = tuple(
-        FoundationShardCheckpoint.model_validate_json(path.read_bytes())
-        for path in (
-            _json_paths(source_root / "staging" / "foundation" / "checkpoints")
-            + _json_paths(source_root / "staging" / "foundation" / "packed-checkpoints")
-        )
+    source_foundation_monthly_paths = _json_paths(
+        source_root / "staging" / "foundation" / "checkpoints"
     )
-    source_months = tuple(
-        Group1MonthCheckpoint.model_validate_json(path.read_bytes())
-        for path in _json_paths(source_root / "staging" / "group1" / "monthly-checkpoints")
+    source_foundation_packed_paths = _json_paths(
+        source_root / "staging" / "foundation" / "packed-checkpoints"
     )
-    if len(source_foundation) != EXPECTED_FOUNDATION_CHECKPOINTS:
-        raise ValueError("Foundation checkpoint coverage is not 632")
-    if len(source_months) != EXPECTED_GROUP1_MONTHS:
+    source_foundation_paths = source_foundation_monthly_paths + source_foundation_packed_paths
+    source_month_paths = _json_paths(source_root / "staging" / "group1" / "monthly-checkpoints")
+    if len(source_foundation_monthly_paths) != EXPECTED_FOUNDATION_MONTHLY_CHECKPOINTS:
+        raise ValueError("Foundation monthly checkpoint coverage is not 632")
+    if len(source_foundation_packed_paths) != EXPECTED_FOUNDATION_PACKED_CHECKPOINTS:
+        raise ValueError("Foundation packed checkpoint coverage is not 164")
+    if len(source_month_paths) != EXPECTED_GROUP1_MONTHS:
         raise ValueError("Group-1 month coverage is not 158")
     source_dataset_paths = _group1_dataset_path_index(source_root)
     if len(source_dataset_paths) != EXPECTED_GROUP1_DATASET_SEALS:
         raise ValueError("Group-1 monthly dataset coverage is not 2,054")
     estimated_total = (
-        len(source_foundation) * 3 + len(source_dataset_paths) * 3 + len(source_months)
+        len(source_foundation_paths) * 3 + len(source_dataset_paths) * 3 + len(source_month_paths)
     )
     progress = PipelineProgressStore(destination_root)
     progress.update(
@@ -243,17 +244,16 @@ def adopt_completed_monthly_results(
     adopted: dict[str, AdoptedFileV1] = {}
     completed = 0
     destination_foundation: list[FoundationShardCheckpoint] = []
-    for source in sorted(
-        source_foundation,
-        key=lambda item: (item.storage_role, item.instrument, item.dataset_name, item.shard_key),
-    ):
+    for source_path in source_foundation_paths:
+        source = FoundationShardCheckpoint.model_validate_json(source_path.read_bytes())
         adopted_checkpoint, entries = _adopt_foundation_checkpoint(
             source_root=source_root,
             destination_root=destination_root,
             source=source,
             destination_snapshot_id=destination_manifest.snapshot_id,
         )
-        destination_foundation.append(adopted_checkpoint)
+        if adopted_checkpoint.storage_role == "PACKED_FINAL":
+            destination_foundation.append(adopted_checkpoint)
         _record_adopted(adopted, entries)
         completed += len(entries)
         if completed % 50 == 0:
@@ -266,16 +266,14 @@ def adopt_completed_monthly_results(
                 message=f"re-signed Foundation evidence ({completed} files)",
             )
 
-    packed_foundation = tuple(
-        item for item in destination_foundation if item.storage_role == "PACKED_FINAL"
-    )
     reader = PackedFoundationFeatureReader(
         snapshot_id=destination_manifest.snapshot_id,
         catalog_root=destination_root / "staging" / "snapshot",
-        checkpoints=packed_foundation,
+        checkpoints=tuple(destination_foundation),
     )
     dataset_count = 0
-    for source_month in sorted(source_months, key=lambda item: (item.instrument, item.owner_start)):
+    for source_month_path in source_month_paths:
+        source_month = Group1MonthCheckpoint.model_validate_json(source_month_path.read_bytes())
         destination_datasets: list[Group1MonthlyDatasetSeal] = []
         for source_dataset in source_month.datasets:
             key = (
@@ -404,7 +402,7 @@ def _validated_adoption_files(
         source_root / "staging" / "foundation" / "checkpoints"
     ) + _json_paths(source_root / "staging" / "foundation" / "packed-checkpoints")
     if len(foundation_checkpoints) != EXPECTED_FOUNDATION_CHECKPOINTS:
-        raise ValueError("Foundation checkpoint coverage is not 632")
+        raise ValueError("Foundation checkpoint coverage is not 796")
     for path in foundation_checkpoints:
         model = FoundationShardCheckpoint.model_validate_json(path.read_bytes())
         _select(selected, path.relative_to(source_root), "FOUNDATION_METADATA")
