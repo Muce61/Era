@@ -3,8 +3,8 @@
 ```text
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
-Current Task: S2-T15 v1.2 — conditional random baseline
-Status: S2_T15_V1_2_METHOD_FIXTURE_PASS_AWAITING_CR_2026_025
+Current Task: S2-T15 v1.3 — conditional random baseline
+Status: S2_T15_V1_3_APPROVED_BLOCKED_BEFORE_AUTHORITY_OR_RUN_BY_OQ_S2_005
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
@@ -30,9 +30,12 @@ rows. Full Verify, quality gate and live automatic UI projection pass; Muce's ex
 instruction became effective after evidence passed at 2026-07-21T14:15:01Z. Muce then approved
 S2-T15 v1.2 method-fixture work with `进入t15` at 2026-07-21T14:35:06Z. The implementation is
 isolated to preregistered conditional matching. Its 16 directed tests and 553-test repository gate
-pass, but this does not authorize a full research Run or Web UI expansion; CR-2026-025 requests
-that minimum v1.3 scope. S2-T16 through S2-T18 and S2-T20 remain `DRAFT_NOT_APPROVED`, and Stage 3
-remains locked.
+pass. Muce approved CR-2026-025 and the minimum v1.3 full research/read-only UI scope at
+2026-07-21T14:41:46Z. The mandatory pre-Run audit then proved that the repository and complete Git
+history do not contain executable volatility/Trades-activity formulas, split/fold boundaries,
+exact purge/embargo duration or a deterministic non-event control-anchor rule. OQ-S2-005 therefore
+blocks Authority/Run creation. No full output or T15 UI PASS evidence exists. S2-T16 through
+S2-T18 and S2-T20 remain `DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
 
 S2-T11 v1.3 full-output Run `stage2-s2t11-paths-20260721T023117Z-029707f3c111` published
 220,201 BTC and 312,507 ETH historical path indexes. Read-only Verify, repository quality gates

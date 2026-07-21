@@ -3,16 +3,16 @@
 ## Metadata
 
 - task_id: S2-T15
-- task_version: 1.2
-- status: METHOD FIXTURE IMPLEMENTATION PASS / AWAITING CR-2026-025
+- task_version: 1.3
+- status: APPROVED / BLOCKED BEFORE AUTHORITY OR RUN BY OQ-S2-005
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T12 PASS; S2-T14 PASS; S2-T19 PASS
-- supersedes: task_version 1.1
+- supersedes: task_version 1.2
 - approved_by: Muce
-- approved_at: 2026-07-21T14:35:06Z
+- approved_at: 2026-07-21T14:41:46Z
 
 ## 1. 目标
 
@@ -104,6 +104,9 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
   自动识别不在v1.2允许范围内，必须先批准CR-2026-025与Task v1.3。
 - 2026-07-21：v1.2条件匹配fixture、16项定向测试及553项统一质量门全部PASS；正式全量
   研究与Web UI仍未运行，Task保持开放并等待CR-2026-025人工决定，不启动S2-T16。
+- 2026-07-21：Muce批准CR-2026-025与v1.3最小全量/UI范围。Run前审计确认仓库及Git全
+  历史缺少波动率/Trades活跃度公式、split/fold边界、精确purge/embargo和非事件control
+  锚点规则；按OQ-S2-005在Authority/Run创建前阻塞。没有创建或修改任何全量证据。
 
 ## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
 
@@ -112,3 +115,10 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 验证命令：\`uv run python -m pytest tests/research/stage_2/baselines/conditional -q\`；\`uv run python scripts/run_quality_gate.py\`。全量研究CLI须由S2-T19冻结后再写入Task新版本，不得当前虚构。
 - 验收标准：匹配/放宽/失败、时间切分、purge/embargo、确定性抽样和manifest一致性通过；正式结论必须全量。
 - 证据模式：\`METHOD_FIXTURE + FULL_RESEARCH_REQUIRED\`。无论fixture能力是否可验收，Stage 1最终PASSED与VALID data baseline之前均不得执行本Task。
+
+## 22. CR-2026-025批准后的v1.3范围与阻塞门
+
+CR-2026-025批准只读绑定T10/T13/T14/T19输入、正式Authority/Run/Manifest/Catalog/Verify、
+最小全量CLI和只读自动UI投影。该范围不包含S2-T16+。执行前必须先关闭OQ-S2-005并
+发布绑定精确特征公式、split/fold、purge/embargo及control锚点规则的新版不可变预注册。
+在此之前禁止创建Authority或Run ID，禁止把fixture PASS投影成全量PASS。
