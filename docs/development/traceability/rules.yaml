@@ -2254,6 +2254,8 @@ rules:
     s2_t11_task_version: '1.2'
     s2_t11_status: CAPABILITY_PASS_FULL_OUTPUT_BLOCKED_TASK_NO_GO
     s2_t11_ui_change_request: docs/development/changes/CR-2026-020.md
+    s2_t11_full_output_change_request: docs/development/changes/CR-2026-021.md
+    cr_s2_021_status: PENDING_APPROVAL_L3_FULL_OUTPUT_CONTRACT
     draft_tasks: [S2-T12, S2-T13, S2-T14, S2-T15, S2-T16, S2-T17, S2-T18, S2-T20]
     oq_s2_004_status: RESOLVED
     decision_ref: docs/development/decisions/ADR-S2-004-primary-research-definition.md

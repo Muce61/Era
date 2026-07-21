@@ -113,7 +113,8 @@ the fixed Runtime V2 Run is published with Quality/Verify PASS and the exact Run
 matches 61,776/61,776 Group-1 partitions with zero differences. S2-T11 v1.2 is human-approved
 and its fixture capability is implemented, but formal full output is blocked by its own unfrozen
 CLI boundary and the Task remains NO-GO. S2-T12 through S2-T20 remain `DRAFT_NOT_APPROVED`, and
-Stage 3 remains locked.
+Stage 3 remains locked. CR-2026-021 proposes the required v1.3 full-output contract and remains
+`PENDING_APPROVAL`.
 [CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
 approve a bounded hybrid transition without changing Stage 1, preregistration, config, parameters,
 candidate semantics or the Plan v1.2 DAG. Formal Run A is now PUBLISHED with Quality PASS,
