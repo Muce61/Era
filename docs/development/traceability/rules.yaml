@@ -172,7 +172,7 @@ rules:
     implementation: src/era100x/research/stage_2/labels/ambiguity/
     tests: tests/research/stage_2/labels/ambiguity/
     validation: docs/development/validations/stage_2/S2-T14.md
-    state: APPROVED_V1_3_FULL_OUTPUT_UI_IN_PROGRESS
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
   state: PLANNED
 - rule_id: FILL-FIRST-NONZERO-PROTECT
   rule_status: FROZEN
@@ -272,7 +272,7 @@ rules:
     implementation: src/era100x/research/stage_2/labels/ambiguity/
     tests: tests/research/stage_2/labels/ambiguity/
     validation: docs/development/validations/stage_2/S2-T14.md
-    state: APPROVED_V1_3_FULL_OUTPUT_UI_IN_PROGRESS
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
   state: PLANNED
 - rule_id: RESEARCH-LOCKED-REPLAY-ONCE
   rule_status: FROZEN
@@ -365,7 +365,7 @@ rules:
     implementation: src/era100x/research/stage_2/labels/ambiguity/
     tests: tests/research/stage_2/labels/ambiguity/
     validation: docs/development/validations/stage_2/S2-T14.md
-    state: APPROVED_V1_3_FULL_OUTPUT_UI_IN_PROGRESS
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
   state: PLANNED
 - rule_id: RESEARCH-H3-CONDITIONAL-ROUND-PROB
   rule_status: FROZEN
@@ -699,7 +699,7 @@ rules:
     implementation: src/era100x/research/stage_2/labels/ambiguity/
     tests: tests/research/stage_2/labels/ambiguity/
     validation: docs/development/validations/stage_2/S2-T14.md
-    state: APPROVED_V1_3_FULL_OUTPUT_UI_IN_PROGRESS
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
   state: PLANNED
 - rule_id: INV-006
   rule_status: FROZEN
@@ -807,7 +807,7 @@ rules:
     implementation: src/era100x/research/stage_2/labels/ambiguity/
     tests: tests/research/stage_2/labels/ambiguity/
     validation: docs/development/validations/stage_2/S2-T14.md
-    state: APPROVED_V1_3_FULL_OUTPUT_UI_IN_PROGRESS
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
   state: PLANNED
 - rule_id: INV-012
   rule_status: FROZEN
@@ -874,7 +874,7 @@ rules:
     implementation: src/era100x/research/stage_2/labels/ambiguity/
     tests: tests/research/stage_2/labels/ambiguity/
     validation: docs/development/validations/stage_2/S2-T14.md
-    state: APPROVED_V1_3_FULL_OUTPUT_UI_IN_PROGRESS
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
   state: PLANNED
 - rule_id: INV-014
   rule_status: FROZEN
@@ -1350,7 +1350,7 @@ rules:
     implementation: src/era100x/research/stage_2/labels/ambiguity/
     tests: tests/research/stage_2/labels/ambiguity/
     validation: docs/development/validations/stage_2/S2-T14.md
-    state: APPROVED_V1_3_FULL_OUTPUT_UI_IN_PROGRESS
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
   state: PLANNED
 - rule_id: CONTRACT-ENTRY-INTENT
   rule_status: RESEARCH
@@ -2425,12 +2425,23 @@ rules:
     s2_t13_total_path_rows: 1065416
     s2_t13_total_classifications: 31962480
     s2_t14_task_version: '1.3'
-    s2_t14_status: APPROVED_FULL_OUTPUT_UI_IN_PROGRESS
+    s2_t14_status: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
     s2_t14_approved_by: Muce
     s2_t14_approved_at: '2026-07-21T13:07:08Z'
     s2_t14_validation: docs/development/validations/stage_2/S2-T14.md
     s2_t14_full_output_ui_change_request: docs/development/changes/CR-2026-024.md
-    cr_s2_024_status: APPROVED_IN_PROGRESS
+    s2_t14_accepted_by: Muce
+    s2_t14_accepted_at: '2026-07-21T14:15:01Z'
+    s2_t14_run_id: stage2-s2t14-ambiguity-bounds-20260721T140507Z-8b4cf765602d
+    s2_t14_authority_hash: 3a563bd23f2bf2f51c487ce0ab0af68f6551d88012a615cc889904594d192f7a
+    s2_t14_snapshot_id: d1c21c10ceb344814d321c1ca4b52f44977cdced55f63d79b54bff86e0e6cf2c
+    s2_t14_manifest_hash: a6182c2ea80af92d081631f41864d5e54c6b8c4494ebe56c18a7a4df0894276a
+    s2_t14_catalog_hash: ab9abf9635ec263888bb4b6f9d5ae350fac44745544590098f3c12ceb8ecdf19
+    s2_t14_total_path_rows: 1065416
+    s2_t14_total_classifications: 31962480
+    s2_t14_total_distributions: 2280
+    s2_t14_total_ambiguous: 2862231
+    cr_s2_024_status: APPROVED_IMPLEMENTED_VALIDATED_HUMAN_ACCEPTED
     cr_s2_024_approved_by: Muce
     cr_s2_024_approved_at: '2026-07-21T13:37:13Z'
     draft_tasks: [S2-T15, S2-T16, S2-T17, S2-T18, S2-T20]

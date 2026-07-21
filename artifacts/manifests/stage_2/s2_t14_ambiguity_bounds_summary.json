@@ -1,0 +1,41 @@
+{
+  "accepted_at": "2026-07-21T14:15:01Z",
+  "accepted_by": "Muce",
+  "authority_hash": "3a563bd23f2bf2f51c487ce0ab0af68f6551d88012a615cc889904594d192f7a",
+  "catalog_hash": "ab9abf9635ec263888bb4b6f9d5ae350fac44745544590098f3c12ceb8ecdf19",
+  "code_commit": "843635dc50f013e12f3b2d8372dadd30dcd3feb5",
+  "historical_evidence_only": true,
+  "human_accepted": true,
+  "instruments": {
+    "BTCUSDT": {
+      "ambiguous_count": 1067753,
+      "classification_count": 13212060,
+      "distribution_count": 1140,
+      "episode_count": 220201,
+      "output_sha256": "1c39e45583f3ffc9f11435ae237e9cf75d8fab7f860682da5ca97f2b599e58f9",
+      "path_rows": 440402
+    },
+    "ETHUSDT": {
+      "ambiguous_count": 1794478,
+      "classification_count": 18750420,
+      "distribution_count": 1140,
+      "episode_count": 312507,
+      "output_sha256": "d5b68e88a2ee52aa3ce9cd32f0a82f8f9006896532dd7e98e8391df13a34f407",
+      "path_rows": 625014
+    }
+  },
+  "manifest_hash": "a6182c2ea80af92d081631f41864d5e54c6b8c4494ebe56c18a7a4df0894276a",
+  "run_id": "stage2-s2t14-ambiguity-bounds-20260721T140507Z-8b4cf765602d",
+  "schema_name": "s2-t14-ambiguity-bounds-repository-summary",
+  "snapshot_id": "d1c21c10ceb344814d321c1ca4b52f44977cdced55f63d79b54bff86e0e6cf2c",
+  "source_s2t13_run_id": "stage2-s2t13-first-passage-20260721T110224Z-d3f0c0331395",
+  "stage3_locked": true,
+  "status": "PASSED_HUMAN_ACCEPTED",
+  "task_id": "S2-T14",
+  "task_version": "1.3",
+  "total_ambiguous_count": 2862231,
+  "total_classification_count": 31962480,
+  "total_distribution_count": 2280,
+  "total_path_rows": 1065416,
+  "verify_status": "PASS"
+}

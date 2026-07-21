@@ -621,6 +621,8 @@
     function renderFirstPassageTask(status, s2t10Passed, s2t11Passed, s2t12Passed) {
       const tasks = ((status.execution_observability || {}).stage2_tasks || {});
       const task = tasks["S2-T13"] || {status:"CHECKING", reason_code:"S2_T13_CHECKING", instruments:{}, checks:{}};
+      const t14Status = escapeText((tasks["S2-T14"] || {}).status || "NOT_STARTED");
+      const t14BoundaryText = t14Status === "PASS" ? "T14 独立闭环" : t14Status === "IN_PROGRESS" ? "T14 执行中" : "T14 未开始";
       const raw = escapeText(task.status);
       const passed = raw === "PASS";
       const failed = raw === "FAILED" || raw === "EVIDENCE_INVALID";
@@ -641,7 +643,7 @@
         {name:"ETH · H1 Contract", icon:"fa-diamond", state:levelState(eth.h1_rows, eth.episodes), detail:`${number(eth.h1_rows)} / ${number(eth.episodes)} paths · 同事件双触达保守处理`, progress:Number(eth.episodes) ? 100 * Number(eth.h1_rows) / Number(eth.episodes) : 0},
         {name:"ETH · H2 Trades", icon:"fa-arrow-down-wide-short", state:levelState(eth.h2_rows, eth.episodes), detail:`${number(eth.h2_rows)} / ${number(eth.episodes)} paths · 身份与 lineage 保留`, progress:Number(eth.episodes) ? 100 * Number(eth.h2_rows) / Number(eth.episodes) : 0},
         {name:"Verify 与 Validation", icon:"fa-file-circle-check", state:passed ? "pass" : failed ? "failed" : state, detail:`${number(checksDone)} / ${number(checksTotal)} checks · Verify ${escapeText(task.verify_status)} · Validation ${escapeText(task.validation_status)}`, progress:checksTotal ? 100 * checksDone / checksTotal : 0},
-        {name:"历史标签边界", icon:"fa-lock", state:boundaryState, detail:"TARGET_FIRST / STOP_FIRST / EXPIRED / AMBIGUOUS · 非 PnL · T14 未开始 · Stage 3 LOCKED", progress:boundaryState === "pass" ? 100 : 0},
+        {name:"历史标签边界", icon:"fa-lock", state:boundaryState, detail:`TARGET_FIRST / STOP_FIRST / EXPIRED / AMBIGUOUS · 非 PnL · ${t14BoundaryText} · Stage 3 LOCKED`, progress:boundaryState === "pass" ? 100 : 0},
       ];
       byId("passageFlowGrid").innerHTML = flows.map(flowCard).join("");
       byId("passageFlowSummary").textContent = `${raw} · ${number(task.total_path_rows)} path rows · ${number(task.total_classification_count)} classifications · ${number(checksDone)} / ${number(checksTotal)} checks`;

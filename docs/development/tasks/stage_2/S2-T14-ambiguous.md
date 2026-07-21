@@ -4,7 +4,7 @@
 
 - task_id: S2-T14
 - task_version: 1.3
-- status: APPROVED / IN_PROGRESS
+- status: PASSED / HUMAN ACCEPTED
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
@@ -108,6 +108,10 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 2026-07-21：Muce以`webui接入t14，然后收尾t14`批准CR-2026-024与v1.3最小范围：
   只增加正式全量分布CLI、追加式Authority/Run/Manifest/Catalog/Verify证据、轻量仓库摘要和
   只读Web UI自动识别；不授权S2-T15+、H3、基线、placebo、聚类、bootstrap或Stage 3。
+- 2026-07-21：Authority `3a563bd2…f7a`、正式Run
+  `stage2-s2t14-ambiguity-bounds-20260721T140507Z-8b4cf765602d`、全量Verify、统一质量门与
+  真实浏览器自动投影全部PASS。Muce的明确收尾指令于证据通过后生效，S2-T14 v1.3在
+  2026-07-21T14:15:01Z完成并人工接收；S2-T15未开始，Stage 3继续锁定。
 
 ## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
 
