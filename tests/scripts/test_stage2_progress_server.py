@@ -78,7 +78,13 @@ def _instrument_catalog(instrument: str, episodes: int, payload: bytes) -> dict:
     }
 
 
-def _write_t12_pass(root: Path, repository_root: Path, run_id: str = T12_RUN_ID) -> None:
+def _write_t12_pass(
+    root: Path,
+    repository_root: Path,
+    run_id: str = T12_RUN_ID,
+    *,
+    human_accepted: bool = False,
+) -> None:
     run_root, authority = _write_t12_active(root, run_id)
     snapshot_id = "3" * 64
     snapshot = run_root / "published/snapshots" / snapshot_id
@@ -151,13 +157,22 @@ def _write_t12_pass(root: Path, repository_root: Path, run_id: str = T12_RUN_ID)
         "historical_evidence_only": True,
         "stage3_locked": True,
     }
+    if human_accepted:
+        summary.update(
+            {
+                "status": "PASSED_HUMAN_ACCEPTED",
+                "human_accepted": True,
+                "accepted_by": "Muce",
+                "accepted_at": "2026-07-21T06:39:21Z",
+            }
+        )
     _write(
         repository_root / MODULE.S2T12_SUMMARY_RELATIVE_PATH,
         json.dumps(summary),
     )
     _write(
         repository_root / MODULE.S2T12_VALIDATION_RELATIVE_PATH,
-        f"S2-T12 VALIDATED\nRun {run_id}\n",
+        (f"S2-T12 {'PASSED / HUMAN ACCEPTED' if human_accepted else 'VALIDATED'}\nRun {run_id}\n"),
     )
 
 
@@ -498,6 +513,24 @@ def test_s2_t12_tampered_repository_summary_fails_closed(tmp_path: Path) -> None
 
     assert result["status"] == "EVIDENCE_INVALID"
     assert result["checks"]["repository_summary_matches"] is False
+
+
+def test_s2_t12_human_acceptance_requires_complete_repository_metadata(tmp_path: Path) -> None:
+    stage2_root = tmp_path / "stage2"
+    repository_root = tmp_path / "repository"
+    _write_t12_pass(stage2_root, repository_root, human_accepted=True)
+
+    accepted = _stage2_path_metrics_projection(stage2_root, repository_root)
+    assert accepted["status"] == "PASS"
+    assert accepted["human_accepted"] is True
+
+    summary_path = repository_root / MODULE.S2T12_SUMMARY_RELATIVE_PATH
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    summary.pop("accepted_at")
+    _write(summary_path, json.dumps(summary))
+    incomplete = _stage2_path_metrics_projection(stage2_root, repository_root)
+    assert incomplete["status"] == "PASS"
+    assert incomplete["human_accepted"] is False
 
 
 def test_s2_t12_newest_terminal_run_wins_without_fallback(tmp_path: Path) -> None:

@@ -619,7 +619,7 @@ def _stage2_path_metrics_projection(
         "validation_pass": not validation_path.is_symlink()
         and bool(validation)
         and run_id in validation
-        and "VALIDATED" in validation,
+        and ("VALIDATED" in validation or "PASSED / HUMAN ACCEPTED" in validation),
         "historical_evidence_only": completion.get("historical_evidence_only") is True
         and manifest.get("historical_evidence_only") is True
         and summary.get("historical_evidence_only") is True,
@@ -627,6 +627,14 @@ def _stage2_path_metrics_projection(
         and summary.get("stage3_locked") is True,
     }
     passed = all(checks.values())
+    accepted_at = summary.get("accepted_at")
+    human_accepted = (
+        summary.get("status") == "PASSED_HUMAN_ACCEPTED"
+        and summary.get("human_accepted") is True
+        and summary.get("accepted_by") == "Muce"
+        and isinstance(accepted_at, str)
+        and re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", accepted_at) is not None
+    )
     result = _s2_t12_base(
         "PASS" if passed else "EVIDENCE_INVALID",
         "S2_T12_FULL_OUTPUT_VERIFIED_VALIDATION_PASS" if passed else "S2_T12_EVIDENCE_INVALID",
@@ -645,7 +653,7 @@ def _stage2_path_metrics_projection(
             "validation_status": "PASS" if checks["validation_pass"] else "FAIL",
             "historical_evidence_only": checks["historical_evidence_only"],
             "stage3_locked": True,
-            "human_accepted": summary.get("human_accepted") is True,
+            "human_accepted": human_accepted,
             "total_metric_rows": total_rows,
             "updated_at": completion_path.stat().st_mtime,
         }

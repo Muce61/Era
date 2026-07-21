@@ -11,7 +11,7 @@
     "stage2-s2t12-metrics-20260721T033611Z-a74fd68920a2"
   ],
   "historical_evidence_only": true,
-  "human_accepted": false,
+  "human_accepted": true,
   "instruments": {
     "BTCUSDT": {
       "computed_rows": 440276,
@@ -45,10 +45,12 @@
   "schema_version": "1.0",
   "snapshot_id": "f32b0c2838c73e8d5719a2b1bf76ebf79346715334310d30ebfbaeeb7c114bec",
   "stage3_locked": true,
-  "status": "VALIDATED_AWAITING_HUMAN_ACCEPTANCE",
+  "status": "PASSED_HUMAN_ACCEPTED",
   "task_id": "S2-T12",
   "task_version": "1.3",
   "total_metric_rows": 1065416,
   "verify_status": "PASS",
-  "web_ui_status": "PASS_CR_2026_022"
+  "web_ui_status": "PASS_CR_2026_022",
+  "accepted_at": "2026-07-21T06:39:21Z",
+  "accepted_by": "Muce"
 }
