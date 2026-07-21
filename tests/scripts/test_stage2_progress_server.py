@@ -11,6 +11,7 @@ MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 _execution_observability = MODULE._execution_observability
 _acceptance_projection = MODULE._acceptance_projection
+_stage2_task_projection = MODULE._stage2_task_projection
 
 
 def _write(path: Path, content: str = "{}") -> None:
@@ -164,3 +165,90 @@ def test_acceptance_is_derived_from_live_release_verify_and_exact_compare_eviden
 
     observability["difference_count"] = 1
     assert _acceptance_projection(status, observability)["s2_t10_status"] == "FAILED"
+
+
+def _path_receipt_payload(status: str, sequence: int = 0, previous: str | None = None):
+    from era100x.research.stage_2.paths.extraction import PathExtractionReceipt
+
+    passed = status == "PASS"
+    return PathExtractionReceipt.seal(
+        {
+            "code_commit": "abcdef0",
+            "sequence": sequence,
+            "previous_receipt_hash": previous,
+            "status": status,
+            "reason_code": f"S2_T11_{status}",
+            "btc_episodes_done": 10 if passed else 4,
+            "btc_episodes_total": 10,
+            "eth_episodes_done": 8 if passed else 1,
+            "eth_episodes_total": 8,
+            "input_hashes": {"BTCUSDT": "1" * 64, "ETHUSDT": "2" * 64},
+            "output_hashes": {"BTCUSDT": "3" * 64, "ETHUSDT": "4" * 64} if passed else {},
+            "acceptance_checks": {"utc": True, "shuffle": True},
+            "full_output_complete": passed,
+            "validation_status": "PASS" if passed else "NOT_RUN",
+            "validation_path": "docs/development/validations/stage_2/S2-T11.md",
+            "validation_hash": "5" * 64 if passed else None,
+            "created_at": "2026-07-21T00:00:00Z",
+        }
+    )
+
+
+def _write_path_receipt(root: Path, receipt) -> None:
+    path = root / "task-evidence/S2-T11" / f"{receipt.sequence:06d}-{receipt.receipt_hash}.json"
+    _write(path, json.dumps(receipt.model_dump(mode="json")))
+
+
+def test_s2_t11_missing_receipt_is_never_pass(tmp_path: Path) -> None:
+    result = _stage2_task_projection(tmp_path)
+
+    assert result["status"] == "NOT_STARTED"
+    assert result["receipt_count"] == 0
+
+
+def test_s2_t11_in_progress_and_failed_receipts_expose_counts_and_reason(tmp_path: Path) -> None:
+    active = _path_receipt_payload("IN_PROGRESS")
+    _write_path_receipt(tmp_path, active)
+    result = _stage2_task_projection(tmp_path)
+    assert result["status"] == "IN_PROGRESS"
+    assert result["btc_done"] == 4
+    assert result["eth_done"] == 1
+
+    failed_root = tmp_path / "failed"
+    failed = _path_receipt_payload("FAILED")
+    _write_path_receipt(failed_root, failed)
+    failed_result = _stage2_task_projection(failed_root)
+    assert failed_result["status"] == "FAILED"
+    assert failed_result["reason_code"] == "S2_T11_FAILED"
+
+
+def test_s2_t11_pass_requires_full_separate_hashed_evidence(tmp_path: Path) -> None:
+    passed = _path_receipt_payload("PASS")
+    _write_path_receipt(tmp_path, passed)
+    result = _stage2_task_projection(tmp_path)
+
+    assert result["status"] == "PASS"
+    assert result["full_output_complete"] is True
+    assert result["validation_status"] == "PASS"
+    assert all(result["checks"].values())
+
+
+def test_s2_t11_malformed_symlink_and_conflicting_chain_fail_closed(tmp_path: Path) -> None:
+    directory = tmp_path / "task-evidence/S2-T11"
+    _write(directory / "broken.json", "not-json")
+    assert _stage2_task_projection(tmp_path)["status"] == "EVIDENCE_INVALID"
+
+    symlink_root = tmp_path / "symlink"
+    target = tmp_path / "target"
+    target.mkdir()
+    link = symlink_root / "task-evidence/S2-T11"
+    link.parent.mkdir(parents=True)
+    link.symlink_to(target, target_is_directory=True)
+    assert _stage2_task_projection(symlink_root)["status"] == "EVIDENCE_INVALID"
+
+    conflict_root = tmp_path / "conflict"
+    first = _path_receipt_payload("IN_PROGRESS")
+    _write_path_receipt(conflict_root, first)
+    second = _path_receipt_payload("FAILED", sequence=1, previous="9" * 64)
+    _write_path_receipt(conflict_root, second)
+    assert _stage2_task_projection(conflict_root)["status"] == "EVIDENCE_INVALID"

@@ -131,6 +131,7 @@ rules:
   - S0-T04
   - S2-T09
   - S2-T10
+  - S2-T11
   - S2-T20
   implementation_paths:
   - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/ (PLANNED)
@@ -143,6 +144,11 @@ rules:
     tests: tests/research/stage_2/episodes/identity/
     validation: docs/development/validations/stage_2/S2-T09.md
     state: PASSED
+  s2_t11_delivery:
+    implementation: src/era100x/research/stage_2/paths/extraction/
+    tests: tests/research/stage_2/paths/extraction/
+    validation: docs/development/validations/stage_2/S2-T11.md
+    state: CAPABILITY_PASS_FULL_OUTPUT_BLOCKED
   state: PLANNED
 - rule_id: FILL-FIRST-NONZERO-PROTECT
   rule_status: FROZEN
@@ -202,14 +208,17 @@ rules:
   - S1-T12
   - S1-T14
   - S1-T15
+  - S2-T11
   - S5-T01
   implementation_paths:
   - src/era100x/data/evidence/, tests/data/evidence/, artifacts/manifests/stage_1/ (PLANNED Stage 1 boundary)
   - artifacts/reports/stage_2/ (PLANNED Stage 2 deterministic evidence reporting boundary)
+  - src/era100x/research/stage_2/paths/extraction/ (S2-T11 IMPLEMENTED fixture capability)
   - src/forward/, tests/forward/, artifacts/manifests/ (PLANNED Stage 5 forward fields)
   test_paths:
   - tests/data/evidence/ (PLANNED); UT-DATA-013
   - docs/development/validations/stage_2/ (PLANNED historical field and illustration/evidence isolation review)
+  - tests/research/stage_2/paths/extraction/ (S2-T11 TESTED)
   - tests/stage_5/ (PLANNED forward regression)
   validation_paths:
   - docs/development/validations/stage_5/ (PLANNED)
@@ -266,12 +275,15 @@ rules:
   - S2-T01
   - S2-T07
   - S2-T08
+  - S2-T11
   - S2-T20
   implementation_paths:
   - src/era100x/data/readers/, src/era100x/data/aggregate/, tests/data/ (PLANNED Stage 1 input boundary)
   - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/gates/ (PLANNED Stage 2 behavior separation)
+  - src/era100x/research/stage_2/paths/extraction/ (S2-T11 IMPLEMENTED historical-only path boundary)
   test_paths:
   - tests/research/stage_2/contracts/, tests/research/stage_2/gates/ (PLANNED); T-EVT-002
+  - tests/research/stage_2/paths/extraction/ (S2-T11 TESTED)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   stage_1_delivery:
@@ -282,6 +294,11 @@ rules:
     implementation_paths: [src/era100x/data/readers/contract_price.py, src/era100x/data/aggregate/bars.py, src/era100x/data/evidence/historical.py]
     test_paths: [tests/data/readers/test_contract_price_reader.py, tests/data/aggregate/test_bars.py, tests/data/evidence/test_historical_boundary.py]
     validation_path: docs/development/validations/stage_1_validation.md
+  s2_t11_delivery:
+    implementation: src/era100x/research/stage_2/paths/extraction/
+    tests: tests/research/stage_2/paths/extraction/
+    validation: docs/development/validations/stage_2/S2-T11.md
+    state: CAPABILITY_PASS_FULL_OUTPUT_BLOCKED
   state: PLANNED
 - rule_id: RESEARCH-H3-CONDITIONAL-ROUND-PROB
   rule_status: FROZEN
@@ -587,11 +604,14 @@ rules:
   - S0-T10
   - S2-T09
   - S2-T10
+  - S2-T11
   - S2-T20
   implementation_paths:
   - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/ (PLANNED)
+  - src/era100x/research/stage_2/paths/extraction/ (S2-T11 read-only episode lineage)
   test_paths:
   - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); FI-14
+  - tests/research/stage_2/paths/extraction/ (S2-T11 immutable lineage regression)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   state: PLANNED
@@ -673,11 +693,14 @@ rules:
   - S0-T10
   - S2-T09
   - S2-T10
+  - S2-T11
   - S2-T20
   implementation_paths:
   - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/ (PLANNED)
+  - src/era100x/research/stage_2/paths/extraction/ (S2-T11 strategy-independent lineage)
   test_paths:
   - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); UT-EVT-011
+  - tests/research/stage_2/paths/extraction/ (S2-T11 lineage regression)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   state: PLANNED
@@ -710,11 +733,14 @@ rules:
   - S2-T07
   - S2-T08
   - S2-T10
+  - S2-T11
   - S2-T20
   implementation_paths:
   - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/gates/, src/era100x/research/stage_2/pipelines/candidates/ (PLANNED)
+  - src/era100x/research/stage_2/paths/extraction/ (S2-T11 IMPLEMENTED no-fabrication boundary)
   test_paths:
   - tests/research/stage_2/ (PLANNED); UT-DATA-013
+  - tests/research/stage_2/paths/extraction/ (S2-T11 TESTED)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   stage_1_delivery:
@@ -1173,10 +1199,13 @@ rules:
   - S2-T05
   - S2-T06
   - S2-T09
+  - S2-T11
   implementation_paths:
   - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/episodes/ (PLANNED)
+  - src/era100x/research/stage_2/paths/extraction/ (S2-T11 MarketEpisode lineage input)
   test_paths:
   - tests/research/stage_2/contracts/, tests/research/stage_2/episodes/ (PLANNED)
+  - tests/research/stage_2/paths/extraction/ (S2-T11 TESTED)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   state: PLANNED
@@ -2219,10 +2248,13 @@ rules:
     plan_status: APPROVED
     approved_by: Muce
     approved_at: '2026-07-16T14:33:04+08:00'
-    approved_tasks: [S2-T19, S2-T01, S2-T02, S2-T03, S2-T04, S2-T05, S2-T06, S2-T07, S2-T08, S2-T09, S2-T10]
+    approved_tasks: [S2-T19, S2-T01, S2-T02, S2-T03, S2-T04, S2-T05, S2-T06, S2-T07, S2-T08, S2-T09, S2-T10, S2-T11]
     approved_task_version: '1.3'
     s2_t09_identity_task_version: '1.4'
-    draft_tasks: [S2-T11, S2-T12, S2-T13, S2-T14, S2-T15, S2-T16, S2-T17, S2-T18, S2-T20]
+    s2_t11_task_version: '1.2'
+    s2_t11_status: CAPABILITY_PASS_FULL_OUTPUT_BLOCKED_TASK_NO_GO
+    s2_t11_ui_change_request: docs/development/changes/CR-2026-020.md
+    draft_tasks: [S2-T12, S2-T13, S2-T14, S2-T15, S2-T16, S2-T17, S2-T18, S2-T20]
     oq_s2_004_status: RESOLVED
     decision_ref: docs/development/decisions/ADR-S2-004-primary-research-definition.md
     event_construction_decision_ref: docs/development/decisions/ADR-S2-005-event-construction-baseline.md

@@ -17,6 +17,7 @@ from urllib.parse import urlsplit
 
 from era100x.research.stage_2.runtime_v2.checkpoint import SAFE_RUN_ID
 from era100x.research.stage_2.runtime_v2.progress import read_progress_status
+from era100x.research.stage_2.paths.extraction import read_path_extraction_receipts
 
 DEFAULT_ROOT = Path("/Volumes/FuckingLife/era100x_stage2")
 
@@ -200,6 +201,78 @@ def _acceptance_projection(status: dict[str, Any], observability: dict[str, Any]
     }
 
 
+def _stage2_task_projection(stage2_root: Path) -> dict[str, Any]:
+    """Read generic append-only task receipts; malformed evidence fails closed."""
+
+    receipt_directory = stage2_root / "task-evidence" / "S2-T11"
+    try:
+        receipts = read_path_extraction_receipts(receipt_directory)
+    except (OSError, ValueError) as exc:
+        return {
+            "task_id": "S2-T11",
+            "task_version": "1.2",
+            "status": "EVIDENCE_INVALID",
+            "reason_code": "S2_T11_RECEIPT_CHAIN_INVALID",
+            "reason": str(exc),
+            "btc_done": 0,
+            "btc_total": 0,
+            "eth_done": 0,
+            "eth_total": 0,
+            "checks": {},
+            "receipt_count": 0,
+        }
+    if not receipts:
+        return {
+            "task_id": "S2-T11",
+            "task_version": "1.2",
+            "status": "NOT_STARTED",
+            "reason_code": "S2_T11_RECEIPT_MISSING",
+            "btc_done": 0,
+            "btc_total": 0,
+            "eth_done": 0,
+            "eth_total": 0,
+            "checks": {},
+            "receipt_count": 0,
+        }
+    latest = receipts[-1]
+    pass_checks = {
+        "receipt_declares_pass": latest.status == "PASS",
+        "full_output_complete": latest.full_output_complete,
+        "validation_pass": latest.validation_status == "PASS",
+        "validation_hash_present": latest.validation_hash is not None,
+        "btc_eth_inputs_separate": set(latest.input_hashes) == {"BTCUSDT", "ETHUSDT"},
+        "btc_eth_outputs_separate": set(latest.output_hashes) == {"BTCUSDT", "ETHUSDT"},
+        "btc_complete": latest.btc_episodes_total > 0
+        and latest.btc_episodes_done == latest.btc_episodes_total,
+        "eth_complete": latest.eth_episodes_total > 0
+        and latest.eth_episodes_done == latest.eth_episodes_total,
+        "registered_checks_pass": bool(latest.acceptance_checks)
+        and all(latest.acceptance_checks.values()),
+    }
+    status: str = latest.status
+    if status == "PASS" and not all(pass_checks.values()):
+        status = "EVIDENCE_INVALID"
+    return {
+        "task_id": latest.task_id,
+        "task_version": latest.task_version,
+        "status": status,
+        "reason_code": latest.reason_code,
+        "btc_done": latest.btc_episodes_done,
+        "btc_total": latest.btc_episodes_total,
+        "eth_done": latest.eth_episodes_done,
+        "eth_total": latest.eth_episodes_total,
+        "checks": pass_checks,
+        "acceptance_checks": latest.acceptance_checks,
+        "full_output_complete": latest.full_output_complete,
+        "validation_status": latest.validation_status,
+        "receipt_hash": latest.receipt_hash,
+        "code_commit": latest.code_commit,
+        "validation_path": latest.validation_path,
+        "receipt_count": len(receipts),
+        "updated_at": latest.created_at,
+    }
+
+
 class ProgressHandler(BaseHTTPRequestHandler):
     server: ProgressHTTPServer
 
@@ -212,6 +285,9 @@ class ProgressHandler(BaseHTTPRequestHandler):
                 payload = read_progress_status(self.server.run_root)
                 observability = _execution_observability(self.server.run_root)
                 observability["acceptance"] = _acceptance_projection(payload, observability)
+                observability["stage2_tasks"] = {
+                    "S2-T11": _stage2_task_projection(self.server.stage2_root)
+                }
                 payload["execution_observability"] = observability
                 self._reply_json(HTTPStatus.OK, payload)
             except (OSError, ValueError) as exc:
@@ -251,9 +327,10 @@ class ProgressHandler(BaseHTTPRequestHandler):
 
 
 class ProgressHTTPServer(ThreadingHTTPServer):
-    def __init__(self, address: tuple[str, int], run_root: Path) -> None:
+    def __init__(self, address: tuple[str, int], run_root: Path, stage2_root: Path) -> None:
         super().__init__(address, ProgressHandler)
         self.run_root = run_root
+        self.stage2_root = stage2_root
 
 
 def parser() -> argparse.ArgumentParser:
@@ -274,7 +351,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     approved = args.root.resolve()
     if not run_root.is_relative_to(approved) or not run_root.is_dir():
         raise SystemExit(f"run directory is unavailable: {run_root}")
-    server = ProgressHTTPServer((args.bind, args.port), run_root)
+    server = ProgressHTTPServer((args.bind, args.port), run_root, approved)
     url = f"http://{args.bind}:{args.port}"
     if args.open_browser:
         threading.Timer(0.3, webbrowser.open, args=(url,)).start()

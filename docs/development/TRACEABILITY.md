@@ -108,10 +108,12 @@ Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～
 
 ## Stage 2 Plan v1.2 APPROVED Coverage
 
-Stage 2 is `IN_PROGRESS / S2_T10_AND_GROUP_1_PASSED`. S2-T19 and S2-T01～S2-T10 are PASSED;
+Stage 2 is `IN_PROGRESS / S2_T10_AND_GROUP_1_PASSED / S2_T11_CAPABILITY_PASS`. S2-T19 and S2-T01～S2-T10 are PASSED;
 the fixed Runtime V2 Run is published with Quality/Verify PASS and the exact Run-A comparison
-matches 61,776/61,776 Group-1 partitions with zero differences. S2-T11 through S2-T20 remain
-`DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
+matches 61,776/61,776 Group-1 partitions with zero differences. S2-T11 v1.2 is human-approved
+and its fixture capability is implemented, but formal full output is blocked by its own unfrozen
+CLI boundary and the Task remains NO-GO. S2-T12 through S2-T20 remain `DRAFT_NOT_APPROVED`, and
+Stage 3 remains locked.
 [CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
 approve a bounded hybrid transition without changing Stage 1, preregistration, config, parameters,
 candidate semantics or the Plan v1.2 DAG. Formal Run A is now PUBLISHED with Quality PASS,
@@ -181,7 +183,8 @@ run is immutable; its sealed objects require a new-run adoption Manifest and ful
 | Cross-implementation determinism and future Feature Snapshot Tier F/E/D protocol | S2-T10 v1.14; future separately approved Tasks | CR-2026-008/019; exact full Run-A/Run-B comparison plus future approval boundary | VALIDATED — 61,776/61,776 MATCH; 0 DIFFERENCES |
 | Compare algorithm-authority production wiring | S2-T10 v1.14 | CR-2026-019; one-line production correction; compare-only Authority `e3688ca21a987849388cb9e694929033aac51ed245d1f0eb5337c43f554eb740` | IMPLEMENTED / 431 TESTS PASS / EXACT COMPARE PASS |
 | Group-1 small-sample integration | S2-T01～S2-T09 | fixture chain plus six controlled real windows; locked execution Manifest | PASSED |
-| Historical path metrics and labels | S2-T11, S2-T12, S2-T13, S2-T14 | v2 ordering, MFE/MAE/time, first passage, AMBIGUOUS bounds | DRAFT_NOT_APPROVED |
+| Historical path metrics and labels | S2-T12, S2-T13, S2-T14 | MFE/MAE/time, first passage, AMBIGUOUS bounds | DRAFT_NOT_APPROVED |
+| Historical H1/H2 path extraction capability | S2-T11 v1.2 | `paths/extraction`; UTC windows, v2 order, canonical identity, conflict/gap/lineage and deterministic receipt tests; `validations/stage_2/S2-T11.md` | CAPABILITY PASS / FULL OUTPUT BLOCKED / TASK NO-GO |
 | Conditional baseline and placebo | S2-T15, S2-T16 | matched baseline/placebo with frozen relaxation and seeds | DRAFT_NOT_APPROVED |
 | Cluster ownership and cluster bootstrap CI | S2-T17, S2-T18 | BTC/ETH-separated clustering and cluster-level resampling | DRAFT_NOT_APPROVED |
 | Stage 2 research gate and deterministic evidence-card reporting | S2-T20 | Stage validation and human Go/No-Go; no automatic Stage 3 | DRAFT_NOT_APPROVED |
