@@ -18,7 +18,7 @@ class PathExtractionReceipt(StrictEventModel):
     schema_name: Literal["stage2-path-extraction-receipt"] = "stage2-path-extraction-receipt"
     schema_version: Literal["1.0"] = "1.0"
     task_id: Literal["S2-T11"] = "S2-T11"
-    task_version: Literal["1.2"] = "1.2"
+    task_version: Literal["1.2", "1.3"] = "1.3"
     code_commit: str = Field(min_length=7, max_length=40)
     sequence: int = Field(ge=0)
     previous_receipt_hash: str | None = Field(default=None, pattern=SHA256_PATTERN)

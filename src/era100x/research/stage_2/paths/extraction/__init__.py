@@ -13,6 +13,12 @@ from .receipts import (
     publish_path_extraction_receipt,
     read_path_extraction_receipts,
 )
+from .full_run import (
+    create_preflight_manifest,
+    execute_run,
+    select_h2_row_groups,
+    verify_run,
+)
 
 __all__ = [
     "ExtractedHistoricalPath",
@@ -24,4 +30,8 @@ __all__ = [
     "extract_historical_path",
     "publish_path_extraction_receipt",
     "read_path_extraction_receipts",
+    "create_preflight_manifest",
+    "execute_run",
+    "select_h2_row_groups",
+    "verify_run",
 ]
