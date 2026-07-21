@@ -3,8 +3,8 @@
 ```text
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
-Current Task: S2-T10
-Status: CR_2026_017_APPROVED_READY_FOR_FINAL_CODE_GATE
+Current Task: NONE — awaiting separately approved Stage 2 Task
+Status: S2_T10_AND_GROUP_1_PASSED
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
@@ -110,3 +110,17 @@ repository-wide regression. Muce separately approved append-only disablement, th
 two byte-identical Authority freezes and exactly one successor on 2026-07-20. No successor has yet
 been created under that approval. S2-T10 and Group 1 remain IN_PROGRESS; S2-T11～S2-T20 and Stage 3
 remain locked.
+
+Muce subsequently approved the CR-2026-018 fixed-Run release-only path and CR-2026-019
+comparison-only correction. Fixed Run
+`stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04` is
+`PUBLISHED_WITH_RESOURCE_ANOMALIES` with Quality PASS and independent Verify PASS over 6 Tasks,
+80,784 partitions, 77,265 fragments, 208 objects and 208 Seals. The 27 resource observations are
+non-terminal; UNKNOWN, error and identity-conflict counts are zero.
+
+CR-2026-019 then executed only Exact Compare and matched Run A and Run B across all 61,776 Group-1
+partitions: 61,776 daily row Hash matches, zero missing, zero extra, zero differences and equal
+global distributions. Comparison report SHA-256 is
+`69298e5d05161223b354e1b60a65ef032e9370e4017da487e35657264af8e9f0`. S2-T10 v1.14 and Group 1
+are PASSED. No later Task was started: S2-T11 through S2-T20 remain `DRAFT_NOT_APPROVED`, and
+Stage 3 remains locked.

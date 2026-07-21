@@ -104,7 +104,17 @@ def _execution_observability(run_root: Path) -> dict[str, Any]:
                     resource_anomalies[task_id] = count
     preflight = _safe_json_object(run_root / "reports/release-only-preflight-cr-2026-018.json")
     publication = _safe_json_object(run_root / "reports/v2-publication-record.json")
+    quality = _safe_json_object(run_root / "reports/v2-quality-report.json")
+    compare_authority = _safe_json_object(
+        run_root / "reports/compare-only-authority-cr-2026-019.json"
+    )
     comparison = _safe_json_object(run_root / "reports/v2-run-a-comparison.json")
+    comparison_report = comparison.get("report")
+    if not isinstance(comparison_report, dict):
+        comparison_report = {}
+    differences = comparison_report.get("differences")
+    missing = comparison_report.get("missing_in_v2")
+    extra = comparison_report.get("extra_in_v2")
     return {
         "successor_created": not bool(amendment),
         "release_only": bool(amendment),
@@ -128,9 +138,65 @@ def _execution_observability(run_root: Path) -> dict[str, Any]:
         "resource_anomaly_count": sum(resource_anomalies.values()),
         "publication_record_present": bool(publication),
         "publication_state": publication.get("publication_state"),
+        "quality_report_present": bool(quality),
+        "quality_status": quality.get("quality_status"),
+        "compare_only_status": compare_authority.get("status"),
+        "compare_only_allowed_commands": compare_authority.get("allowed_commands", []),
         "comparison_report_present": bool(comparison),
-        "matched_partition_count": comparison.get("matched_partition_count"),
-        "difference_count": comparison.get("difference_count"),
+        "comparison_status": comparison_report.get("status"),
+        "matched_partition_count": comparison_report.get("matched_partition_count"),
+        "daily_row_hash_match_count": comparison_report.get("daily_row_hash_match_count"),
+        "difference_count": len(differences) if isinstance(differences, list) else None,
+        "missing_partition_count": len(missing) if isinstance(missing, list) else None,
+        "extra_partition_count": len(extra) if isinstance(extra, list) else None,
+        "global_distributions_equal": comparison_report.get("global_distributions_equal"),
+    }
+
+
+def _acceptance_projection(status: dict[str, Any], observability: dict[str, Any]) -> dict[str, Any]:
+    """Derive S2-T10 acceptance from live append-only evidence, never UI constants."""
+
+    subflows = {
+        item.get("name"): item.get("status")
+        for item in status.get("pipeline_subflows", [])
+        if isinstance(item, dict) and isinstance(item.get("name"), str)
+    }
+    checks = {
+        "all_partitions_complete": status.get("overall_logical_partitions_done") == 80_784,
+        "all_task_receipts_present": all(observability.get("task_receipts", {}).values()),
+        "publication_pass": observability.get("publication_state")
+        in {"PUBLISHED", "PUBLISHED_WITH_RESOURCE_ANOMALIES"},
+        "quality_pass": observability.get("quality_status") == "PASS",
+        "release_subflow_pass": subflows.get("RELEASE") == "PASS",
+        "verify_subflow_pass": subflows.get("VERIFY") == "PASS",
+        "compare_subflow_pass": subflows.get("RUN_A_RUN_B_COMPARE") == "PASS",
+        "exact_partition_match": observability.get("matched_partition_count") == 61_776,
+        "all_daily_hashes_match": observability.get("daily_row_hash_match_count") == 61_776,
+        "no_missing_partitions": observability.get("missing_partition_count") == 0,
+        "no_extra_partitions": observability.get("extra_partition_count") == 0,
+        "no_differences": observability.get("difference_count") == 0,
+        "global_distributions_equal": observability.get("global_distributions_equal") is True,
+    }
+    comparison_checks = (
+        "exact_partition_match",
+        "all_daily_hashes_match",
+        "no_missing_partitions",
+        "no_extra_partitions",
+        "no_differences",
+        "global_distributions_equal",
+    )
+    failed = any(
+        subflows.get(name) == "FAILED" for name in ("RELEASE", "VERIFY", "RUN_A_RUN_B_COMPARE")
+    ) or (
+        observability.get("comparison_report_present") is True
+        and not all(checks[name] for name in comparison_checks)
+    )
+    task_status = "PASS" if all(checks.values()) else "FAILED" if failed else "IN_PROGRESS"
+    return {
+        "s2_t10_status": task_status,
+        "group1_status": task_status,
+        "stage3_status": "LOCKED",
+        "checks": checks,
     }
 
 
@@ -144,7 +210,9 @@ class ProgressHandler(BaseHTTPRequestHandler):
         elif path == "/api/status":
             try:
                 payload = read_progress_status(self.server.run_root)
-                payload["execution_observability"] = _execution_observability(self.server.run_root)
+                observability = _execution_observability(self.server.run_root)
+                observability["acceptance"] = _acceptance_projection(payload, observability)
+                payload["execution_observability"] = observability
                 self._reply_json(HTTPStatus.OK, payload)
             except (OSError, ValueError) as exc:
                 self._reply_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})

@@ -34,7 +34,7 @@
     }
     * { box-sizing: border-box; }
     html { min-width: 320px; background: var(--bg); }
-    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font: 14px/1.45 var(--sans); -webkit-font-smoothing: antialiased; }
+    body { margin: 0; min-height: 100vh; overflow-x: hidden; background: var(--bg); color: var(--text); font: 14px/1.45 var(--sans); -webkit-font-smoothing: antialiased; }
     button { font: inherit; }
     button:focus-visible, a:focus-visible { outline: 2px solid #82b5ff; outline-offset: 3px; }
     .app { min-height: 100vh; padding: 0 16px 16px; }
@@ -189,14 +189,17 @@
     .checklist li { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line-soft); }
     .checklist i { color: var(--amber); margin-top: 3px; }
     .dialog-foot { padding: 14px 20px 20px; display: flex; justify-content: flex-end; }
-    .drawer { position: fixed; z-index: 20; top: 0; right: 0; width: min(460px, 100vw); height: 100vh; background: #081624; border-left: 1px solid var(--line); box-shadow: -24px 0 80px #0009; transform: translateX(102%); transition: transform .25s ease; padding: 18px; overflow: auto; }
-    .drawer.open { transform: translateX(0); }
+    .drawer { display: none; position: fixed; z-index: 20; top: 0; right: 0; width: min(460px, 100vw); height: 100vh; background: #081624; border-left: 1px solid var(--line); box-shadow: -24px 0 80px #0009; padding: 18px; overflow: auto; }
+    .drawer.open { display: block; }
     .drawer-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
     .drawer-head h2 { margin: 0; font-size: 19px; }
     .evidence-block { margin-top: 18px; }
     .evidence-block h3 { color: #c8d5e3; font-size: 14px; }
     .evidence-block p { color: var(--muted); }
     .evidence-block code { display: block; color: #8db7e9; background: #06111f; border: 1px solid var(--line-soft); border-radius: 8px; padding: 10px; overflow-wrap: anywhere; font: 11px/1.5 var(--mono); }
+    @media (max-width: 1400px) {
+      .process-note { display: none; }
+    }
     @media (max-width: 1180px) {
       .brand { min-width: auto; }
       .brand-copy { display: none; }
@@ -256,17 +259,17 @@
       <div class="title">ERA / Stage 2 · Event Research</div>
       <div class="top-status">
         <div class="tag approved">Plan v1.2<b>APPROVED</b></div>
-        <div class="tag progress">S2-T10 v1.13<b>IN PROGRESS</b></div>
-        <div id="gateChip" class="gate-chip">RELEASE-ONLY</div>
+        <div id="taskProgressTag" class="tag progress">S2-T10 v1.14<b>CHECKING</b></div>
+        <div id="gateChip" class="gate-chip">LOADING</div>
       </div>
-      <div id="processNote" class="process-note">CR-2026-018 · 旧 Run 仅发布</div>
+      <div id="processNote" class="process-note">正在读取 append-only 证据</div>
     </header>
 
     <div class="snapshot"><span>治理快照：2026-07-20</span><span id="updatedAt">数据更新：—</span></div>
 
     <section class="layout">
       <aside class="panel task-rail" aria-label="阶段任务轨道">
-        <h2 class="panel-title"><span>阶段任务轨道</span><span class="passed-count">9 / 10 PASSED</span></h2>
+        <h2 class="panel-title"><span>阶段任务轨道</span><span id="passedCount" class="passed-count">9 / 10 PASSED</span></h2>
         <ol class="task-list">
           <li class="task-item"><button class="task-button" data-task="Manifest：冻结预注册输入、输出布局与 Group-1 执行边界。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">S2-T19</span><span class="task-name">Manifest（前置）</span><span class="task-state">PASSED</span></button></li>
           <li class="task-item"><button class="task-button" data-task="Contracts：Stage 2 输入边界、注册表与 CanonicalKeyLevel 契约。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">01 S2-T01</span><span class="task-name">Contracts</span><span class="task-state">PASSED</span></button></li>
@@ -278,7 +281,7 @@
           <li class="task-item"><button class="task-button" data-task="Price G0–G3：数据、上下文、结构与价格启动门。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">07a S2-T07</span><span class="task-name">Price G0–G3</span><span class="task-state">PASSED</span></button></li>
           <li class="task-item branch"><button class="task-button" data-task="Flow G4：基于 Stage 1 H2 Trades 的流量研究门，与 PRICE 路径隔离。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">07b S2-T08</span><span class="task-name">Flow G4（并行）</span><span class="task-state">PASSED</span></button></li>
           <li class="task-item"><button class="task-button" data-task="MarketEpisode：冻结身份、去重、一次消费与 re-arm 规则。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">08 S2-T09</span><span class="task-name">MarketEpisode（汇聚）</span><span class="task-state">PASSED</span></button></li>
-          <li class="task-item active"><button class="task-button" aria-current="step" data-task="Full Generation：BTC/ETH × PRICE/FLOW 全量、可恢复、append-only 生成与零容差比较。"><span class="node">10</span><span class="task-code">S2-T10</span><span class="task-name">Full Generation</span><span class="task-state">IN PROGRESS</span><span class="active-dot"></span></button></li>
+          <li id="s2t10Item" class="task-item active"><button id="s2t10Button" class="task-button" aria-current="step" data-task="Full Generation：由发布、验证和 61,776 分区零容差比较证据自动判定。"><span id="s2t10Node" class="node">10</span><span class="task-code">S2-T10</span><span class="task-name">Full Generation</span><span id="s2t10State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
         </ol>
         <div id="taskHint" class="task-hint">选择节点查看职责。</div>
       </aside>
@@ -287,28 +290,28 @@
         <h2 class="panel-title"><span>S2-T10 执行路线（确定性）</span><span class="passed-count" style="color:#6b9ee8">历史密封证据</span></h2>
         <div class="execution">
           <ol class="step-track" aria-label="Runtime V2 确定性执行路线">
-            <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">Authority<br>Amendment</span></li>
-            <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">Foundation<br>BTC</span></li>
-            <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">Foundation<br>ETH</span></li>
-            <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">BTC<br>Price</span></li>
-            <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">BTC<br>Flow</span></li>
-            <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">ETH<br>Price</span></li>
-            <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">ETH<br>Flow</span></li>
-            <li class="step complete"><span class="step-circle"><i class="fa-solid fa-check"></i></span><span class="step-label">208 Seals<br>Accepted</span></li>
-            <li class="step"><span class="step-circle">9</span><span class="step-label">Release</span></li>
-            <li class="step"><span class="step-circle">10</span><span class="step-label">Verify</span></li>
-            <li class="step"><span class="step-circle">11</span><span class="step-label">Exact<br>Compare</span></li>
+            <li id="authorityStep" class="step"><span class="step-circle">1</span><span class="step-label">Authority<br>Amendment</span></li>
+            <li id="foundationBtcStep" class="step"><span class="step-circle">2</span><span class="step-label">Foundation<br>BTC</span></li>
+            <li id="foundationEthStep" class="step"><span class="step-circle">3</span><span class="step-label">Foundation<br>ETH</span></li>
+            <li id="btcPriceStep" class="step"><span class="step-circle">4</span><span class="step-label">BTC<br>Price</span></li>
+            <li id="btcFlowStep" class="step"><span class="step-circle">5</span><span class="step-label">BTC<br>Flow</span></li>
+            <li id="ethPriceStep" class="step"><span class="step-circle">6</span><span class="step-label">ETH<br>Price</span></li>
+            <li id="ethFlowStep" class="step"><span class="step-circle">7</span><span class="step-label">ETH<br>Flow</span></li>
+            <li id="sealedStep" class="step"><span class="step-circle">8</span><span class="step-label">208 Seals<br>Accepted</span></li>
+            <li id="releaseStep" class="step"><span class="step-circle">9</span><span class="step-label">Release</span></li>
+            <li id="verifyStep" class="step"><span class="step-circle">10</span><span class="step-label">Verify</span></li>
+            <li id="compareStep" class="step"><span class="step-circle">11</span><span class="step-label">Exact<br>Compare</span></li>
           </ol>
-          <div id="trackNote" class="track-note">CR-2026-018：复用旧 Run 的 208 个密封结果，不 resume、不重新打包，只执行发布、验证和精确比较。</div>
+          <div id="trackNote" class="track-note">正在根据固定 Run 的 append-only 证据自动识别各节点状态。</div>
         </div>
 
         <section class="live-flow" aria-labelledby="liveFlowTitle">
-          <div class="live-flow-head"><strong id="liveFlowTitle">固定旧 Run · Release-only 实时流水线</strong><span id="liveFlowSummary">正在读取 append-only 证据…</span></div>
+          <div class="live-flow-head"><strong id="liveFlowTitle">固定旧 Run · 自动识别流水线</strong><span id="liveFlowSummary">正在读取 append-only 证据…</span></div>
           <div id="runtimeFlowGrid" class="flow-grid" aria-live="polite"></div>
         </section>
 
         <section class="authority">
-          <div class="subhead">CR-2026-018 最小恢复授权链</div>
+          <div class="subhead">CR-2026-018 / 019 最小恢复与比较授权链</div>
           <div class="authority-flow">
             <div class="auth-step current"><span class="auth-icon"><i class="fa-solid fa-shield-halved"></i></span><span><strong>最终代码门</strong><small id="authorityCodeGate">待运行</small></span></div>
             <div class="auth-arrow"><i class="fa-solid fa-arrow-right"></i></div>
@@ -370,21 +373,21 @@
     </section>
 
     <footer class="decision">
-      <section class="locked"><i class="fa-solid fa-lock"></i><div><strong>Stage 3 LOCKED</strong><b>Group 1 NOT PASSED</b><small>Release、Verify 和 61,776 个分区精确比较完成前，不得进入下一组或 Stage 3。</small></div></section>
-      <section class="conclusion"><div><h3>当前结论</h3><p id="currentConclusion">正在读取固定旧 Run 的 release-only 证据。</p></div><div class="next"><h3 id="nextTitle">下一步（当前唯一授权动作）</h3><p id="nextAction"><b>物理预检 208 个密封成果</b>，通过后执行 Release。</p><small>本页面只读，只展示自动执行流程，不会触发恢复、打包、停止或清理。</small></div></section>
+      <section class="locked"><i class="fa-solid fa-lock"></i><div><strong>Stage 3 LOCKED</strong><b id="group1Status">Group 1 CHECKING</b><small id="stageLockNote">正在自动核对 S2-T10 验收证据；Stage 3 始终不自动解锁。</small></div></section>
+      <section class="conclusion"><div><h3>当前结论</h3><p id="currentConclusion">正在读取固定 Run 的发布、验证与比较证据。</p></div><div class="next"><h3 id="nextTitle">下一步</h3><p id="nextAction"><b>只读等待自动判定</b>。</p><small>本页面只读，不会触发恢复、打包、发布、停止或清理。</small></div></section>
       <section class="actions"><button id="evidenceBtn" class="action" type="button"><i class="fa-solid fa-file-shield"></i> 查看证据</button><button id="codeGateBtn" class="action primary" type="button"><i class="fa-solid fa-route"></i> 查看执行说明</button></section>
     </footer>
   </main>
 
   <dialog id="gateDialog">
-    <div class="dialog-head"><h2>CR-2026-018 · Release-only 执行说明</h2><button class="icon-button" data-close-dialog type="button" aria-label="关闭"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="dialog-head"><h2>CR-2026-018 / 019 · 完成证据</h2><button class="icon-button" data-close-dialog type="button" aria-label="关闭"><i class="fa-solid fa-xmark"></i></button></div>
     <div class="dialog-body">
-      <p>此监控页只展示 append-only 证据。后台受控流程直接接收旧 Run 的 208 个密封成果，不 resume、不重新打包，只推进发布、验证与精确比较。</p>
+      <p>此监控页每 5 秒自动读取 append-only 证据，并据此判定 S2-T10 与 Group 1；HTML 不预置最终 PASS。</p>
       <ul class="checklist">
-        <li><i class="fa-regular fa-circle"></i><span>停用当前 successor，现场保留且禁止复用或删除</span></li>
-        <li><i class="fa-regular fa-circle"></i><span>物理核验旧 Run 的 208 个对象、208 个 Seal 与 80,784 个分区</span></li>
-        <li><i class="fa-regular fa-circle"></i><span>Release、Verify 与 61,776 个 Group-1 分区 Exact Compare</span></li>
-        <li><i class="fa-regular fa-circle"></i><span>全链完成后仍保持 Stage 3 LOCKED，等待治理评审</span></li>
+        <li><i class="fa-regular fa-circle"></i><span>读取 successor 停用证据及复用、删除边界</span></li>
+        <li><i class="fa-regular fa-circle"></i><span>读取 208 个对象、208 个 Seal 与 80,784 个分区证据</span></li>
+        <li><i class="fa-regular fa-circle"></i><span>读取 Release、Verify 与 61,776 分区 Exact Compare 结果</span></li>
+        <li><i class="fa-solid fa-lock"></i><span>Stage 3 继续 LOCKED，后续 Stage 2 Task 等待单独批准</span></li>
       </ul>
     </div>
     <div class="dialog-foot"><button class="action" data-close-dialog type="button">我知道了</button></div>
@@ -396,8 +399,8 @@
     <section class="evidence-block"><h3>Terminal historical Run B</h3><p>80,784 V2 partitions sealed; FAILED_INTEGRITY at Final Packing; UNPUBLISHED; cannot resume.</p><code>stage2-g1-v2-b-20260719T141315Z-bf8c6a186f66</code></section>
     <section class="evidence-block"><h3>Fixed release-only Run B</h3><p>GROUP1_COMPLETE · 80,784 partitions · 208 objects · 208 Seals · no repacking.</p><code>stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04</code></section>
     <section class="evidence-block"><h3>Superseded successor</h3><p>INTERRUPTED_RECOVERABLE · preserved in place · resume/reuse/delete all forbidden.</p><code>stage2-g1-v2-b-20260720T143327Z-de804cf61e81</code></section>
-    <section class="evidence-block"><h3>Governance authority</h3><p>CR-2026-018 permits only release, verify and exact compare against the fixed sealed input set.</p></section>
-    <section class="evidence-block"><h3>Current blocker</h3><p>CR-2026-019 is DRAFT / NOT APPROVED. Compare stopped before consuming the partition stream because the production call passed the Receipt marker as the comparator algorithm authority.</p></section>
+    <section class="evidence-block"><h3>Governance authority</h3><p>CR-2026-018 fixed the release-only input set; CR-2026-019 authorized only the corrected Exact Compare. All other mutations remained disabled.</p></section>
+    <section class="evidence-block"><h3>Exact comparison</h3><p id="comparisonEvidence">正在从 append-only 比较报告自动读取。</p></section>
   </aside>
 
   <script>
@@ -451,6 +454,12 @@
       const safeProgress = Math.max(0, Math.min(100, Number(progress) || 0));
       return `<article class="flow-card ${state}"><span class="flow-icon"><i class="fa-solid ${icon || stateIcon[state]}"></i></span><span><span class="flow-name">${escapeHtml(name)}</span><span class="flow-state">${stateLabel[state]}</span></span><span class="flow-detail">${escapeHtml(detail)}</span><span class="flow-bar"><span style="width:${safeProgress}%"></span></span></article>`;
     };
+    const setTrackStep = (id, state, ordinal) => {
+      const step = byId(id);
+      const circle = step.querySelector(".step-circle");
+      step.classList.toggle("complete", state === "pass");
+      circle.innerHTML = state === "pass" ? '<i class="fa-solid fa-check"></i>' : state === "failed" ? '<i class="fa-solid fa-xmark"></i>' : state === "running" ? '<i class="fa-solid fa-play"></i>' : String(ordinal);
+    };
 
     function renderRuntimeFlow(status) {
       const observability = status.execution_observability || {};
@@ -463,18 +472,20 @@
       const compare = subflowByName(status, "RUN_A_RUN_B_COMPARE");
       const foundationDone = Number(status.foundation_logical_partitions_done) || 0;
       const releaseOnly = Boolean(observability.release_only);
-      const authorityState = observability.release_only_status === "AUTHORIZED_RELEASE_ONLY" ? "pass" : "pending";
+      const compareOnly = observability.compare_only_status === "AUTHORIZED_COMPARE_ONLY";
+      const authorityState = observability.release_only_status === "AUTHORIZED_RELEASE_ONLY" && compareOnly ? "pass" : "pending";
       const preflightState = observability.release_only_preflight_status === "PASS" ? "pass" : authorityState === "pass" ? "running" : "pending";
       const rawReleaseState = normalizeState(release && release.status);
       const releaseState = observability.publication_record_present ? "pass" : releaseOnly && rawReleaseState === "failed" ? "pending" : rawReleaseState;
-      const compareState = observability.comparison_report_present ? "pass" : normalizeState(compare && compare.status);
+      const comparisonPassed = observability.comparison_report_present && observability.comparison_status === "PASS" && Number(observability.matched_partition_count) === 61776 && Number(observability.daily_row_hash_match_count) === 61776 && Number(observability.difference_count) === 0 && Number(observability.missing_partition_count) === 0 && Number(observability.extra_partition_count) === 0 && observability.global_distributions_equal === true;
+      const compareState = comparisonPassed ? "pass" : observability.comparison_report_present ? "failed" : normalizeState(compare && compare.status);
       const groupDetail = (label, partitions, taskId, sealed) => {
         if (sealed) return "组件已密封 · 等待任务收据";
         const anomalyCount = Number(anomalies[taskId]) || 0;
         return `${label} · ${partitions} 分区组件${anomalyCount ? ` · 资源告警 ${number(anomalyCount)}` : ""}`;
       };
       const flows = [
-        {name:"Release-only Authority", icon:"fa-file-shield", state:authorityState, detail:authorityState === "pass" ? "CR-2026-018 · 仅允许 release / verify / compare" : "等待追加式 Authority amendment", progress:authorityState === "pass" ? 100 : 0},
+        {name:"最小 Authority", icon:"fa-file-shield", state:authorityState, detail:authorityState === "pass" ? "CR018 固定发布 · CR019 仅允许 compare" : "等待追加式 Authority amendment", progress:authorityState === "pass" ? 100 : 0},
         {name:"Foundation · BTC", icon:"fa-database", state:receiptState(receipts, "foundation_btc", activeTask, "FOUNDATION:BTCUSDT"), detail:`${number(Math.min(foundationDone, 9504))} / 9,504 分区`, progress:100 * Math.min(foundationDone, 9504) / 9504},
         {name:"Foundation · ETH", icon:"fa-database", state:receiptState(receipts, "foundation_eth", activeTask, "FOUNDATION:ETHUSDT"), detail:`${number(Math.max(0, foundationDone - 9504))} / 9,504 分区`, progress:100 * Math.max(0, foundationDone - 9504) / 9504},
         {name:"208 个密封成果预检", icon:"fa-boxes-stacked", state:preflightState, detail:`${number(observability.sealed_object_count)} objects · ${number(observability.sealed_seal_count)} Seals · 不重新打包`, progress:preflightState === "pass" ? 100 : 0},
@@ -484,9 +495,22 @@
         {name:"Group 1 · ETH Flow", icon:"fa-water", state:componentState(receipts, components, "group1_eth_flow", activeTask, "GROUP1:ETHUSDT:V1_FLOW"), detail:groupDetail("V1_FLOW", "7,128", "GROUP1:ETHUSDT:V1_FLOW", components.group1_eth_flow && !receipts.group1_eth_flow), progress:receipts.group1_eth_flow ? 100 : 0},
         {name:"发布", icon:"fa-cloud-arrow-up", state:releaseState, detail:observability.publication_record_present ? "PUBLISHED · 原子发布记录已落盘" : escapeText(release && release.message), progress:releaseState === "pass" ? 100 : 0},
         {name:"验证", icon:"fa-shield-halved", state:normalizeState(verify && verify.status), detail:escapeText(verify && verify.message), progress:verify && verify.status === "PASS" ? 100 : 0},
-        {name:"精确比较", icon:"fa-code-compare", state:compareState, detail:observability.comparison_report_present ? "Run A × Run B · 61,776 分区报告已落盘" : escapeText(compare && compare.message), progress:compareState === "pass" ? 100 : 0},
+        {name:"精确比较", icon:"fa-code-compare", state:compareState, detail:comparisonPassed ? `Run A × Run B · ${number(observability.matched_partition_count)} / 61,776 · 零差异` : observability.comparison_report_present ? "比较报告存在，但未满足零差异验收条件" : escapeText(compare && compare.message), progress:compareState === "pass" ? 100 : 0},
       ];
       byId("runtimeFlowGrid").innerHTML = flows.map(flowCard).join("");
+      [
+        ["authorityStep", flows[0].state, 1],
+        ["foundationBtcStep", flows[1].state, 2],
+        ["foundationEthStep", flows[2].state, 3],
+        ["sealedStep", flows[3].state, 8],
+        ["btcPriceStep", flows[4].state, 4],
+        ["btcFlowStep", flows[5].state, 5],
+        ["ethPriceStep", flows[6].state, 6],
+        ["ethFlowStep", flows[7].state, 7],
+        ["releaseStep", flows[8].state, 9],
+        ["verifyStep", flows[9].state, 10],
+        ["compareStep", flows[10].state, 11],
+      ].forEach(([id, state, ordinal]) => setTrackStep(id, state, ordinal));
       const passed = flows.filter((item) => item.state === "pass").length;
       const running = flows.find((item) => item.state === "running");
       const failed = flows.find((item) => item.state === "failed");
@@ -501,13 +525,27 @@
         const status = await response.json();
         const flow = renderRuntimeFlow(status);
         const observability = status.execution_observability || {};
+        const acceptance = observability.acceptance || {};
+        const taskPassed = acceptance.s2_t10_status === "PASS";
+        const taskFailed = acceptance.s2_t10_status === "FAILED";
         const liveSubflow = [...(status.pipeline_subflows || [])].reverse().find((item) => item.status === "RUNNING");
         byId("updatedAt").textContent = "数据更新：" + dateTime(status.updated_at);
         const activeLabel = status.active_task || (liveSubflow && liveSubflow.current_item);
         const failedFlow = flow.flows.find((item) => item.state === "failed");
-        byId("processNote").textContent = activeLabel ? "Release-only · " + escapeText(activeLabel) : "固定旧 Run · " + escapeText(status.status);
+        byId("processNote").textContent = taskPassed ? "CR-2026-019 · 61,776 / 61,776 MATCH" : activeLabel ? "Release-only · " + escapeText(activeLabel) : "固定旧 Run · " + escapeText(status.status);
         const resourceAnomalyCount = Number(observability.resource_anomaly_count) || 0;
-        byId("liveEvidence").textContent = escapeText(status.status) + " · " + escapeText(status.phase) + " · health " + escapeText(status.health) + (resourceAnomalyCount ? " · 资源告警 " + number(resourceAnomalyCount) : "") + "（仅 Run 监控，不代表 Stage 2 通过）";
+        byId("liveEvidence").textContent = escapeText(status.status) + " · " + escapeText(status.phase) + " · health " + escapeText(status.health) + (resourceAnomalyCount ? " · 资源告警 " + number(resourceAnomalyCount) : "") + (taskPassed ? " · S2-T10 / Group 1 PASS" : "（等待自动验收）");
+        byId("comparisonEvidence").textContent = observability.comparison_report_present ? `${escapeText(observability.comparison_status)} · Run A 61,776 × Run B 61,776 · matched ${number(observability.matched_partition_count)} · missing ${number(observability.missing_partition_count)} · extra ${number(observability.extra_partition_count)} · differences ${number(observability.difference_count)}` : "尚无 append-only 比较报告。";
+        byId("taskProgressTag").className = taskPassed ? "tag approved" : "tag progress";
+        byId("taskProgressTag").innerHTML = `S2-T10 v1.14<b>${taskPassed ? "PASSED" : taskFailed ? "FAILED" : "IN PROGRESS"}</b>`;
+        byId("passedCount").textContent = taskPassed ? "10 / 10 PASSED" : "9 / 10 PASSED";
+        byId("s2t10Item").classList.toggle("active", !taskPassed);
+        if (taskPassed) byId("s2t10Button").removeAttribute("aria-current"); else byId("s2t10Button").setAttribute("aria-current", "step");
+        byId("s2t10Node").innerHTML = taskPassed ? '<i class="fa-solid fa-check"></i>' : taskFailed ? '<i class="fa-solid fa-xmark"></i>' : "10";
+        byId("s2t10State").textContent = taskPassed ? "PASSED" : taskFailed ? "FAILED" : "IN PROGRESS";
+        byId("group1Status").textContent = `Group 1 ${taskPassed ? "PASSED" : taskFailed ? "FAILED" : "IN PROGRESS"}`;
+        byId("group1Status").classList.toggle("good", taskPassed);
+        byId("group1Status").classList.toggle("bad", taskFailed);
         const isTrackedRun = Boolean(status.run_id);
         if (isTrackedRun) {
           const done = Number(status.overall_logical_partitions_done) || 0;
@@ -517,22 +555,24 @@
           byId("successorBar").style.width = Math.max(0, Math.min(100, 100 * done / total)) + "%";
           byId("successorPublication").textContent = observability.publication_record_present ? "PUBLISHED" : "UNPUBLISHED";
           byId("successorPublication").classList.toggle("good", Boolean(observability.publication_record_present));
-          byId("successorSideStatus").innerHTML = `<i class="fa-solid fa-file-shield"></i><span>固定旧 Run · Release-only<br>${failedFlow ? escapeHtml(failedFlow.name.toUpperCase() + " FAILED") : escapeHtml(status.status)}</span>`;
-          byId("trackNote").textContent = "CR-2026-018：208 个密封成果已固定，不 resume、不重新打包；只推进 Release、Verify 与 Exact Compare。";
+          byId("successorSideStatus").innerHTML = taskPassed ? `<i class="fa-solid fa-check"></i><span>固定旧 Run · COMPLETE<br>61,776 / 61,776 MATCH</span>` : `<i class="fa-solid fa-file-shield"></i><span>固定旧 Run · Release-only<br>${failedFlow ? escapeHtml(failedFlow.name.toUpperCase() + " FAILED") : escapeHtml(status.status)}</span>`;
+          byId("trackNote").textContent = taskPassed ? "自动判定 PASS：208 个密封成果保持不变；Release、Verify 与 61,776 分区 Exact Compare 全部通过。" : "自动判定进行中：持续读取 CR-2026-018 / 019 append-only 证据。";
           byId("authorityCodeGate").textContent = "PASS";
           byId("authorityDisabled").textContent = observability.superseded_run_id ? "RECORDED" : "PENDING";
-          byId("authorityFrozen").textContent = observability.release_only_status === "AUTHORIZED_RELEASE_ONLY" ? "AUTHORIZED" : "PENDING";
+          byId("authorityFrozen").textContent = observability.compare_only_status === "AUTHORIZED_COMPARE_ONLY" ? "CR018 + CR019" : observability.release_only_status === "AUTHORIZED_RELEASE_ONLY" ? "CR018 ONLY" : "PENDING";
           byId("authoritySuccessor").textContent = observability.release_only_preflight_status === "PASS" ? "208 / 208 PASS" : "CHECKING";
         }
         const activeFlow = flow.flows.find((item) => item.state === "running");
-        byId("gateChip").textContent = failedFlow ? failedFlow.name.toUpperCase() + " FAILED" : activeFlow ? activeFlow.name.toUpperCase() : escapeText(status.status);
+        byId("gateChip").textContent = taskPassed ? "EXACT MATCH" : failedFlow ? failedFlow.name.toUpperCase() + " FAILED" : activeFlow ? activeFlow.name.toUpperCase() : escapeText(status.status);
         if (failedFlow) {
           const compareAuthorityFailure = failedFlow.name === "精确比较" && failedFlow.detail.includes("approved legacy hash algorithm");
           byId("currentConclusion").textContent = compareAuthorityFailure ? "Release 与 80,784 分区 Verify 已通过；Exact Compare 因算法 Authority 接线错误在读取分区流前停止，尚未产生 61,776 比较结论。" : `${failedFlow.name} 已失败，固定旧 Run 的发布链停止；密封输入保持不变。`;
           byId("nextAction").innerHTML = compareAuthorityFailure ? "<b>等待 CR-2026-019 人工批准</b>，批准前不改代码、不重跑 Compare。" : "<b>停止自动流程</b>，保留证据并检查完整性或比较差异。";
-        } else if (flow.compareState === "pass") {
-          byId("currentConclusion").textContent = `固定旧 Run 已发布并完成验证；Run A 精确比较 ${number(observability.matched_partition_count)} / 61,776，差异 ${number(observability.difference_count)}。`;
-          byId("nextAction").innerHTML = "<b>提交 S2-T10 证据评审</b>，不得自动进入下一组或 Stage 3。";
+        } else if (taskPassed) {
+          byId("stageLockNote").textContent = "S2-T10 已通过；S2-T11～S2-T20 仍待单独批准，Stage 3 不自动解锁。";
+          byId("nextTitle").textContent = "下一步（等待单独授权）";
+          byId("currentConclusion").textContent = `S2-T10 与 Group 1 已通过；Run A 精确比较 ${number(observability.matched_partition_count)} / 61,776，缺失 ${number(observability.missing_partition_count)}，多余 ${number(observability.extra_partition_count)}，差异 ${number(observability.difference_count)}。`;
+          byId("nextAction").innerHTML = "<b>停止自动流程</b>，保留全部 append-only 证据，等待后续 Stage 2 Task 单独批准。";
         } else if (flow.verifyState === "pass") {
           byId("currentConclusion").textContent = "发布与验证已通过，正在等待 61,776 个 Group 1 分区的 Run A 精确比较。";
           byId("nextAction").innerHTML = "<b>执行 Exact Compare</b>，生成逐分区零容差比较证据。";

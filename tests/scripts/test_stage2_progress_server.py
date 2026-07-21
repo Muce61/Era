@@ -10,6 +10,7 @@ assert SPEC is not None and SPEC.loader is not None
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 _execution_observability = MODULE._execution_observability
+_acceptance_projection = MODULE._acceptance_projection
 
 
 def _write(path: Path, content: str = "{}") -> None:
@@ -51,7 +52,23 @@ def test_execution_observability_projects_append_only_evidence(tmp_path: Path) -
     )
     _write(
         tmp_path / "reports/v2-run-a-comparison.json",
-        json.dumps({"matched_partition_count": 61776, "difference_count": 0}),
+        json.dumps(
+            {
+                "report": {
+                    "status": "PASS",
+                    "matched_partition_count": 61776,
+                    "daily_row_hash_match_count": 61776,
+                    "differences": [],
+                    "missing_in_v2": [],
+                    "extra_in_v2": [],
+                    "global_distributions_equal": True,
+                }
+            }
+        ),
+    )
+    _write(
+        tmp_path / "reports/compare-only-authority-cr-2026-019.json",
+        json.dumps({"status": "AUTHORIZED_COMPARE_ONLY", "allowed_commands": ["compare"]}),
     )
 
     result = _execution_observability(tmp_path)
@@ -73,8 +90,15 @@ def test_execution_observability_projects_append_only_evidence(tmp_path: Path) -
     assert result["publication_record_present"] is True
     assert result["publication_state"] == "PUBLISHED"
     assert result["comparison_report_present"] is True
+    assert result["compare_only_status"] == "AUTHORIZED_COMPARE_ONLY"
+    assert result["compare_only_allowed_commands"] == ["compare"]
+    assert result["comparison_status"] == "PASS"
     assert result["matched_partition_count"] == 61776
+    assert result["daily_row_hash_match_count"] == 61776
     assert result["difference_count"] == 0
+    assert result["missing_partition_count"] == 0
+    assert result["extra_partition_count"] == 0
+    assert result["global_distributions_equal"] is True
 
 
 def test_execution_observability_projects_cr018_release_only_evidence(tmp_path: Path) -> None:
@@ -107,3 +131,36 @@ def test_execution_observability_projects_cr018_release_only_evidence(tmp_path: 
     assert result["sealed_seal_count"] == 208
     assert result["sealed_partition_count"] == 80784
     assert result["superseded_run_id"] == "stage2-g1-v2-b-superseded"
+
+
+def test_acceptance_is_derived_from_live_release_verify_and_exact_compare_evidence() -> None:
+    status = {
+        "overall_logical_partitions_done": 80784,
+        "pipeline_subflows": [
+            {"name": "RELEASE", "status": "PASS"},
+            {"name": "VERIFY", "status": "PASS"},
+            {"name": "RUN_A_RUN_B_COMPARE", "status": "PASS"},
+        ],
+    }
+    observability = {
+        "task_receipts": {name: True for name in MODULE.RUNTIME_TASK_RECEIPTS},
+        "publication_state": "PUBLISHED_WITH_RESOURCE_ANOMALIES",
+        "quality_status": "PASS",
+        "comparison_report_present": True,
+        "matched_partition_count": 61776,
+        "daily_row_hash_match_count": 61776,
+        "missing_partition_count": 0,
+        "extra_partition_count": 0,
+        "difference_count": 0,
+        "global_distributions_equal": True,
+    }
+
+    result = _acceptance_projection(status, observability)
+
+    assert result["s2_t10_status"] == "PASS"
+    assert result["group1_status"] == "PASS"
+    assert result["stage3_status"] == "LOCKED"
+    assert all(result["checks"].values())
+
+    observability["difference_count"] = 1
+    assert _acceptance_projection(status, observability)["s2_t10_status"] == "FAILED"

@@ -42,8 +42,8 @@ S2-T01～T19 PASS → T20
 
 S2-T19 is the first preregistration capability and has no dependency on another Stage 2 Task. S2-T01～T09 own fixture capability only; S2-T10 exclusively owns full candidate generation. The graph must remain acyclic and all Stage 2 Task references must resolve before approval.
 
-Current approval state: Plan v1.2 remains APPROVED, S2-T19 and S2-T01～S2-T09 are PASSED, and
-S2-T10 v1.8 is APPROVED / IN_PROGRESS. Groups 2～4 remain DRAFT and unexecuted. CR-2026-007 and
+Current approval state: Plan v1.2 remains APPROVED and S2-T19 plus S2-T01～S2-T10 are PASSED.
+Groups 2～4 remain DRAFT and unexecuted. CR-2026-007 and
 CR-2026-008 change no dependency edge. The DAG remains acyclic; S2-T19 remains first and S2-T10
 remains the sole full candidate builder.
 
@@ -67,3 +67,8 @@ Foundation failure, Run B failure or semantic mismatch stops S2-T10; no branch c
 CR-2026-015 advances only the internal S2-T10 execution version to v1.13. It adds no Task edge:
 terminal Run B audit → new Authority/preflight → verified monthly evidence adoption → final packing
 → release → verify → exact Run A/Run B comparison. It never authorizes S2-T11 through S2-T20.
+
+CR-2026-018 and CR-2026-019 complete that existing edge without adding a new Task: the fixed Run
+published and verified 80,784 partitions, then matched all 61,776 Group-1 partitions against Run A
+with zero differences. The `S2-T10 → T11` dependency is now factually satisfied, but T11 remains
+`DRAFT_NOT_APPROVED` and cannot start without separate approval.

@@ -135,3 +135,16 @@ unpublished at final component packing because producer and consumer sort contra
 19 packed artifacts are physically unique; no data duplicate was found. Group 1 remains **FAIL /
 INCOMPLETE** until a new run adopts verified monthly evidence, repeats final packing and passes
 release, verification and all 61,776 Run A/Run B semantic comparisons.
+
+## S2-T10 v1.14 final Group-1 acceptance
+
+CR-2026-018 reused the unchanged 208 sealed results without resume or repacking and completed
+atomic publication plus independent verification over all 80,784 V2 partitions. CR-2026-019 then
+corrected only the comparator algorithm-authority call, passed the complete 431-test repository
+gate and executed only Exact Compare under append-only comparison Authority.
+
+Run A and Run B each contain 61,776 Group-1 partitions. All 61,776 daily row Hashes match, global
+distributions are equal, and missing, extra and difference counts are all zero. Comparison report
+SHA-256 is `69298e5d05161223b354e1b60a65ef032e9370e4017da487e35657264af8e9f0`.
+S2-T10 v1.14 and Group 1 are **PASS**. This result does not authorize S2-T11 through S2-T20 and
+does not unlock Stage 3.

@@ -217,12 +217,12 @@ def test_read_only_web_endpoints(tmp_path: Path) -> None:
             assert "S2-T01" in page
             assert "S2-T10" in page
             assert "Full Generation" in page
-            assert "FINAL CODE GATE" in page
+            assert "9 / 10 PASSED" in page
             assert "证据轨道" in page
             assert "Stage 3 LOCKED" in page
-            assert "Group 1 NOT PASSED" in page
-            assert "固定旧 Run · Release-only 实时流水线" in page
-            assert "不 resume、不重新打包" in page
+            assert "Group 1 CHECKING" in page
+            assert "固定旧 Run · 自动识别流水线" in page
+            assert "HTML 不预置最终 PASS" in page
             assert "查看执行说明" in page
             assert "只读" in page
             assert "恢复运行" not in page

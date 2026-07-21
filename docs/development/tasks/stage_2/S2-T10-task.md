@@ -289,3 +289,16 @@ resume, reuse and deletion all false. That evidence must be bound into two byte-
 Authority freezes before exactly one successor is created. The successor may adopt only the already
 authorized monthly evidence and must recreate packing, release, verify and all 61,776 exact Run-A
 comparisons. Approval does not itself mark this Task PASS or unlock a later Task or Stage.
+
+## 32. CR-2026-018 / 019 fixed-Run release and exact comparison
+
+CR-2026-018 supersedes only the unnecessary successor/repacking ceremony in section 31: it fixes
+the prior Run's 208-object/208-Seal set as immutable input and permits Release, Verify and Compare.
+CR-2026-019 corrects only the production comparator's algorithm-authority argument and permits
+only one comparison retry. It does not alter Receipt markers, rows, Hashes, distributions or
+research semantics.
+
+Acceptance is exact: Run A and Run B each contain 61,776 Group-1 partitions; matched partitions and
+daily row Hash matches must both equal 61,776; missing, extra and difference counts must all equal
+zero; global distributions must be equal. The executed report satisfies every condition, so
+S2-T10 v1.14 is PASS. No later Task or Stage is authorized by this acceptance.
