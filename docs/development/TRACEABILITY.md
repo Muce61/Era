@@ -108,7 +108,7 @@ Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～
 
 ## Stage 2 Plan v1.2 APPROVED Coverage
 
-Stage 2 is `IN_PROGRESS / S2_T12_PASSED_HUMAN_ACCEPTED`. S2-T19 and S2-T01～S2-T12 are PASSED;
+Stage 2 is `IN_PROGRESS / S2_T13_FIXTURE_VALIDATED_AWAITING_CR_2026_023`. S2-T19 and S2-T01～S2-T12 are PASSED;
 the fixed Runtime V2 Run is published with Quality/Verify PASS and the exact Run-A comparison
 matches 61,776/61,776 Group-1 partitions with zero differences. S2-T11 v1.3 and CR-2026-021 are
 human-approved. Full-output Run `stage2-s2t11-paths-20260721T023117Z-029707f3c111` published
@@ -118,7 +118,10 @@ timing evidence. Full Run `stage2-s2t12-metrics-20260721T040435Z-de9aaea56f2a` a
 Verify PASS over 220,201 BTC and 312,507 ETH Episodes, producing 1,065,416 separate H1/H2 metric
 rows. CR-2026-022 is approved, implemented and validated; the read-only UI derives the fixed Run,
 separate BTC/ETH H1/H2 counts and 16/16 checks from immutable evidence. Muce accepted S2-T12 at
-2026-07-21T06:39:21Z. S2-T13 through S2-T20 remain `DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
+2026-07-21T06:39:21Z and approved S2-T13 v1.2 at 2026-07-21T07:45:12Z.
+[CR-2026-023](changes/CR-2026-023.md) records the required S2-T13 v1.3 full-output and automatic
+read-only UI scope. Until it is approved, S2-T13 remains fixture-validated only; S2-T14 through
+S2-T20 remain `DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
 [CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
 approve a bounded hybrid transition without changing Stage 1, preregistration, config, parameters,
 candidate semantics or the Plan v1.2 DAG. Formal Run A is now PUBLISHED with Quality PASS,
@@ -189,7 +192,8 @@ run is immutable; its sealed objects require a new-run adoption Manifest and ful
 | Compare algorithm-authority production wiring | S2-T10 v1.14 | CR-2026-019; one-line production correction; compare-only Authority `e3688ca21a987849388cb9e694929033aac51ed245d1f0eb5337c43f554eb740` | IMPLEMENTED / 431 TESTS PASS / EXACT COMPARE PASS |
 | Group-1 small-sample integration | S2-T01～S2-T09 | fixture chain plus six controlled real windows; locked execution Manifest | PASSED |
 | Historical price-only path metrics | S2-T12 v1.3 | H1/H2 MFE/MAE, Time-to-Activation proxy and Time-since-MFE; 1,065,416 rows; Run/Verify/UI PASS; no PnL/return/first-passage | PASSED / HUMAN ACCEPTED; CR-2026-022 UI PASS |
-| Historical first-passage and AMBIGUOUS bounds | S2-T13, S2-T14 | first passage and AMBIGUOUS bounds | DRAFT_NOT_APPROVED |
+| Historical first-passage labels | S2-T13 v1.2 | strict H1/H2 TARGET_FIRST/STOP_FIRST/EXPIRED/AMBIGUOUS fixture contract; registered domains/horizons; no PnL/ROUND_SUCCESS/bounds | IMPLEMENTED / FIXTURE VALIDATED / AWAITING CR-2026-023 |
+| Historical AMBIGUOUS bounds | S2-T14 | optimistic/pessimistic H1 bounds | DRAFT_NOT_APPROVED |
 | Historical H1/H2 path extraction | S2-T11 v1.3 | `paths/extraction`; approved lossless source-slice CLI; BTC 220,201 + ETH 312,507 episodes; Manifest `d4d6a2f5…`; verify/UI/quality PASS; Muce accepted 2026-07-21; `validations/stage_2/S2-T11.md` | PASSED / HUMAN ACCEPTED |
 | Conditional baseline and placebo | S2-T15, S2-T16 | matched baseline/placebo with frozen relaxation and seeds | DRAFT_NOT_APPROVED |
 | Cluster ownership and cluster bootstrap CI | S2-T17, S2-T18 | BTC/ETH-separated clustering and cluster-level resampling | DRAFT_NOT_APPROVED |
