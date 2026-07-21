@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T13 v1.3 — First Passage labels
-Status: S2_T13_V1_3_APPROVED_IMPLEMENTED_AWAITING_FORMAL_RUN
+Status: S2_T13_V1_3_FULL_OUTPUT_VERIFIED_AWAITING_HUMAN_ACCEPTANCE
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
@@ -16,8 +16,10 @@ read-only Web UI now derives PASS, 1,065,416 rows and 16/16 evidence checks from
 evidence without hard-coding acceptance. Muce accepted and closed S2-T12 at
 2026-07-21T06:39:21Z. Muce approved S2-T13 v1.2 at 2026-07-21T07:45:12Z, then approved
 CR-2026-023 and v1.3 at 2026-07-21T10:41:50Z. The strict historical first-passage fixture,
-full-output runner, read-only Verify and automatic Web-UI projection are implemented. The formal
-Authority and BTC/ETH full Run are not yet executed. S2-T14 through S2-T20 remain
+full-output runner, read-only Verify and automatic Web-UI projection are implemented. Authority
+`ab76072c…bbbe` and Run `stage2-s2t13-first-passage-20260721T110224Z-d3f0c0331395` published
+1,065,416 H1/H2 path rows and 31,962,480 classifications; full Verify and the real-evidence UI
+projection pass. Human acceptance remains pending. S2-T14 through S2-T20 remain
 `DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
 
 S2-T11 v1.3 full-output Run `stage2-s2t11-paths-20260721T023117Z-029707f3c111` published

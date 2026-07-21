@@ -4,7 +4,7 @@
 
 - task_id: S2-T13
 - task_version: 1.3
-- status: APPROVED / IMPLEMENTED / AWAITING FORMAL FULL RUN
+- status: FULL OUTPUT VERIFIED / AWAITING HUMAN ACCEPTANCE
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
