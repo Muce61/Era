@@ -164,7 +164,7 @@ rules:
     implementation: src/era100x/research/stage_2/labels/first_passage/
     tests: tests/research/stage_2/labels/first_passage/
     validation: docs/development/validations/stage_2/S2-T13.md
-    state: IMPLEMENTED_FIXTURE_VALIDATED_AWAITING_CR_2026_023
+    state: APPROVED_V1_3_IMPLEMENTED_AWAITING_FORMAL_RUN
   state: PLANNED
 - rule_id: FILL-FIRST-NONZERO-PROTECT
   rule_status: FROZEN
@@ -256,7 +256,7 @@ rules:
     implementation: src/era100x/research/stage_2/labels/first_passage/
     tests: tests/research/stage_2/labels/first_passage/
     validation: docs/development/validations/stage_2/S2-T13.md
-    state: IMPLEMENTED_FIXTURE_VALIDATED_AWAITING_CR_2026_023
+    state: APPROVED_V1_3_IMPLEMENTED_AWAITING_FORMAL_RUN
   state: PLANNED
 - rule_id: RESEARCH-LOCKED-REPLAY-ONCE
   rule_status: FROZEN
@@ -341,7 +341,7 @@ rules:
     implementation: src/era100x/research/stage_2/labels/first_passage/
     tests: tests/research/stage_2/labels/first_passage/
     validation: docs/development/validations/stage_2/S2-T13.md
-    state: IMPLEMENTED_FIXTURE_VALIDATED_AWAITING_CR_2026_023
+    state: APPROVED_V1_3_IMPLEMENTED_AWAITING_FORMAL_RUN
   state: PLANNED
 - rule_id: RESEARCH-H3-CONDITIONAL-ROUND-PROB
   rule_status: FROZEN
@@ -667,7 +667,7 @@ rules:
     implementation: src/era100x/research/stage_2/labels/first_passage/
     tests: tests/research/stage_2/labels/first_passage/
     validation: docs/development/validations/stage_2/S2-T13.md
-    state: IMPLEMENTED_FIXTURE_VALIDATED_AWAITING_CR_2026_023
+    state: APPROVED_V1_3_IMPLEMENTED_AWAITING_FORMAL_RUN
   state: PLANNED
 - rule_id: INV-006
   rule_status: FROZEN
@@ -767,7 +767,7 @@ rules:
     implementation: src/era100x/research/stage_2/labels/first_passage/
     tests: tests/research/stage_2/labels/first_passage/
     validation: docs/development/validations/stage_2/S2-T13.md
-    state: IMPLEMENTED_FIXTURE_VALIDATED_AWAITING_CR_2026_023
+    state: APPROVED_V1_3_IMPLEMENTED_AWAITING_FORMAL_RUN
   state: PLANNED
 - rule_id: INV-012
   rule_status: FROZEN
@@ -826,7 +826,7 @@ rules:
     implementation: src/era100x/research/stage_2/labels/first_passage/
     tests: tests/research/stage_2/labels/first_passage/
     validation: docs/development/validations/stage_2/S2-T13.md
-    state: IMPLEMENTED_FIXTURE_VALIDATED_AWAITING_CR_2026_023
+    state: APPROVED_V1_3_IMPLEMENTED_AWAITING_FORMAL_RUN
   state: PLANNED
 - rule_id: INV-014
   rule_status: FROZEN
@@ -1294,7 +1294,7 @@ rules:
     implementation: src/era100x/research/stage_2/labels/first_passage/
     tests: tests/research/stage_2/labels/first_passage/
     validation: docs/development/validations/stage_2/S2-T13.md
-    state: IMPLEMENTED_FIXTURE_VALIDATED_AWAITING_CR_2026_023
+    state: APPROVED_V1_3_IMPLEMENTED_AWAITING_FORMAL_RUN
   state: PLANNED
 - rule_id: CONTRACT-ENTRY-INTENT
   rule_status: RESEARCH
@@ -2354,13 +2354,13 @@ rules:
     s2_t11_ui_change_request: docs/development/changes/CR-2026-020.md
     s2_t11_full_output_change_request: docs/development/changes/CR-2026-021.md
     cr_s2_021_status: APPROVED_L3_FULL_OUTPUT_CONTRACT
-    s2_t13_task_version: '1.2'
-    s2_t13_status: IMPLEMENTED_FIXTURE_VALIDATED_AWAITING_CR_2026_023
+    s2_t13_task_version: '1.3'
+    s2_t13_status: APPROVED_IMPLEMENTED_AWAITING_FORMAL_RUN
     s2_t13_approved_by: Muce
     s2_t13_approved_at: '2026-07-21T07:45:12Z'
     s2_t13_validation: docs/development/validations/stage_2/S2-T13.md
     s2_t13_full_output_ui_change_request: docs/development/changes/CR-2026-023.md
-    cr_s2_023_status: DRAFT_AWAITING_HUMAN_APPROVAL
+    cr_s2_023_status: APPROVED_IMPLEMENTED_AWAITING_FORMAL_RUN
     draft_tasks: [S2-T14, S2-T15, S2-T16, S2-T17, S2-T18, S2-T20]
     oq_s2_004_status: RESOLVED
     decision_ref: docs/development/decisions/ADR-S2-004-primary-research-definition.md

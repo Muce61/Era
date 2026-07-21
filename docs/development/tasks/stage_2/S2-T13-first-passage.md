@@ -3,16 +3,16 @@
 ## Metadata
 
 - task_id: S2-T13
-- task_version: 1.2
-- status: IMPLEMENTED / FIXTURE VALIDATED / AWAITING CR-2026-023
+- task_version: 1.3
+- status: APPROVED / IMPLEMENTED / AWAITING FORMAL FULL RUN
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T11 PASS
-- supersedes: task_version 1.1
+- supersedes: task_version 1.2
 - approved_by: Muce
-- approved_at: 2026-07-21T07:45:12Z
+- approved_at: 2026-07-21T10:41:50Z
 
 ## 1. 目标
 
@@ -102,6 +102,8 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 2026-07-21：Muce以“开始T13”批准v1.2；完成严格first-passage合同和fixture能力，
   定向测试与统一质量门通过。现有v1.2未冻结正式全量CLI，Web UI允许范围也未覆盖T13；
   提交CR-2026-023后停止，不批准T14或Stage 3。
+- 2026-07-21：Muce批准CR-2026-023及v1.3最小全量合同；允许固定全量CLI、只读
+  Authority/Run/Manifest/Catalog/Verify与Web UI自动识别。T14及Stage 3仍未批准。
 
 ## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
 
@@ -126,3 +128,23 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
   `TARGET_FIRST`均不得描述为`ROUND_SUCCESS`、PnL、return或真实执行结果。
 - v1.2只批准fixture级独立能力。正式全量CLI、Authority/Manifest/Catalog发布和Web UI
   自动识别必须先批准CR-2026-023及相应v1.3合同。
+
+## 23. S2-T13 v1.3正式全量合同
+
+- 唯一CLI为`uv run python scripts/run_stage2_first_passage.py
+  {preflight,run,resume,verify}`。`preflight`不得创建Run ID；Authority必须绑定实现commit、
+  S2-T11 Snapshot、S2-T10参考价事实、只读恢复overlay、BTC/ETH计数、参数域和资源门。
+- 每个MarketEpisode只使用其已冻结的`time_combination_id`及对应T1/T2/T3/T4窗口；不得
+  把短路径外推为更长horizon。全体Episode必须覆盖四种timing。
+- 对每个Episode分别生成H1与H2行；每行按target-major、stop-minor稳定顺序完整保存
+  `6 targets × 5 stops = 30`个分类。固定532,708 Episodes对应1,065,416条路径行和
+  31,962,480个分类。
+- H1/H2、BTC/ETH、原始标签与保守主标签必须分离。H1同事件双触达原始为
+  `AMBIGUOUS`、主处理为`STOP_FIRST`；不得生成S2-T14上下界。
+- 运行按BTC/ETH独立生成，失败Run保持未发布且不可恢复；成功结果通过同卷原子发布，
+  Manifest/Catalog/行哈希/文件哈希自校验。Verify只读遍历全部行，核对30组合、标签分布、
+  lineage、历史证据边界与禁止字段。
+- Web UI只从最新合法Authority、Run、Catalog、Verify、repository summary与validation
+  联合证据推导状态；较新的失败或无效Run不得回退，HTML不得预置PASSED。
+- 允许新增/修改`labels/first_passage/full_run.py`、`scripts/run_stage2_first_passage.py`、
+  对应测试、S2-T13治理/summary，以及进度server、HTML和现有进度测试。其他范围不变。

@@ -261,7 +261,7 @@
       <div class="title">ERA / Stage 2 · Event Research</div>
       <div class="top-status">
         <div class="tag approved">Plan v1.2<b>APPROVED</b></div>
-        <div id="taskProgressTag" class="tag progress">S2-T12<b>CHECKING</b></div>
+        <div id="taskProgressTag" class="tag progress">S2-T13<b>CHECKING</b></div>
         <div id="gateChip" class="gate-chip">LOADING</div>
       </div>
       <div id="processNote" class="process-note">正在读取 append-only 证据</div>
@@ -271,7 +271,7 @@
 
     <section class="layout">
       <aside class="panel task-rail" aria-label="阶段任务轨道">
-        <h2 class="panel-title"><span>阶段任务轨道</span><span id="passedCount" class="passed-count">10 / 13 PASSED</span></h2>
+        <h2 class="panel-title"><span>阶段任务轨道</span><span id="passedCount" class="passed-count">10 / 14 PASSED</span></h2>
         <ol class="task-list">
           <li class="task-item"><button class="task-button" data-task="Manifest：冻结预注册输入、输出布局与 Group-1 执行边界。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">S2-T19</span><span class="task-name">Manifest（前置）</span><span class="task-state">PASSED</span></button></li>
           <li class="task-item"><button class="task-button" data-task="Contracts：Stage 2 输入边界、注册表与 CanonicalKeyLevel 契约。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">01 S2-T01</span><span class="task-name">Contracts</span><span class="task-state">PASSED</span></button></li>
@@ -286,6 +286,7 @@
           <li id="s2t10Item" class="task-item active"><button id="s2t10Button" class="task-button" aria-current="step" data-task="Full Generation：由发布、验证和 61,776 分区零容差比较证据自动判定。"><span id="s2t10Node" class="node">10</span><span class="task-code">S2-T10</span><span class="task-name">Full Generation</span><span id="s2t10State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
           <li id="s2t11Item" class="task-item active"><button id="s2t11Button" class="task-button" aria-current="step" data-task="路径提取：从真实收据自动识别 H1/H2、BTC/ETH、验证与全量输出状态。"><span id="s2t11Node" class="node">11</span><span class="task-code">S2-T11</span><span class="task-name">Path Extraction</span><span id="s2t11State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
           <li id="s2t12Item" class="task-item active"><button id="s2t12Button" class="task-button" aria-current="step" data-task="路径指标：从最新 Authority、Run、Catalog、Verify 与 validation 自动识别 BTC/ETH 的 H1/H2 历史指标状态。"><span id="s2t12Node" class="node">12</span><span class="task-code">S2-T12</span><span class="task-name">Path Metrics</span><span id="s2t12State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
+          <li id="s2t13Item" class="task-item active"><button id="s2t13Button" class="task-button" aria-current="step" data-task="First Passage：从最新 Authority、Run、Catalog、Verify 与 validation 自动识别 H1/H2 的目标先、止损先、过期和歧义状态。"><span id="s2t13Node" class="node">13</span><span class="task-code">S2-T13</span><span class="task-name">First Passage</span><span id="s2t13State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
         </ol>
         <div id="taskHint" class="task-hint">选择节点查看职责。</div>
       </aside>
@@ -322,6 +323,11 @@
         <section class="live-flow" aria-labelledby="metricsFlowTitle">
           <div class="live-flow-head"><strong id="metricsFlowTitle">S2-T12 · 历史路径指标流水线</strong><span id="metricsFlowSummary">正在读取 Authority、Run 与 validation…</span></div>
           <div id="metricsFlowGrid" class="flow-grid" aria-live="polite"></div>
+        </section>
+
+        <section class="live-flow" aria-labelledby="passageFlowTitle">
+          <div class="live-flow-head"><strong id="passageFlowTitle">S2-T13 · First Passage 标签流水线</strong><span id="passageFlowSummary">正在读取 Authority、Run 与 validation…</span></div>
+          <div id="passageFlowGrid" class="flow-grid" aria-live="polite"></div>
         </section>
 
         <section class="authority">
@@ -396,7 +402,7 @@
   <dialog id="gateDialog">
     <div class="dialog-head"><h2>CR-2026-018 / 019 · 完成证据</h2><button class="icon-button" data-close-dialog type="button" aria-label="关闭"><i class="fa-solid fa-xmark"></i></button></div>
     <div class="dialog-body">
-      <p>此监控页每 5 秒自动读取 append-only 证据，并据此判定 S2-T10、Group 1 与当前 Stage 2 Task；HTML 不预置最终 PASS（包括 S2-T11 与 S2-T12）。</p>
+      <p>此监控页每 5 秒自动读取 append-only 证据，并据此判定 S2-T10、Group 1 与当前 Stage 2 Task；HTML 不预置最终 PASS（包括 S2-T11、S2-T12 与 S2-T13）。</p>
       <ul class="checklist">
         <li><i class="fa-regular fa-circle"></i><span>读取 successor 停用证据及复用、删除边界</span></li>
         <li><i class="fa-regular fa-circle"></i><span>读取 208 个对象、208 个 Seal 与 80,784 个分区证据</span></li>
@@ -416,6 +422,7 @@
     <section class="evidence-block"><h3>Governance authority</h3><p>CR-2026-018 fixed the release-only input set; CR-2026-019 authorized only the corrected Exact Compare. All other mutations remained disabled.</p></section>
     <section class="evidence-block"><h3>Exact comparison</h3><p id="comparisonEvidence">正在从 append-only 比较报告自动读取。</p></section>
     <section class="evidence-block"><h3>S2-T12 historical path metrics</h3><p id="metricsEvidence">正在从最新 Authority、Run、Catalog、Verify 与 validation 自动读取。</p><code id="metricsRunId">尚无合法 Run</code></section>
+    <section class="evidence-block"><h3>S2-T13 historical first passage</h3><p id="passageEvidence">正在从最新 Authority、Run、Catalog、Verify 与 validation 自动读取。</p><code id="passageRunId">尚无合法 Run</code></section>
   </aside>
 
   <script>
@@ -599,12 +606,49 @@
       if (passed) byId("s2t12Button").removeAttribute("aria-current"); else byId("s2t12Button").setAttribute("aria-current", "step");
       byId("s2t12Node").innerHTML = passed ? '<i class="fa-solid fa-check"></i>' : failed ? '<i class="fa-solid fa-xmark"></i>' : "12";
       byId("s2t12State").textContent = raw;
-      byId("taskProgressTag").className = passed ? "tag approved" : "tag progress";
-      const taskVersion = escapeText(task.task_version || "UNKNOWN");
-      byId("taskProgressTag").innerHTML = `S2-T12 v${taskVersion}<b>${raw}</b>`;
-      byId("passedCount").textContent = `${10 + (s2t10Passed ? 1 : 0) + (s2t11Passed ? 1 : 0) + (passed ? 1 : 0)} / 13 PASSED`;
       byId("metricsRunId").textContent = escapeText(task.run_id);
       byId("metricsEvidence").textContent = `${raw} · BTC ${number(btc.metric_rows)} · ETH ${number(eth.metric_rows)} · total ${number(task.total_metric_rows)} · ${number(checksDone)} / ${number(checksTotal)} checks · historical evidence only`;
+      return {task, passed, failed, running};
+    }
+
+    function renderFirstPassageTask(status, s2t10Passed, s2t11Passed, s2t12Passed) {
+      const tasks = ((status.execution_observability || {}).stage2_tasks || {});
+      const task = tasks["S2-T13"] || {status:"CHECKING", reason_code:"S2_T13_CHECKING", instruments:{}, checks:{}};
+      const raw = escapeText(task.status);
+      const passed = raw === "PASS";
+      const failed = raw === "FAILED" || raw === "EVIDENCE_INVALID";
+      const running = raw === "IN_PROGRESS";
+      const state = passed ? "pass" : failed ? "failed" : running ? "running" : "pending";
+      const instruments = task.instruments || {};
+      const btc = instruments.BTCUSDT || {};
+      const eth = instruments.ETHUSDT || {};
+      const checks = task.checks || {};
+      const checksDone = Object.values(checks).filter(Boolean).length;
+      const checksTotal = Object.keys(checks).length;
+      const levelState = (rows, episodes) => passed && Number(rows) === Number(episodes) && Number(episodes) > 0 ? "pass" : failed ? "failed" : running && Number(rows) > 0 ? "running" : "pending";
+      const boundaryState = task.historical_evidence_only && task.stage3_locked ? passed ? "pass" : state : "failed";
+      const flows = [
+        {name:"Authority 与固定组合域", icon:"fa-file-shield", state:passed || running ? state : failed ? "failed" : "pending", detail:`${escapeText(task.authority_hash)} · ${escapeText(task.run_id)}`, progress:passed ? 100 : running ? 50 : 0},
+        {name:"BTC · H1 Contract", icon:"fa-bitcoin-sign", state:levelState(btc.h1_rows, btc.episodes), detail:`${number(btc.h1_rows)} / ${number(btc.episodes)} paths · 6 target × 5 stop`, progress:Number(btc.episodes) ? 100 * Number(btc.h1_rows) / Number(btc.episodes) : 0},
+        {name:"BTC · H2 Trades", icon:"fa-arrow-down-wide-short", state:levelState(btc.h2_rows, btc.episodes), detail:`${number(btc.h2_rows)} / ${number(btc.episodes)} paths · V2 稳定顺序`, progress:Number(btc.episodes) ? 100 * Number(btc.h2_rows) / Number(btc.episodes) : 0},
+        {name:"ETH · H1 Contract", icon:"fa-diamond", state:levelState(eth.h1_rows, eth.episodes), detail:`${number(eth.h1_rows)} / ${number(eth.episodes)} paths · 同事件双触达保守处理`, progress:Number(eth.episodes) ? 100 * Number(eth.h1_rows) / Number(eth.episodes) : 0},
+        {name:"ETH · H2 Trades", icon:"fa-arrow-down-wide-short", state:levelState(eth.h2_rows, eth.episodes), detail:`${number(eth.h2_rows)} / ${number(eth.episodes)} paths · 身份与 lineage 保留`, progress:Number(eth.episodes) ? 100 * Number(eth.h2_rows) / Number(eth.episodes) : 0},
+        {name:"Verify 与 Validation", icon:"fa-file-circle-check", state:passed ? "pass" : failed ? "failed" : state, detail:`${number(checksDone)} / ${number(checksTotal)} checks · Verify ${escapeText(task.verify_status)} · Validation ${escapeText(task.validation_status)}`, progress:checksTotal ? 100 * checksDone / checksTotal : 0},
+        {name:"历史标签边界", icon:"fa-lock", state:boundaryState, detail:"TARGET_FIRST / STOP_FIRST / EXPIRED / AMBIGUOUS · 非 PnL · T14 未开始 · Stage 3 LOCKED", progress:boundaryState === "pass" ? 100 : 0},
+      ];
+      byId("passageFlowGrid").innerHTML = flows.map(flowCard).join("");
+      byId("passageFlowSummary").textContent = `${raw} · ${number(task.total_path_rows)} path rows · ${number(task.total_classification_count)} classifications · ${number(checksDone)} / ${number(checksTotal)} checks`;
+      byId("s2t13Item").classList.toggle("active", !passed && !failed);
+      byId("s2t13Item").classList.toggle("failed", failed);
+      if (passed) byId("s2t13Button").removeAttribute("aria-current"); else byId("s2t13Button").setAttribute("aria-current", "step");
+      byId("s2t13Node").innerHTML = passed ? '<i class="fa-solid fa-check"></i>' : failed ? '<i class="fa-solid fa-xmark"></i>' : "13";
+      byId("s2t13State").textContent = raw;
+      byId("taskProgressTag").className = passed ? "tag approved" : "tag progress";
+      const taskVersion = escapeText(task.task_version || "UNKNOWN");
+      byId("taskProgressTag").innerHTML = `S2-T13 v${taskVersion}<b>${raw}</b>`;
+      byId("passedCount").textContent = `${10 + (s2t10Passed ? 1 : 0) + (s2t11Passed ? 1 : 0) + (s2t12Passed ? 1 : 0) + (passed ? 1 : 0)} / 14 PASSED`;
+      byId("passageRunId").textContent = escapeText(task.run_id);
+      byId("passageEvidence").textContent = `${raw} · BTC ${number(btc.classification_count)} · ETH ${number(eth.classification_count)} · total ${number(task.total_classification_count)} classifications · historical evidence only`;
       return {task, passed, failed, running};
     }
 
@@ -620,6 +664,7 @@
         const taskFailed = acceptance.s2_t10_status === "FAILED";
         const pathTask = renderPathTask(status, taskPassed);
         const metricsTask = renderMetricsTask(status, taskPassed, pathTask.passed);
+        const passageTask = renderFirstPassageTask(status, taskPassed, pathTask.passed, metricsTask.passed);
         const liveSubflow = [...(status.pipeline_subflows || [])].reverse().find((item) => item.status === "RUNNING");
         byId("updatedAt").textContent = "数据更新：" + dateTime(status.updated_at);
         const activeLabel = status.active_task || (liveSubflow && liveSubflow.current_item);
@@ -710,7 +755,7 @@
             byId("stageLockNote").textContent = "S2-T12 已从真实 Authority、Run、Catalog、Verify 与 validation 自动判定 PASS；Stage 3 仍保持 LOCKED。";
             byId("currentConclusion").textContent = `S2-T12 历史路径指标 PASS：BTC ${number(btcRows)} 行，ETH ${number(ethRows)} 行，总计 ${number(metricsTask.task.total_metric_rows)} 行；全部仅为历史价格路径证据。`;
             byId("nextAction").innerHTML = metricsTask.task.human_accepted
-              ? "<b>S2-T12 已人工验收并正式收尾</b>；S2-T13 未批准，保持停止。"
+              ? "<b>S2-T12 已人工验收并正式收尾</b>；继续读取已批准 S2-T13 的独立证据。"
               : "<b>停止并等待人工验收 S2-T12</b>；不得自动开始 S2-T13。";
           } else if (metricsTask.failed) {
             byId("stageLockNote").textContent = "S2-T12 运行失败或证据无效；Stage 3 保持 LOCKED。";
@@ -724,6 +769,31 @@
             byId("stageLockNote").textContent = "S2-T12 尚无合法全量证据；Stage 3 保持 LOCKED。";
             byId("currentConclusion").textContent = "S2-T12 尚未产生可自动验收的 Authority、Run 与 validation 联合证据。";
             byId("nextAction").innerHTML = "<b>等待合法的 S2-T12 append-only 证据</b>；不得硬编码 PASS。";
+          }
+        }
+        if (taskPassed && pathTask.passed && metricsTask.passed) {
+          byId("processNote").textContent = `S2-T13 · ${escapeText(passageTask.task.status)} · ${escapeText(passageTask.task.reason_code)}`;
+          byId("gateChip").textContent = passageTask.passed ? "S2-T13 PASS" : passageTask.failed ? "S2-T13 FAILED" : passageTask.running ? "S2-T13 RUNNING" : "S2-T13 CHECKING";
+          if (passageTask.passed) {
+            const btcClassifications = Number((passageTask.task.instruments.BTCUSDT || {}).classification_count) || 0;
+            const ethClassifications = Number((passageTask.task.instruments.ETHUSDT || {}).classification_count) || 0;
+            byId("stageLockNote").textContent = "S2-T13 已从真实 Authority、Run、Catalog、Verify 与 validation 自动判定 PASS；Stage 3 仍保持 LOCKED。";
+            byId("currentConclusion").textContent = `S2-T13 历史 First Passage 标签 PASS：BTC ${number(btcClassifications)} 个分类，ETH ${number(ethClassifications)} 个分类，总计 ${number(passageTask.task.total_classification_count)}；T14 bounds 未执行。`;
+            byId("nextAction").innerHTML = passageTask.task.human_accepted
+              ? "<b>S2-T13 已人工验收并正式收尾</b>；T14 仍需单独批准。"
+              : "<b>停止并等待人工验收 S2-T13</b>；不得自动开始 S2-T14。";
+          } else if (passageTask.failed) {
+            byId("stageLockNote").textContent = "S2-T13 运行失败或证据无效；Stage 3 保持 LOCKED。";
+            byId("currentConclusion").textContent = `S2-T13 未通过：${escapeText(passageTask.task.reason || passageTask.task.reason_code)}。`;
+            byId("nextAction").innerHTML = "<b>停止自动流程</b>，检查最新 Authority、Run、Catalog、Verify 或 validation；不得回退到更旧 Run。";
+          } else if (passageTask.running) {
+            byId("stageLockNote").textContent = "S2-T13 正在执行历史 First Passage 标签；Stage 3 保持 LOCKED。";
+            byId("currentConclusion").textContent = `S2-T13 当前 Run ${escapeText(passageTask.task.run_id)} 尚未形成完整原子发布证据。`;
+            byId("nextAction").innerHTML = "<b>继续只读观察</b>，不得由页面触发 run、resume、verify 或发布。";
+          } else {
+            byId("stageLockNote").textContent = "S2-T13 已批准但尚无合法全量证据；Stage 3 保持 LOCKED。";
+            byId("currentConclusion").textContent = "S2-T13 尚未产生可自动验收的 Authority、Run 与 validation 联合证据。";
+            byId("nextAction").innerHTML = "<b>等待合法的 S2-T13 append-only 证据</b>；不得硬编码 PASS。";
           }
         }
       } catch (error) {
