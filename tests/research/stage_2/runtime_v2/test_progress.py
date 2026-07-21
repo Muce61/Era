@@ -219,9 +219,9 @@ def test_read_only_web_endpoints(tmp_path: Path) -> None:
             assert "S2-T11" in page
             assert "Full Generation" in page
             assert "Path Extraction" in page
-            assert "10 / 11 PASSED" in page
-            assert "S2-T11 v1.2<b>CHECKING</b>" in page
-            assert "S2-T11 v1.2<b>PASSED</b>" not in page
+            assert "10 / 12 PASSED" in page
+            assert "S2-T11<b>CHECKING</b>" in page
+            assert "S2-T11 v1.2" not in page
             assert "证据轨道" in page
             assert "Stage 3 LOCKED" in page
             assert "Group 1 CHECKING" in page

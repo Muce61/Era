@@ -231,6 +231,15 @@ def test_s2_t11_pass_requires_full_separate_hashed_evidence(tmp_path: Path) -> N
     assert result["full_output_complete"] is True
     assert result["validation_status"] == "PASS"
     assert all(result["checks"].values())
+    assert result["task_version"] == "1.3"
+
+
+def test_ui_derives_s2_t11_version_and_complete_task_count() -> None:
+    page = MODULE_PATH.with_name("stage2_progress_ui.html").read_text(encoding="utf-8")
+
+    assert 'task.task_version || "UNKNOWN"' in page
+    assert "/ 12 PASSED" in page
+    assert "S2-T11 v1.2" not in page
 
 
 def test_s2_t11_malformed_symlink_and_conflicting_chain_fail_closed(tmp_path: Path) -> None:
