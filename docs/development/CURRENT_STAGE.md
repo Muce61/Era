@@ -3,18 +3,20 @@
 ```text
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
-Current Task: NONE — S2-T11 closed; awaiting separately approved S2-T12
-Status: S2_T11_PASSED_HUMAN_ACCEPTED
+Current Task: S2-T12 v1.3 — MFE / MAE / Time-to-Activation
+Status: S2_T12_APPROVED_IN_PROGRESS
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
-S2-T19 and S2-T01～S2-T11 are PASSED. S2-T12 through S2-T20 remain `DRAFT_NOT_APPROVED`, so no
-current Task is active and Stage 3 remains locked.
+S2-T19 and S2-T01～S2-T11 are PASSED. Muce approved S2-T12 v1.3 at
+2026-07-21T03:02:25Z; its minimum historical price-only path-metric contract is active on the
+independent `codex/stage2-s2-t12-path-metrics` branch. S2-T13 through S2-T20 remain
+`DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
 
 S2-T11 v1.3 full-output Run `stage2-s2t11-paths-20260721T023117Z-029707f3c111` published
 220,201 BTC and 312,507 ETH historical path indexes. Read-only Verify, repository quality gates
 and automatic UI projection passed; Muce accepted and closed S2-T11 at 2026-07-21T02:47:07Z.
-This does not approve S2-T12 or unlock Stage 3.
+This satisfies the S2-T12 dependency but does not approve S2-T13 or unlock Stage 3.
 
 ## Historical S2-T10 progression
 
