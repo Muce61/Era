@@ -27,6 +27,15 @@
   "metric_decimal_rounding": "ROUND_HALF_EVEN",
   "mfe_sign": "NON_NEGATIVE_SIGNED_BPS",
   "reference_price_source": "FIXED_S2T10_PRICE_TRIGGER_FACT",
+  "read_only_recovery_overlays": [
+    {
+      "official_archive_sha256": "e4a909df273586e48bd49c41de6f3d1a317f5e37763440144003173addf9b3c9",
+      "overlay_path": "/Volumes/FuckingLife/era100x_stage2/tmp/S2-T12-recovery/rebuild-2022-03-01/date=2022-03-01/part-000.parquet",
+      "source_byte_sha256": "fc0f50e0d92b46520644666b040512b19cafbbcf0d143f714d92b4525315c296",
+      "source_logical_sha256": "eee2263fe964b5dcfb8d7fd8e063a240442dc844cbd66e1025c7aa9202b6fd84",
+      "source_relative_path": "BTCUSDT/archive=2022-03/date=2022-03-01/part-000.parquet"
+    }
+  ],
   "source_s2t10_run_id": "stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04",
   "source_s2t10_snapshot_id": "df15b9cbb208a6f921b3a68bee24be44f77e83eb2c8ac1582ef942b108708d33",
   "source_s2t11_run_id": "stage2-s2t11-paths-20260721T023117Z-029707f3c111",

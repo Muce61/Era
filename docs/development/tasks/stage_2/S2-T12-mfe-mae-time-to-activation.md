@@ -172,6 +172,11 @@ MAE_bps = min(0, min(signed_move_bps))
   `uv run python scripts/run_stage2_path_metrics.py {preflight,run,resume,verify}`。
 - 全量结果写入`/Volumes/FuckingLife/era100x_stage2/runs/<run_id>/`既有不可变布局；
   `published/manifests/reports` append-only，任何失败不覆盖S2-T11或S2-T10产物。
+- 若冻结的H2源文件发生物理字节损坏，只允许在Stage 2 `tmp`中从同一Binance官方Trades
+  归档确定性重建只读overlay；overlay必须同时命中T11记录的`source_byte_sha256`、Stage 1
+  `logical_sha256`、行数和官方归档SHA-256。不得写回、移动或替换Stage 1文件；不完全匹配则
+  fail-closed。当前唯一overlay为BTCUSDT 2022-03-01，影响249个Episode/310个slice，
+  重建后byte hash `fc0f50e0…c296`与logical hash `eee2263f…d84`精确匹配。
 
 ### 22.5 验收与停止边界
 

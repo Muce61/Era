@@ -187,6 +187,32 @@ def _source_authority() -> dict[str, str]:
         raise ValueError("S2-T11 manifest hash no longer matches the accepted snapshot")
     if catalog["run_id"] != SOURCE_S2T11_RUN_ID:
         raise ValueError("S2-T11 catalog run ID mismatch")
+    config = json.loads(CONFIG_PATH.read_bytes())
+    recovery: list[dict[str, str]] = []
+    seen_recovery_sources: set[str] = set()
+    for item in config.get("read_only_recovery_overlays", []):
+        source_relative_path = str(item["source_relative_path"])
+        if source_relative_path in seen_recovery_sources:
+            raise ValueError("duplicate S2-T12 recovery overlay source")
+        seen_recovery_sources.add(source_relative_path)
+        overlay = Path(item["overlay_path"])
+        allowed_root = (STAGE2_ROOT / "tmp").resolve()
+        if overlay.is_symlink() or not overlay.is_file():
+            raise ValueError(f"missing or unsafe S2-T12 recovery overlay: {overlay}")
+        if not overlay.resolve().is_relative_to(allowed_root):
+            raise ValueError("S2-T12 recovery overlay is outside the Stage 2 tmp root")
+        actual = sha256_file(overlay)
+        if actual != item["source_byte_sha256"]:
+            raise ValueError("S2-T12 recovery overlay byte hash mismatch")
+        recovery.append(
+            {
+                "source_relative_path": source_relative_path,
+                "overlay_path": str(overlay),
+                "source_byte_sha256": actual,
+                "source_logical_sha256": item["source_logical_sha256"],
+                "official_archive_sha256": item["official_archive_sha256"],
+            }
+        )
     return {
         "source_s2t11_manifest_hash": manifest["manifest_hash"],
         "source_s2t11_catalog_hash": catalog["catalog_hash"],
@@ -194,6 +220,7 @@ def _source_authority() -> dict[str, str]:
         "source_s2t11_catalog_sha256": sha256_file(catalog_path),
         "source_s2t11_execution_sha256": sha256_file(execution_path),
         "config_sha256": sha256_file(CONFIG_PATH),
+        "recovery_overlay_authority_hash": _json_hash(recovery),
     }
 
 
@@ -272,6 +299,7 @@ def read_preflight_manifest(path: Path) -> dict[str, Any]:
             "source_s2t11_catalog_sha256",
             "source_s2t11_execution_sha256",
             "config_sha256",
+            "recovery_overlay_authority_hash",
         )
     }:
         raise ValueError("S2-T12 frozen source authority changed")
@@ -609,6 +637,11 @@ def _process_h1(
 
 
 def _process_h2(states: dict[str, _MetricState], slices: list[dict[str, Any]]) -> None:
+    config = json.loads(CONFIG_PATH.read_bytes())
+    overlays = {
+        str(item["source_relative_path"]): item
+        for item in config.get("read_only_recovery_overlays", [])
+    }
     slices.sort(
         key=lambda row: (
             row["source_owner_date"],
@@ -624,7 +657,13 @@ def _process_h2(states: dict[str, _MetricState], slices: list[dict[str, Any]]) -
     for item in slices:
         group = (str(item["source_relative_path"]), int(item["row_group_ordinal"]))
         if group != current_group:
-            path = _safe_relative(STAGE1_PUBLISHED_ROOT, group[0])
+            overlay = overlays.get(group[0])
+            if overlay is None:
+                path = _safe_relative(STAGE1_PUBLISHED_ROOT, group[0])
+            else:
+                if item["source_byte_sha256"] != overlay["source_byte_sha256"]:
+                    raise ValueError("H2 recovery overlay does not match the T11 source hash")
+                path = Path(overlay["overlay_path"])
             if path.is_symlink() or not path.is_file():
                 raise ValueError(f"unsafe or missing H2 source: {path}")
             table = pq.ParquetFile(path).read_row_group(
