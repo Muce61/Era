@@ -248,10 +248,10 @@ def create_preflight_manifest(*, code_commit: str) -> tuple[dict[str, Any], Path
 
 
 def latest_preflight_manifest() -> Path:
-    paths = sorted(path for path in AUTHORITY_ROOT.glob("*.json") if not path.name.startswith("._"))
+    paths = tuple(path for path in AUTHORITY_ROOT.glob("*.json") if not path.name.startswith("._"))
     if not paths:
         raise ValueError("no S2-T12 preflight authority exists")
-    return paths[-1]
+    return max(paths, key=lambda path: (path.stat().st_mtime_ns, path.name))
 
 
 def read_preflight_manifest(path: Path) -> dict[str, Any]:
