@@ -124,9 +124,10 @@ S2-T13 v1.3 full-output and automatic read-only UI scope. Authority `ab76072c…
 `stage2-s2t13-first-passage-20260721T110224Z-d3f0c0331395` published 1,065,416 H1/H2 path rows and
 31,962,480 classifications; full Verify and the automatic real-evidence UI projection pass. Muce
 accepted and closed S2-T13 at 2026-07-21T12:52:58Z. Muce subsequently approved the S2-T14 v1.2
-fixture capability at 2026-07-21T13:07:08Z; formal full-output and UI observability remain outside
-that version's scope. The v1.2 deterministic fixture and repository quality gate pass; CR-2026-024
-awaits human approval. S2-T15 through S2-T18 and S2-T20 remain `DRAFT_NOT_APPROVED`, and Stage 3
+fixture capability at 2026-07-21T13:07:08Z. The v1.2 deterministic fixture and repository quality
+gate pass. Muce approved CR-2026-024 and S2-T14 v1.3 at 2026-07-21T13:37:13Z for the minimum
+full-distribution and read-only automatic UI scope; execution is in progress. S2-T15 through
+S2-T18 and S2-T20 remain `DRAFT_NOT_APPROVED`, and Stage 3
 remains locked.
 [CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
 approve a bounded hybrid transition without changing Stage 1, preregistration, config, parameters,
@@ -199,7 +200,7 @@ run is immutable; its sealed objects require a new-run adoption Manifest and ful
 | Group-1 small-sample integration | S2-T01～S2-T09 | fixture chain plus six controlled real windows; locked execution Manifest | PASSED |
 | Historical price-only path metrics | S2-T12 v1.3 | H1/H2 MFE/MAE, Time-to-Activation proxy and Time-since-MFE; 1,065,416 rows; Run/Verify/UI PASS; no PnL/return/first-passage | PASSED / HUMAN ACCEPTED; CR-2026-022 UI PASS |
 | Historical first-passage labels | S2-T13 v1.3 | strict H1/H2 TARGET_FIRST/STOP_FIRST/EXPIRED/AMBIGUOUS; 1,065,416 path rows; 31,962,480 classifications; full Verify/UI PASS; no PnL/ROUND_SUCCESS/bounds | PASSED / HUMAN ACCEPTED |
-| Historical AMBIGUOUS bounds | S2-T14 v1.2 | immutable raw labels; Primary failure treatment; conditional exclusion; theoretical upper; H1 adverse/optimistic bounds; no PnL/ROUND_SUCCESS | IMPLEMENTATION PASS / 15 DIRECTED TESTS / AWAITING CR-2026-024 |
+| Historical AMBIGUOUS bounds | S2-T14 v1.3 | immutable raw labels; Primary failure treatment; conditional exclusion; theoretical upper; H1 adverse/optimistic bounds; compact full distribution and read-only UI; no PnL/ROUND_SUCCESS | APPROVED / IN_PROGRESS; CR-2026-024 |
 | Historical H1/H2 path extraction | S2-T11 v1.3 | `paths/extraction`; approved lossless source-slice CLI; BTC 220,201 + ETH 312,507 episodes; Manifest `d4d6a2f5…`; verify/UI/quality PASS; Muce accepted 2026-07-21; `validations/stage_2/S2-T11.md` | PASSED / HUMAN ACCEPTED |
 | Conditional baseline and placebo | S2-T15, S2-T16 | matched baseline/placebo with frozen relaxation and seeds | DRAFT_NOT_APPROVED |
 | Cluster ownership and cluster bootstrap CI | S2-T17, S2-T18 | BTC/ETH-separated clustering and cluster-level resampling | DRAFT_NOT_APPROVED |

@@ -3,14 +3,14 @@
 ## Metadata
 
 - task_id: S2-T14
-- task_version: 1.2
-- status: IMPLEMENTATION PASS / AWAITING CR-2026-024 APPROVAL
+- task_version: 1.3
+- status: APPROVED / IN_PROGRESS
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T13 PASS
-- supersedes: task_version 1.1
+- supersedes: task_version 1.2
 - approved_by: Muce
 - approved_at: 2026-07-21T13:07:08Z
 
@@ -105,6 +105,9 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 2026-07-21：v1.2纯fixture边界、分布汇总、hash和隔离测试通过；定向15项及统一质量门
   523项全部PASS。因全量分布与Web UI仍缺授权，提交CR-2026-024并停止，不启动正式Run
   或S2-T15。
+- 2026-07-21：Muce以`webui接入t14，然后收尾t14`批准CR-2026-024与v1.3最小范围：
+  只增加正式全量分布CLI、追加式Authority/Run/Manifest/Catalog/Verify证据、轻量仓库摘要和
+  只读Web UI自动识别；不授权S2-T15+、H3、基线、placebo、聚类、bootstrap或Stage 3。
 
 ## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
 
@@ -128,5 +131,10 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
   仍使用S2-T13的V2稳定顺序，不产生同事件伪歧义。
 - 分布必须按BTC/ETH、H1/H2、parameter set、target、stop和timing分别汇总；Primary率、
   排除歧义的条件率和理论上界率均由原始计数精确推导，输入shuffle不得改变hash。
-- 本版本只批准纯fixture变换与分布汇总能力；不得输出PnL、return、ROUND_SUCCESS、
-  live execution、条件基线、placebo、cluster、bootstrap或Stage 2 Go/No-Go。
+- v1.3按已批准CR-2026-024增加全量分布与只读自动观测，但仍不得输出PnL、return、
+  ROUND_SUCCESS、live execution、条件基线、placebo、cluster、bootstrap或Stage 2 Go/No-Go。
+- 全量Run必须在创建Run ID前绑定已验收S2-T13的Authority、Run、Snapshot、Manifest、
+  Catalog、代码版本、输出hash与计数；逐条扫描全部31,962,480个分类，但只发布紧凑分布，
+  不复制或改写上游逐行分类。
+- 最新合法Run的状态由Web UI只读自动投影；HTML不得预置PASSED，失败、篡改、symlink或
+  更新但无效的证据必须失败关闭且不得回退到更旧PASS。

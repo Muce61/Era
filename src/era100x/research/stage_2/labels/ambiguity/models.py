@@ -48,7 +48,7 @@ class HistoricalAmbiguityBounds(StrictEventModel):
     )
     schema_version: Literal["1.0"] = "1.0"
     task_id: Literal["S2-T14"] = "S2-T14"
-    task_version: Literal["1.2"] = "1.2"
+    task_version: Literal["1.3"] = "1.3"
     instrument: Instrument
     market_episode_id: str = Field(pattern=SHA256_PATTERN)
     canonical_candidate_id: str = Field(pattern=SHA256_PATTERN)
@@ -146,7 +146,7 @@ class HistoricalAmbiguityDistribution(StrictEventModel):
     )
     schema_version: Literal["1.0"] = "1.0"
     task_id: Literal["S2-T14"] = "S2-T14"
-    task_version: Literal["1.2"] = "1.2"
+    task_version: Literal["1.3"] = "1.3"
     instrument: Instrument
     evidence_level: EvidenceLevel
     parameter_set_id: str = Field(min_length=1)

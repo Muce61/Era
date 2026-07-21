@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
 
@@ -14,10 +15,12 @@ _acceptance_projection = MODULE._acceptance_projection
 _stage2_task_projection = MODULE._stage2_task_projection
 _stage2_path_metrics_projection = MODULE._stage2_path_metrics_projection
 _stage2_first_passage_projection = MODULE._stage2_first_passage_projection
+_stage2_ambiguity_bounds_projection = MODULE._stage2_ambiguity_bounds_projection
 _json_hash = MODULE._json_hash
 
 T12_RUN_ID = "stage2-s2t12-metrics-20260721T040435Z-abcdef123456"
 T13_RUN_ID = "stage2-s2t13-first-passage-20260721T104500Z-abcdef123456"
+T14_RUN_ID = "stage2-s2t14-ambiguity-bounds-20260721T140500Z-abcdef123456"
 
 
 def _write(path: Path, content: str = "{}") -> None:
@@ -339,6 +342,225 @@ def _write_t13_pass(
     )
 
 
+def _t14_authority() -> dict:
+    parameter_set_ids = [f"parameter-{index:02d}" for index in range(19)]
+    return _sealed(
+        {
+            "task_id": "S2-T14",
+            "task_version": "1.3",
+            "code_commit": "abcdef0",
+            "source_s2t13_run_id": T13_RUN_ID,
+            "source_s2t13_snapshot_id": "6" * 64,
+            "source_s2t13_authority_hash": "a" * 64,
+            "source_s2t13_manifest_hash": "7" * 64,
+            "source_s2t13_catalog_hash": "8" * 64,
+            "source_s2t13_code_commit": "65a5473",
+            "combination_order": [f"combination-{index}" for index in range(30)],
+            "parameter_set_ids": parameter_set_ids,
+            "parameter_set_timing_pairs": [
+                {"parameter_set_id": value, "timing_id": f"T{index % 4 + 1}"}
+                for index, value in enumerate(parameter_set_ids)
+            ],
+            "timing_ids": ["T1", "T2", "T3", "T4"],
+            "evidence_levels": ["H1", "H2"],
+            "expected_distribution_count_per_instrument": 1_140,
+            "historical_evidence_only": True,
+            "stage3_locked": True,
+        },
+        "authority_hash",
+    )
+
+
+def _write_t14_active(root: Path, run_id: str = T14_RUN_ID) -> tuple[Path, dict]:
+    run_root = root / "runs" / run_id
+    authority = _t14_authority()
+    _write(run_root / "manifests/preflight-authority.json", json.dumps(authority))
+    execution = _sealed(
+        {
+            **authority,
+            "run_id": run_id,
+            "started_at_utc": "2026-07-21T14:05:00Z",
+        },
+        "execution_manifest_hash",
+    )
+    _write(
+        run_root / "manifests" / f"execution-{execution['execution_manifest_hash']}.json",
+        json.dumps(execution),
+    )
+    _write(
+        root / "authorities/S2-T14" / f"{authority['authority_hash']}.json",
+        json.dumps(authority),
+    )
+    return run_root, authority
+
+
+def _t14_instrument(instrument: str, episodes: int, payload: bytes) -> dict:
+    path_rows = episodes * 2
+    classifications = path_rows * 30
+    ambiguous = classifications // 10
+    target_first = classifications // 5
+    stop_first = classifications // 4
+    expired = classifications - ambiguous - target_first - stop_first
+    return {
+        "instrument": instrument,
+        "episode_count": episodes,
+        "path_rows": path_rows,
+        "classification_count": classifications,
+        "distribution_count": 1_140,
+        "label_counts": {
+            "TARGET_FIRST": target_first,
+            "STOP_FIRST": stop_first,
+            "EXPIRED": expired,
+            "AMBIGUOUS": ambiguous,
+        },
+        "label_reason_counts": {
+            "TARGET_OBSERVED_FIRST": target_first,
+            "STOP_OBSERVED_FIRST": stop_first,
+            "HORIZON_EXPIRED_WITHOUT_TOUCH": expired,
+            "H1_SAME_EVENT_TARGET_AND_STOP": ambiguous,
+        },
+        "primary_target_first_count": target_first,
+        "conditional_denominator": classifications - ambiguous,
+        "theoretical_upper_target_first_count": target_first + ambiguous,
+        "byte_size": len(payload),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+    }
+
+
+def _write_t14_pass(
+    root: Path,
+    repository_root: Path,
+    run_id: str = T14_RUN_ID,
+    *,
+    human_accepted: bool = False,
+) -> None:
+    run_root, authority = _write_t14_active(root, run_id)
+    snapshot_id = "9" * 64
+    snapshot = run_root / "published/snapshots" / snapshot_id
+    payloads = {
+        "BTCUSDT": b'{"instrument":"BTCUSDT","distributions":[]}',
+        "ETHUSDT": b'{"instrument":"ETHUSDT","distributions":[]}',
+    }
+    entries = {
+        instrument: _t14_instrument(instrument, episodes, payloads[instrument])
+        for instrument, episodes in (("BTCUSDT", 10), ("ETHUSDT", 12))
+    }
+    for instrument, payload in payloads.items():
+        path = snapshot / instrument / "ambiguity_distributions.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(payload)
+    catalog = _sealed(
+        {
+            "schema_name": "stage2-s2t14-ambiguity-bounds-catalog",
+            "schema_version": "1.0",
+            "run_id": run_id,
+            "snapshot_id": snapshot_id,
+            **{
+                key: authority[key]
+                for key in (
+                    "combination_order",
+                    "parameter_set_ids",
+                    "parameter_set_timing_pairs",
+                    "timing_ids",
+                    "evidence_levels",
+                    "expected_distribution_count_per_instrument",
+                )
+            },
+            "instruments": entries,
+        },
+        "catalog_hash",
+    )
+    execution_path = next((run_root / "manifests").glob("execution-*.json"))
+    execution = json.loads(execution_path.read_text())
+    manifest = _sealed(
+        {
+            "schema_name": "stage2-s2t14-ambiguity-bounds-manifest",
+            "schema_version": "1.0",
+            "task_id": "S2-T14",
+            "task_version": "1.3",
+            "run_id": run_id,
+            "snapshot_id": snapshot_id,
+            "execution_manifest_hash": execution["execution_manifest_hash"],
+            "authority_hash": authority["authority_hash"],
+            "source_s2t13_run_id": authority["source_s2t13_run_id"],
+            "source_s2t13_snapshot_id": authority["source_s2t13_snapshot_id"],
+            "source_s2t13_authority_hash": authority["source_s2t13_authority_hash"],
+            "source_s2t13_manifest_hash": authority["source_s2t13_manifest_hash"],
+            "source_s2t13_catalog_hash": authority["source_s2t13_catalog_hash"],
+            "source_s2t13_code_commit": authority["source_s2t13_code_commit"],
+            "historical_evidence_only": True,
+            "stage3_locked": True,
+        },
+        "manifest_hash",
+    )
+    total_rows = sum(entry["path_rows"] for entry in entries.values())
+    total_classifications = sum(entry["classification_count"] for entry in entries.values())
+    total_distributions = sum(entry["distribution_count"] for entry in entries.values())
+    total_ambiguous = sum(entry["label_counts"]["AMBIGUOUS"] for entry in entries.values())
+    completion = {
+        "status": "PASS",
+        "task_id": "S2-T14",
+        "task_version": "1.3",
+        "run_id": run_id,
+        "authority_hash": authority["authority_hash"],
+        "snapshot_id": snapshot_id,
+        "manifest_hash": manifest["manifest_hash"],
+        "catalog_hash": catalog["catalog_hash"],
+        "total_path_rows": total_rows,
+        "total_classification_count": total_classifications,
+        "total_distribution_count": total_distributions,
+        "total_ambiguous_count": total_ambiguous,
+        "historical_evidence_only": True,
+        "stage3_locked": True,
+    }
+    _write(snapshot / "catalog.json", json.dumps(catalog))
+    _write(snapshot / "manifest.json", json.dumps(manifest))
+    _write(run_root / "reports/completion.json", json.dumps(completion))
+    summary = {
+        "schema_name": "s2-t14-ambiguity-bounds-repository-summary",
+        "task_id": "S2-T14",
+        "task_version": "1.3",
+        "run_id": run_id,
+        "authority_hash": authority["authority_hash"],
+        "snapshot_id": snapshot_id,
+        "manifest_hash": manifest["manifest_hash"],
+        "catalog_hash": catalog["catalog_hash"],
+        "source_s2t13_run_id": authority["source_s2t13_run_id"],
+        "total_path_rows": total_rows,
+        "total_classification_count": total_classifications,
+        "total_distribution_count": total_distributions,
+        "total_ambiguous_count": total_ambiguous,
+        "instruments": {
+            instrument: {
+                "episode_count": entry["episode_count"],
+                "path_rows": entry["path_rows"],
+                "classification_count": entry["classification_count"],
+                "distribution_count": entry["distribution_count"],
+                "ambiguous_count": entry["label_counts"]["AMBIGUOUS"],
+                "output_sha256": entry["sha256"],
+            }
+            for instrument, entry in entries.items()
+        },
+        "verify_status": "PASS",
+        "historical_evidence_only": True,
+        "stage3_locked": True,
+    }
+    if human_accepted:
+        summary.update(
+            {
+                "status": "PASSED_HUMAN_ACCEPTED",
+                "human_accepted": True,
+                "accepted_by": "Muce",
+                "accepted_at": "2026-07-21T15:00:00Z",
+            }
+        )
+    _write(repository_root / MODULE.S2T14_SUMMARY_RELATIVE_PATH, json.dumps(summary))
+    _write(
+        repository_root / MODULE.S2T14_VALIDATION_RELATIVE_PATH,
+        f"S2-T14 VALIDATED\nRun {run_id}\n",
+    )
+
+
 def test_execution_observability_projects_append_only_evidence(tmp_path: Path) -> None:
     adoption = {
         "adopted_file_count": 8708,
@@ -573,14 +795,17 @@ def test_s2_t11_human_acceptance_is_derived_from_append_only_receipt(tmp_path: P
     assert result["human_accepted"] is True
 
 
-def test_ui_derives_s2_t11_version_and_complete_task_count() -> None:
+def test_ui_derives_current_task_version_count_and_acceptance_without_hardcoded_pass() -> None:
     page = MODULE_PATH.with_name("stage2_progress_ui.html").read_text(encoding="utf-8")
 
     assert 'task.task_version || "UNKNOWN"' in page
-    assert "/ 14 PASSED" in page
+    assert "/ 15 PASSED" in page
     assert "S2-T11 v1.2" not in page
-    assert "S2-T13<b>CHECKING</b>" in page
-    assert "S2-T13<b>PASSED</b>" not in page
+    assert "S2-T14<b>CHECKING</b>" in page
+    assert "S2-T14<b>PASSED</b>" not in page
+    assert 'tasks["S2-T14"]' in page
+    assert "VALIDATED · AWAITING HUMAN" in page
+    assert "PASSED · HUMAN ACCEPTED" in page
 
 
 def test_s2_t11_malformed_symlink_and_conflicting_chain_fail_closed(tmp_path: Path) -> None:
@@ -831,4 +1056,138 @@ def test_s2_t13_tampered_summary_and_symlink_fail_closed(tmp_path: Path) -> None
     run_link.parent.mkdir(parents=True)
     run_link.symlink_to(target, target_is_directory=True)
     linked = _stage2_first_passage_projection(linked_root, repository_root)
+    assert linked["status"] == "EVIDENCE_INVALID"
+
+
+def test_s2_t14_missing_and_active_runs_never_pass(tmp_path: Path) -> None:
+    repository_root = tmp_path / "repository"
+    missing = _stage2_ambiguity_bounds_projection(tmp_path, repository_root)
+    assert missing["status"] == "NOT_STARTED"
+    assert missing["reason_code"] == "S2_T14_RUN_MISSING"
+
+    run_root, _ = _write_t14_active(tmp_path)
+    _write(
+        run_root / "reports/btcusdt-completion.json",
+        json.dumps(
+            {
+                "instrument": "BTCUSDT",
+                "episode_count": 10,
+                "path_rows": 20,
+                "classification_count": 600,
+                "distribution_count": 1_140,
+                "ambiguous_count": 60,
+            }
+        ),
+    )
+    active = _stage2_ambiguity_bounds_projection(tmp_path, repository_root)
+    assert active["status"] == "IN_PROGRESS"
+    assert active["run_id"] == T14_RUN_ID
+    assert active["instruments"]["BTCUSDT"]["distribution_count"] == 1_140
+    assert active["checks"]["published_completion_present"] is False
+
+
+def test_s2_t14_pass_requires_bound_source_distributions_verify_and_validation(
+    tmp_path: Path,
+) -> None:
+    stage2_root = tmp_path / "stage2"
+    repository_root = tmp_path / "repository"
+    _write_t14_pass(stage2_root, repository_root)
+
+    result = _stage2_ambiguity_bounds_projection(stage2_root, repository_root)
+
+    assert result["status"] == "PASS"
+    assert result["reason_code"] == "S2_T14_FULL_OUTPUT_VERIFIED_VALIDATION_PASS"
+    assert result["total_path_rows"] == 44
+    assert result["total_classification_count"] == 1_320
+    assert result["total_distribution_count"] == 2_280
+    assert result["total_ambiguous_count"] == 132
+    assert result["instruments"]["BTCUSDT"]["distribution_count"] == 1_140
+    assert result["instruments"]["ETHUSDT"]["classification_count"] == 720
+    assert result["source_s2t13_run_id"] == T13_RUN_ID
+    assert result["verify_status"] == "PASS"
+    assert result["validation_status"] == "PASS"
+    assert result["historical_evidence_only"] is True
+    assert result["stage3_locked"] is True
+    assert result["human_accepted"] is False
+    assert all(result["checks"].values())
+
+
+def test_s2_t14_human_acceptance_is_derived_from_repository_summary(tmp_path: Path) -> None:
+    stage2_root = tmp_path / "stage2"
+    repository_root = tmp_path / "repository"
+    _write_t14_pass(stage2_root, repository_root, human_accepted=True)
+
+    result = _stage2_ambiguity_bounds_projection(stage2_root, repository_root)
+
+    assert result["status"] == "PASS"
+    assert result["human_accepted"] is True
+    assert all(result["checks"].values())
+
+
+def test_s2_t14_newest_failure_wins_without_fallback(tmp_path: Path) -> None:
+    repository_root = tmp_path / "repository"
+    _write_t14_pass(tmp_path, repository_root)
+    newer = "stage2-s2t14-ambiguity-bounds-20260721T140501Z-fedcba654321"
+    failure = {
+        "task_id": "S2-T14",
+        "task_version": "1.3",
+        "run_id": newer,
+        "status": "FAILED_UNPUBLISHED",
+        "failure_class": "VALIDATION_ERROR",
+        "reason": "newer run failed",
+        "resume_allowed": False,
+    }
+    _write(tmp_path / "runs" / newer / "reports/failure.json", json.dumps(failure))
+
+    result = _stage2_ambiguity_bounds_projection(tmp_path, repository_root)
+
+    assert result["status"] == "FAILED"
+    assert result["run_id"] == newer
+    assert result["reason"] == "newer run failed"
+
+    malformed_root = tmp_path / "malformed"
+    malformed = dict(failure)
+    malformed.pop("resume_allowed")
+    _write(malformed_root / "runs" / newer / "reports/failure.json", json.dumps(malformed))
+    invalid = _stage2_ambiguity_bounds_projection(malformed_root, repository_root)
+    assert invalid["status"] == "EVIDENCE_INVALID"
+    assert invalid["reason_code"] == "S2_T14_EVIDENCE_INVALID"
+
+
+def test_s2_t14_tampered_summary_output_and_symlink_fail_closed(tmp_path: Path) -> None:
+    stage2_root = tmp_path / "stage2"
+    repository_root = tmp_path / "repository"
+    _write_t14_pass(stage2_root, repository_root)
+    summary_path = repository_root / MODULE.S2T14_SUMMARY_RELATIVE_PATH
+    summary = json.loads(summary_path.read_text())
+    summary["total_ambiguous_count"] += 1
+    _write(summary_path, json.dumps(summary))
+    result = _stage2_ambiguity_bounds_projection(stage2_root, repository_root)
+    assert result["status"] == "EVIDENCE_INVALID"
+    assert result["checks"]["repository_summary_matches"] is False
+
+    clean_root = tmp_path / "clean"
+    clean_repository = tmp_path / "clean-repository"
+    _write_t14_pass(clean_root, clean_repository)
+    output = (
+        clean_root
+        / "runs"
+        / T14_RUN_ID
+        / "published/snapshots"
+        / ("9" * 64)
+        / "BTCUSDT/ambiguity_distributions.json"
+    )
+    original = output.read_bytes()
+    output.write_bytes(b"X" + original[1:])
+    tampered = _stage2_ambiguity_bounds_projection(clean_root, clean_repository)
+    assert tampered["status"] == "EVIDENCE_INVALID"
+    assert tampered["checks"]["btcusdt_complete"] is False
+
+    linked_root = tmp_path / "linked"
+    target = tmp_path / "outside-t14"
+    target.mkdir()
+    run_link = linked_root / "runs" / T14_RUN_ID
+    run_link.parent.mkdir(parents=True)
+    run_link.symlink_to(target, target_is_directory=True)
+    linked = _stage2_ambiguity_bounds_projection(linked_root, repository_root)
     assert linked["status"] == "EVIDENCE_INVALID"

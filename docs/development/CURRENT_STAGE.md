@@ -3,8 +3,8 @@
 ```text
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
-Current Task: S2-T14 v1.2 — AMBIGUOUS bounds
-Status: S2_T14_V1_2_IMPLEMENTATION_PASS_AWAITING_CR_2026_024
+Current Task: S2-T14 v1.3 — AMBIGUOUS bounds
+Status: S2_T14_V1_3_APPROVED_IN_PROGRESS
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
@@ -21,8 +21,9 @@ full-output runner, read-only Verify and automatic Web-UI projection are impleme
 1,065,416 H1/H2 path rows and 31,962,480 classifications; full Verify and the real-evidence UI
 projection pass. Muce accepted and closed S2-T13 at 2026-07-21T12:52:58Z, then approved S2-T14
 v1.2 fixture capability with `开始t14` at 2026-07-21T13:07:08Z. S2-T14 is isolated to historical
-AMBIGUOUS bounds. Its deterministic fixture implementation and repository quality gate pass;
-CR-2026-024 now awaits separate approval for formal full-output and UI observability. S2-T15 through
+AMBIGUOUS bounds. Its deterministic fixture implementation and repository quality gate pass.
+Muce approved CR-2026-024 and S2-T14 v1.3 at 2026-07-21T13:37:13Z for the minimum formal
+full-distribution and read-only automatic UI scope; execution is now in progress. S2-T15 through
 S2-T18 and S2-T20 remain `DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
 
 S2-T11 v1.3 full-output Run `stage2-s2t11-paths-20260721T023117Z-029707f3c111` published
