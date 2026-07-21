@@ -619,6 +619,7 @@ def _build_instrument(
         expected_snapshot_id=FIXED_SNAPSHOT_ID,
         deep_verify_objects=False,
     )
+    destination.parent.mkdir(parents=True, exist_ok=False)
     temporary = destination.with_name(f".{destination.name}.{uuid.uuid4().hex}.tmp")
     writer = _MetricsWriter(temporary)
     try:
@@ -635,7 +636,6 @@ def _build_instrument(
     except BaseException:
         writer.writer.close()
         raise
-    destination.parent.mkdir(parents=True, exist_ok=True)
     os.replace(temporary, destination)
     summary = {
         "instrument": instrument,
