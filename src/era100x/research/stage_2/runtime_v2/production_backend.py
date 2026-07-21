@@ -693,7 +693,7 @@ class ProductionRuntimeV2Backend:
         report = compare_run_a_to_v2_sorted_stream(
             run_a,
             group1_receipts(),
-            v2_legacy_hash_algorithm=V2_RECEIPT_LEGACY_HASH_ALGORITHM,
+            v2_legacy_hash_algorithm=LEGACY_HASH_ALGORITHM,
             v2_global_distributions=distributions,
         )
         self._enforce_compare_rss("semantic comparison")
