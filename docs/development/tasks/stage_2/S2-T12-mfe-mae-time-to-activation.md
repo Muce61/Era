@@ -4,7 +4,7 @@
 
 - task_id: S2-T12
 - task_version: 1.3
-- status: APPROVED / IN_PROGRESS
+- status: VALIDATED / AWAITING HUMAN ACCEPTANCE
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
@@ -102,6 +102,10 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 2026-07-21：Muce批准v1.3最小路径指标合同，从已收口并推送的
   `9c3aadd5166ea2a2f6ab59b365ed1aee9b46aab6`独立执行；状态
   `APPROVED / IN_PROGRESS`。本版本冻结第22节合同，不批准S2-T13或Stage 3。
+- 2026-07-21：全量Run `stage2-s2t12-metrics-20260721T040435Z-de9aaea56f2a`与独立Verify
+  PASS，共发布1,065,416条BTC/ETH分离的H1/H2历史路径指标；状态更新为
+  `VALIDATED / AWAITING HUMAN ACCEPTANCE`。Web UI自动识别仍由待批准CR-2026-022阻塞，
+  不批准S2-T13或Stage 3。
 
 ## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
 

@@ -1,0 +1,53 @@
+{
+  "authority_hash": "4874435df7b5617409a6da49bd537c146ed4267ab6074b913e5aeb67a6260b91",
+  "catalog_hash": "d1a9fa0224ae20dabe1611337e998109463cb0ccc2ae4ac874373204d43eb422",
+  "code_commit": "c8126cd2bf1f461894400c427a087d92fbe1bf82",
+  "config_sha256": "7c25857fb8f769cf464e611c37e9bceb49f62d2da9f15d7ac112b0af84c1b887",
+  "evidence_level": "FULL_HISTORICAL_H1_H2_PRICE_PATH_METRICS",
+  "failed_unpublished_run_ids": [
+    "stage2-s2t12-metrics-20260721T031838Z-5d2177984856",
+    "stage2-s2t12-metrics-20260721T032029Z-ff774eb5fea3",
+    "stage2-s2t12-metrics-20260721T033014Z-04ea535bfe63",
+    "stage2-s2t12-metrics-20260721T033611Z-a74fd68920a2"
+  ],
+  "historical_evidence_only": true,
+  "instruments": {
+    "BTCUSDT": {
+      "computed_rows": 440276,
+      "episode_count": 220201,
+      "h1_rows": 220201,
+      "h2_rows": 220201,
+      "no_observation_rows": 126,
+      "output_sha256": "c03076da8bbf4c2d890467ff04f85c2167e6e1659dba845f3d38a75fd2a24022",
+      "row_count": 440402
+    },
+    "ETHUSDT": {
+      "computed_rows": 624670,
+      "episode_count": 312507,
+      "h1_rows": 312507,
+      "h2_rows": 312507,
+      "no_observation_rows": 344,
+      "output_sha256": "ee5355995ce8109ea96aadc48e785d28efe29c63d9ac7227d53c6978e3646e0a",
+      "row_count": 625014
+    }
+  },
+  "manifest_hash": "482a9a8c3a3d3bb219155c50f2f3cedf20769d04e1cadc5beee792e59b12530d",
+  "recovery_overlay": {
+    "official_archive_sha256": "e4a909df273586e48bd49c41de6f3d1a317f5e37763440144003173addf9b3c9",
+    "source_byte_sha256": "fc0f50e0d92b46520644666b040512b19cafbbcf0d143f714d92b4525315c296",
+    "source_logical_sha256": "eee2263fe964b5dcfb8d7fd8e063a240442dc844cbd66e1025c7aa9202b6fd84",
+    "source_relative_path": "BTCUSDT/archive=2022-03/date=2022-03-01/part-000.parquet",
+    "stage1_mutated": false
+  },
+  "run_id": "stage2-s2t12-metrics-20260721T040435Z-de9aaea56f2a",
+  "schema_name": "s2-t12-path-metrics-repository-summary",
+  "schema_version": "1.0",
+  "snapshot_id": "f32b0c2838c73e8d5719a2b1bf76ebf79346715334310d30ebfbaeeb7c114bec",
+  "stage3_locked": true,
+  "status": "VALIDATED_AWAITING_HUMAN_ACCEPTANCE",
+  "task_id": "S2-T12",
+  "task_version": "1.3",
+  "total_metric_rows": 1065416,
+  "verify_status": "PASS",
+  "web_ui_status": "BLOCKED_PENDING_CR_2026_022_APPROVAL"
+}
