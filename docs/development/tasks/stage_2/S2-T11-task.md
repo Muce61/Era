@@ -15,6 +15,7 @@
 - approved_at: 2026-07-21T02:19:21Z
 - accepted_by: Muce
 - accepted_at: 2026-07-21T02:47:07Z
+- acceptance_receipt: e16b77c80c4cfbd1b42fda071ce117534aaa302f6ea70fe4c4a0cfbff61383ac
 
 ## 1. 目标
 

@@ -16,5 +16,8 @@
   "task_version": "1.3",
   "accepted_at": "2026-07-21T02:47:07Z",
   "accepted_by": "Muce",
+  "acceptance_code_commit": "4866ca52a62a95c49039ed0dcec2ca056460c1a2",
+  "acceptance_receipt_hash": "e16b77c80c4cfbd1b42fda071ce117534aaa302f6ea70fe4c4a0cfbff61383ac",
+  "superseded_acceptance_receipt_hash": "906a66fe3120ccbffa613359ca18686f061b31c48bdd9271ef42900c87b3a615",
   "unconsumed_superseded_preflight_hash": "005157a08cb654ad25a2627da5f0f692955d0df476f266e989686de16d2f5879"
 }
