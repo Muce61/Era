@@ -23,6 +23,8 @@
   ],
   "manual_version": "V1.3.4",
   "mae_sign": "NON_POSITIVE_SIGNED_BPS",
+  "metric_decimal_places": 18,
+  "metric_decimal_rounding": "ROUND_HALF_EVEN",
   "mfe_sign": "NON_NEGATIVE_SIGNED_BPS",
   "reference_price_source": "FIXED_S2T10_PRICE_TRIGGER_FACT",
   "source_s2t10_run_id": "stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04",

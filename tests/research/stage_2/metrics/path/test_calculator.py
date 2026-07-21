@@ -201,6 +201,20 @@ def test_zero_baseline_and_unreached_activation_are_not_missing() -> None:
     assert all(item.time_to_activation_ns is None for item in result.activations)
 
 
+def test_repeating_decimal_bps_is_explicitly_quantized_half_even() -> None:
+    path = _path([_bar(10 * S, high="4", low="2")], [])
+    result = compute_h1_path_metrics(
+        path,
+        reference_price=Decimal("3"),
+        activation_thresholds_bps=(Decimal("15"),),
+    )
+
+    assert result.mfe_bps == Decimal("3333.333333333333333333")
+    assert result.mae_bps == Decimal("-3333.333333333333333333")
+    assert result.mfe_bps.as_tuple().exponent == -18
+    assert result.mae_bps.as_tuple().exponent == -18
+
+
 def test_empty_evidence_is_no_observations_not_zero() -> None:
     path = _path([], [])
     result = compute_h2_path_metrics(

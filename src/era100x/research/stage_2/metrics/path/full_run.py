@@ -12,7 +12,7 @@ from bisect import bisect_left
 from collections import Counter, OrderedDict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_EVEN, Decimal
 from pathlib import Path, PurePosixPath
 from typing import Any, cast
 
@@ -54,6 +54,7 @@ DECIMAL_TYPE = pa.decimal128(38, 18)
 ZERO = Decimal(0)
 ONE = Decimal(1)
 BPS = Decimal(10_000)
+BPS_QUANTUM = Decimal("0.000000000000000001")
 
 METRICS_SCHEMA = pa.schema(
     [
@@ -374,8 +375,16 @@ class _MetricState:
             "window_truncated": self.episode["window_truncated"],
             "observation_count": self.observation_count,
             "metric_status": "COMPUTED" if computed else "NO_OBSERVATIONS",
-            "mfe_bps": max(ZERO, cast(Decimal, mfe)) if computed else None,
-            "mae_bps": min(ZERO, cast(Decimal, mae)) if computed else None,
+            "mfe_bps": (
+                max(ZERO, cast(Decimal, mfe)).quantize(BPS_QUANTUM, rounding=ROUND_HALF_EVEN)
+                if computed
+                else None
+            ),
+            "mae_bps": (
+                min(ZERO, cast(Decimal, mae)).quantize(BPS_QUANTUM, rounding=ROUND_HALF_EVEN)
+                if computed
+                else None
+            ),
             "mfe_first_ts_event_ns": self.mfe_ts if computed else None,
             "mae_first_ts_event_ns": self.mae_ts if computed else None,
             "last_observation_ts_event_ns": self.last_ts,

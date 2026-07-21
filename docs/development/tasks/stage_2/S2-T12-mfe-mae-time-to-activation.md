@@ -140,6 +140,8 @@ MAE_bps = min(0, min(signed_move_bps))
 - H2按`(ts_event_ns, venue_trade_id, canonical_trade_id)`处理Trade price；历史事实身份仍为
   `(instrument, canonical_trade_id)`，冲突事实全部保留。
 - 相同极值多次出现时，使用稳定顺序中第一次达到该最终极值的事件时间。
+- 极值、阈值比较和首次时间均使用未量化Decimal；写入`MFE_bps/MAE_bps`证据字段时统一
+  量化到小数点后18位，舍入模式为`ROUND_HALF_EVEN`，不得隐式截断或使用binary float。
 - `time_since_mfe_ns = last_observation_ts_event_ns - mfe_first_ts_event_ns`；无观测时指标为
   `NO_OBSERVATIONS`且数值为空，不得以零伪装缺失。
 - 路径继续使用UTC event time和左闭右开窗口；截断、缺口、歧义与S2-T11质量状态原样传播。

@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from decimal import Decimal
+from decimal import ROUND_HALF_EVEN, Decimal
 
 from era100x.research.stage_2.paths.extraction.models import ExtractedHistoricalPath
 
 from .models import ActivationTiming, HistoricalPathMetrics
 
 BPS = Decimal("10000")
+BPS_QUANTUM = Decimal("0.000000000000000001")
 PROHIBITED_INTERPRETATIONS = (
     "PNL",
     "RETURN",
@@ -23,6 +24,10 @@ PROHIBITED_INTERPRETATIONS = (
 
 def _signed_move_bps(price: Decimal, reference_price: Decimal) -> Decimal:
     return (price / reference_price - Decimal(1)) * BPS
+
+
+def _stored_bps(value: Decimal) -> Decimal:
+    return value.quantize(BPS_QUANTUM, rounding=ROUND_HALF_EVEN)
 
 
 def _thresholds(values: Iterable[Decimal]) -> tuple[Decimal, ...]:
@@ -219,8 +224,8 @@ def _computed_metrics(
             ),
             "observation_count": len(favorable),
             "metric_status": "COMPUTED",
-            "mfe_bps": mfe,
-            "mae_bps": mae,
+            "mfe_bps": _stored_bps(mfe),
+            "mae_bps": _stored_bps(mae),
             "mfe_first_ts_event_ns": mfe_ts,
             "mae_first_ts_event_ns": mae_ts,
             "last_observation_ts_event_ns": last_ts,
