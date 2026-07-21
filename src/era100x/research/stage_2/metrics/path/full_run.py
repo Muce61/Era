@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import uuid
 from bisect import bisect_left
-from collections import Counter
+from collections import Counter, OrderedDict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -548,10 +548,45 @@ def _process_h1(
     timestamps: list[int] = []
     highs: pa.Array | pa.ChunkedArray = pa.array([], type=DECIMAL_TYPE)
     lows: pa.Array | pa.ChunkedArray = pa.array([], type=DECIMAL_TYPE)
+    artifact_cache: OrderedDict[str, pa.Table] = OrderedDict()
+    verified_objects: set[str] = set()
     for item in slices:
         partition = str(item["source_partition_id"])
         if partition != current_partition:
-            table = reader.read_partition(partition).combine_chunks()
+            receipt = reader.receipt(partition)
+            if receipt.terminal_state == "EMPTY":
+                raise ValueError("T11 H1 slice references an empty source partition")
+            if receipt.semantic_sha256 != item["source_semantic_sha256"]:
+                raise ValueError("T11 H1 source semantic hash mismatch")
+            if receipt.row_count != int(item["source_row_count"]):
+                raise ValueError("T11 H1 source row count mismatch")
+            pieces: list[pa.Table] = []
+            for fragment_hash in receipt.fragment_hashes:
+                fragment = reader._fragment(fragment_hash)
+                artifact = reader.artifacts.get(fragment.artifact.object_sha256)
+                if artifact is None or artifact != fragment.artifact:
+                    raise ValueError("H1 fragment references a conflicting object")
+                physical = artifact_cache.get(artifact.object_sha256)
+                if physical is None:
+                    path = _safe_relative(reader.catalog_root, artifact.relative_path)
+                    if artifact.object_sha256 not in verified_objects:
+                        if sha256_file(path) != artifact.object_sha256:
+                            raise ValueError("H1 packed object byte hash mismatch")
+                        verified_objects.add(artifact.object_sha256)
+                    physical = pq.read_table(path, columns=["event_ts_ns", "high", "low"])
+                    artifact_cache[artifact.object_sha256] = physical
+                    artifact_cache.move_to_end(artifact.object_sha256)
+                    while len(artifact_cache) > 4:
+                        artifact_cache.popitem(last=False)
+                else:
+                    artifact_cache.move_to_end(artifact.object_sha256)
+                piece = physical.slice(fragment.row_offset, fragment.row_count)
+                if piece.num_rows != fragment.row_count:
+                    raise ValueError("H1 fragment range is outside its packed object")
+                pieces.append(piece)
+            table = pa.concat_tables(pieces).combine_chunks()
+            if table.num_rows != receipt.row_count:
+                raise ValueError("H1 fragment row count does not match its receipt")
             timestamps = cast(list[int], table["event_ts_ns"].to_pylist())
             highs = table["high"]
             lows = table["low"]
