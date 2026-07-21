@@ -236,6 +236,7 @@ def _write_t13_pass(
     root: Path,
     repository_root: Path,
     run_id: str = T13_RUN_ID,
+    human_accepted: bool = False,
 ) -> None:
     run_root, authority = _write_t13_active(root, run_id)
     snapshot_id = "6" * 64
@@ -322,6 +323,15 @@ def _write_t13_pass(
         "historical_evidence_only": True,
         "stage3_locked": True,
     }
+    if human_accepted:
+        summary.update(
+            {
+                "status": "PASSED_HUMAN_ACCEPTED",
+                "human_accepted": True,
+                "accepted_by": "Muce",
+                "accepted_at": "2026-07-21T12:52:58Z",
+            }
+        )
     _write(repository_root / MODULE.S2T13_SUMMARY_RELATIVE_PATH, json.dumps(summary))
     _write(
         repository_root / MODULE.S2T13_VALIDATION_RELATIVE_PATH,
@@ -765,6 +775,18 @@ def test_s2_t13_pass_requires_authority_matrix_verify_and_validation(tmp_path: P
     assert result["historical_evidence_only"] is True
     assert result["stage3_locked"] is True
     assert result["human_accepted"] is False
+    assert all(result["checks"].values())
+
+
+def test_s2_t13_human_acceptance_is_derived_from_repository_summary(tmp_path: Path) -> None:
+    stage2_root = tmp_path / "stage2"
+    repository_root = tmp_path / "repository"
+    _write_t13_pass(stage2_root, repository_root, human_accepted=True)
+
+    result = _stage2_first_passage_projection(stage2_root, repository_root)
+
+    assert result["status"] == "PASS"
+    assert result["human_accepted"] is True
     assert all(result["checks"].values())
 
 

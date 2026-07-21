@@ -3,8 +3,8 @@
 ```text
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
-Current Task: S2-T13 v1.3 — First Passage labels
-Status: S2_T13_V1_3_FULL_OUTPUT_VERIFIED_AWAITING_HUMAN_ACCEPTANCE
+Current Task: NONE — S2-T13 closed; awaiting separately approved S2-T14
+Status: S2_T13_PASSED_HUMAN_ACCEPTED
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
@@ -19,8 +19,8 @@ CR-2026-023 and v1.3 at 2026-07-21T10:41:50Z. The strict historical first-passag
 full-output runner, read-only Verify and automatic Web-UI projection are implemented. Authority
 `ab76072c…bbbe` and Run `stage2-s2t13-first-passage-20260721T110224Z-d3f0c0331395` published
 1,065,416 H1/H2 path rows and 31,962,480 classifications; full Verify and the real-evidence UI
-projection pass. Human acceptance remains pending. S2-T14 through S2-T20 remain
-`DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
+projection pass. Muce accepted and closed S2-T13 at 2026-07-21T12:52:58Z. S2-T14 through
+S2-T18 and S2-T20 remain `DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
 
 S2-T11 v1.3 full-output Run `stage2-s2t11-paths-20260721T023117Z-029707f3c111` published
 220,201 BTC and 312,507 ETH historical path indexes. Read-only Verify, repository quality gates

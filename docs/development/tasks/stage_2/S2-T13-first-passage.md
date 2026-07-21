@@ -4,7 +4,7 @@
 
 - task_id: S2-T13
 - task_version: 1.3
-- status: FULL OUTPUT VERIFIED / AWAITING HUMAN ACCEPTANCE
+- status: PASSED / HUMAN ACCEPTED
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
@@ -13,6 +13,8 @@
 - supersedes: task_version 1.2
 - approved_by: Muce
 - approved_at: 2026-07-21T10:41:50Z
+- accepted_by: Muce
+- accepted_at: 2026-07-21T12:52:58Z
 
 ## 1. 目标
 
@@ -104,6 +106,9 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
   提交CR-2026-023后停止，不批准T14或Stage 3。
 - 2026-07-21：Muce批准CR-2026-023及v1.3最小全量合同；允许固定全量CLI、只读
   Authority/Run/Manifest/Catalog/Verify与Web UI自动识别。T14及Stage 3仍未批准。
+- 2026-07-21：正式全量Run、Verify、Validation、统一质量门与真实Web UI自动识别通过；
+  Muce于2026-07-21T12:52:58Z以“收尾t13”完成人工验收。状态更新为
+  `PASSED / HUMAN ACCEPTED`；S2-T14仍须单独批准，Stage 3保持锁定。
 
 ## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
 
