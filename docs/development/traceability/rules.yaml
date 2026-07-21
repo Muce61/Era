@@ -165,6 +165,11 @@ rules:
     tests: tests/research/stage_2/labels/first_passage/
     validation: docs/development/validations/stage_2/S2-T13.md
     state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t14_delivery:
+    implementation: src/era100x/research/stage_2/labels/ambiguity/
+    tests: tests/research/stage_2/labels/ambiguity/
+    validation: docs/development/validations/stage_2/S2-T14.md
+    state: IMPLEMENTED_FIXTURE_VALIDATED_AWAITING_CR_2026_024
   state: PLANNED
 - rule_id: FILL-FIRST-NONZERO-PROTECT
   rule_status: FROZEN
@@ -257,6 +262,11 @@ rules:
     tests: tests/research/stage_2/labels/first_passage/
     validation: docs/development/validations/stage_2/S2-T13.md
     state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t14_delivery:
+    implementation: src/era100x/research/stage_2/labels/ambiguity/
+    tests: tests/research/stage_2/labels/ambiguity/
+    validation: docs/development/validations/stage_2/S2-T14.md
+    state: IMPLEMENTED_FIXTURE_VALIDATED_AWAITING_CR_2026_024
   state: PLANNED
 - rule_id: RESEARCH-LOCKED-REPLAY-ONCE
   rule_status: FROZEN
@@ -342,6 +352,11 @@ rules:
     tests: tests/research/stage_2/labels/first_passage/
     validation: docs/development/validations/stage_2/S2-T13.md
     state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t14_delivery:
+    implementation: src/era100x/research/stage_2/labels/ambiguity/
+    tests: tests/research/stage_2/labels/ambiguity/
+    validation: docs/development/validations/stage_2/S2-T14.md
+    state: IMPLEMENTED_FIXTURE_VALIDATED_AWAITING_CR_2026_024
   state: PLANNED
 - rule_id: RESEARCH-H3-CONDITIONAL-ROUND-PROB
   rule_status: FROZEN
@@ -668,6 +683,11 @@ rules:
     tests: tests/research/stage_2/labels/first_passage/
     validation: docs/development/validations/stage_2/S2-T13.md
     state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t14_delivery:
+    implementation: src/era100x/research/stage_2/labels/ambiguity/
+    tests: tests/research/stage_2/labels/ambiguity/
+    validation: docs/development/validations/stage_2/S2-T14.md
+    state: IMPLEMENTED_FIXTURE_VALIDATED_AWAITING_CR_2026_024
   state: PLANNED
 - rule_id: INV-006
   rule_status: FROZEN
@@ -768,6 +788,11 @@ rules:
     tests: tests/research/stage_2/labels/first_passage/
     validation: docs/development/validations/stage_2/S2-T13.md
     state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t14_delivery:
+    implementation: src/era100x/research/stage_2/labels/ambiguity/
+    tests: tests/research/stage_2/labels/ambiguity/
+    validation: docs/development/validations/stage_2/S2-T14.md
+    state: IMPLEMENTED_FIXTURE_VALIDATED_AWAITING_CR_2026_024
   state: PLANNED
 - rule_id: INV-012
   rule_status: FROZEN
@@ -827,6 +852,11 @@ rules:
     tests: tests/research/stage_2/labels/first_passage/
     validation: docs/development/validations/stage_2/S2-T13.md
     state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t14_delivery:
+    implementation: src/era100x/research/stage_2/labels/ambiguity/
+    tests: tests/research/stage_2/labels/ambiguity/
+    validation: docs/development/validations/stage_2/S2-T14.md
+    state: IMPLEMENTED_FIXTURE_VALIDATED_AWAITING_CR_2026_024
   state: PLANNED
 - rule_id: INV-014
   rule_status: FROZEN
@@ -1295,6 +1325,11 @@ rules:
     tests: tests/research/stage_2/labels/first_passage/
     validation: docs/development/validations/stage_2/S2-T13.md
     state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t14_delivery:
+    implementation: src/era100x/research/stage_2/labels/ambiguity/
+    tests: tests/research/stage_2/labels/ambiguity/
+    validation: docs/development/validations/stage_2/S2-T14.md
+    state: IMPLEMENTED_FIXTURE_VALIDATED_AWAITING_CR_2026_024
   state: PLANNED
 - rule_id: CONTRACT-ENTRY-INTENT
   rule_status: RESEARCH
@@ -2368,7 +2403,14 @@ rules:
     s2_t13_snapshot_id: 3ea1f8e188c4cf605c05c49bc86118925784b27a3b7c0e9c1969edda7a295da0
     s2_t13_total_path_rows: 1065416
     s2_t13_total_classifications: 31962480
-    draft_tasks: [S2-T14, S2-T15, S2-T16, S2-T17, S2-T18, S2-T20]
+    s2_t14_task_version: '1.2'
+    s2_t14_status: IMPLEMENTED_FIXTURE_VALIDATED_AWAITING_CR_2026_024
+    s2_t14_approved_by: Muce
+    s2_t14_approved_at: '2026-07-21T13:07:08Z'
+    s2_t14_validation: docs/development/validations/stage_2/S2-T14.md
+    s2_t14_full_output_ui_change_request: docs/development/changes/CR-2026-024.md
+    cr_s2_024_status: PROPOSED_AWAITING_HUMAN_APPROVAL
+    draft_tasks: [S2-T15, S2-T16, S2-T17, S2-T18, S2-T20]
     oq_s2_004_status: RESOLVED
     decision_ref: docs/development/decisions/ADR-S2-004-primary-research-definition.md
     event_construction_decision_ref: docs/development/decisions/ADR-S2-005-event-construction-baseline.md

@@ -4,15 +4,15 @@
 
 - task_id: S2-T14
 - task_version: 1.2
-- status: DRAFT
+- status: IMPLEMENTATION PASS / AWAITING CR-2026-024 APPROVAL
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T13 PASS
 - supersedes: task_version 1.1
-- approved_by: NONE
-- approved_at: NONE
+- approved_by: Muce
+- approved_at: 2026-07-21T13:07:08Z
 
 ## 1. 目标
 
@@ -99,6 +99,12 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 2026-07-14：v1.0，按Stage 1 Trade Identity v2与Stage 2 Plan v1.0重规划；状态DRAFT，未执行。
 - 2026-07-14：v1.1，加入可扩展研究setup架构与事件说明图规划；状态DRAFT，未执行。
 - 2026-07-16：v1.2，按Plan v1.2收口分组、前置S2-T19并修订DAG；状态DRAFT，未执行。
+- 2026-07-21：Muce以“开始t14”批准v1.2 fixture能力，从已人工验收的S2-T13提交
+  `65a547386ca400c3b581bcf44c51ac1dacc4d764`独立执行。正式全量分布CLI、外部Run和Web UI
+  自动识别不在v1.2允许范围内，必须先批准最小范围修订。
+- 2026-07-21：v1.2纯fixture边界、分布汇总、hash和隔离测试通过；定向15项及统一质量门
+  523项全部PASS。因全量分布与Web UI仍缺授权，提交CR-2026-024并停止，不启动正式Run
+  或S2-T15。
 
 ## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
 
@@ -107,3 +113,20 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 验证命令：\`uv run python -m pytest tests/research/stage_2/labels/ambiguity -q\`；\`uv run python scripts/run_quality_gate.py\`。全量研究CLI须由S2-T19冻结后再写入Task新版本，不得当前虚构。
 - 验收标准：同秒双触及、无序事件、H1上下界、H2可判定路径、禁止删除/重分类歧义测试通过。
 - 证据模式：\`FIXTURE_CAPABILITY + FULL DISTRIBUTION\`。无论fixture能力是否可验收，Stage 1最终PASSED与VALID data baseline之前均不得执行本Task。
+
+## 22. S2-T14 v1.2最小歧义边界合同
+
+- 输入只能是已验证的S2-T13 `HistoricalFirstPassageLabel`；输入hash不匹配时失败关闭，
+  不得修改、删除或重新分类原始标签。
+- Primary固定把`AMBIGUOUS`按失败处理；条件结果必须从分母排除`AMBIGUOUS`；理论上界将
+  `AMBIGUOUS`按成功计入。三种口径必须同时保留，不得用条件结果或理论上界替代Primary。
+- H1同事件同时触及目标和止损时，悲观路径标签为`STOP_FIRST`、乐观路径标签为
+  `TARGET_FIRST`，但原始标签仍是`AMBIGUOUS`。
+- 缺口、无观察或窗口截断等未解决来源歧义只能产生0/1成功指标边界，不得虚构悲观或
+  乐观路径顺序标签。
+- `TARGET_FIRST`、`STOP_FIRST`和`EXPIRED`等可判定路径的上下界必须收敛到原标签；H2
+  仍使用S2-T13的V2稳定顺序，不产生同事件伪歧义。
+- 分布必须按BTC/ETH、H1/H2、parameter set、target、stop和timing分别汇总；Primary率、
+  排除歧义的条件率和理论上界率均由原始计数精确推导，输入shuffle不得改变hash。
+- 本版本只批准纯fixture变换与分布汇总能力；不得输出PnL、return、ROUND_SUCCESS、
+  live execution、条件基线、placebo、cluster、bootstrap或Stage 2 Go/No-Go。
