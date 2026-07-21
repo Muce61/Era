@@ -11,6 +11,7 @@
     "stage2-s2t12-metrics-20260721T033611Z-a74fd68920a2"
   ],
   "historical_evidence_only": true,
+  "human_accepted": false,
   "instruments": {
     "BTCUSDT": {
       "computed_rows": 440276,
@@ -49,5 +50,5 @@
   "task_version": "1.3",
   "total_metric_rows": 1065416,
   "verify_status": "PASS",
-  "web_ui_status": "BLOCKED_PENDING_CR_2026_022_APPROVAL"
+  "web_ui_status": "PASS_CR_2026_022"
 }

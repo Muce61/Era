@@ -12,8 +12,10 @@ S2-T19 and S2-T01～S2-T11 are PASSED. Muce approved S2-T12 v1.3 at
 2026-07-21T03:02:25Z. Its full historical H1/H2 path-metric Run
 `stage2-s2t12-metrics-20260721T040435Z-de9aaea56f2a` published 1,065,416 BTC/ETH-separated metric
 rows and passed read-only Verify. Repository validation passes; human acceptance and the
-CR-2026-022 automatic Web-UI observability amendment remain outstanding. S2-T13 through S2-T20
-remain `DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
+final S2-T12 gate remain outstanding. CR-2026-022 is approved, implemented and validated: the
+read-only Web UI now derives PASS, 1,065,416 rows and 16/16 evidence checks from the real immutable
+evidence without hard-coding acceptance. S2-T13 through S2-T20 remain `DRAFT_NOT_APPROVED`, and
+Stage 3 remains locked.
 
 S2-T11 v1.3 full-output Run `stage2-s2t11-paths-20260721T023117Z-029707f3c111` published
 220,201 BTC and 312,507 ETH historical path indexes. Read-only Verify, repository quality gates

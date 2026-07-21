@@ -2292,6 +2292,7 @@ rules:
     s2_t12_snapshot_id: f32b0c2838c73e8d5719a2b1bf76ebf79346715334310d30ebfbaeeb7c114bec
     s2_t12_validation: docs/development/validations/stage_2/S2-T12.md
     s2_t12_ui_change_request: docs/development/changes/CR-2026-022.md
+    cr_s2_022_status: APPROVED_IMPLEMENTED_VALIDATED_READ_ONLY_UI
     s2_t11_ui_change_request: docs/development/changes/CR-2026-020.md
     s2_t11_full_output_change_request: docs/development/changes/CR-2026-021.md
     cr_s2_021_status: APPROVED_L3_FULL_OUTPUT_CONTRACT

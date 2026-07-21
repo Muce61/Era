@@ -261,7 +261,7 @@
       <div class="title">ERA / Stage 2 · Event Research</div>
       <div class="top-status">
         <div class="tag approved">Plan v1.2<b>APPROVED</b></div>
-        <div id="taskProgressTag" class="tag progress">S2-T11<b>CHECKING</b></div>
+        <div id="taskProgressTag" class="tag progress">S2-T12<b>CHECKING</b></div>
         <div id="gateChip" class="gate-chip">LOADING</div>
       </div>
       <div id="processNote" class="process-note">正在读取 append-only 证据</div>
@@ -271,7 +271,7 @@
 
     <section class="layout">
       <aside class="panel task-rail" aria-label="阶段任务轨道">
-        <h2 class="panel-title"><span>阶段任务轨道</span><span id="passedCount" class="passed-count">10 / 12 PASSED</span></h2>
+        <h2 class="panel-title"><span>阶段任务轨道</span><span id="passedCount" class="passed-count">10 / 13 PASSED</span></h2>
         <ol class="task-list">
           <li class="task-item"><button class="task-button" data-task="Manifest：冻结预注册输入、输出布局与 Group-1 执行边界。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">S2-T19</span><span class="task-name">Manifest（前置）</span><span class="task-state">PASSED</span></button></li>
           <li class="task-item"><button class="task-button" data-task="Contracts：Stage 2 输入边界、注册表与 CanonicalKeyLevel 契约。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">01 S2-T01</span><span class="task-name">Contracts</span><span class="task-state">PASSED</span></button></li>
@@ -285,6 +285,7 @@
           <li class="task-item"><button class="task-button" data-task="MarketEpisode：冻结身份、去重、一次消费与 re-arm 规则。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">08 S2-T09</span><span class="task-name">MarketEpisode（汇聚）</span><span class="task-state">PASSED</span></button></li>
           <li id="s2t10Item" class="task-item active"><button id="s2t10Button" class="task-button" aria-current="step" data-task="Full Generation：由发布、验证和 61,776 分区零容差比较证据自动判定。"><span id="s2t10Node" class="node">10</span><span class="task-code">S2-T10</span><span class="task-name">Full Generation</span><span id="s2t10State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
           <li id="s2t11Item" class="task-item active"><button id="s2t11Button" class="task-button" aria-current="step" data-task="路径提取：从真实收据自动识别 H1/H2、BTC/ETH、验证与全量输出状态。"><span id="s2t11Node" class="node">11</span><span class="task-code">S2-T11</span><span class="task-name">Path Extraction</span><span id="s2t11State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
+          <li id="s2t12Item" class="task-item active"><button id="s2t12Button" class="task-button" aria-current="step" data-task="路径指标：从最新 Authority、Run、Catalog、Verify 与 validation 自动识别 BTC/ETH 的 H1/H2 历史指标状态。"><span id="s2t12Node" class="node">12</span><span class="task-code">S2-T12</span><span class="task-name">Path Metrics</span><span id="s2t12State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
         </ol>
         <div id="taskHint" class="task-hint">选择节点查看职责。</div>
       </aside>
@@ -316,6 +317,11 @@
         <section class="live-flow" aria-labelledby="pathFlowTitle">
           <div class="live-flow-head"><strong id="pathFlowTitle">S2-T11 · 路径提取流水线</strong><span id="pathFlowSummary">正在读取 append-only 收据…</span></div>
           <div id="pathFlowGrid" class="flow-grid" aria-live="polite"></div>
+        </section>
+
+        <section class="live-flow" aria-labelledby="metricsFlowTitle">
+          <div class="live-flow-head"><strong id="metricsFlowTitle">S2-T12 · 历史路径指标流水线</strong><span id="metricsFlowSummary">正在读取 Authority、Run 与 validation…</span></div>
+          <div id="metricsFlowGrid" class="flow-grid" aria-live="polite"></div>
         </section>
 
         <section class="authority">
@@ -390,7 +396,7 @@
   <dialog id="gateDialog">
     <div class="dialog-head"><h2>CR-2026-018 / 019 · 完成证据</h2><button class="icon-button" data-close-dialog type="button" aria-label="关闭"><i class="fa-solid fa-xmark"></i></button></div>
     <div class="dialog-body">
-      <p>此监控页每 5 秒自动读取 append-only 证据，并据此判定 S2-T10、Group 1 与当前 Stage 2 Task；HTML 不预置最终 PASS（包括 S2-T11）。</p>
+      <p>此监控页每 5 秒自动读取 append-only 证据，并据此判定 S2-T10、Group 1 与当前 Stage 2 Task；HTML 不预置最终 PASS（包括 S2-T11 与 S2-T12）。</p>
       <ul class="checklist">
         <li><i class="fa-regular fa-circle"></i><span>读取 successor 停用证据及复用、删除边界</span></li>
         <li><i class="fa-regular fa-circle"></i><span>读取 208 个对象、208 个 Seal 与 80,784 个分区证据</span></li>
@@ -409,6 +415,7 @@
     <section class="evidence-block"><h3>Superseded successor</h3><p>INTERRUPTED_RECOVERABLE · preserved in place · resume/reuse/delete all forbidden.</p><code>stage2-g1-v2-b-20260720T143327Z-de804cf61e81</code></section>
     <section class="evidence-block"><h3>Governance authority</h3><p>CR-2026-018 fixed the release-only input set; CR-2026-019 authorized only the corrected Exact Compare. All other mutations remained disabled.</p></section>
     <section class="evidence-block"><h3>Exact comparison</h3><p id="comparisonEvidence">正在从 append-only 比较报告自动读取。</p></section>
+    <section class="evidence-block"><h3>S2-T12 historical path metrics</h3><p id="metricsEvidence">正在从最新 Authority、Run、Catalog、Verify 与 validation 自动读取。</p><code id="metricsRunId">尚无合法 Run</code></section>
   </aside>
 
   <script>
@@ -557,11 +564,48 @@
       if (passed) byId("s2t11Button").removeAttribute("aria-current"); else byId("s2t11Button").setAttribute("aria-current", "step");
       byId("s2t11Node").innerHTML = passed ? '<i class="fa-solid fa-check"></i>' : failed ? '<i class="fa-solid fa-xmark"></i>' : blocked ? '<i class="fa-solid fa-pause"></i>' : "11";
       byId("s2t11State").textContent = raw;
+      return {task, passed, failed, blocked, running, humanAccepted};
+    }
+
+    function renderMetricsTask(status, s2t10Passed, s2t11Passed) {
+      const tasks = ((status.execution_observability || {}).stage2_tasks || {});
+      const task = tasks["S2-T12"] || {status:"CHECKING", reason_code:"S2_T12_CHECKING", instruments:{}, checks:{}};
+      const raw = escapeText(task.status);
+      const passed = raw === "PASS";
+      const failed = raw === "FAILED" || raw === "EVIDENCE_INVALID";
+      const running = raw === "IN_PROGRESS";
+      const state = passed ? "pass" : failed ? "failed" : running ? "running" : "pending";
+      const instruments = task.instruments || {};
+      const btc = instruments.BTCUSDT || {};
+      const eth = instruments.ETHUSDT || {};
+      const checks = task.checks || {};
+      const checksDone = Object.values(checks).filter(Boolean).length;
+      const checksTotal = Object.keys(checks).length;
+      const levelState = (rows, episodes) => passed && Number(rows) === Number(episodes) && Number(episodes) > 0 ? "pass" : failed ? "failed" : running && Number(rows) > 0 ? "running" : "pending";
+      const boundaryState = task.historical_evidence_only && task.stage3_locked ? passed ? "pass" : state : "failed";
+      const flows = [
+        {name:"Authority 与固定 Run", icon:"fa-file-shield", state:passed || running ? state : failed ? "failed" : "pending", detail:`${escapeText(task.authority_hash)} · ${escapeText(task.run_id)}`, progress:passed ? 100 : running ? 50 : 0},
+        {name:"BTC · H1 Contract", icon:"fa-bitcoin-sign", state:levelState(btc.h1_rows, btc.episodes), detail:`${number(btc.h1_rows)} / ${number(btc.episodes)} · 历史高低价路径`, progress:Number(btc.episodes) ? 100 * Number(btc.h1_rows) / Number(btc.episodes) : 0},
+        {name:"BTC · H2 Trades", icon:"fa-arrow-down-wide-short", state:levelState(btc.h2_rows, btc.episodes), detail:`${number(btc.h2_rows)} / ${number(btc.episodes)} · V2 稳定顺序`, progress:Number(btc.episodes) ? 100 * Number(btc.h2_rows) / Number(btc.episodes) : 0},
+        {name:"ETH · H1 Contract", icon:"fa-diamond", state:levelState(eth.h1_rows, eth.episodes), detail:`${number(eth.h1_rows)} / ${number(eth.episodes)} · 历史高低价路径`, progress:Number(eth.episodes) ? 100 * Number(eth.h1_rows) / Number(eth.episodes) : 0},
+        {name:"ETH · H2 Trades", icon:"fa-arrow-down-wide-short", state:levelState(eth.h2_rows, eth.episodes), detail:`${number(eth.h2_rows)} / ${number(eth.episodes)} · V2 稳定顺序`, progress:Number(eth.episodes) ? 100 * Number(eth.h2_rows) / Number(eth.episodes) : 0},
+        {name:"Verify 与 Validation", icon:"fa-file-circle-check", state:passed ? "pass" : failed ? "failed" : state, detail:`${number(checksDone)} / ${number(checksTotal)} checks · Verify ${escapeText(task.verify_status)} · Validation ${escapeText(task.validation_status)}`, progress:checksTotal ? 100 * checksDone / checksTotal : 0},
+        {name:"历史证据边界", icon:"fa-lock", state:boundaryState, detail:"MFE / MAE / 时间指标 · 非 PnL、非真实收益、非实时保护 · Stage 3 LOCKED", progress:boundaryState === "pass" ? 100 : 0},
+      ];
+      byId("metricsFlowGrid").innerHTML = flows.map(flowCard).join("");
+      byId("metricsFlowSummary").textContent = `${raw} · ${number(task.total_metric_rows)} metric rows · ${number(checksDone)} / ${number(checksTotal)} checks · Run ${escapeText(task.run_id)}`;
+      byId("s2t12Item").classList.toggle("active", !passed && !failed);
+      byId("s2t12Item").classList.toggle("failed", failed);
+      if (passed) byId("s2t12Button").removeAttribute("aria-current"); else byId("s2t12Button").setAttribute("aria-current", "step");
+      byId("s2t12Node").innerHTML = passed ? '<i class="fa-solid fa-check"></i>' : failed ? '<i class="fa-solid fa-xmark"></i>' : "12";
+      byId("s2t12State").textContent = raw;
       byId("taskProgressTag").className = passed ? "tag approved" : "tag progress";
       const taskVersion = escapeText(task.task_version || "UNKNOWN");
-      byId("taskProgressTag").innerHTML = `S2-T11 v${taskVersion}<b>${raw}</b>`;
-      byId("passedCount").textContent = `${10 + (s2t10Passed ? 1 : 0) + (passed ? 1 : 0)} / 12 PASSED`;
-      return {task, passed, failed, blocked, running, humanAccepted};
+      byId("taskProgressTag").innerHTML = `S2-T12 v${taskVersion}<b>${raw}</b>`;
+      byId("passedCount").textContent = `${10 + (s2t10Passed ? 1 : 0) + (s2t11Passed ? 1 : 0) + (passed ? 1 : 0)} / 13 PASSED`;
+      byId("metricsRunId").textContent = escapeText(task.run_id);
+      byId("metricsEvidence").textContent = `${raw} · BTC ${number(btc.metric_rows)} · ETH ${number(eth.metric_rows)} · total ${number(task.total_metric_rows)} · ${number(checksDone)} / ${number(checksTotal)} checks · historical evidence only`;
+      return {task, passed, failed, running};
     }
 
     async function refresh() {
@@ -575,6 +619,7 @@
         const taskPassed = acceptance.s2_t10_status === "PASS";
         const taskFailed = acceptance.s2_t10_status === "FAILED";
         const pathTask = renderPathTask(status, taskPassed);
+        const metricsTask = renderMetricsTask(status, taskPassed, pathTask.passed);
         const liveSubflow = [...(status.pipeline_subflows || [])].reverse().find((item) => item.status === "RUNNING");
         byId("updatedAt").textContent = "数据更新：" + dateTime(status.updated_at);
         const activeLabel = status.active_task || (liveSubflow && liveSubflow.current_item);
@@ -636,7 +681,7 @@
             byId("stageLockNote").textContent = "S2-T11 已通过真实全量证据自动验收；Stage 3 仍保持 LOCKED。";
             byId("currentConclusion").textContent = "S2-T11 H1/H2 路径提取、BTC/ETH 全量输出与 validation 证据均已通过。";
             byId("nextAction").innerHTML = pathTask.humanAccepted
-              ? "<b>S2-T11 已人工验收并正式收尾</b>；S2-T12 尚未批准，保持停止。"
+              ? "<b>S2-T11 已人工验收并正式收尾</b>；继续读取 S2-T12 独立证据。"
               : "<b>停止并等待人工验收 S2-T11</b>；不得自动开始 S2-T12。";
           } else if (pathTask.failed) {
             byId("stageLockNote").textContent = "S2-T11 证据失败或无效；Stage 3 保持 LOCKED。";
@@ -654,6 +699,31 @@
             byId("stageLockNote").textContent = "S2-T10 已通过；S2-T11 尚无完整运行收据，Stage 3 保持 LOCKED。";
             byId("currentConclusion").textContent = "S2-T11 尚未产生可验收的 append-only 路径提取收据。";
             byId("nextAction").innerHTML = "<b>等待合法的 S2-T11 运行入口与全量证据</b>。";
+          }
+        }
+        if (taskPassed && pathTask.passed) {
+          byId("processNote").textContent = `S2-T12 · ${escapeText(metricsTask.task.status)} · ${escapeText(metricsTask.task.reason_code)}`;
+          byId("gateChip").textContent = metricsTask.passed ? "S2-T12 PASS" : metricsTask.failed ? "S2-T12 FAILED" : metricsTask.running ? "S2-T12 RUNNING" : "S2-T12 CHECKING";
+          if (metricsTask.passed) {
+            const btcRows = Number((metricsTask.task.instruments.BTCUSDT || {}).metric_rows) || 0;
+            const ethRows = Number((metricsTask.task.instruments.ETHUSDT || {}).metric_rows) || 0;
+            byId("stageLockNote").textContent = "S2-T12 已从真实 Authority、Run、Catalog、Verify 与 validation 自动判定 PASS；Stage 3 仍保持 LOCKED。";
+            byId("currentConclusion").textContent = `S2-T12 历史路径指标 PASS：BTC ${number(btcRows)} 行，ETH ${number(ethRows)} 行，总计 ${number(metricsTask.task.total_metric_rows)} 行；全部仅为历史价格路径证据。`;
+            byId("nextAction").innerHTML = metricsTask.task.human_accepted
+              ? "<b>S2-T12 已人工验收并正式收尾</b>；S2-T13 未批准，保持停止。"
+              : "<b>停止并等待人工验收 S2-T12</b>；不得自动开始 S2-T13。";
+          } else if (metricsTask.failed) {
+            byId("stageLockNote").textContent = "S2-T12 运行失败或证据无效；Stage 3 保持 LOCKED。";
+            byId("currentConclusion").textContent = `S2-T12 未通过：${escapeText(metricsTask.task.reason || metricsTask.task.reason_code)}。`;
+            byId("nextAction").innerHTML = "<b>停止自动流程</b>，检查最新 Authority、Run、Catalog、Verify 或 validation；不得回退到更旧 Run。";
+          } else if (metricsTask.running) {
+            byId("stageLockNote").textContent = "S2-T12 正在执行历史路径指标；Stage 3 保持 LOCKED。";
+            byId("currentConclusion").textContent = `S2-T12 当前 Run ${escapeText(metricsTask.task.run_id)} 尚未形成完整原子发布证据。`;
+            byId("nextAction").innerHTML = "<b>继续只读观察</b>，不得由页面触发 run、resume、verify 或发布。";
+          } else {
+            byId("stageLockNote").textContent = "S2-T12 尚无合法全量证据；Stage 3 保持 LOCKED。";
+            byId("currentConclusion").textContent = "S2-T12 尚未产生可自动验收的 Authority、Run 与 validation 联合证据。";
+            byId("nextAction").innerHTML = "<b>等待合法的 S2-T12 append-only 证据</b>；不得硬编码 PASS。";
           }
         }
       } catch (error) {

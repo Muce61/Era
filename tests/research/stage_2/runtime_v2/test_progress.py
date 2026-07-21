@@ -217,10 +217,13 @@ def test_read_only_web_endpoints(tmp_path: Path) -> None:
             assert "S2-T01" in page
             assert "S2-T10" in page
             assert "S2-T11" in page
+            assert "S2-T12" in page
             assert "Full Generation" in page
             assert "Path Extraction" in page
-            assert "10 / 12 PASSED" in page
-            assert "S2-T11<b>CHECKING</b>" in page
+            assert "Path Metrics" in page
+            assert "10 / 13 PASSED" in page
+            assert "S2-T12<b>CHECKING</b>" in page
+            assert "S2-T12<b>PASSED</b>" not in page
             assert "S2-T11 v1.2" not in page
             assert "证据轨道" in page
             assert "Stage 3 LOCKED" in page
@@ -236,6 +239,10 @@ def test_read_only_web_endpoints(tmp_path: Path) -> None:
         with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/status") as response:
             status = json.load(response)
             assert status["health"] == "INTERRUPTED_RECOVERABLE"
+            assert (
+                status["execution_observability"]["stage2_tasks"]["S2-T12"]["status"]
+                == "NOT_STARTED"
+            )
         request = urllib.request.Request(f"http://127.0.0.1:{port}/", method="POST")
         try:
             urllib.request.urlopen(request)

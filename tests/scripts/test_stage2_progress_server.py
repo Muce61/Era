@@ -12,11 +12,153 @@ SPEC.loader.exec_module(MODULE)
 _execution_observability = MODULE._execution_observability
 _acceptance_projection = MODULE._acceptance_projection
 _stage2_task_projection = MODULE._stage2_task_projection
+_stage2_path_metrics_projection = MODULE._stage2_path_metrics_projection
+_json_hash = MODULE._json_hash
+
+T12_RUN_ID = "stage2-s2t12-metrics-20260721T040435Z-abcdef123456"
 
 
 def _write(path: Path, content: str = "{}") -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
+
+
+def _sealed(payload: dict, field: str) -> dict:
+    result = dict(payload)
+    result[field] = _json_hash(payload)
+    return result
+
+
+def _t12_authority() -> dict:
+    return _sealed(
+        {
+            "task_id": "S2-T12",
+            "task_version": "1.3",
+            "code_commit": "abcdef0",
+            "historical_evidence_only": True,
+        },
+        "authority_hash",
+    )
+
+
+def _write_t12_active(root: Path, run_id: str = T12_RUN_ID) -> tuple[Path, dict]:
+    run_root = root / "runs" / run_id
+    authority = _t12_authority()
+    _write(run_root / "manifests/preflight-authority.json", json.dumps(authority))
+    execution = _sealed(
+        {
+            **authority,
+            "run_id": run_id,
+            "started_at_utc": "2026-07-21T04:04:35Z",
+        },
+        "execution_manifest_hash",
+    )
+    _write(
+        run_root / "manifests" / f"execution-{execution['execution_manifest_hash']}.json",
+        json.dumps(execution),
+    )
+    _write(
+        root / "authorities/S2-T12" / f"{authority['authority_hash']}.json",
+        json.dumps(authority),
+    )
+    return run_root, authority
+
+
+def _instrument_catalog(instrument: str, episodes: int, payload: bytes) -> dict:
+    return {
+        "instrument": instrument,
+        "episode_count": episodes,
+        "byte_size": len(payload),
+        "sha256": ("1" if instrument == "BTCUSDT" else "2") * 64,
+        "path_metrics": {
+            "row_count": episodes * 2,
+            "evidence_level_counts": {"H1": episodes, "H2": episodes},
+            "metric_status_counts": {"COMPUTED": episodes * 2 - 1, "NO_OBSERVATIONS": 1},
+        },
+    }
+
+
+def _write_t12_pass(root: Path, repository_root: Path, run_id: str = T12_RUN_ID) -> None:
+    run_root, authority = _write_t12_active(root, run_id)
+    snapshot_id = "3" * 64
+    snapshot = run_root / "published/snapshots" / snapshot_id
+    payloads = {"BTCUSDT": b"btc", "ETHUSDT": b"eth-data"}
+    entries = {
+        instrument: _instrument_catalog(instrument, episodes, payloads[instrument])
+        for instrument, episodes in (("BTCUSDT", 10), ("ETHUSDT", 12))
+    }
+    for instrument, payload in payloads.items():
+        path = snapshot / instrument / "path_metrics.parquet"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(payload)
+    catalog = _sealed(
+        {
+            "schema_name": "stage2-s2t12-path-metrics-catalog",
+            "schema_version": "1.0",
+            "run_id": run_id,
+            "snapshot_id": snapshot_id,
+            "instruments": entries,
+        },
+        "catalog_hash",
+    )
+    execution_path = next((run_root / "manifests").glob("execution-*.json"))
+    execution = json.loads(execution_path.read_text(encoding="utf-8"))
+    manifest = _sealed(
+        {
+            "schema_name": "stage2-s2t12-path-metrics-manifest",
+            "schema_version": "1.0",
+            "run_id": run_id,
+            "snapshot_id": snapshot_id,
+            "execution_manifest_hash": execution["execution_manifest_hash"],
+            "historical_evidence_only": True,
+        },
+        "manifest_hash",
+    )
+    completion = {
+        "status": "PASS",
+        "run_id": run_id,
+        "snapshot_id": snapshot_id,
+        "manifest_hash": manifest["manifest_hash"],
+        "catalog_hash": catalog["catalog_hash"],
+        "historical_evidence_only": True,
+        "stage3_locked": True,
+    }
+    _write(snapshot / "catalog.json", json.dumps(catalog))
+    _write(snapshot / "manifest.json", json.dumps(manifest))
+    _write(run_root / "reports/completion.json", json.dumps(completion))
+    summary_instruments = {
+        instrument: {
+            "episode_count": entry["episode_count"],
+            "h1_rows": entry["path_metrics"]["evidence_level_counts"]["H1"],
+            "h2_rows": entry["path_metrics"]["evidence_level_counts"]["H2"],
+            "row_count": entry["path_metrics"]["row_count"],
+            "output_sha256": entry["sha256"],
+        }
+        for instrument, entry in entries.items()
+    }
+    summary = {
+        "schema_name": "s2-t12-path-metrics-repository-summary",
+        "task_id": "S2-T12",
+        "task_version": "1.3",
+        "run_id": run_id,
+        "authority_hash": authority["authority_hash"],
+        "snapshot_id": snapshot_id,
+        "manifest_hash": manifest["manifest_hash"],
+        "catalog_hash": catalog["catalog_hash"],
+        "total_metric_rows": 44,
+        "instruments": summary_instruments,
+        "verify_status": "PASS",
+        "historical_evidence_only": True,
+        "stage3_locked": True,
+    }
+    _write(
+        repository_root / MODULE.S2T12_SUMMARY_RELATIVE_PATH,
+        json.dumps(summary),
+    )
+    _write(
+        repository_root / MODULE.S2T12_VALIDATION_RELATIVE_PATH,
+        f"S2-T12 VALIDATED\nRun {run_id}\n",
+    )
 
 
 def test_execution_observability_projects_append_only_evidence(tmp_path: Path) -> None:
@@ -257,8 +399,10 @@ def test_ui_derives_s2_t11_version_and_complete_task_count() -> None:
     page = MODULE_PATH.with_name("stage2_progress_ui.html").read_text(encoding="utf-8")
 
     assert 'task.task_version || "UNKNOWN"' in page
-    assert "/ 12 PASSED" in page
+    assert "/ 13 PASSED" in page
     assert "S2-T11 v1.2" not in page
+    assert "S2-T12<b>CHECKING</b>" in page
+    assert "S2-T12<b>PASSED</b>" not in page
 
 
 def test_s2_t11_malformed_symlink_and_conflicting_chain_fail_closed(tmp_path: Path) -> None:
@@ -280,3 +424,125 @@ def test_s2_t11_malformed_symlink_and_conflicting_chain_fail_closed(tmp_path: Pa
     second = _path_receipt_payload("FAILED", sequence=1, previous="9" * 64)
     _write_path_receipt(conflict_root, second)
     assert _stage2_task_projection(conflict_root)["status"] == "EVIDENCE_INVALID"
+
+
+def test_s2_t12_missing_and_active_runs_never_pass(tmp_path: Path) -> None:
+    repository_root = tmp_path / "repository"
+    missing = _stage2_path_metrics_projection(tmp_path, repository_root)
+    assert missing["status"] == "NOT_STARTED"
+    assert missing["reason_code"] == "S2_T12_RUN_MISSING"
+
+    _write_t12_active(tmp_path)
+    active = _stage2_path_metrics_projection(tmp_path, repository_root)
+    assert active["status"] == "IN_PROGRESS"
+    assert active["run_id"] == T12_RUN_ID
+    assert active["checks"]["published_completion_present"] is False
+
+
+def test_s2_t12_failed_unpublished_run_exposes_reason(tmp_path: Path) -> None:
+    run_root = tmp_path / "runs" / T12_RUN_ID
+    failure = {
+        "task_id": "S2-T12",
+        "task_version": "1.3",
+        "run_id": T12_RUN_ID,
+        "status": "FAILED_UNPUBLISHED",
+        "failure_class": "VALIDATION_ERROR",
+        "reason": "test failure",
+        "resume_allowed": False,
+    }
+    _write(run_root / "reports/failure.json", json.dumps(failure))
+
+    result = _stage2_path_metrics_projection(tmp_path, tmp_path / "repository")
+
+    assert result["status"] == "FAILED"
+    assert result["reason_code"] == "S2_T12_FAILED_UNPUBLISHED"
+    assert result["reason"] == "test failure"
+    assert result["resume_allowed"] is False
+
+
+def test_s2_t12_pass_requires_bound_authority_catalog_summary_and_validation(
+    tmp_path: Path,
+) -> None:
+    stage2_root = tmp_path / "stage2"
+    repository_root = tmp_path / "repository"
+    _write_t12_pass(stage2_root, repository_root)
+
+    result = _stage2_path_metrics_projection(stage2_root, repository_root)
+
+    assert result["status"] == "PASS"
+    assert result["reason_code"] == "S2_T12_FULL_OUTPUT_VERIFIED_VALIDATION_PASS"
+    assert result["total_metric_rows"] == 44
+    assert result["instruments"]["BTCUSDT"]["h1_rows"] == 10
+    assert result["instruments"]["BTCUSDT"]["h2_rows"] == 10
+    assert result["instruments"]["ETHUSDT"]["h1_rows"] == 12
+    assert result["instruments"]["ETHUSDT"]["h2_rows"] == 12
+    assert result["verify_status"] == "PASS"
+    assert result["validation_status"] == "PASS"
+    assert result["historical_evidence_only"] is True
+    assert result["stage3_locked"] is True
+    assert result["human_accepted"] is False
+    assert len(result["checks"]) == 16
+    assert all(result["checks"].values())
+
+
+def test_s2_t12_tampered_repository_summary_fails_closed(tmp_path: Path) -> None:
+    stage2_root = tmp_path / "stage2"
+    repository_root = tmp_path / "repository"
+    _write_t12_pass(stage2_root, repository_root)
+    summary_path = repository_root / MODULE.S2T12_SUMMARY_RELATIVE_PATH
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    summary["total_metric_rows"] += 1
+    _write(summary_path, json.dumps(summary))
+
+    result = _stage2_path_metrics_projection(stage2_root, repository_root)
+
+    assert result["status"] == "EVIDENCE_INVALID"
+    assert result["checks"]["repository_summary_matches"] is False
+
+
+def test_s2_t12_newest_terminal_run_wins_without_fallback(tmp_path: Path) -> None:
+    repository_root = tmp_path / "repository"
+    _write_t12_pass(tmp_path, repository_root)
+    newer_run_id = "stage2-s2t12-metrics-20260721T040436Z-fedcba654321"
+    failure = {
+        "task_id": "S2-T12",
+        "task_version": "1.3",
+        "run_id": newer_run_id,
+        "status": "FAILED_UNPUBLISHED",
+        "failure_class": "VALIDATION_ERROR",
+        "reason": "newer run failed",
+        "resume_allowed": False,
+    }
+    _write(
+        tmp_path / "runs" / newer_run_id / "reports/failure.json",
+        json.dumps(failure),
+    )
+
+    result = _stage2_path_metrics_projection(tmp_path, repository_root)
+
+    assert result["status"] == "FAILED"
+    assert result["run_id"] == newer_run_id
+    assert result["reason"] == "newer run failed"
+
+
+def test_s2_t12_symlink_run_and_terminal_evidence_fail_closed(tmp_path: Path) -> None:
+    target = tmp_path / "outside"
+    target.mkdir()
+    linked_run = tmp_path / "runs" / T12_RUN_ID
+    linked_run.parent.mkdir(parents=True)
+    linked_run.symlink_to(target, target_is_directory=True)
+    result = _stage2_path_metrics_projection(tmp_path, tmp_path / "repository")
+    assert result["status"] == "EVIDENCE_INVALID"
+
+    terminal_root = tmp_path / "terminal"
+    run_root, _ = _write_t12_active(terminal_root)
+    completion_target = tmp_path / "completion.json"
+    _write(completion_target, json.dumps({"status": "PASS"}))
+    completion_path = run_root / "reports/completion.json"
+    completion_path.parent.mkdir(parents=True)
+    completion_path.symlink_to(completion_target)
+    terminal_result = _stage2_path_metrics_projection(
+        terminal_root,
+        tmp_path / "repository",
+    )
+    assert terminal_result["status"] == "EVIDENCE_INVALID"

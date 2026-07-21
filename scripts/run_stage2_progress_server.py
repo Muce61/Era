@@ -5,7 +5,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 import threading
 import webbrowser
 from collections.abc import Sequence
@@ -20,6 +22,11 @@ from era100x.research.stage_2.runtime_v2.progress import read_progress_status
 from era100x.research.stage_2.paths.extraction import read_path_extraction_receipts
 
 DEFAULT_ROOT = Path("/Volumes/FuckingLife/era100x_stage2")
+REPOSITORY_ROOT = Path(__file__).parents[1]
+S2T12_RUN_PREFIX = "stage2-s2t12-metrics-"
+S2T12_RUN_ID = re.compile(r"^stage2-s2t12-metrics-\d{8}T\d{6}Z-[0-9a-f]{12}$")
+S2T12_SUMMARY_RELATIVE_PATH = Path("artifacts/manifests/stage_2/s2_t12_path_metrics_summary.json")
+S2T12_VALIDATION_RELATIVE_PATH = Path("docs/development/validations/stage_2/S2-T12.md")
 
 _PAGE_PATH = Path(__file__).with_name("stage2_progress_ui.html")
 RUNTIME_TASK_RECEIPTS = {
@@ -56,6 +63,35 @@ def _safe_json_object(path: Path) -> dict[str, Any]:
     except (OSError, ValueError):
         return {}
     return value if isinstance(value, dict) else {}
+
+
+def _json_hash(value: Any) -> str:
+    return hashlib.sha256(
+        json.dumps(
+            value,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def _self_hash_matches(value: dict[str, Any], field: str) -> bool:
+    expected = value.get(field)
+    if not isinstance(expected, str):
+        return False
+    payload = dict(value)
+    payload.pop(field, None)
+    return expected == _json_hash(payload)
+
+
+def _safe_text(path: Path) -> str:
+    if not path.is_file() or path.is_symlink():
+        return ""
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        return ""
 
 
 def _execution_observability(run_root: Path) -> dict[str, Any]:
@@ -275,6 +311,350 @@ def _stage2_task_projection(stage2_root: Path) -> dict[str, Any]:
     }
 
 
+def _s2_t12_base(status: str, reason_code: str) -> dict[str, Any]:
+    return {
+        "task_id": "S2-T12",
+        "task_version": "1.3",
+        "status": status,
+        "reason_code": reason_code,
+        "run_id": None,
+        "authority_hash": None,
+        "snapshot_id": None,
+        "manifest_hash": None,
+        "catalog_hash": None,
+        "instruments": {},
+        "checks": {},
+        "full_output_complete": False,
+        "verify_status": "NOT_RUN",
+        "validation_status": "NOT_RUN",
+        "historical_evidence_only": True,
+        "stage3_locked": True,
+        "human_accepted": False,
+    }
+
+
+def _s2_t12_invalid(reason: str, *, run_id: str | None = None) -> dict[str, Any]:
+    result = _s2_t12_base("EVIDENCE_INVALID", "S2_T12_EVIDENCE_INVALID")
+    result["reason"] = reason
+    result["run_id"] = run_id
+    return result
+
+
+def _s2_t12_instrument_projection(
+    snapshot: Path,
+    instrument: str,
+    catalog_entry: Any,
+) -> tuple[dict[str, Any], bool]:
+    if not isinstance(catalog_entry, dict):
+        return {}, False
+    metrics = catalog_entry.get("path_metrics")
+    if not isinstance(metrics, dict):
+        return {}, False
+    evidence_counts = metrics.get("evidence_level_counts")
+    status_counts = metrics.get("metric_status_counts")
+    if not isinstance(evidence_counts, dict) or not isinstance(status_counts, dict):
+        return {}, False
+    episodes = catalog_entry.get("episode_count")
+    h1_rows = evidence_counts.get("H1")
+    h2_rows = evidence_counts.get("H2")
+    metric_rows = metrics.get("row_count")
+    computed_rows = status_counts.get("COMPUTED")
+    no_observation_rows = status_counts.get("NO_OBSERVATIONS", 0)
+    output_sha256 = catalog_entry.get("sha256")
+    byte_size = catalog_entry.get("byte_size")
+    output_path = snapshot / instrument / "path_metrics.parquet"
+    projection = {
+        "episodes": episodes,
+        "h1_rows": h1_rows,
+        "h2_rows": h2_rows,
+        "metric_rows": metric_rows,
+        "computed_rows": computed_rows,
+        "no_observation_rows": no_observation_rows,
+        "output_sha256": output_sha256,
+    }
+    if not (
+        isinstance(episodes, int)
+        and not isinstance(episodes, bool)
+        and episodes >= 0
+        and isinstance(h1_rows, int)
+        and not isinstance(h1_rows, bool)
+        and h1_rows >= 0
+        and isinstance(h2_rows, int)
+        and not isinstance(h2_rows, bool)
+        and h2_rows >= 0
+        and isinstance(metric_rows, int)
+        and not isinstance(metric_rows, bool)
+        and metric_rows >= 0
+        and isinstance(computed_rows, int)
+        and not isinstance(computed_rows, bool)
+        and computed_rows >= 0
+        and isinstance(no_observation_rows, int)
+        and not isinstance(no_observation_rows, bool)
+        and no_observation_rows >= 0
+        and isinstance(byte_size, int)
+        and not isinstance(byte_size, bool)
+        and byte_size >= 0
+    ):
+        return projection, False
+    complete = (
+        episodes > 0
+        and h1_rows == episodes
+        and h2_rows == episodes
+        and metric_rows == h1_rows + h2_rows
+        and metric_rows == computed_rows + no_observation_rows
+        and isinstance(output_sha256, str)
+        and len(output_sha256) == 64
+        and output_path.is_file()
+        and not output_path.is_symlink()
+        and not output_path.parent.is_symlink()
+        and output_path.stat().st_size == byte_size
+    )
+    return projection, complete
+
+
+def _stage2_path_metrics_projection(
+    stage2_root: Path,
+    repository_root: Path = REPOSITORY_ROOT,
+) -> dict[str, Any]:
+    """Project the newest S2-T12 run; never fall back past newer evidence."""
+
+    runs_root = stage2_root / "runs"
+    if runs_root.is_symlink():
+        return _s2_t12_invalid("S2-T12 runs root is a symlink")
+    if not runs_root.is_dir():
+        return _s2_t12_base("NOT_STARTED", "S2_T12_RUN_MISSING")
+    try:
+        candidates = sorted(
+            path
+            for path in runs_root.iterdir()
+            if path.name.startswith(S2T12_RUN_PREFIX) and not path.name.startswith("._")
+        )
+    except OSError as exc:
+        return _s2_t12_invalid(f"cannot enumerate S2-T12 runs: {exc}")
+    if not candidates:
+        return _s2_t12_base("NOT_STARTED", "S2_T12_RUN_MISSING")
+    run_root = candidates[-1]
+    run_id = run_root.name
+    if S2T12_RUN_ID.fullmatch(run_id) is None or run_root.is_symlink() or not run_root.is_dir():
+        return _s2_t12_invalid("newest S2-T12 run path is unsafe", run_id=run_id)
+
+    completion_path = run_root / "reports/completion.json"
+    failure_path = run_root / "reports/failure.json"
+    completion_present = completion_path.is_file() and not completion_path.is_symlink()
+    failure_present = failure_path.is_file() and not failure_path.is_symlink()
+    if completion_present and failure_present:
+        return _s2_t12_invalid("run has both completion and failure evidence", run_id=run_id)
+    if failure_path.is_symlink() or completion_path.is_symlink():
+        return _s2_t12_invalid("run terminal evidence is a symlink", run_id=run_id)
+    if failure_present:
+        failure = _safe_json_object(failure_path)
+        if (
+            failure.get("run_id") != run_id
+            or failure.get("task_id") != "S2-T12"
+            or failure.get("task_version") != "1.3"
+            or failure.get("status") != "FAILED_UNPUBLISHED"
+            or failure.get("resume_allowed") is not False
+            or not isinstance(failure.get("reason"), str)
+        ):
+            return _s2_t12_invalid("malformed S2-T12 failure evidence", run_id=run_id)
+        result = _s2_t12_base("FAILED", "S2_T12_FAILED_UNPUBLISHED")
+        result.update(
+            {
+                "run_id": run_id,
+                "reason": failure["reason"],
+                "failure_class": failure.get("failure_class"),
+                "resume_allowed": False,
+            }
+        )
+        return result
+
+    preflight_path = run_root / "manifests/preflight-authority.json"
+    preflight = _safe_json_object(preflight_path)
+    execution_paths = sorted((run_root / "manifests").glob("execution-*.json"))
+    execution = _safe_json_object(execution_paths[0]) if len(execution_paths) == 1 else {}
+    execution_valid = (
+        len(execution_paths) == 1
+        and not execution_paths[0].is_symlink()
+        and execution.get("run_id") == run_id
+        and execution.get("task_id") == "S2-T12"
+        and execution.get("task_version") == "1.3"
+        and _self_hash_matches(execution, "execution_manifest_hash")
+    )
+    preflight_valid = (
+        bool(preflight)
+        and not preflight_path.is_symlink()
+        and preflight.get("task_id") == "S2-T12"
+        and preflight.get("task_version") == "1.3"
+        and _self_hash_matches(preflight, "authority_hash")
+    )
+    if not completion_present:
+        if not preflight_valid or not execution_valid:
+            return _s2_t12_invalid(
+                "active run lacks valid Authority/execution evidence", run_id=run_id
+            )
+        result = _s2_t12_base("IN_PROGRESS", "S2_T12_RUN_IN_PROGRESS")
+        result.update(
+            {
+                "run_id": run_id,
+                "authority_hash": preflight.get("authority_hash"),
+                "checks": {
+                    "preflight_authority_valid": True,
+                    "execution_manifest_valid": True,
+                    "published_completion_present": False,
+                },
+            }
+        )
+        for instrument in ("BTCUSDT", "ETHUSDT"):
+            partial = _safe_json_object(
+                run_root / "reports" / f"{instrument.lower()}-completion.json"
+            )
+            if partial.get("instrument") == instrument:
+                metrics = partial.get("path_metrics", {})
+                result["instruments"][instrument] = {
+                    "episodes": partial.get("episode_count"),
+                    "h1_rows": metrics.get("evidence_level_counts", {}).get("H1"),
+                    "h2_rows": metrics.get("evidence_level_counts", {}).get("H2"),
+                    "metric_rows": metrics.get("row_count"),
+                }
+        return result
+
+    completion = _safe_json_object(completion_path)
+    snapshot_id = completion.get("snapshot_id")
+    snapshot = run_root / "published/snapshots" / str(snapshot_id)
+    manifest_path = snapshot / "manifest.json"
+    catalog_path = snapshot / "catalog.json"
+    manifest = _safe_json_object(manifest_path)
+    catalog = _safe_json_object(catalog_path)
+    raw_instruments = catalog.get("instruments")
+    instruments: dict[str, Any] = raw_instruments if isinstance(raw_instruments, dict) else {}
+    instrument_projection: dict[str, Any] = {}
+    instrument_checks: dict[str, bool] = {}
+    for instrument in ("BTCUSDT", "ETHUSDT"):
+        projected, complete = _s2_t12_instrument_projection(
+            snapshot,
+            instrument,
+            instruments.get(instrument),
+        )
+        instrument_projection[instrument] = projected
+        instrument_checks[f"{instrument.lower()}_complete"] = complete
+
+    authorities_root = stage2_root / "authorities/S2-T12"
+    authority_candidates: list[Path] = []
+    if authorities_root.is_dir() and not authorities_root.is_symlink():
+        try:
+            authority_candidates = [
+                path for path in authorities_root.glob("*.json") if not path.name.startswith("._")
+            ]
+        except OSError:
+            authority_candidates = []
+    latest_authority: Path | None = None
+    if authority_candidates:
+        latest_authority = max(
+            authority_candidates,
+            key=lambda path: (path.lstat().st_mtime_ns, path.name),
+        )
+    authority = _safe_json_object(latest_authority) if latest_authority is not None else {}
+
+    summary_path = repository_root / S2T12_SUMMARY_RELATIVE_PATH
+    validation_path = repository_root / S2T12_VALIDATION_RELATIVE_PATH
+    summary = _safe_json_object(summary_path)
+    validation = _safe_text(validation_path)
+    total_rows = sum(
+        int(value.get("metric_rows", 0))
+        for value in instrument_projection.values()
+        if isinstance(value, dict)
+    )
+    raw_summary_instruments = summary.get("instruments")
+    summary_instruments: dict[str, Any] = (
+        raw_summary_instruments if isinstance(raw_summary_instruments, dict) else {}
+    )
+    summary_instruments_match = all(
+        isinstance(summary_instruments.get(instrument), dict)
+        and summary_instruments[instrument].get("episode_count")
+        == instrument_projection[instrument].get("episodes")
+        and summary_instruments[instrument].get("h1_rows")
+        == instrument_projection[instrument].get("h1_rows")
+        and summary_instruments[instrument].get("h2_rows")
+        == instrument_projection[instrument].get("h2_rows")
+        and summary_instruments[instrument].get("row_count")
+        == instrument_projection[instrument].get("metric_rows")
+        and summary_instruments[instrument].get("output_sha256")
+        == instrument_projection[instrument].get("output_sha256")
+        for instrument in ("BTCUSDT", "ETHUSDT")
+    )
+    checks = {
+        "preflight_authority_valid": preflight_valid,
+        "execution_manifest_valid": execution_valid,
+        "newest_authority_matches_run": latest_authority is not None
+        and not latest_authority.is_symlink()
+        and authority == preflight
+        and latest_authority.name == f"{preflight.get('authority_hash')}.json",
+        "completion_pass": completion.get("status") == "PASS"
+        and completion.get("run_id") == run_id,
+        "immutable_snapshot_present": snapshot.is_dir() and not snapshot.is_symlink(),
+        "manifest_self_hash_valid": not manifest_path.is_symlink()
+        and _self_hash_matches(manifest, "manifest_hash"),
+        "catalog_self_hash_valid": not catalog_path.is_symlink()
+        and _self_hash_matches(catalog, "catalog_hash"),
+        "terminal_evidence_bound": manifest.get("run_id") == run_id
+        and catalog.get("run_id") == run_id
+        and manifest.get("snapshot_id") == snapshot_id
+        and catalog.get("snapshot_id") == snapshot_id
+        and completion.get("manifest_hash") == manifest.get("manifest_hash")
+        and completion.get("catalog_hash") == catalog.get("catalog_hash"),
+        **instrument_checks,
+        "btc_eth_h1_h2_separate": set(instruments) == {"BTCUSDT", "ETHUSDT"},
+        "repository_summary_matches": not summary_path.is_symlink()
+        and summary.get("schema_name") == "s2-t12-path-metrics-repository-summary"
+        and summary.get("task_id") == "S2-T12"
+        and summary.get("task_version") == "1.3"
+        and summary.get("run_id") == run_id
+        and summary.get("authority_hash") == preflight.get("authority_hash")
+        and summary.get("snapshot_id") == snapshot_id
+        and summary.get("manifest_hash") == manifest.get("manifest_hash")
+        and summary.get("catalog_hash") == catalog.get("catalog_hash")
+        and summary.get("total_metric_rows") == total_rows
+        and summary_instruments_match,
+        "verify_pass": summary.get("verify_status") == "PASS",
+        "validation_pass": not validation_path.is_symlink()
+        and bool(validation)
+        and run_id in validation
+        and "VALIDATED" in validation,
+        "historical_evidence_only": completion.get("historical_evidence_only") is True
+        and manifest.get("historical_evidence_only") is True
+        and summary.get("historical_evidence_only") is True,
+        "stage3_locked": completion.get("stage3_locked") is True
+        and summary.get("stage3_locked") is True,
+    }
+    passed = all(checks.values())
+    result = _s2_t12_base(
+        "PASS" if passed else "EVIDENCE_INVALID",
+        "S2_T12_FULL_OUTPUT_VERIFIED_VALIDATION_PASS" if passed else "S2_T12_EVIDENCE_INVALID",
+    )
+    result.update(
+        {
+            "run_id": run_id,
+            "authority_hash": preflight.get("authority_hash"),
+            "snapshot_id": snapshot_id,
+            "manifest_hash": manifest.get("manifest_hash"),
+            "catalog_hash": catalog.get("catalog_hash"),
+            "instruments": instrument_projection,
+            "checks": checks,
+            "full_output_complete": completion.get("status") == "PASS",
+            "verify_status": summary.get("verify_status", "NOT_RUN"),
+            "validation_status": "PASS" if checks["validation_pass"] else "FAIL",
+            "historical_evidence_only": checks["historical_evidence_only"],
+            "stage3_locked": True,
+            "human_accepted": summary.get("human_accepted") is True,
+            "total_metric_rows": total_rows,
+            "updated_at": completion_path.stat().st_mtime,
+        }
+    )
+    if not passed:
+        result["reason"] = "one or more S2-T12 evidence checks failed"
+    return result
+
+
 class ProgressHandler(BaseHTTPRequestHandler):
     server: ProgressHTTPServer
 
@@ -288,7 +668,8 @@ class ProgressHandler(BaseHTTPRequestHandler):
                 observability = _execution_observability(self.server.run_root)
                 observability["acceptance"] = _acceptance_projection(payload, observability)
                 observability["stage2_tasks"] = {
-                    "S2-T11": _stage2_task_projection(self.server.stage2_root)
+                    "S2-T11": _stage2_task_projection(self.server.stage2_root),
+                    "S2-T12": _stage2_path_metrics_projection(self.server.stage2_root),
                 }
                 payload["execution_observability"] = observability
                 self._reply_json(HTTPStatus.OK, payload)
