@@ -4,15 +4,15 @@
 
 - task_id: S2-T15
 - task_version: 1.2
-- status: DRAFT
+- status: METHOD FIXTURE IMPLEMENTATION PASS / AWAITING CR-2026-025
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T12 PASS; S2-T14 PASS; S2-T19 PASS
 - supersedes: task_version 1.1
-- approved_by: NONE
-- approved_at: NONE
+- approved_by: Muce
+- approved_at: 2026-07-21T14:35:06Z
 
 ## 1. 目标
 
@@ -99,6 +99,11 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 2026-07-14：v1.0，按Stage 1 Trade Identity v2与Stage 2 Plan v1.0重规划；状态DRAFT，未执行。
 - 2026-07-14：v1.1，加入可扩展研究setup架构与事件说明图规划；状态DRAFT，未执行。
 - 2026-07-16：v1.2，按Plan v1.2收口分组、前置S2-T19并修订DAG；状态DRAFT，未执行。
+- 2026-07-21：Muce以`进入t15`批准v1.2方法fixture能力，从已收尾的S2-T14提交
+  `2190d31639bebaa01e6e2462b55b57f43b03c286`独立执行。正式全量CLI、外部Run和Web UI
+  自动识别不在v1.2允许范围内，必须先批准CR-2026-025与Task v1.3。
+- 2026-07-21：v1.2条件匹配fixture、16项定向测试及553项统一质量门全部PASS；正式全量
+  研究与Web UI仍未运行，Task保持开放并等待CR-2026-025人工决定，不启动S2-T16。
 
 ## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
 
