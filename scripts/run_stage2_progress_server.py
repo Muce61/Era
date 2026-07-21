@@ -265,6 +265,8 @@ def _stage2_task_projection(stage2_root: Path) -> dict[str, Any]:
         "acceptance_checks": latest.acceptance_checks,
         "full_output_complete": latest.full_output_complete,
         "validation_status": latest.validation_status,
+        "human_accepted": latest.status == "PASS"
+        and latest.reason_code.startswith("S2_T11_HUMAN_ACCEPTED_"),
         "receipt_hash": latest.receipt_hash,
         "code_commit": latest.code_commit,
         "validation_path": latest.validation_path,

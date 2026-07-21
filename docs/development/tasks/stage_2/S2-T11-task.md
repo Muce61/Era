@@ -4,7 +4,7 @@
 
 - task_id: S2-T11
 - task_version: 1.3
-- status: APPROVED
+- status: PASSED
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
@@ -13,6 +13,8 @@
 - supersedes: task_version 1.2
 - approved_by: Muce
 - approved_at: 2026-07-21T02:19:21Z
+- accepted_by: Muce
+- accepted_at: 2026-07-21T02:47:07Z
 
 ## 1. 目标
 
@@ -100,6 +102,7 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 - 2026-07-14：v1.1，加入可扩展研究setup架构与事件说明图规划；状态DRAFT，未执行。
 - 2026-07-16：v1.2，按Plan v1.2收口分组、前置S2-T19并修订DAG；状态DRAFT，未执行。
 - 2026-07-21：v1.3，CR-2026-021获人工批准；冻结全量路径提取CLI、切片索引输出、恢复、验证和只读输入边界。
+- 2026-07-21：正式Run、只读Verify、完整质量门和自动UI通过后，Muce人工验收并收尾；状态PASSED。
 
 ## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
 

@@ -534,6 +534,7 @@
       const failed = raw === "FAILED" || raw === "EVIDENCE_INVALID";
       const blocked = raw === "BLOCKED";
       const running = raw === "IN_PROGRESS";
+      const humanAccepted = Boolean(task.human_accepted);
       const state = passed ? "pass" : failed ? "failed" : running ? "running" : "pending";
       const btcTotal = Number(task.btc_total) || 0;
       const ethTotal = Number(task.eth_total) || 0;
@@ -560,7 +561,7 @@
       const taskVersion = escapeText(task.task_version || "UNKNOWN");
       byId("taskProgressTag").innerHTML = `S2-T11 v${taskVersion}<b>${raw}</b>`;
       byId("passedCount").textContent = `${10 + (s2t10Passed ? 1 : 0) + (passed ? 1 : 0)} / 12 PASSED`;
-      return {task, passed, failed, blocked, running};
+      return {task, passed, failed, blocked, running, humanAccepted};
     }
 
     async function refresh() {
@@ -634,7 +635,9 @@
           if (pathTask.passed) {
             byId("stageLockNote").textContent = "S2-T11 已通过真实全量证据自动验收；Stage 3 仍保持 LOCKED。";
             byId("currentConclusion").textContent = "S2-T11 H1/H2 路径提取、BTC/ETH 全量输出与 validation 证据均已通过。";
-            byId("nextAction").innerHTML = "<b>停止并等待人工验收 S2-T11</b>；不得自动开始 S2-T12。";
+            byId("nextAction").innerHTML = pathTask.humanAccepted
+              ? "<b>S2-T11 已人工验收并正式收尾</b>；S2-T12 尚未批准，保持停止。"
+              : "<b>停止并等待人工验收 S2-T11</b>；不得自动开始 S2-T12。";
           } else if (pathTask.failed) {
             byId("stageLockNote").textContent = "S2-T11 证据失败或无效；Stage 3 保持 LOCKED。";
             byId("currentConclusion").textContent = `S2-T11 未通过：${escapeText(pathTask.task.reason_code)}。`;

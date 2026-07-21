@@ -11,8 +11,10 @@
   "run_id": "stage2-s2t11-paths-20260721T023117Z-029707f3c111",
   "source_code_commit": "bfcec8c3d2f5e63bfe6169d0b44f569530205062",
   "stage3_status": "LOCKED",
-  "status": "PASS",
+  "status": "PASSED_HUMAN_ACCEPTED",
   "task_id": "S2-T11",
   "task_version": "1.3",
+  "accepted_at": "2026-07-21T02:47:07Z",
+  "accepted_by": "Muce",
   "unconsumed_superseded_preflight_hash": "005157a08cb654ad25a2627da5f0f692955d0df476f266e989686de16d2f5879"
 }

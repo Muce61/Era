@@ -167,7 +167,12 @@ def test_acceptance_is_derived_from_live_release_verify_and_exact_compare_eviden
     assert _acceptance_projection(status, observability)["s2_t10_status"] == "FAILED"
 
 
-def _path_receipt_payload(status: str, sequence: int = 0, previous: str | None = None):
+def _path_receipt_payload(
+    status: str,
+    sequence: int = 0,
+    previous: str | None = None,
+    reason_code: str | None = None,
+):
     from era100x.research.stage_2.paths.extraction import PathExtractionReceipt
 
     passed = status == "PASS"
@@ -177,7 +182,7 @@ def _path_receipt_payload(status: str, sequence: int = 0, previous: str | None =
             "sequence": sequence,
             "previous_receipt_hash": previous,
             "status": status,
-            "reason_code": f"S2_T11_{status}",
+            "reason_code": reason_code or f"S2_T11_{status}",
             "btc_episodes_done": 10 if passed else 4,
             "btc_episodes_total": 10,
             "eth_episodes_done": 8 if passed else 1,
@@ -232,6 +237,20 @@ def test_s2_t11_pass_requires_full_separate_hashed_evidence(tmp_path: Path) -> N
     assert result["validation_status"] == "PASS"
     assert all(result["checks"].values())
     assert result["task_version"] == "1.3"
+    assert result["human_accepted"] is False
+
+
+def test_s2_t11_human_acceptance_is_derived_from_append_only_receipt(tmp_path: Path) -> None:
+    passed = _path_receipt_payload(
+        "PASS",
+        reason_code="S2_T11_HUMAN_ACCEPTED_20260721T024707Z",
+    )
+    _write_path_receipt(tmp_path, passed)
+
+    result = _stage2_task_projection(tmp_path)
+
+    assert result["status"] == "PASS"
+    assert result["human_accepted"] is True
 
 
 def test_ui_derives_s2_t11_version_and_complete_task_count() -> None:

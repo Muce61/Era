@@ -185,7 +185,7 @@ run is immutable; its sealed objects require a new-run adoption Manifest and ful
 | Compare algorithm-authority production wiring | S2-T10 v1.14 | CR-2026-019; one-line production correction; compare-only Authority `e3688ca21a987849388cb9e694929033aac51ed245d1f0eb5337c43f554eb740` | IMPLEMENTED / 431 TESTS PASS / EXACT COMPARE PASS |
 | Group-1 small-sample integration | S2-T01～S2-T09 | fixture chain plus six controlled real windows; locked execution Manifest | PASSED |
 | Historical path metrics and labels | S2-T12, S2-T13, S2-T14 | MFE/MAE/time, first passage, AMBIGUOUS bounds | DRAFT_NOT_APPROVED |
-| Historical H1/H2 path extraction | S2-T11 v1.3 | `paths/extraction`; approved lossless source-slice CLI; BTC 220,201 + ETH 312,507 episodes; Manifest `d4d6a2f5…`; verify/UI/quality PASS; `validations/stage_2/S2-T11.md` | PASSED / WAITING HUMAN ACCEPTANCE |
+| Historical H1/H2 path extraction | S2-T11 v1.3 | `paths/extraction`; approved lossless source-slice CLI; BTC 220,201 + ETH 312,507 episodes; Manifest `d4d6a2f5…`; verify/UI/quality PASS; Muce accepted 2026-07-21; `validations/stage_2/S2-T11.md` | PASSED / HUMAN ACCEPTED |
 | Conditional baseline and placebo | S2-T15, S2-T16 | matched baseline/placebo with frozen relaxation and seeds | DRAFT_NOT_APPROVED |
 | Cluster ownership and cluster bootstrap CI | S2-T17, S2-T18 | BTC/ETH-separated clustering and cluster-level resampling | DRAFT_NOT_APPROVED |
 | Stage 2 research gate and deterministic evidence-card reporting | S2-T20 | Stage validation and human Go/No-Go; no automatic Stage 3 | DRAFT_NOT_APPROVED |
