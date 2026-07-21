@@ -8,7 +8,12 @@ Status: S2_T10_AND_GROUP_1_PASSED
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
-S2-T19 and S2-T01～S2-T09 are PASSED. S2-T10 v1.12 is REOPENED_FOR_PERFORMANCE_CORRECTION under
+S2-T19 and S2-T01～S2-T10 are PASSED. S2-T11 through S2-T20 remain `DRAFT_NOT_APPROVED`, so no
+current Task is active and Stage 3 remains locked.
+
+## Historical S2-T10 progression
+
+S2-T10 v1.12 was REOPENED_FOR_PERFORMANCE_CORRECTION under
 CR-2026-007 and CR-2026-008. Formal Run A
 `stage2-g1-full-a-20260716T144233Z-366a541b7956` is PUBLISHED with Quality PASS, 9508/9508
 completed work items, zero failed/UNKNOWN work items and 61,776 logical partitions. Its published

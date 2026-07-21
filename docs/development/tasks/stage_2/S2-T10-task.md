@@ -3,18 +3,20 @@
 ## Metadata
 
 - task_id: S2-T10
-- task_version: 1.13
-- status: IN_PROGRESS
+- task_version: 1.14
+- status: PASSED
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
 - created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
 - dependencies: S2-T01 PASS; S2-T02 PASS; S2-T03 PASS; S2-T04 PASS; S2-T05 PASS; S2-T06 PASS; S2-T07 PASS; S2-T08 PASS; S2-T09 PASS; S2-T19 PASS; locked Group-1 Manifest; CR-2026-007 APPROVED; CR-2026-008 APPROVED
-- supersedes: task_version 1.12
+- supersedes: task_version 1.13
 - approved_by: Muce
-- approved_at: 2026-07-17T19:09:18+08:00
+- approved_at: 2026-07-21
 - execution_started_at: 2026-07-17T19:09:18+08:00
-- blocked_reason: NONE; CR-2026-017 authorizes the final-code gate, append-only disablement, two identical Authority freezes and exactly one successor
+- completed_at: 2026-07-21T08:48:55+08:00
+- blocked_reason: NONE
+- final_acceptance: CR-2026-019 exact comparison PASS; Group 1 PASS
 
 ## 1. 目标
 

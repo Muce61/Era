@@ -2229,6 +2229,9 @@ rules:
     change_request_ref: docs/development/changes/CR-2026-005.md
     implemented_change_request_ref: docs/development/changes/CR-2026-003.md
     s2_t10_recovery_task_version: '1.13'
+    s2_t10_final_task_version: '1.14'
+    s2_t10_status: PASSED
+    group_1_status: PASSED
     cr_s2_004_status: RESOLVED_IMPLEMENTED_VALIDATED_L2
     cr_s2_004_validation: docs/development/validations/stage_2/CR-2026-004.md
     cr_s2_005_status: RESOLVED_IMPLEMENTED_VALIDATED_L2
@@ -2291,7 +2294,7 @@ rules:
     cr_s2_016_foundation_packed_checkpoint_count: 164
     cr_s2_016_group1_monthly_checkpoint_count: 158
     cr_s2_016_group1_monthly_dataset_seal_count: 2054
-    cr_s2_017_status: APPROVED_READY_FOR_FINAL_CODE_GATE
+    cr_s2_017_status: SUPERSEDED_BY_EXECUTED_CR_2026_018_019
     cr_s2_017_change_request_ref: docs/development/changes/CR-2026-017.md
     cr_s2_017_validation: docs/development/validations/stage_2/CR-2026-017.md
     cr_s2_017_failed_release_run_b_id: stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04
@@ -2307,8 +2310,30 @@ rules:
     cr_s2_017_runtime_v2_test_count: 214
     cr_s2_017_repository_test_count: 427
     cr_s2_017_successor_authorization: APPROVED_EXACTLY_ONE
-    cr_s2_017_failed_run_disablement: PENDING_FINAL_COMMIT_AND_RESERVED_SUCCESSOR_IDS
+    cr_s2_017_failed_run_disablement: SUPERSEDED_BY_CR_2026_018_FIXED_RUN_BOUNDARY
     cr_s2_017_authority_freeze_requirement: TWO_BYTE_IDENTICAL_FREEZES_BINDING_DISABLEMENT
+    cr_s2_018_status: APPROVED_EXECUTED_RELEASE_VERIFY_PASS
+    cr_s2_018_change_request_ref: docs/development/changes/CR-2026-018.md
+    cr_s2_018_release_code_commit: 9857bd83c73c0b0e103e5600e41f89d3e698ae41
+    cr_s2_018_fixed_run_b_id: stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04
+    cr_s2_018_fixed_run_b_status: PUBLISHED_WITH_RESOURCE_ANOMALIES_QUALITY_VERIFY_PASS
+    cr_s2_018_total_partitions: 80784
+    cr_s2_018_fragment_count: 77265
+    cr_s2_018_object_count: 208
+    cr_s2_018_seal_count: 208
+    cr_s2_019_status: IMPLEMENTED_EXECUTED_EXACT_COMPARE_PASS
+    cr_s2_019_change_request_ref: docs/development/changes/CR-2026-019.md
+    cr_s2_019_compare_code_commit: a9140b585d53370c4eb7818b9235737288220d1c
+    cr_s2_019_compare_authority_sha256: e3688ca21a987849388cb9e694929033aac51ed245d1f0eb5337c43f554eb740
+    cr_s2_019_comparison_report_sha256: 69298e5d05161223b354e1b60a65ef032e9370e4017da487e35657264af8e9f0
+    cr_s2_019_comparison_semantic_sha256: 8e409adaa66209695b99da45fd0367833059d6035fb24747226cd869e449487d
+    cr_s2_019_run_a_partitions: 61776
+    cr_s2_019_run_b_partitions: 61776
+    cr_s2_019_matched_partitions: 61776
+    cr_s2_019_missing_partitions: 0
+    cr_s2_019_extra_partitions: 0
+    cr_s2_019_difference_count: 0
+    cr_s2_019_global_distributions_equal: true
     formal_run_a_id: stage2-g1-full-a-20260716T144233Z-366a541b7956
     formal_run_a_status: PUBLISHED_QUALITY_PASS
     formal_run_a_logical_partitions: 61776
@@ -2341,13 +2366,13 @@ rules:
     cr_s2_014_stopped_run_b_id: stage2-g1-v2-b-20260719T045142Z-0eeb27e0be21
     cr_s2_014_stopped_run_b_status: INTERRUPTED_RECOVERABLE_UNPUBLISHED
     cr_s2_014_performance_gate: FIXED_BTC_ETH_JULY_AT_LEAST_4X
-    next_authorized_state_after_authority_validation: BLOCKED_PENDING_CR_2026_014_VALIDATION
+    next_authorized_state_after_authority_validation: NONE_S2_T10_COMPLETE
     hybrid_architecture_decision_ref: docs/development/decisions/ADR-S2-006-hybrid-v2-feature-foundation.md
     plan_dag_change: NONE
     legacy_run_b_authorized: false
     later_group_execution_authorized: false
-    execution_blocker: CR_2026_014_CORRECTNESS_PERFORMANCE_AND_QUALITY_PENDING
-    execution_state: BLOCKED_PENDING_CR_2026_014_VALIDATION
+    execution_blocker: NONE
+    execution_state: S2_T10_AND_GROUP_1_PASSED_AWAITING_SEPARATE_TASK_APPROVAL
   state: PLANNED
 - rule_id: GATE-STAGE-3
   rule_status: FROZEN

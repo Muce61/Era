@@ -108,9 +108,10 @@ Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～
 
 ## Stage 2 Plan v1.2 APPROVED Coverage
 
-Stage 2 is `IN_PROGRESS / CR_2026_017_APPROVED_READY_FOR_FINAL_CODE_GATE`. The Runtime V2 and repository
-candidate implementation gates pass; S2-T10 and Group 1 remain incomplete pending the new Authority,
-audited adoption, replacement Run B and exact comparison.
+Stage 2 is `IN_PROGRESS / S2_T10_AND_GROUP_1_PASSED`. S2-T19 and S2-T01～S2-T10 are PASSED;
+the fixed Runtime V2 Run is published with Quality/Verify PASS and the exact Run-A comparison
+matches 61,776/61,776 Group-1 partitions with zero differences. S2-T11 through S2-T20 remain
+`DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
 [CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
 approve a bounded hybrid transition without changing Stage 1, preregistration, config, parameters,
 candidate semantics or the Plan v1.2 DAG. Formal Run A is now PUBLISHED with Quality PASS,

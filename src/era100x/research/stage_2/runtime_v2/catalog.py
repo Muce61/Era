@@ -960,10 +960,10 @@ class CatalogPublisherV2:
             )
         artifacts = tuple(sorted(artifacts_by_id.values(), key=lambda item: item.object_sha256))
         seals = tuple(sorted(seals_by_id.values(), key=lambda item: item.seal_hash))
-        # CR-2026-013 classifies object-count thresholds as resource
-        # observations.  The sealed indexes remain authoritative at any count;
-        # semantic, ownership, duplicate and physical-hash checks above and
-        # below continue to fail closed.
+        # CR-2026-013 classifies object-count thresholds as resource observations;
+        # CR-2026-017/018 remove the stale terminal count gate. The sealed indexes
+        # remain authoritative evidence at any count, while semantic, ownership,
+        # duplicate and physical-hash checks continue to fail closed.
 
         logical_table = _concat_component_tables(logical_tables, schema=_LOGICAL_PARTITIONS_SCHEMA)
         logical_tables.clear()

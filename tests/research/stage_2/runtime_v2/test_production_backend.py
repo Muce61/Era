@@ -25,6 +25,7 @@ from era100x.research.stage_2.runtime_v2.compatibility import (
     CompatibilityDifference,
     CompatibilityMismatch,
     CompatibilityReport,
+    LEGACY_HASH_ALGORITHM,
     PAYLOAD_AND_DISTRIBUTION_PROOF,
 )
 from era100x.research.stage_2.runtime_v2.hashing import canonical_arrow_schema
@@ -527,9 +528,14 @@ def test_compare_mismatch_is_append_only_and_fail_closed(
         "era100x.research.stage_2.runtime_v2.production_backend.project_formal_run_a",
         lambda *args, **kwargs: object(),
     )
+
+    def compare_with_authority(*args: object, **kwargs: object) -> CompatibilityReport:
+        assert kwargs["v2_legacy_hash_algorithm"] == LEGACY_HASH_ALGORITHM
+        return mismatch
+
     monkeypatch.setattr(
         "era100x.research.stage_2.runtime_v2.production_backend.compare_run_a_to_v2_sorted_stream",
-        lambda *args, **kwargs: mismatch,
+        compare_with_authority,
     )
 
     with pytest.raises(CompatibilityMismatch):

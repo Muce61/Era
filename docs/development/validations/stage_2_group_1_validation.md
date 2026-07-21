@@ -1,16 +1,20 @@
 # Stage 2 Group 1 Validation
 
-## Conclusion
+## Current conclusion
 
-**FAIL**
+**PASS** — S2-T10 v1.14 and Group 1 passed after the fixed Run published and verified all 80,784
+partitions and matched formal Run A across all 61,776 Group-1 partitions with zero differences.
 
-Recovery status: CR-2026-003 and CR-2026-004 are implemented and validated; CR-2026-005 is
+The recovery history below is retained append-only. Its earlier FAIL statements describe the
+state at those checkpoints and do not override the current conclusion.
+
+Historical recovery status: CR-2026-003 and CR-2026-004 are implemented and validated; CR-2026-005 is
 RESOLVED. The current v1.6 Run A completed 9508/9508 generation items; its isolated CR-2026-006
 release child remains authorized, while the legacy parent and legacy Run B are stopped.
 CR-2026-007/008 authorize S2-T10 v1.8 to build a complete Feature Foundation, perform a fresh V2
 Group-1 Run B and compare its full canonical owner-day projection exactly with formal Run A.
-Run A publication, V2 Run B and cross-implementation comparison are not yet complete. This remains
-FAIL.
+At that checkpoint, Run A publication, V2 Run B and cross-implementation comparison were not yet
+complete and the result remained FAIL.
 
 S2-T19 and S2-T01～S2-T09 passed their directed tests and small-sample integration. The original
 S2-T10 v1.3 attempt failed during the first full BTCUSDT Flow partition because its Stage 1 Trades physical-path
