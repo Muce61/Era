@@ -32,3 +32,10 @@ Adopt CR-2026-031's mutually exclusive missingness taxonomy and fail-closed acti
 The full BTC/ETH audit may reveal more exclusions or a true upstream defect. Either is reported as
 evidence rather than corrected after seeing match coverage or delta. No new Authority or formal
 Run is permitted until OQ-S2-009 is resolved and the expected exclusion inventory is frozen.
+
+## Seven-day validation
+
+The source-boundary week confirmed the decision for both instruments: each has exactly 61 typed
+boundary-warmup exclusions and no activity/context unavailability in the window. Strict read-back
+passes. Whole-history validation remains required; the ADR does not treat a seven-day result as
+proof of all periods.

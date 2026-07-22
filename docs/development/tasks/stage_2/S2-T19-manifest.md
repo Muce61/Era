@@ -161,3 +161,11 @@ are blocked until human approval defines all OQ-S2-010 landmarks, activation, ne
 cost/fill/closure, maximum horizon, censor, subgroup and multiplicity values in a new Plan/Task
 version. The three possible interpretations—delayed activation, momentum decay, or conditional
 time rules—must all be reported; observing one does not authorize post-hoc rule replacement.
+
+### Seven-day audit evidence
+
+At clean commit `be507ff`, the `[2020-01-01,2020-01-08)` audit passed feature availability and
+raw-path non-pollution, but correctly blocked the lifecycle handoff. Nineteen Primary T4/H2 rows
+remain EXPIRED at the accepted 600-second source boundary. No executable lifecycle values were
+added. This addendum remains not executable until OQ-S2-010 approves a separate variable-length
+source and the full landmark/H3/censor contract.

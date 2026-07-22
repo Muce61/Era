@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T15 v1.4 — conditional random baseline
-Status: S2_T15_STOPPED_AVAILABILITY_AUDIT_AUTHORIZED_OQ_S2_009_AND_OQ_S2_010_OPEN
+Status: S2_T15_STOPPED_7_DAY_RAW_PATH_PASS_FULL_LIFECYCLE_BLOCKED
 ```
 
 No T15 long-running process is active. Muce stopped the latest TRAIN-bin preparation before a
@@ -21,6 +21,16 @@ exact expected exclusions before the question can close. OQ-S2-010 records the a
 between immutable raw event paths and a future theoretical full-lifecycle strategy study; exact
 landmark, activation, near-zero H3 PnL, comparison, closure and censor contracts remain undefined.
 Neither approval authorizes a new Authority, bins, Run, S2-T16+ or Stage 3.
+
+The required clean seven-day audit has now run over `[2020-01-01, 2020-01-08)`. Feature
+availability and raw-path non-pollution pass: 20,160 anchors reconcile to 20,038 available plus
+122 typed boundary-warmup exclusions; 1,211 raw paths remain byte-identical after 2,422 T12 and
+2,422 T13 derived rows. Strict audit Verify passes with report Hash `a47b6488…b344`.
+
+The full-lifecycle handoff is BLOCKED, not PASS. The current accepted raw source ends at T4/600
+seconds, while 19 of 52 H2 T4 rows are still Primary EXPIRED in the audit week. OQ-S2-010 must add
+a separate variable-length source and exact lifecycle/censor/H3 contract. OQ-S2-009 also remains
+open until the whole historical range is audited. No long task may resume from this result.
 
 The unique CR-2026-028 successor
 `stage2-s2t15-conditional-20260722T120658Z-023f47cffef2` passed the corrected sealed Episode

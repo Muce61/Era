@@ -38,3 +38,10 @@ The raw path remains reusable for multiple exit hypotheses, while a strategy lif
 whether a proxy position eventually exits fully. The cost is a new H3 contract and potentially
 longer data windows. Implementation remains blocked until OQ-S2-010 freezes exact landmarks,
 activation, near-zero, cost, closure and censor definitions.
+
+## Seven-day validation
+
+The raw-path separation passes over 1,211 real T1-T4 rows with byte-identical sources after
+T12/T13 consumption. The lifecycle side cannot execute: T11 stops at 600 seconds and 19 Primary
+T4/H2 rows are still `EXPIRED`. This confirms that the lifecycle must use a separate
+variable-length source and cannot mutate or stretch the accepted T1-T4 event evidence in place.

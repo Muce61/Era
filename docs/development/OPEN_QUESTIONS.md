@@ -63,8 +63,8 @@ These questions are inherited from V1.3.4 Appendix N. They do not block planning
 | OQ-S2-004 | 2026-07-16审批引用的T1/T3/T4精确时间组合、三个预注册时期、条件随机匹配bin/固定放宽层级和主失败线在仓库及全部本地历史中均无定义；其精确值是什么？ | RESOLVED | Stage 2 preregistration completion | NONE | 2026-07-16T14:51:38+08:00 Muce人工批准完整定义；见[ADR-S2-004](decisions/ADR-S2-004-primary-research-definition.md)。T2是唯一Primary；P1/P2/P3、L0～L5、5 controls、matching/bootstrap seed 20260716、AMBIGUOUS失败、F1～F10与ETH分类均已预注册。全部为BASELINE/RESEARCH，不是最优或FROZEN。 |
 | OQ-S2-005 | ADR-S2-004声称沿用已批准的1m波动率和Trades活跃度公式，但仓库及全部Git历史均无公式本体；正式条件基线也缺少split/fold边界、精确purge/embargo长度和非事件control锚点生成规则。精确定义是什么？ | RESOLVED | S2-T15 full conditional baseline | NONE | 2026-07-22T02:25:41Z Muce批准CR-2026-026、ADR-S2-009、S2-T15 v1.4及T19 append-only addendum；冻结三特征、关键位距离、F0-F3滚动折、3600/600秒、daily grid、三层control identity、T13/T14绑定和全量对账。未知结果不预先获批。 |
 | OQ-S2-006 | 固定T10的14,256个Group-1关键位/MarketEpisode分区收据未携带其DatasetSpec要求的`field.*`分布摘要，当前权威`CatalogReaderV2`因此拒绝读取。T15应如何获得可验证且不改写密封T10的只读输入？ | RESOLVED | S2-T15 upstream binding | NONE | 2026-07-22T03:24:18Z Muce批准独立CR-2026-027；只读补证已验证14,256/14,256，T10修改为0，新audit PASS。正式Authority仍需最终干净提交和最终治理Hash重审计。 |
-| OQ-S2-009 | T15已准备BTC/P1/B0的210,240个grid anchors中，首61个因61-bar回看越过历史起点而`PRICE_FEATURE_UNAVAILABLE`；BTC/ETH全范围是否还有边界warmup、声明gap或未绑定分区，分别怎样处理？ | OPEN / AUDIT AUTHORIZED | S2-T15 availability audit | S2-T15 Authority/bin/Run | Muce于2026-07-22T16:27:27Z批准[CR-2026-031](changes/CR-2026-031.md)与[ADR-S2-010](decisions/ADR-S2-010-historical-missingness.md)；必须完成BTC/ETH全范围只读审计并冻结逐类预期数量后才能关闭；不得填充、缩短窗口或把缺失当0。 |
-| OQ-S2-010 | “存活较长、尚未激活、净可退出PnL接近零”各自精确定义什么，理论策略从何时入场、怎样运行到完全平仓、何时右删失，以及如何避免幸存者偏差？ | OPEN / DIRECTION APPROVED | future Stage 2/Stage 3 lifecycle preregistration | lifecycle implementation/Authority/Run | Muce于2026-07-22T16:27:27Z批准[CR-2026-032](changes/CR-2026-032.md)与[ADR-S2-011](decisions/ADR-S2-011-event-path-and-strategy-lifecycle-separation.md)的两层方向；仍须人工冻结landmark、激活状态、H3近零带、比较组、成本/成交、最大horizon、删失、subgroup和多重检验。 |
+| OQ-S2-009 | T15已准备BTC/P1/B0的210,240个grid anchors中，首61个因61-bar回看越过历史起点而`PRICE_FEATURE_UNAVAILABLE`；BTC/ETH全范围是否还有边界warmup、声明gap或未绑定分区，分别怎样处理？ | OPEN / 7-DAY PASS / FULL AUDIT PENDING | S2-T15 availability audit | S2-T15 Authority/bin/Run | `[2020-01-01,2020-01-08)`短跑确认BTC/ETH各10,080=10,019可用+61边界warmup，activity/context缺失为0，严格Verify PASS；仍须完成全范围只读审计并冻结逐类预期数量后才能关闭。见[validation](validations/stage_2/CR-2026-031-032-seven-day-audit.md)。 |
+| OQ-S2-010 | “存活较长、尚未激活、净可退出PnL接近零”各自精确定义什么，理论策略从何时入场、怎样运行到完全平仓、何时右删失，以及如何避免幸存者偏差？ | OPEN / 7-DAY LIFECYCLE BLOCKED | future Stage 2/Stage 3 lifecycle preregistration | lifecycle implementation/Authority/Run | 7天审计确认原始路径不污染PASS，但当前最长T4=600秒且52条H2 T4中19条Primary仍EXPIRED；须批准独立variable-length source、landmark、激活、H3近零带、比较组、成本/成交、最大horizon与删失合同。见[validation](validations/stage_2/CR-2026-031-032-seven-day-audit.md)。 |
 
 New questions must record discovery/source, affected rules/contracts/baselines, evidence required, owner, status, and linked ADR/CR. No unresolved question may be answered by assumption.
 
@@ -80,7 +80,8 @@ New questions must record discovery/source, affected rules/contracts/baselines, 
 - Evidence required: whole-range read-only BTC/ETH availability inventory, exact boundary/gap/
   unbound/invalid/zero-observation classification, per-group reconciliation and immutable Hashes.
 - Owner/status: Muce / `OPEN`; CR-2026-031 and ADR-S2-010 approved at
-  `2026-07-22T16:27:27Z`; read-only audit authorized.
+  `2026-07-22T16:27:27Z`; seven-day boundary audit PASS for both instruments; whole-history audit
+  remains pending.
 - Linked governance: [CR-2026-031](changes/CR-2026-031.md) and
   [ADR-S2-010](decisions/ADR-S2-010-historical-missingness.md).
 
@@ -96,7 +97,8 @@ New questions must record discovery/source, affected rules/contracts/baselines, 
   cost/fill, censor, subgroup, multiplicity and risk-set matching definitions before any code or
   outcome is read.
 - Owner/status: Muce / `OPEN`; CR-2026-032 and ADR-S2-011 direction approved at
-  `2026-07-22T16:27:27Z`; exact executable contract remains unresolved.
+  `2026-07-22T16:27:27Z`; seven-day raw-path audit PASS and lifecycle handoff BLOCKED because the
+  accepted source stops at 600 seconds while 19 Primary T4/H2 rows remain EXPIRED.
 - Linked governance: [CR-2026-032](changes/CR-2026-032.md) and
   [ADR-S2-011](decisions/ADR-S2-011-event-path-and-strategy-lifecycle-separation.md).
 
