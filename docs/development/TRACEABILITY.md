@@ -160,10 +160,11 @@ Muce then required a seven-day real-input rehearsal before every long-running ta
 CR-2026-029 TRAIN-bin freeze before any Binning Set or Run ID was created. The first isolated T15
 rehearsal exposed an invalid two-groups-in-one-file simulation package; the complete fresh rerun
 passed 20,160 feature rows, 42 boundary JSON round-trips, 10 real Decimal candidate receptions,
-10 H2 matrices, 300 outcome cells and exact 2-group/60-summary reconciliation. Draft CR-2026-030
-records the stopped `e3d9814f…c365` Authority and blocks any replacement formal chain pending
-explicit human approval. The rehearsal is simulation-only and does not change the formal research
-result.
+10 H2 matrices, 300 outcome cells and exact 2-group/60-summary reconciliation. CR-2026-030
+records the stopped `e3d9814f…c365` Authority. Muce approved CR-2026-030 at
+`2026-07-22T14:47:04Z`, authorizing exactly one replacement Authority/bin/Run chain only after the
+final-clean-code seven-day rehearsal, full quality gate and fresh audit pass. The rehearsal is
+simulation-only and does not change the formal research result.
 S2-T16 through S2-T18 and S2-T20 remain `DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
 [CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
 approve a bounded hybrid transition without changing Stage 1, preregistration, config, parameters,

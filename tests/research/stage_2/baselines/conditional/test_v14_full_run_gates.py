@@ -8,6 +8,13 @@ import pytest
 from era100x.research.stage_2.baselines.conditional import full_run
 
 
+def test_governance_binding_includes_approved_seven_day_rehearsal_cr() -> None:
+    binding = full_run._governance_binding()
+
+    assert "docs/development/changes/CR-2026-030.md" in binding
+    assert len(binding["docs/development/changes/CR-2026-030.md"]) == 64
+
+
 def test_blocked_upstream_audit_cannot_freeze_authority(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

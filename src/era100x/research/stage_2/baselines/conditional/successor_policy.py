@@ -1,4 +1,4 @@
-"""CR-2026-029 fail-closed policy for the final S2-T15 replacement chain."""
+"""CR-2026-030 fail-closed policy for the final S2-T15 replacement chain."""
 
 from __future__ import annotations
 
@@ -102,7 +102,7 @@ def require_final_successor_creation_state(runs_root: Path) -> Path:
     predecessor = validate_failed_predecessor(runs_root)
     failed_successor = validate_failed_cr028_successor(runs_root)
     if _t15_runs(runs_root) != tuple(sorted((predecessor, failed_successor))):
-        raise ValueError("CR-2026-029 allows exactly one final successor and no other T15 Run")
+        raise ValueError("CR-2026-030 allows exactly one final successor and no other T15 Run")
     return failed_successor
 
 
@@ -117,7 +117,7 @@ def require_final_successor_resume_state(runs_root: Path, successor_run_id: str)
         or successor.is_symlink()
         or not successor.is_dir()
     ):
-        raise ValueError("CR-2026-029 final successor resume target is missing or unsafe")
+        raise ValueError("CR-2026-030 final successor resume target is missing or unsafe")
     if set(_t15_runs(runs_root)) != {predecessor, failed_successor, successor}:
-        raise ValueError("CR-2026-029 final successor chain count drift")
+        raise ValueError("CR-2026-030 final successor chain count drift")
     return failed_successor

@@ -54,6 +54,7 @@ GOVERNANCE_FILES = (
     REPOSITORY_ROOT / "docs/development/changes/CR-2026-027.md",
     REPOSITORY_ROOT / "docs/development/changes/CR-2026-028.md",
     REPOSITORY_ROOT / "docs/development/changes/CR-2026-029.md",
+    REPOSITORY_ROOT / "docs/development/changes/CR-2026-030.md",
     REPOSITORY_ROOT / "docs/development/decisions/ADR-S2-009-conditional-baseline-v1.4.md",
     REPOSITORY_ROOT / "docs/development/tasks/stage_2/S2-T15-task.md",
     REPOSITORY_ROOT / "docs/development/tasks/stage_2/S2-T19-manifest.md",
@@ -118,14 +119,17 @@ def _governance_binding() -> dict[str, str]:
     receiver_cr = GOVERNANCE_FILES[1].read_text()
     context_cr = GOVERNANCE_FILES[2].read_text()
     decimal_cr = GOVERNANCE_FILES[3].read_text()
-    adr = GOVERNANCE_FILES[4].read_text()
-    task = GOVERNANCE_FILES[5].read_text()
+    rehearsal_cr = GOVERNANCE_FILES[4].read_text()
+    adr = GOVERNANCE_FILES[5].read_text()
+    task = GOVERNANCE_FILES[6].read_text()
     oq = (REPOSITORY_ROOT / "docs/development/OPEN_QUESTIONS.md").read_text()
     required = (
         ("CR approval", "status: APPROVED", cr),
         ("receiver CR approval", "status: APPROVED", receiver_cr),
         ("Context receiver CR approval", "status: APPROVED", context_cr),
         ("Decimal receiver CR approval", "status: APPROVED", decimal_cr),
+        ("seven-day rehearsal CR approval", "status: APPROVED", rehearsal_cr),
+        ("seven-day rehearsal authorization", "approved_at: `2026-07-22T14:47:04Z`", rehearsal_cr),
         ("ADR approval", "APPROVED", adr),
         ("Task v1.4", "task_version: 1.4", task),
         ("OQ resolution", "OQ-S2-005", oq),

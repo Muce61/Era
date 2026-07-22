@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T15 v1.4 — conditional random baseline
-Status: S2_T15_V1_4_SEVEN_DAY_REHEARSAL_PASS_CR_2026_030_APPROVAL_REQUIRED
+Status: S2_T15_V1_4_CR_2026_030_APPROVED_IMPLEMENTATION_GATES
 ```
 
 The unique CR-2026-028 successor
@@ -29,7 +29,9 @@ packaging placed BTC and ETH groups in one selection file. A fresh complete reru
 matrices, 300 outcome cells, 10 assignments and 60 summary rows. This is simulation-only evidence,
 not a research result. Because `AGENTS.md` changes the Authority-bound repository commit and
 CR-2026-029's final Authority has already been created, a new formal chain is blocked pending
-explicit approval of draft CR-2026-030. No long task is active.
+explicit approval of CR-2026-030. Muce approved it at `2026-07-22T14:47:04Z`, authorizing exactly
+one replacement Authority/bin/Run chain after a final-clean-code seven-day rehearsal, full quality
+gate and fresh audit pass. No long task is active yet.
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
 S2-T19 and S2-T01～S2-T12 are PASSED. Muce approved S2-T12 v1.3 at
