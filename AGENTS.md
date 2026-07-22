@@ -26,6 +26,10 @@
 
 Before each task: read applicable `AGENTS.md` files and relevant manual sections; list applicable `rule_id` values; list allowed and forbidden files; provide an execution plan; and verify that the Stage, Plan, and Task are approved.
 
+Before every long-running or full-data task, first run a bounded short rehearsal over seven complete consecutive UTC days unless an approved task contract requires a stricter representative window. The rehearsal must use real read-only inputs where available, write only to an isolated unpublished location, and exercise the complete handoff path that the long task will use: computation, serialization, checkpoint or receipt creation, strict read-back by the next consumer, reconciliation, verification, and any read-only UI projection that is in scope. Record explicit simulated acceptance criteria before running it. A unit test, schema-only fixture, or successful producer write is not a substitute for the consumer read-back rehearsal.
+
+Do not start or resume the long task until the short rehearsal has passed and its actual row counts, date range, output formats, hashes, read-back results, reconciliation, and limitations have been reported. Any formatting, schema, Decimal, timestamp, path, hash, checkpoint, receiver, or UI-projection failure in the rehearsal blocks the long task. Fix the problem, rerun the rehearsal from the beginning, and obtain any governance approval required by the changed code or contract. A seven-day rehearsal reduces execution risk but never proves that the full historical dataset will pass; full-data validation remains mandatory.
+
 After each task: run required validation commands; report actual modified files; update traceability; report incomplete work; distinguish tests actually run from tests not run; do not continue automatically; and never claim an unrun test passed.
 
 ## Change Handling

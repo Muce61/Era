@@ -142,7 +142,7 @@ rules:
   - src/era100x/research/stage_2/metrics/path/ (S2-T12 IMPLEMENTED read-only Episode lineage)
   - src/era100x/research/stage_2/labels/first_passage/ (S2-T13 IMPLEMENTED fixture first-passage capability)
   - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 IMPLEMENTED historical ambiguity bounds)
-  - src/era100x/research/stage_2/baselines/conditional/ (S2-T15 v1.4 CR-2026-029 receiver correction implemented; quality/fresh-audit/final-chain gates remain)
+  - src/era100x/research/stage_2/baselines/conditional/ (S2-T15 v1.4 seven-day rehearsal PASS; CR-2026-030 approval required before another formal chain)
   test_paths:
   - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); UT-EVT-011, FI-14
   - tests/research/stage_2/metrics/path/ (S2-T12 TESTED)
@@ -339,7 +339,7 @@ rules:
   - src/era100x/research/stage_2/metrics/path/ (S2-T12 IMPLEMENTED H1/H2 price-only metrics)
   - src/era100x/research/stage_2/labels/first_passage/ (S2-T13 IMPLEMENTED H1/H2 price-only classification)
   - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 IMPLEMENTED H1/H2 ambiguity bounds)
-  - src/era100x/research/stage_2/baselines/conditional/ (S2-T15 v1.4 historical-only CR-2026-029 final recovery authorized; no formal result yet)
+  - src/era100x/research/stage_2/baselines/conditional/ (S2-T15 v1.4 historical-only seven-day rehearsal PASS; CR-2026-030 blocks another formal chain; no formal result yet)
   test_paths:
   - tests/research/stage_2/contracts/, tests/research/stage_2/gates/ (PLANNED); T-EVT-002
   - tests/research/stage_2/paths/extraction/ (S2-T11 TESTED)

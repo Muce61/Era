@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T15 v1.4 — conditional random baseline
-Status: S2_T15_V1_4_CR_2026_029_APPROVED_IMPLEMENTATION_GATES
+Status: S2_T15_V1_4_SEVEN_DAY_REHEARSAL_PASS_CR_2026_030_APPROVAL_REQUIRED
 ```
 
 The unique CR-2026-028 successor
@@ -18,6 +18,18 @@ resolved OQ-S2-008 at `2026-07-22T14:12:52Z`, authorizing only the strict Decima
 invalidation of the failed successor chain and exactly one final replacement chain. Quality,
 fresh-audit, Authority/bin and preflight gates remain. S2-T16+ remain unauthorized and Stage 3
 remains locked.
+
+At Muce's instruction on `2026-07-22T14:41:45Z`, the running final TRAIN-bin freeze was stopped
+before a Binning Set or Run ID existed, and the repository root now requires a real seven-day
+producer-to-consumer rehearsal before every long-running/full-data task. The stopped Authority is
+`e3d9814f…c365`; two prepared BTC/P1 blocks and one incomplete temporary block remain preserved,
+unpublished and non-reusable. The first isolated rehearsal correctly failed because its simulated
+packaging placed BTC and ETH groups in one selection file. A fresh complete rerun then passed
+20,160 feature rows, 42 boundary JSON round-trips, 10 strict Decimal candidate receptions, 10 H2
+matrices, 300 outcome cells, 10 assignments and 60 summary rows. This is simulation-only evidence,
+not a research result. Because `AGENTS.md` changes the Authority-bound repository commit and
+CR-2026-029's final Authority has already been created, a new formal chain is blocked pending
+explicit approval of draft CR-2026-030. No long task is active.
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
 S2-T19 and S2-T01～S2-T12 are PASSED. Muce approved S2-T12 v1.3 at
