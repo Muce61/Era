@@ -1,5 +1,23 @@
 # Open Questions
 
+## OQ-S2-009 — Does a public venue Trade ID discontinuity prove an H2 source gap?
+
+- status: OPEN / BLOCKS REVISED H2 SEMANTIC PUBLICATION
+- discovered_by: read-only review of P3/F3 T13/T15 source-gap outcomes
+- affected_scope: Stage 1 quality semantics; T11 H2 paths; T13 first-passage; T14 ambiguity;
+  T15 conditional baseline
+- proposed_resolution: CR-2026-031 + ADR-S2-010
+- evidence: Official checksum-bound 2026 archives contain 800,104,791 BTC and 1,255,571,071 ETH
+  public Trade rows while skipping 1,170,244 and 1,811,220 numeric venue IDs respectively. All
+  184 daily partitions per instrument exist. The skipped-ID fraction is about 0.14%, but the
+  legacy any-discontinuity rule makes 703/705 BTC and 1,148/1,151 ETH unpublished P3/F3 primary
+  T2 rows source-gap AMBIGUOUS.
+- decision_needed: decide whether an uncorroborated numeric ID jump remains a hard semantic gap or
+  becomes a reportable anomaly/sensitivity dimension, and define the independent evidence needed
+  for `VERIFIED_PUBLIC_TRADE_GAP`.
+- boundary: no assumption, implementation, evidence rewrite, synthetic Trade, Authority, Run or
+  publication before explicit approval. Existing sealed evidence remains immutable.
+
 ## OQ-S2-008 — S2-T15 strict Decimal receiver and final successor recovery
 
 - status: RESOLVED BY CR-2026-029 / IMPLEMENTATION GATES REMAIN
@@ -104,6 +122,28 @@ New questions must record discovery/source, affected rules/contracts/baselines, 
 - Linked governance: [CR-2026-027](changes/CR-2026-027.md),
   [CR-2026-026](changes/CR-2026-026.md) and
   [ADR-S2-009](decisions/ADR-S2-009-conditional-baseline-v1.4.md).
+
+## OQ-S2-009 audit record
+
+- Discovery/source: read-only diagnosis of sealed T13 H2 labels and the unpublished T15
+  P3/F3 primary selection on 2026-07-22. Stage 1 Catalogs show complete daily partitions and
+  checksum-bound official public Trades, while their exchange-provided numeric IDs contain many
+  small discontinuities. Binance's public source description identifies the field and endpoint but
+  does not promise integer continuity.
+- Affected rules/contracts/baselines: `EVENT-CONSUME-MARKET-EPISODE`,
+  `STRATEGY-V1-PRICE-ONLY-HISTORICAL`, ADR-2026-001 Trade Identity v2, S1-T07 quality semantics,
+  T11 H2 path quality, T13 source-gap classification, T14 ambiguity bounds and T15 upstream label
+  binding. Stage 1 raw facts and all accepted sealed evidence remain immutable.
+- Evidence required: instrument/year/month discontinuity inventory; archive/checksum and
+  Catalog/object reconciliation; range-size and adjacent-event-time distributions; explicit
+  separation of uncorroborated ID jumps, verified missing public facts and source-integrity
+  failures; legacy-versus-proposed P1/P2/P3 and F0-F3 impact; approved official cross-source proof
+  if any skipped ID is promoted to a verified public-Trade gap.
+- Owner/status: Muce / `OPEN`; awaiting explicit approval or rejection of the proposed semantic
+  boundary.
+- Linked governance: [CR-2026-031](changes/CR-2026-031.md),
+  [ADR-S2-010](decisions/ADR-S2-010-venue-trade-id-discontinuity.md) and preserved
+  [ADR-2026-001](decisions/ADR-2026-001-trade-identity-v2.md).
 
 U-001～U-003 remain OPEN after Stage 0 final approval. They block only their recorded downstream execution/adaptation scopes and do not invalidate the offline Stage 0 v1.0 baseline.
 
