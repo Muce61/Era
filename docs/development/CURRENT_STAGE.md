@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T15 v1.4 — conditional random baseline
-Status: S2_T15_STOPPED_7_DAY_RAW_PATH_PASS_FULL_LIFECYCLE_BLOCKED
+Status: S2_T15_STOPPED_SPECIAL_RESEARCH_POINT_CR_2026_033_DRAFT
 ```
 
 No T15 long-running process is active. Muce stopped the latest TRAIN-bin preparation before a
@@ -31,6 +31,12 @@ The full-lifecycle handoff is BLOCKED, not PASS. The current accepted raw source
 seconds, while 19 of 52 H2 T4 rows are still Primary EXPIRED in the audit week. OQ-S2-010 must add
 a separate variable-length source and exact lifecycle/censor/H3 contract. OQ-S2-009 also remains
 open until the whole historical range is audited. No long task may resume from this result.
+
+Muce subsequently requested a framework-level `SPECIAL_RESEARCH_POINT`: a research point may
+declare exact rule exemptions, while every undeclared rule continues to apply. CR-2026-033,
+ADR-S2-012 and OQ-S2-011 now record the proposed fail-closed contract. They are DRAFT only: no
+exemption is approved, no implementation exists, and no Authority, bins, Run, S2-T16+ or Stage 3
+work is authorized.
 
 The unique CR-2026-028 successor
 `stage2-s2t15-conditional-20260722T120658Z-023f47cffef2` passed the corrected sealed Episode

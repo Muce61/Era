@@ -162,6 +162,27 @@ cost/fill/closure, maximum horizon, censor, subgroup and multiplicity values in 
 version. The three possible interpretations—delayed activation, momentum decay, or conditional
 time rules—must all be reported; observing one does not authorize post-hoc rule replacement.
 
+## 26. Proposed special research point addendum
+
+Status: **DRAFT / NOT APPROVED / NOT IMPLEMENTED**. Linked governance is
+[CR-2026-033](../../changes/CR-2026-033.md),
+[ADR-S2-012](../../decisions/ADR-S2-012-special-research-point.md) and OQ-S2-011.
+
+A proposed `SPECIAL_RESEARCH_POINT` inherits every rule in the frozen registry by default. It may
+stop applying only an exact `rule_id` listed in its approved `declared_exemptions`; every omitted
+rule and every rule added to the registry later continues to apply automatically. Wildcards,
+unknown IDs, duplicate IDs, empty reasons, stale source hashes and implied exemptions fail closed.
+
+Each declared exemption must record its bounded scope, reason, risk, replacement safeguard, human
+approval and expiry. Framework approval alone would not approve any concrete exemption. Truth,
+sealed-input lineage, append-only evidence, no-real-API/funds/orders, execution/risk/closure,
+stage gates, Stage 3 lock, seven-day rehearsal, deprecated-rule and forward-validation boundaries
+remain non-waivable. Affected outputs must be isolated as `EXPLORATORY_NONCOMPLIANT` and must be
+rejected by formal baseline, acceptance, promotion and PASS projections.
+
+No schema, registry, Manifest, UI or execution code may implement this addendum until CR-2026-033
+and ADR-S2-012 receive explicit human approval and the exact S2-T19 v1.4 Task scope is authorized.
+
 ### Seven-day audit evidence
 
 At clean commit `be507ff`, the `[2020-01-01,2020-01-08)` audit passed feature availability and
