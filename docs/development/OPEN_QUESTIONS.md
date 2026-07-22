@@ -4,8 +4,8 @@
 
 - status: RESOLVED BY CR-2026-031 AND ADR-S2-010 / AUDIT GATES REMAIN
 - discovered_by: read-only review of P3/F3 T13/T15 source-gap outcomes
-- affected_scope: Stage 1 quality semantics; T11 H2 paths; T13 first-passage; T14 ambiguity;
-  T15 conditional baseline
+- affected_scope: Stage 1 quality semantics; T11 H2 paths; T12 path metrics; T13 first-passage;
+  T14 ambiguity; T15 conditional baseline
 - proposed_resolution: CR-2026-031 + ADR-S2-010
 - evidence: Official checksum-bound 2026 archives contain 800,104,791 BTC and 1,255,571,071 ETH
   public Trade rows while skipping 1,170,244 and 1,811,220 numeric venue IDs respectively. All
@@ -136,8 +136,9 @@ New questions must record discovery/source, affected rules/contracts/baselines, 
   does not promise integer continuity.
 - Affected rules/contracts/baselines: `EVENT-CONSUME-MARKET-EPISODE`,
   `STRATEGY-V1-PRICE-ONLY-HISTORICAL`, ADR-2026-001 Trade Identity v2, S1-T07 quality semantics,
-  T11 H2 path quality, T13 source-gap classification, T14 ambiguity bounds and T15 upstream label
-  binding. Stage 1 raw facts and all accepted sealed evidence remain immutable.
+  T11 H2 path quality, T12 inherited path-metric quality, T13 source-gap classification, T14
+  ambiguity bounds and T15 upstream label binding. Stage 1 raw facts and all accepted sealed
+  evidence remain immutable.
 - Evidence required: instrument/year/month discontinuity inventory; archive/checksum and
   Catalog/object reconciliation; range-size and adjacent-event-time distributions; explicit
   separation of uncorroborated ID jumps, verified missing public facts and source-integrity

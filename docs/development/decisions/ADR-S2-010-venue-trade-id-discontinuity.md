@@ -59,7 +59,7 @@ density rather than demonstrated source loss.
 
 - Stage 1 raw and published canonical Trades remain unchanged.
 - Stage 1 quality output needs a new derived semantic version; legacy counts remain available.
-- T11, T13, T14 and T15 require explicit impact analysis and append-only successor evidence.
+- T11, T12, T13, T14 and T15 require explicit impact analysis and append-only successor evidence.
 - P3/F3 may recover many classifiable paths, but the direction and magnitude are unknown until a
   preregistered rerun completes.
 - The legacy interpretation remains available as a conservative bound rather than being erased.
