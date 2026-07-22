@@ -51,6 +51,7 @@ SOURCE_SNAPSHOT_ROOT = SOURCE_RUN_ROOT / "published" / "snapshots" / SOURCE_SNAP
 SOURCE_REPOSITORY_SUMMARY = (
     REPOSITORY_ROOT / "artifacts/manifests/stage_2/s2_t13_first_passage_summary.json"
 )
+SOURCE_HANDOFF_RECEIPT: Path | None = None
 REPOSITORY_SUMMARY = (
     REPOSITORY_ROOT / "artifacts/manifests/stage_2/s2_t14_ambiguity_bounds_summary.json"
 )
@@ -88,7 +89,6 @@ def _source_path(instrument: str) -> Path:
 def _source_contract() -> dict[str, Any]:
     if SOURCE_RUN_ROOT.is_symlink() or SOURCE_SNAPSHOT_ROOT.is_symlink():
         raise ValueError("unsafe S2-T13 source root")
-    summary = _read_json(SOURCE_REPOSITORY_SUMMARY, description="S2-T13 repository summary")
     completion = _read_json(
         SOURCE_RUN_ROOT / "reports/completion.json", description="S2-T13 completion"
     )
@@ -98,6 +98,38 @@ def _source_contract() -> dict[str, Any]:
         raise ValueError("S2-T13 manifest self-hash mismatch")
     if not _self_hash_matches(catalog, "catalog_hash"):
         raise ValueError("S2-T13 catalog self-hash mismatch")
+    automated_handoff: dict[str, Any] | None = None
+    if SOURCE_HANDOFF_RECEIPT is None:
+        summary = _read_json(SOURCE_REPOSITORY_SUMMARY, description="S2-T13 repository summary")
+    else:
+        automated_handoff = _read_json(
+            SOURCE_HANDOFF_RECEIPT, description="S2-T13 automated rerun handoff"
+        )
+        if not _self_hash_matches(automated_handoff, "handoff_hash"):
+            raise ValueError("S2-T13 automated handoff self-hash mismatch")
+        if (
+            automated_handoff.get("schema_name") != "stage2-s2t11-t15-rerun-handoff-v1"
+            or automated_handoff.get("task_id") != "S2-T13"
+            or automated_handoff.get("status") != "VERIFY_PASS"
+            or automated_handoff.get("historical_evidence_only") is not True
+            or automated_handoff.get("stage3_locked") is not True
+        ):
+            raise ValueError("invalid S2-T13 automated handoff contract")
+        summary = {
+            **automated_handoff,
+            "task_id": "S2-T13",
+            "task_version": "1.3",
+            "status": "VERIFIED_AUTOMATED_CHAIN_HANDOFF",
+            "verify_status": "PASS",
+            "instruments": {
+                instrument: {
+                    "output_sha256": catalog.get("instruments", {})
+                    .get(instrument, {})
+                    .get("sha256")
+                }
+                for instrument in INSTRUMENTS
+            },
+        }
     expected = {
         "run_id": SOURCE_RUN_ID,
         "authority_hash": SOURCE_AUTHORITY_HASH,
@@ -110,11 +142,16 @@ def _source_contract() -> dict[str, Any]:
     for name, value in expected.items():
         if summary.get(name) != value or completion.get(name) != value:
             raise ValueError(f"accepted S2-T13 {name} binding changed")
+    accepted_source = (
+        summary.get("status") == "PASSED_HUMAN_ACCEPTED"
+        and summary.get("human_accepted") is True
+        or automated_handoff is not None
+        and summary.get("status") == "VERIFIED_AUTOMATED_CHAIN_HANDOFF"
+    )
     if (
         summary.get("task_id") != "S2-T13"
         or summary.get("task_version") != "1.3"
-        or summary.get("status") != "PASSED_HUMAN_ACCEPTED"
-        or summary.get("human_accepted") is not True
+        or not accepted_source
         or summary.get("verify_status") != "PASS"
         or summary.get("code_commit") != SOURCE_CODE_COMMIT
         or manifest.get("code_commit") != SOURCE_CODE_COMMIT

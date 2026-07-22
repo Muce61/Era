@@ -99,15 +99,18 @@
     .flow-card.pass { border-color: #24724f; background: #081b18; }
     .flow-card.running { border-color: #347bd4; background: #0a2038; box-shadow: 0 0 15px #2577d51f; }
     .flow-card.failed { border-color: #a73943; background: #25151a; }
+    .flow-card.blocked { border-color: #a8752d; background: #20190f; }
     .flow-icon { width: 28px; height: 28px; border: 1px solid #53647a; border-radius: 50%; color: #8091a7; display: grid; place-items: center; font-size: 11px; }
     .pass .flow-icon { border-color: var(--green); color: var(--green); }
     .running .flow-icon { border-color: #5b9dff; color: #a9cfff; background: #12365d; box-shadow: 0 0 12px #4f94ff3b; }
     .failed .flow-icon { border-color: var(--red); color: var(--red); }
+    .blocked .flow-icon { border-color: #d89b42; color: #f1bd6e; }
     .flow-name { display: block; color: #d7e2ee; font-size: 12px; font-weight: 600; }
     .flow-state { display: block; margin-top: 2px; color: var(--dim); font: 600 10px/1.2 var(--mono); letter-spacing: .04em; }
     .pass .flow-state { color: var(--green); }
     .running .flow-state { color: #6fa9ff; }
     .failed .flow-state { color: var(--red); }
+    .blocked .flow-state { color: #f1bd6e; }
     .flow-detail { grid-column: 1 / -1; color: var(--muted); font: 10px/1.35 var(--mono); overflow-wrap: anywhere; }
     .flow-bar { grid-column: 1 / -1; height: 4px; border-radius: 3px; background: #1a2b3d; overflow: hidden; }
     .flow-bar span { display: block; height: 100%; width: 0; background: #4c8ff4; border-radius: inherit; transition: width .25s ease; }
@@ -337,6 +340,11 @@
           <div id="ambiguityFlowGrid" class="flow-grid" aria-live="polite"></div>
         </section>
 
+        <section class="live-flow" aria-labelledby="rerunFlowTitle">
+          <div class="live-flow-head"><strong id="rerunFlowTitle">T11 → T15 · 自动重跑链</strong><span id="rerunFlowSummary">正在读取治理门与编排 checkpoint…</span></div>
+          <div id="rerunFlowGrid" class="flow-grid" aria-live="polite"></div>
+        </section>
+
         <section class="authority">
           <div class="subhead">CR-2026-018 / 019 最小恢复与比较授权链</div>
           <div class="authority-flow">
@@ -432,6 +440,7 @@
     <section class="evidence-block"><h3>S2-T13 historical first passage</h3><p id="passageEvidence">正在从最新 Authority、Run、Catalog、Verify 与 validation 自动读取。</p><code id="passageRunId">尚无合法 Run</code></section>
     <section class="evidence-block"><h3>S2-T14 historical ambiguity bounds</h3><p id="ambiguityEvidence">正在从最新 Authority、Run、Catalog、Verify 与 validation 自动读取。</p><code id="ambiguityRunId">尚无合法 Run</code></section>
     <section class="evidence-block"><h3>S2-T15 historical conditional baseline</h3><p id="conditionalEvidence">正在从治理、audit、Authority、Run、Verify 与 validation 自动读取。</p><code id="conditionalRunId">尚无合法 Run</code></section>
+    <section class="evidence-block"><h3>CR-2026-031/032 · T11-T15 rerun chain</h3><p id="rerunEvidence">正在从治理 Hash、approval、checkpoint 与 handoff 收据自动读取。</p><code id="rerunChainId">尚无合法重跑链</code></section>
   </aside>
 
   <script>
@@ -476,8 +485,8 @@
       if (value === "FAILED") return "failed";
       return "pending";
     };
-    const stateLabel = {pass:"PASS", running:"RUNNING", failed:"FAILED", pending:"PENDING"};
-    const stateIcon = {pass:"fa-check", running:"fa-play", failed:"fa-xmark", pending:"fa-circle"};
+    const stateLabel = {pass:"PASS", running:"RUNNING", failed:"FAILED", blocked:"BLOCKED", pending:"PENDING"};
+    const stateIcon = {pass:"fa-check", running:"fa-play", failed:"fa-xmark", blocked:"fa-pause", pending:"fa-circle"};
     const subflowByName = (status, name) => (status.pipeline_subflows || []).find((item) => item.name === name);
     const receiptState = (receipts, key, activeTask, taskId) => receipts[key] ? "pass" : activeTask === taskId ? "running" : "pending";
     const componentState = (receipts, components, key, activeTask, taskId) => receipts[key] ? "pass" : components[key] || activeTask === taskId ? "running" : "pending";
@@ -728,6 +737,39 @@
       return {task, passed, failed, blocked, running: raw === "IN_PROGRESS"};
     }
 
+    function renderRerunChain(status) {
+      const chain = ((status.execution_observability || {}).rerun_chain || {});
+      const tasks = chain.tasks || {};
+      const governance = chain.governance || {};
+      const taskOrder = ["S2-T11", "S2-T12", "S2-T13", "S2-T14", "S2-T15"];
+      const taskName = {
+        "S2-T11":"Path Extraction",
+        "S2-T12":"Path Metrics",
+        "S2-T13":"First Passage",
+        "S2-T14":"Ambiguity Bounds",
+        "S2-T15":"Conditional Baseline",
+      };
+      const flows = taskOrder.map((taskId) => {
+        const task = tasks[taskId] || {status:"NOT_STARTED"};
+        const raw = escapeText(task.status);
+        const state = raw === "PASS" ? "pass" : raw === "FAILED" || raw === "EVIDENCE_INVALID" ? "failed" : raw === "BLOCKED" ? "blocked" : raw === "IN_PROGRESS" ? "running" : "pending";
+        return {
+          name:`${taskId} · ${taskName[taskId]}`,
+          icon:taskId === "S2-T15" ? "fa-scale-balanced" : "fa-route",
+          state,
+          detail:`${escapeText(task.action || "waiting")} · ${escapeText(task.reason_code)} · Run ${escapeText(task.run_id)}`,
+          progress:raw === "PASS" ? 100 : raw === "IN_PROGRESS" ? 50 : 0,
+        };
+      });
+      byId("rerunFlowGrid").innerHTML = flows.map(flowCard).join("");
+      const passed = flows.filter((item) => item.state === "pass").length;
+      const chainStatus = escapeText(chain.status || "BLOCKED");
+      byId("rerunFlowSummary").textContent = `${chainStatus} · ${passed} / 5 Verify PASS · 当前 ${escapeText(chain.current_task)} / ${escapeText(chain.current_action)}`;
+      byId("rerunChainId").textContent = escapeText(chain.chain_id);
+      byId("rerunEvidence").textContent = `${chainStatus} · ${escapeText(chain.reason_code)} · CR031 ${governance.cr_2026_031 ? "APPROVED" : "BLOCKED"} · OQ-S2-009 ${escapeText(governance.oq_s2_009_status)} · CR032 ${governance.cr_2026_032_direction ? "DIRECTION APPROVED" : "BLOCKED"} · lifecycle implementation ${chain.lifecycle_implementation_executed ? "EXECUTED" : "NOT EXECUTED"} · seven-day audit ${escapeText(chain.seven_day_audit)} · Stage 3 LOCKED`;
+      return chain;
+    }
+
     async function refresh() {
       try {
         const response = await fetch("/api/status", {cache:"no-store"});
@@ -744,6 +786,7 @@
         const priorPassedCount = 10 + (taskPassed ? 1 : 0) + (pathTask.passed ? 1 : 0) + (metricsTask.passed ? 1 : 0) + (passageTask.passed ? 1 : 0);
         const ambiguityTask = renderAmbiguityTask(status, priorPassedCount);
         const conditionalTask = renderConditionalTask(status, priorPassedCount + (ambiguityTask.accepted ? 1 : 0));
+        const rerunChain = renderRerunChain(status);
         const liveSubflow = [...(status.pipeline_subflows || [])].reverse().find((item) => item.status === "RUNNING");
         byId("updatedAt").textContent = "数据更新：" + dateTime(status.updated_at);
         const activeLabel = status.active_task || (liveSubflow && liveSubflow.current_item);

@@ -173,6 +173,13 @@ OQ-S2-010 separately propose immutable exit-rule-free event paths plus an H3 the
 full-lifecycle study with landmark risk-set comparison. Muce approved both governance pairs at
 `2026-07-22T16:27:27Z`: the availability audit and two-layer direction are authorized, while both
 OQs remain OPEN. No code, Authority, Run, S2-T16+ or Stage 3 is authorized.
+The T11-through-T15 rerun-preparation implementation adds a single resumable CLI, verified
+append-only task handoffs, dynamic T11/T13/T14 bindings for downstream consumers, whole-range
+typed-availability audit support and an automatic read-only UI rail. It applies
+`EVENT-CONSUME-MARKET-EPISODE` and `STRATEGY-V1-PRICE-ONLY-HISTORICAL`, creates no formal research
+evidence during inspection, and fails closed while OQ-S2-009 is OPEN. The one-off user instruction
+for this preparation records the seven-day rehearsal as skipped; it does not weaken the
+whole-range audit, clean-code, approval-receipt, Authority, binning, preflight or Verify gates.
 S2-T16 through S2-T18 and S2-T20 remain `DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
 [CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
 approve a bounded hybrid transition without changing Stage 1, preregistration, config, parameters,

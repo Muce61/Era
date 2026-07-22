@@ -55,7 +55,12 @@ GOVERNANCE_FILES = (
     REPOSITORY_ROOT / "docs/development/changes/CR-2026-028.md",
     REPOSITORY_ROOT / "docs/development/changes/CR-2026-029.md",
     REPOSITORY_ROOT / "docs/development/changes/CR-2026-030.md",
+    REPOSITORY_ROOT / "docs/development/changes/CR-2026-031.md",
+    REPOSITORY_ROOT / "docs/development/changes/CR-2026-032.md",
     REPOSITORY_ROOT / "docs/development/decisions/ADR-S2-009-conditional-baseline-v1.4.md",
+    REPOSITORY_ROOT / "docs/development/decisions/ADR-S2-010-historical-missingness.md",
+    REPOSITORY_ROOT
+    / "docs/development/decisions/ADR-S2-011-event-path-and-strategy-lifecycle-separation.md",
     REPOSITORY_ROOT / "docs/development/tasks/stage_2/S2-T15-task.md",
     REPOSITORY_ROOT / "docs/development/tasks/stage_2/S2-T19-manifest.md",
 )
@@ -115,13 +120,18 @@ def repository_is_clean() -> bool:
 def _governance_binding() -> dict[str, str]:
     for path in GOVERNANCE_FILES:
         _safe_file(path)
-    cr = GOVERNANCE_FILES[0].read_text()
-    receiver_cr = GOVERNANCE_FILES[1].read_text()
-    context_cr = GOVERNANCE_FILES[2].read_text()
-    decimal_cr = GOVERNANCE_FILES[3].read_text()
-    rehearsal_cr = GOVERNANCE_FILES[4].read_text()
-    adr = GOVERNANCE_FILES[5].read_text()
-    task = GOVERNANCE_FILES[6].read_text()
+    contents = {path.name: path.read_text() for path in GOVERNANCE_FILES}
+    cr = contents["CR-2026-026.md"]
+    receiver_cr = contents["CR-2026-027.md"]
+    context_cr = contents["CR-2026-028.md"]
+    decimal_cr = contents["CR-2026-029.md"]
+    rehearsal_cr = contents["CR-2026-030.md"]
+    missingness_cr = contents["CR-2026-031.md"]
+    lifecycle_cr = contents["CR-2026-032.md"]
+    adr = contents["ADR-S2-009-conditional-baseline-v1.4.md"]
+    missingness_adr = contents["ADR-S2-010-historical-missingness.md"]
+    lifecycle_adr = contents["ADR-S2-011-event-path-and-strategy-lifecycle-separation.md"]
+    task = contents["S2-T15-task.md"]
     oq = (REPOSITORY_ROOT / "docs/development/OPEN_QUESTIONS.md").read_text()
     required = (
         ("CR approval", "status: APPROVED", cr),
@@ -130,6 +140,10 @@ def _governance_binding() -> dict[str, str]:
         ("Decimal receiver CR approval", "status: APPROVED", decimal_cr),
         ("seven-day rehearsal CR approval", "status: APPROVED", rehearsal_cr),
         ("seven-day rehearsal authorization", "approved_at: `2026-07-22T14:47:04Z`", rehearsal_cr),
+        ("missingness CR approval", "status: APPROVED", missingness_cr),
+        ("missingness ADR approval", "APPROVED", missingness_adr),
+        ("lifecycle direction approval", "status: APPROVED DIRECTION", lifecycle_cr),
+        ("lifecycle ADR direction", "APPROVED DIRECTION", lifecycle_adr),
         ("ADR approval", "APPROVED", adr),
         ("Task v1.4", "task_version: 1.4", task),
         ("OQ resolution", "OQ-S2-005", oq),
@@ -572,7 +586,11 @@ def latest_audit() -> Path:
     return max(candidates, key=lambda path: (path.stat().st_mtime_ns, path.name))
 
 
-def freeze_authority(*, audit_path: Path | None = None) -> tuple[S2T15ContractAuthority, Path]:
+def freeze_authority(
+    *,
+    audit_path: Path | None = None,
+    successor_approval_path: Path | None = None,
+) -> tuple[S2T15ContractAuthority, Path]:
     if not repository_is_clean():
         raise ValueError("Authority requires a clean final-code commit")
     report = _read_json(audit_path or latest_audit())
@@ -580,6 +598,11 @@ def freeze_authority(*, audit_path: Path | None = None) -> tuple[S2T15ContractAu
         raise ValueError(
             f"Authority blocked by upstream audit: {report.get('reason_code', 'UNKNOWN')}"
         )
+    if successor_approval_path is None:
+        raise ValueError("T15 successor Authority requires a separate rerun approval receipt")
+    from era100x.research.stage_2.rerun.orchestrator import validate_approval_receipt
+
+    approval = validate_approval_receipt(successor_approval_path)
     current = audit_upstream(write_report=False)
     if report.get("upstream_binding_hash") != current.get("upstream_binding_hash"):
         raise ValueError("upstream audit drift before Authority")
@@ -599,6 +622,7 @@ def freeze_authority(*, audit_path: Path | None = None) -> tuple[S2T15ContractAu
             "preregistration_addendum_hash": governance[
                 "docs/development/tasks/stage_2/S2-T19-manifest.md"
             ],
+            "rerun_approval_hash": approval["approval_hash"],
         }
     )
     path = AUTHORITY_ROOT / f"authority-{authority.authority_hash}.json"

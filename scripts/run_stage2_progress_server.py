@@ -20,6 +20,7 @@ from urllib.parse import urlsplit
 from era100x.research.stage_2.runtime_v2.checkpoint import SAFE_RUN_ID
 from era100x.research.stage_2.runtime_v2.progress import read_progress_status
 from era100x.research.stage_2.paths.extraction import read_path_extraction_receipts
+from era100x.research.stage_2.rerun import read_latest_chain_projection
 
 DEFAULT_ROOT = Path("/Volumes/FuckingLife/era100x_stage2")
 REPOSITORY_ROOT = Path(__file__).parents[1]
@@ -1651,6 +1652,10 @@ class ProgressHandler(BaseHTTPRequestHandler):
                     "S2-T14": _stage2_ambiguity_bounds_projection(self.server.stage2_root),
                     "S2-T15": _stage2_conditional_baseline_projection(self.server.stage2_root),
                 }
+                observability["rerun_chain"] = read_latest_chain_projection(
+                    self.server.stage2_root,
+                    repository_root=REPOSITORY_ROOT,
+                )
                 payload["execution_observability"] = observability
                 self._reply_json(HTTPStatus.OK, payload)
             except (OSError, ValueError) as exc:

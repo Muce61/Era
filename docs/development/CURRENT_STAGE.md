@@ -22,6 +22,15 @@ between immutable raw event paths and a future theoretical full-lifecycle strate
 landmark, activation, near-zero H3 PnL, comparison, closure and censor contracts remain undefined.
 Neither approval authorizes a new Authority, bins, Run, S2-T16+ or Stage 3.
 
+The T11-through-T15 rerun preparation now has one resumable, fail-closed orchestration entrypoint
+and a read-only Web-UI projection. It dynamically binds each verified handoff into the next Task,
+records append-only checkpoints/events, and refuses to create the chain until a clean-commit
+approval receipt binds the governance Hashes, whole-range CR-2026-031 availability-audit PASS and
+explicit single-successor authority. The current projection is therefore `BLOCKED` with
+`S2_RERUN_OQ_S2_009_OPEN`; no Authority, Binning Set or Run was created. Per Muce's explicit
+instruction for this rerun preparation, the seven-day rehearsal was not executed. OQ-S2-010's
+lifecycle direction is shown read-only but is not implemented by this chain.
+
 The unique CR-2026-028 successor
 `stage2-s2t15-conditional-20260722T120658Z-023f47cffef2` passed the corrected sealed Episode
 Context boundary and completed all `456 / 456` outcome-blind matching groups. It then stopped

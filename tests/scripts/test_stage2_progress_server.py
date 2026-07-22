@@ -806,6 +806,11 @@ def test_ui_derives_current_task_version_count_and_acceptance_without_hardcoded_
     assert "S2-T15<b>PASSED</b>" not in page
     assert 'tasks["S2-T14"]' in page
     assert 'tasks["S2-T15"]' in page
+    assert "T11 → T15 · 自动重跑链" in page
+    assert "execution_observability || {}).rerun_chain" in page
+    assert 'blocked:"BLOCKED"' in page
+    assert "CR-2026-031/032 · T11-T15 rerun chain" in page
+    assert "SKIPPED_BY_USER_FOR_THIS_RERUN" not in page
     assert "VALIDATED · AWAITING HUMAN" in page
     assert "PASSED · HUMAN ACCEPTED" in page
     assert "等待 OQ-S2-006 的人工输入绑定决定" in page

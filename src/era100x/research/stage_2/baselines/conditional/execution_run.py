@@ -26,6 +26,7 @@ from .reconciliation import ControlReconciliation, EpisodeReconciliation
 from .successor_policy import (
     require_final_successor_creation_state,
     require_final_successor_resume_state,
+    rerun_successor_approval_hash,
 )
 from .t10_access import FixedT10Reader, read_json_file
 from .v14_contracts import (
@@ -215,6 +216,7 @@ def run_full_execution(
         raise ValueError("T15 binning set was not frozen by the Authority commit")
     if resume_run_id is None:
         predecessor = require_final_successor_creation_state(runs_root)
+        rerun_approval_hash = rerun_successor_approval_hash()
         run_id = _new_run_id(authority.authority_hash)
         run_root = runs_root / run_id
         run_root.mkdir(parents=False, exist_ok=False)
@@ -230,6 +232,7 @@ def run_full_execution(
             "authority_hash": authority.authority_hash,
             "binning_set_hash": bins["binning_set_hash"],
             "supersedes_failed_run_id": predecessor.name,
+            "rerun_approval_hash": rerun_approval_hash,
             "historical_evidence_only": True,
             "stage3_locked": True,
         }
@@ -246,12 +249,14 @@ def run_full_execution(
         predecessor = require_final_successor_resume_state(runs_root, run_id)
         checkpoint_path = run_root / "checkpoint.json"
         checkpoint = read_json_file(checkpoint_path)
+        rerun_approval_hash = rerun_successor_approval_hash()
         if (
             checkpoint.get("run_id") != run_id
             or checkpoint.get("authority_hash") != authority.authority_hash
             or checkpoint.get("binning_set_hash") != bins["binning_set_hash"]
             or checkpoint.get("status")
             not in {"IN_PROGRESS", "COMPLETE_PENDING_VERIFY", "VERIFIED_PASS"}
+            or checkpoint.get("rerun_approval_hash") != rerun_approval_hash
         ):
             raise ValueError("T15 resume checkpoint binding or status drift")
         stored_authority = S2T15ContractAuthority.model_validate_json(
@@ -272,6 +277,7 @@ def run_full_execution(
         "binning_set_hash": bins["binning_set_hash"],
         "code_commit": current_commit,
         "supersedes_failed_run_id": predecessor.name,
+        "rerun_approval_hash": rerun_approval_hash,
         "expected_h2_path_count": EXPECTED_H2_PATHS,
         "expected_h2_outcome_cell_count": EXPECTED_H2_OUTCOME_CELLS,
         "expected_group_count": 456,

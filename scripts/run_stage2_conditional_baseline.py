@@ -43,6 +43,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--authority", type=Path)
     parser.add_argument("--binning-set", type=Path)
     parser.add_argument("--run-id")
+    parser.add_argument("--successor-approval", type=Path)
     parser.add_argument(
         "--build-receiver-supplement",
         action="store_true",
@@ -85,7 +86,10 @@ def main() -> int:
         if context_supplement_build is not None:
             result["context_receiver_supplement_build"] = context_supplement_build
     elif args.mode == "freeze-authority":
-        authority, path = freeze_authority(audit_path=args.audit_report)
+        authority, path = freeze_authority(
+            audit_path=args.audit_report,
+            successor_approval_path=args.successor_approval,
+        )
         result = {
             "status": "PASS",
             "authority_hash": authority.authority_hash,

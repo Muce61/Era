@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
+RERUN_SUCCESSOR_APPROVAL: Path | None = None
+
 FAILED_PREDECESSOR_RUN_ID = "stage2-s2t15-conditional-20260722T071250Z-871c404c5f43"
 FAILED_PREDECESSOR_AUTHORITY_HASH = (
     "871c404c5f43c5c07539d7a373801756c150ad5f3e6724eee0b016699a5cfbd1"
@@ -29,6 +31,62 @@ def _t15_runs(runs_root: Path) -> tuple[Path, ...]:
     if any(path.is_symlink() or not path.is_dir() for path in candidates):
         raise ValueError("unsafe T15 Run entry blocks final successor recovery")
     return candidates
+
+
+def configure_rerun_successor_approval(path: Path | None) -> None:
+    """Select the separately approved rerun receipt; ``None`` preserves CR-2026-030."""
+
+    global RERUN_SUCCESSOR_APPROVAL
+    RERUN_SUCCESSOR_APPROVAL = path
+
+
+def rerun_successor_approval_hash() -> str | None:
+    if RERUN_SUCCESSOR_APPROVAL is None:
+        return None
+    from era100x.research.stage_2.rerun.orchestrator import validate_approval_receipt
+
+    return str(validate_approval_receipt(RERUN_SUCCESSOR_APPROVAL)["approval_hash"])
+
+
+def _checkpoint(run_root: Path) -> dict[str, Any]:
+    path = run_root / "checkpoint.json"
+    if path.is_symlink() or not path.is_file():
+        raise ValueError(f"T15 Run checkpoint is missing or unsafe: {run_root.name}")
+    payload = json.loads(path.read_bytes())
+    if not isinstance(payload, dict) or payload.get("run_id") != run_root.name:
+        raise ValueError(f"T15 Run checkpoint binding drift: {run_root.name}")
+    return cast(dict[str, Any], payload)
+
+
+def _require_approved_rerun_creation_state(runs_root: Path, approval_hash: str) -> Path:
+    runs = _t15_runs(runs_root)
+    if not runs:
+        raise ValueError("approved T15 rerun requires preserved predecessor evidence")
+    bound = []
+    for run_root in runs:
+        checkpoint = _checkpoint(run_root)
+        if checkpoint.get("rerun_approval_hash") == approval_hash:
+            bound.append(run_root)
+        if checkpoint.get("status") in {"IN_PROGRESS", "COMPLETE_PENDING_VERIFY"}:
+            raise ValueError(f"another active T15 Run blocks rerun creation: {run_root.name}")
+    if bound:
+        raise ValueError("the approved T15 rerun successor has already been created")
+    return max(runs, key=lambda path: (path.stat().st_mtime_ns, path.name))
+
+
+def _require_approved_rerun_resume_state(
+    runs_root: Path, successor_run_id: str, approval_hash: str
+) -> Path:
+    successor = runs_root / successor_run_id
+    if successor.is_symlink() or not successor.is_dir():
+        raise ValueError("approved T15 rerun resume target is missing or unsafe")
+    checkpoint = _checkpoint(successor)
+    if checkpoint.get("rerun_approval_hash") != approval_hash:
+        raise ValueError("T15 rerun resume approval binding drift")
+    predecessors = [path for path in _t15_runs(runs_root) if path != successor]
+    if not predecessors:
+        raise ValueError("T15 rerun predecessor evidence is missing")
+    return max(predecessors, key=lambda path: (path.stat().st_mtime_ns, path.name))
 
 
 def _validate_failed_run(
@@ -99,6 +157,10 @@ def validate_failed_cr028_successor(runs_root: Path) -> Path:
 def require_final_successor_creation_state(runs_root: Path) -> Path:
     """Allow one final Run only when both exact failed Runs are the complete universe."""
 
+    approval_hash = rerun_successor_approval_hash()
+    if approval_hash is not None:
+        return _require_approved_rerun_creation_state(runs_root, approval_hash)
+
     predecessor = validate_failed_predecessor(runs_root)
     failed_successor = validate_failed_cr028_successor(runs_root)
     if _t15_runs(runs_root) != tuple(sorted((predecessor, failed_successor))):
@@ -108,6 +170,10 @@ def require_final_successor_creation_state(runs_root: Path) -> Path:
 
 def require_final_successor_resume_state(runs_root: Path, successor_run_id: str) -> Path:
     """Allow resume only for the final Run created after both failed Runs."""
+
+    approval_hash = rerun_successor_approval_hash()
+    if approval_hash is not None:
+        return _require_approved_rerun_resume_state(runs_root, successor_run_id, approval_hash)
 
     predecessor = validate_failed_predecessor(runs_root)
     failed_successor = validate_failed_cr028_successor(runs_root)

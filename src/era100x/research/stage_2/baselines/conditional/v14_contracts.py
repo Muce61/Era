@@ -143,6 +143,7 @@ class S2T15ContractAuthority(StrictEventModel):
     context_binding_hash: str = Field(pattern=SHA256_PATTERN)
     label_contract_hash: str = Field(pattern=SHA256_PATTERN)
     preregistration_addendum_hash: str = Field(pattern=SHA256_PATTERN)
+    rerun_approval_hash: str | None = Field(default=None, pattern=SHA256_PATTERN)
     setup_id: Literal["KEY_LOW_SWEEP_RECLAIM_HOLD_V1@1.0"] = "KEY_LOW_SWEEP_RECLAIM_HOLD_V1@1.0"
     context_model_id: Literal["CAUSAL_EMA20_1H@1.0"] = "CAUSAL_EMA20_1H@1.0"
     feature_formula_ids: tuple[str, str, str] = (
