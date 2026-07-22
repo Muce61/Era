@@ -2,7 +2,7 @@
 
 ## Status
 
-PROPOSED — awaiting explicit human approval
+APPROVED — 2026-07-22T15:39:25Z by Muce
 
 ## Context
 
@@ -55,7 +55,7 @@ source contract or independent reconciliation. Without that proof, turning every
 into a missing price observation overstates uncertainty and makes ambiguity depend mainly on trade
 density rather than demonstrated source loss.
 
-## Consequences if approved
+## Consequences
 
 - Stage 1 raw and published canonical Trades remain unchanged.
 - Stage 1 quality output needs a new derived semantic version; legacy counts remain available.
@@ -90,5 +90,8 @@ silently substituted for the accepted H2 individual-Trade evidence.
 
 ## Approval and implementation boundary
 
-This ADR is not active until explicitly approved together with CR-2026-031. Before approval it
-authorizes no code change, evidence mutation, Authority, Run, publication, S2-T16+ or Stage 3 work.
+This ADR and CR-2026-031 were approved by Muce at `2026-07-22T15:39:25Z`. The approved semantic
+boundary authorizes the required read-only audit only. Code changes, evidence successors,
+Authority, Run and publication remain blocked until that audit passes and the affected Task
+versions, rule mappings, reason codes and invalidation graph receive separate approval. S2-T16+
+and Stage 3 remain unauthorized.

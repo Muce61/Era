@@ -169,9 +169,10 @@ Read-only diagnosis then separated raw-data quantity from downstream semantic im
 checksum-bound 2026 public Trades contain complete daily partitions but systematic numeric
 `venue_trade_id` discontinuities. The skipped-ID fraction is about 0.14%, while the legacy
 any-discontinuity rule makes 703/705 BTC and 1,148/1,151 ETH unpublished P3/F3 primary T2 rows
-source-gap AMBIGUOUS. CR-2026-031 and proposed ADR-S2-010 now track OQ-S2-009: a bare venue-ID jump
-is not yet proven to be a missing public Trade. The proposal is governance-only; no accepted
-evidence or running contract changes before explicit approval.
+source-gap AMBIGUOUS. Muce approved CR-2026-031 and ADR-S2-010 at
+`2026-07-22T15:39:25Z`, resolving OQ-S2-009: a bare venue-ID jump is an uncorroborated anomaly and
+is not sufficient proof of a missing public Trade. Only the required read-only audit is now
+authorized; no code, accepted evidence or running contract changes before the remaining gates.
 S2-T16 through S2-T18 and S2-T20 remain `DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
 [CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
 approve a bounded hybrid transition without changing Stage 1, preregistration, config, parameters,
@@ -247,7 +248,7 @@ run is immutable; its sealed objects require a new-run adoption Manifest and ful
 | Historical AMBIGUOUS bounds | S2-T14 v1.3 | immutable raw labels; Primary failure treatment; conditional exclusion; theoretical upper; H1 adverse/optimistic bounds; 31,962,480 classifications; 2,280 compact distributions; full Verify/UI PASS; no PnL/ROUND_SUCCESS | PASSED / HUMAN ACCEPTED; CR-2026-024 |
 | Historical H1/H2 path extraction | S2-T11 v1.3 | `paths/extraction`; approved lossless source-slice CLI; BTC 220,201 + ETH 312,507 episodes; Manifest `d4d6a2f5…`; verify/UI/quality PASS; Muce accepted 2026-07-21; `validations/stage_2/S2-T11.md` | PASSED / HUMAN ACCEPTED |
 | Conditional random baseline | S2-T15 v1.4 | causal RMS/activity/distance; rolling F0-F3; sealed T10 trigger Context for Episodes; outcome-blind 5 controls shared by 30 H2 cells; no PnL/return | CR-2026-029 APPROVED / QUALITY AND FINAL-CHAIN GATES |
-| Venue-ID discontinuity versus verified H2 source gap | Stage 1 quality; S2-T11/T13/T14/T15 impact | CR-2026-031; proposed ADR-S2-010; OQ-S2-009; existing evidence immutable | DRAFT / AWAITING HUMAN APPROVAL / NO IMPLEMENTATION AUTHORITY |
+| Venue-ID discontinuity versus verified H2 source gap | Stage 1 quality; S2-T11/T13/T14/T15 impact | CR-2026-031; ADR-S2-010; OQ-S2-009; existing evidence immutable | APPROVED / READ-ONLY AUDIT AUTHORIZED / IMPLEMENTATION BLOCKED |
 | Placebo | S2-T16 | preregistered placebo; separate future Task | DRAFT_NOT_APPROVED |
 | Cluster ownership and cluster bootstrap CI | S2-T17, S2-T18 | BTC/ETH-separated clustering and cluster-level resampling | DRAFT_NOT_APPROVED |
 | Stage 2 research gate and deterministic evidence-card reporting | S2-T20 | Stage validation and human Go/No-Go; no automatic Stage 3 | DRAFT_NOT_APPROVED |

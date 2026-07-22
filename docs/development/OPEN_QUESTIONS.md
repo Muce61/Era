@@ -2,7 +2,7 @@
 
 ## OQ-S2-009 — Does a public venue Trade ID discontinuity prove an H2 source gap?
 
-- status: OPEN / BLOCKS REVISED H2 SEMANTIC PUBLICATION
+- status: RESOLVED BY CR-2026-031 AND ADR-S2-010 / AUDIT GATES REMAIN
 - discovered_by: read-only review of P3/F3 T13/T15 source-gap outcomes
 - affected_scope: Stage 1 quality semantics; T11 H2 paths; T13 first-passage; T14 ambiguity;
   T15 conditional baseline
@@ -15,8 +15,12 @@
 - decision_needed: decide whether an uncorroborated numeric ID jump remains a hard semantic gap or
   becomes a reportable anomaly/sensitivity dimension, and define the independent evidence needed
   for `VERIFIED_PUBLIC_TRADE_GAP`.
-- boundary: no assumption, implementation, evidence rewrite, synthetic Trade, Authority, Run or
-  publication before explicit approval. Existing sealed evidence remains immutable.
+- decision: Muce approved CR-2026-031 and ADR-S2-010 at `2026-07-22T15:39:25Z`. A bare numeric
+  venue-ID jump is an uncorroborated anomaly, not sufficient proof of a missing public Trade.
+- remaining_gates: the read-only audit, affected-version scope, reason-code mapping, invalidation
+  graph and successor plan require explicit evidence and approval before implementation.
+- boundary: no evidence rewrite, synthetic Trade, Authority, Run or publication under the revised
+  semantic before the remaining gates pass. Existing sealed evidence remains immutable.
 
 ## OQ-S2-008 — S2-T15 strict Decimal receiver and final successor recovery
 
@@ -139,8 +143,8 @@ New questions must record discovery/source, affected rules/contracts/baselines, 
   separation of uncorroborated ID jumps, verified missing public facts and source-integrity
   failures; legacy-versus-proposed P1/P2/P3 and F0-F3 impact; approved official cross-source proof
   if any skipped ID is promoted to a verified public-Trade gap.
-- Owner/status: Muce / `OPEN`; awaiting explicit approval or rejection of the proposed semantic
-  boundary.
+- Owner/status: Muce / `RESOLVED` at `2026-07-22T15:39:25Z`; read-only audit authorized, code and
+  successor evidence remain blocked by the recorded gates.
 - Linked governance: [CR-2026-031](changes/CR-2026-031.md),
   [ADR-S2-010](decisions/ADR-S2-010-venue-trade-id-discontinuity.md) and preserved
   [ADR-2026-001](decisions/ADR-2026-001-trade-identity-v2.md).
