@@ -1,8 +1,21 @@
 # Open Questions
 
+## OQ-S2-008 — S2-T15 strict Decimal receiver and final successor recovery
+
+- status: OPEN / BLOCKS CODE CHANGE AND NEW AUTHORITY OR RUN
+- task: S2-T15 v1.4
+- proposed_resolution: CR-2026-029
+- evidence: The CR-2026-028 successor completed `456 / 456` outcome-blind groups, then failed
+  unpublished before the first control H2 outcome because canonical JSON encoded
+  `control_entry_price` as a string while strict validation requires a `Decimal` instance.
+- decision_needed: approve or reject the minimum receiver conversion, invalidation of the failed
+  successor chain and exactly one final replacement Authority/bin/Run chain.
+- boundary: no in-place override, no partial-result publication, no contract change, no S2-T16+,
+  and Stage 3 remains locked.
+
 ## OQ-S2-007 — S2-T15 sealed Episode Context receiver and successor recovery
 
-- status: RESOLVED BY CR-2026-028 / IMPLEMENTATION GATES REMAIN
+- status: RESOLVED BY CR-2026-028 / SUCCESSOR FAILURE TRACKED BY OQ-S2-008
 - discovered_by: first formal S2-T15 v1.4 Run
 - proposed_resolution: CR-2026-028
 - evidence: BTC 220,201/220,201 and ETH 312,507/312,507 have complete, conflict-free
