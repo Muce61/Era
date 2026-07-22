@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from pathlib import Path
 
 import pytest
 
 from era100x.research.stage_2.baselines.conditional.seven_day_audit import (
     _safe_new_output_root,
+    _validate_daily_anchor_grid,
     lifecycle_assessment,
     verify_seven_day_audit,
 )
@@ -28,6 +30,20 @@ def test_lifecycle_audit_does_not_pass_when_window_has_no_survivor() -> None:
 
     assert result["status"] == "BLOCKED"
     assert "SEVEN_DAY_WINDOW_DID_NOT_EXERCISE_SURVIVORS_AT_T4" in result["blockers"]
+
+
+def test_daily_anchor_grid_allows_deterministic_offset_change_at_midnight() -> None:
+    day_ns = 86_400_000_000_000
+    minute_ns = 60_000_000_000
+    start_ns = 1_577_836_800_000_000_000
+    offsets = (9, 42, 3, 58, 11, 27, 35)
+    anchors = [
+        start_ns + day * day_ns + offset * 1_000_000_000 + minute * minute_ns
+        for day, offset in enumerate(offsets)
+        for minute in range(1_440)
+    ]
+
+    _validate_daily_anchor_grid(anchors=anchors, start_date=date(2020, 1, 1))
 
 
 def test_output_root_must_be_new_named_private_tmp_child(tmp_path: Path) -> None:

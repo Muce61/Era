@@ -147,6 +147,24 @@ def _feature_rows_for_day(
     return result
 
 
+def _validate_daily_anchor_grid(*, anchors: list[int], start_date: date) -> None:
+    by_date: dict[date, list[int]] = {}
+    for anchor in anchors:
+        owner_date = datetime.fromtimestamp(anchor / 1_000_000_000, UTC).date()
+        by_date.setdefault(owner_date, []).append(anchor)
+    expected_dates = {start_date + timedelta(days=offset) for offset in range(AUDIT_DAY_COUNT)}
+    if set(by_date) != expected_dates:
+        raise ValueError("feature anchor UTC-date coverage mismatch")
+    for owner_date, daily in by_date.items():
+        ordered = sorted(daily)
+        if len(ordered) != 1_440 or len(ordered) != len(set(ordered)):
+            raise ValueError(f"feature anchor daily count/identity mismatch: {owner_date}")
+        if any(
+            right - left != MINUTE_NS for left, right in zip(ordered, ordered[1:], strict=False)
+        ):
+            raise ValueError(f"feature anchors are not a one-minute daily grid: {owner_date}")
+
+
 def _audit_features(
     *, output_root: Path, start_date: date
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -193,10 +211,7 @@ def _audit_features(
         expected_rows = AUDIT_DAY_COUNT * 1_440
         if table.schema != schema or table.num_rows != expected_rows:
             raise ValueError("feature Parquet strict read-back mismatch")
-        if len(anchors) != len(set(anchors)) or any(
-            right - left != MINUTE_NS for left, right in zip(anchors, anchors[1:], strict=False)
-        ):
-            raise ValueError("feature anchors are not unique one-minute grid rows")
+        _validate_daily_anchor_grid(anchors=anchors, start_date=start_date)
         if valid_count + len(excluded_anchors) != expected_rows:
             raise ValueError("feature availability reconciliation failed")
         status = (
