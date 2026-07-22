@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T15 v1.4 — conditional random baseline
-Status: S2_T15_STOPPED_OQ_S2_009_AND_OQ_S2_010_OPEN
+Status: S2_T15_STOPPED_AVAILABILITY_AUDIT_AUTHORIZED_OQ_S2_009_AND_OQ_S2_010_OPEN
 ```
 
 No T15 long-running process is active. Muce stopped the latest TRAIN-bin preparation before a
@@ -14,12 +14,13 @@ remain preserved and unpublished. The current prepared Authority is
 lifecycle governance drafts change its bound repository/governance state, so it must not resume or
 be reused as a formal chain.
 
-OQ-S2-009 records the observed 61-row BTC/P1 boundary availability issue and requires a complete
-BTC/ETH read-only availability audit plus human approval of CR-2026-031/ADR-S2-010. OQ-S2-010
-records the proposed separation between immutable raw event paths and a future theoretical
-full-lifecycle strategy study. CR-2026-032/ADR-S2-011 are DRAFT only: exact landmark, activation,
-near-zero H3 PnL, closure and censor contracts remain undefined. Neither CR authorizes a new
-Authority, bins, Run, S2-T16+ or Stage 3.
+Muce approved CR-2026-031/ADR-S2-010 and CR-2026-032/ADR-S2-011 at
+`2026-07-22T16:27:27Z`. OQ-S2-009 records the observed 61-row BTC/P1 boundary availability issue;
+the complete BTC/ETH read-only availability audit is now authorized, but it must pass and freeze
+exact expected exclusions before the question can close. OQ-S2-010 records the approved separation
+between immutable raw event paths and a future theoretical full-lifecycle strategy study; exact
+landmark, activation, near-zero H3 PnL, comparison, closure and censor contracts remain undefined.
+Neither approval authorizes a new Authority, bins, Run, S2-T16+ or Stage 3.
 
 The unique CR-2026-028 successor
 `stage2-s2t15-conditional-20260722T120658Z-023f47cffef2` passed the corrected sealed Episode

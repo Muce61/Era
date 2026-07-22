@@ -141,7 +141,8 @@ created only by the approved T15 `run` command after sealed bins and preflight.
 
 ## 25. Proposed append-only lifecycle sub-hypothesis addendum
 
-Status: **DRAFT / NOT APPROVED / NOT EXECUTABLE**. Linked governance is
+Status: **APPROVED DIRECTION / NUMERIC CONTRACT OPEN / NOT EXECUTABLE**. Muce approved the
+two-layer evidence direction and sub-hypothesis at `2026-07-22T16:27:27Z`. Linked governance is
 [CR-2026-032](../../changes/CR-2026-032.md),
 [ADR-S2-011](../../decisions/ADR-S2-011-event-path-and-strategy-lifecycle-separation.md) and
 OQ-S2-010.

@@ -2,7 +2,7 @@
 
 ## Status
 
-PROPOSED — awaiting Muce approval
+APPROVED — 2026-07-22T16:27:27Z by Muce
 
 ## Context
 

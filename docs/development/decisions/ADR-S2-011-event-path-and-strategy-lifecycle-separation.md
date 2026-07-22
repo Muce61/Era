@@ -2,7 +2,7 @@
 
 ## Status
 
-PROPOSED — awaiting Muce approval and OQ-S2-010 resolution
+APPROVED DIRECTION — 2026-07-22T16:27:27Z by Muce; implementation blocked by OQ-S2-010
 
 ## Context
 
