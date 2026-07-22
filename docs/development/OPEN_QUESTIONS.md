@@ -2,14 +2,18 @@
 
 ## OQ-S2-007 — S2-T15 sealed Episode Context receiver and successor recovery
 
-- status: OPEN / BLOCKING AUTHORITY AND SUCCESSOR RUN
+- status: RESOLVED BY CR-2026-028 / IMPLEMENTATION GATES REMAIN
 - discovered_by: first formal S2-T15 v1.4 Run
 - proposed_resolution: CR-2026-028
 - evidence: BTC 220,201/220,201 and ETH 312,507/312,507 have complete, conflict-free
   `(trigger_id, event_parameter_set_id)` bindings and all bound trigger states are `UP/PASS`.
 - decision_required: approve the direct sealed price-trigger Context binding, a read-only supplement
   for 4,752 legacy `price_triggers` receipts, and exactly one successor Authority/bin/Run chain.
-- prohibited_until_resolved: Authority, Binning Snapshot, successor Run ID, PASS UI and S2-T16+.
+- decision: Muce approved the sealed trigger Context binding, 4,752-partition read-only supplement,
+  invalidation of the first unpublished chain and exactly one successor chain at
+  `2026-07-22T08:53:43Z`.
+- remaining_gates: implementation quality, supplement and fresh audit must PASS before Authority;
+  successor preflight must PASS before the single successor Run ID.
 
 These questions are inherited from V1.3.4 Appendix N. They do not block planning, but block the stated downstream scope until evidence and human decision exist.
 

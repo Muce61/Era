@@ -147,9 +147,10 @@ at final Episode availability rather than binding the sealed price-trigger Conte
 reconciliation proves BTC 220,201/220,201 and ETH 312,507/312,507 conflict-free
 `(trigger_id,event_parameter_set_id)` bindings, all `UP/PASS`. The correction and automatic FAILED
 UI projection are implemented, but direct `price_triggers` reception exposes 4,752 additional
-legacy distribution omissions. CR-2026-028 is DRAFT and OQ-S2-007 blocks the new supplement,
-Authority/bins and exactly one successor Run pending human approval. S2-T16 through S2-T18 and
-S2-T20 remain `DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
+legacy distribution omissions. Muce approved CR-2026-028 and resolved OQ-S2-007 at
+2026-07-22T08:53:43Z, authorizing the independent read-only supplement, invalidation of the first
+unpublished chain and exactly one successor chain. Supplement/audit/quality/preflight gates remain;
+S2-T16 through S2-T18 and S2-T20 remain `DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
 [CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
 approve a bounded hybrid transition without changing Stage 1, preregistration, config, parameters,
 candidate semantics or the Plan v1.2 DAG. Formal Run A is now PUBLISHED with Quality PASS,
@@ -223,7 +224,7 @@ run is immutable; its sealed objects require a new-run adoption Manifest and ful
 | Historical first-passage labels | S2-T13 v1.3 | strict H1/H2 TARGET_FIRST/STOP_FIRST/EXPIRED/AMBIGUOUS; 1,065,416 path rows; 31,962,480 classifications; full Verify/UI PASS; no PnL/ROUND_SUCCESS/bounds | PASSED / HUMAN ACCEPTED |
 | Historical AMBIGUOUS bounds | S2-T14 v1.3 | immutable raw labels; Primary failure treatment; conditional exclusion; theoretical upper; H1 adverse/optimistic bounds; 31,962,480 classifications; 2,280 compact distributions; full Verify/UI PASS; no PnL/ROUND_SUCCESS | PASSED / HUMAN ACCEPTED; CR-2026-024 |
 | Historical H1/H2 path extraction | S2-T11 v1.3 | `paths/extraction`; approved lossless source-slice CLI; BTC 220,201 + ETH 312,507 episodes; Manifest `d4d6a2f5…`; verify/UI/quality PASS; Muce accepted 2026-07-21; `validations/stage_2/S2-T11.md` | PASSED / HUMAN ACCEPTED |
-| Conditional random baseline | S2-T15 v1.4 | causal RMS/activity/distance; rolling F0-F3; sealed T10 trigger Context for Episodes; outcome-blind 5 controls shared by 30 H2 cells; no PnL/return | FAILED_UNPUBLISHED / CR-2026-028 DRAFT / OQ-S2-007 BLOCKS SUCCESSOR |
+| Conditional random baseline | S2-T15 v1.4 | causal RMS/activity/distance; rolling F0-F3; sealed T10 trigger Context for Episodes; outcome-blind 5 controls shared by 30 H2 cells; no PnL/return | CR-2026-028 APPROVED / SUPPLEMENT AND AUDIT BEFORE UNIQUE SUCCESSOR |
 | Placebo | S2-T16 | preregistered placebo; separate future Task | DRAFT_NOT_APPROVED |
 | Cluster ownership and cluster bootstrap CI | S2-T17, S2-T18 | BTC/ETH-separated clustering and cluster-level resampling | DRAFT_NOT_APPROVED |
 | Stage 2 research gate and deterministic evidence-card reporting | S2-T20 | Stage validation and human Go/No-Go; no automatic Stage 3 | DRAFT_NOT_APPROVED |

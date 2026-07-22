@@ -14,8 +14,10 @@ import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
 from era100x.research.stage_2.runtime_v2.models import Receipt
 
+from .context_receipt_supplement import latest_valid_context_receipt_supplement
 from .receipt_supplement import latest_valid_receipt_distribution_supplement
 from .binning_run import read_binning_set
+from .successor_policy import require_single_successor_creation_state
 from .v14_contracts import (
     COMBINATION_ORDER,
     EXPECTED_H2_OUTCOME_CELLS,
@@ -50,6 +52,7 @@ T11_AUTHORITY = STAGE2_ROOT / "authorities" / "S2-T11" / f"{T11_AUTHORITY_HASH}.
 GOVERNANCE_FILES = (
     REPOSITORY_ROOT / "docs/development/changes/CR-2026-026.md",
     REPOSITORY_ROOT / "docs/development/changes/CR-2026-027.md",
+    REPOSITORY_ROOT / "docs/development/changes/CR-2026-028.md",
     REPOSITORY_ROOT / "docs/development/decisions/ADR-S2-009-conditional-baseline-v1.4.md",
     REPOSITORY_ROOT / "docs/development/tasks/stage_2/S2-T15-task.md",
     REPOSITORY_ROOT / "docs/development/tasks/stage_2/S2-T19-manifest.md",
@@ -112,17 +115,21 @@ def _governance_binding() -> dict[str, str]:
         _safe_file(path)
     cr = GOVERNANCE_FILES[0].read_text()
     receiver_cr = GOVERNANCE_FILES[1].read_text()
-    adr = GOVERNANCE_FILES[2].read_text()
-    task = GOVERNANCE_FILES[3].read_text()
+    context_cr = GOVERNANCE_FILES[2].read_text()
+    adr = GOVERNANCE_FILES[3].read_text()
+    task = GOVERNANCE_FILES[4].read_text()
     oq = (REPOSITORY_ROOT / "docs/development/OPEN_QUESTIONS.md").read_text()
     required = (
         ("CR approval", "status: APPROVED", cr),
         ("receiver CR approval", "status: APPROVED", receiver_cr),
+        ("Context receiver CR approval", "status: APPROVED", context_cr),
         ("ADR approval", "APPROVED", adr),
         ("Task v1.4", "task_version: 1.4", task),
         ("OQ resolution", "OQ-S2-005", oq),
         ("OQ resolved state", "| RESOLVED | S2-T15 full conditional baseline", oq),
         ("receiver OQ resolved state", "| RESOLVED | S2-T15 upstream binding", oq),
+        ("Context receiver OQ", "OQ-S2-007", oq),
+        ("Context receiver OQ resolved state", "RESOLVED BY CR-2026-028", oq),
     )
     for label, marker, content in required:
         if marker not in content:
@@ -373,15 +380,27 @@ def audit_upstream(*, write_report: bool = True) -> dict[str, Any]:
     supplement = latest_valid_receipt_distribution_supplement()
     supplement_manifest = supplement[0] if supplement is not None else None
     supplement_path = supplement[1] if supplement is not None else None
-    supplement_pass = distribution_gap_count == 0 or (
+    context_supplement = latest_valid_context_receipt_supplement()
+    context_supplement_manifest = context_supplement[0] if context_supplement is not None else None
+    context_supplement_path = context_supplement[1] if context_supplement is not None else None
+    original_supplement_pass = (
         supplement_manifest is not None
-        and supplement_manifest.get("supplement_partition_count") == distribution_gap_count
+        and supplement_manifest.get("supplement_partition_count") == 14_256
         and supplement_manifest.get("dataset_partition_counts")
         == {
             "canonical_key_levels@group1-v1-price-v1": 4_752,
             "market_episodes@group1-v1-flow-v1": 4_752,
             "market_episodes@group1-v1-price-v1": 4_752,
         }
+    )
+    context_supplement_pass = (
+        context_supplement_manifest is not None
+        and context_supplement_manifest.get("supplement_partition_count") == 4_752
+        and context_supplement_manifest.get("dataset_partition_counts")
+        == {"price_triggers@group1-v1-price-v1": 4_752}
+    )
+    supplement_pass = distribution_gap_count == 0 or (
+        distribution_gap_count == 19_008 and original_supplement_pass and context_supplement_pass
     )
     context_implementation = REPOSITORY_ROOT / "src/era100x/research/stage_2/gates/price/gate.py"
     _safe_file(context_implementation)
@@ -392,7 +411,7 @@ def audit_upstream(*, write_report: bool = True) -> dict[str, Any]:
         "task_version": "1.4",
         "status": "PASS" if supplement_pass else "BLOCKED",
         "reason_code": (
-            "S2_T15_UPSTREAM_BINDING_PASS_WITH_CR_2026_027_SUPPLEMENT"
+            "S2_T15_UPSTREAM_BINDING_PASS_WITH_CR_2026_027_AND_CR_2026_028_SUPPLEMENTS"
             if distribution_gap_count and supplement_pass
             else "S2_T15_UPSTREAM_T10_RECEIPT_DISTRIBUTIONS_MISSING"
             if distribution_gap_count
@@ -416,7 +435,10 @@ def audit_upstream(*, write_report: bool = True) -> dict[str, Any]:
             "missing_distribution_partition_count": distribution_gap_count,
             "accepted_receiver_supplement_partition_count": (
                 int(supplement_manifest["supplement_partition_count"])
-                if supplement_manifest is not None and supplement_pass
+                + int(context_supplement_manifest["supplement_partition_count"])
+                if supplement_manifest is not None
+                and context_supplement_manifest is not None
+                and supplement_pass
                 else 0
             ),
             "receiver_supplement_manifest_hash": (
@@ -426,6 +448,16 @@ def audit_upstream(*, write_report: bool = True) -> dict[str, Any]:
             ),
             "receiver_supplement_path": (
                 str(supplement_path) if supplement_path is not None and supplement_pass else None
+            ),
+            "context_receiver_supplement_manifest_hash": (
+                context_supplement_manifest.get("manifest_hash")
+                if context_supplement_manifest is not None and supplement_pass
+                else None
+            ),
+            "context_receiver_supplement_path": (
+                str(context_supplement_path)
+                if context_supplement_path is not None and supplement_pass
+                else None
             ),
             "original_receipts_modified": False,
         },
@@ -576,8 +608,7 @@ def preflight(*, authority_path: Path, binning_set_path: Path) -> dict[str, Any]
     binning = read_binning_set(binning_set_path, authority_hash=authority.authority_hash)
     if binning.get("code_commit") != authority.code_commit:
         raise ValueError("binning snapshot set code commit drift")
-    if any(RUNS_ROOT.glob("stage2-s2t15-conditional-*")):
-        raise ValueError("a T15 Run ID already exists; unique-run gate blocks creation")
+    predecessor = require_single_successor_creation_state(RUNS_ROOT)
     free_bytes = shutil.disk_usage(STAGE2_ROOT).free
     if free_bytes < 10 * 1024**3:
         raise ValueError("insufficient free space for S2-T15")
@@ -588,6 +619,8 @@ def preflight(*, authority_path: Path, binning_set_path: Path) -> dict[str, Any]
         "code_commit": authority.code_commit,
         "binning_set_hash": binning["binning_set_hash"],
         "free_bytes": free_bytes,
+        "invalidated_predecessor_run_id": predecessor.name,
+        "successor_chain_authorized": 1,
         "run_id_created": False,
         "stage3_locked": True,
     }

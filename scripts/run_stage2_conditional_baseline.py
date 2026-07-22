@@ -25,6 +25,9 @@ from era100x.research.stage_2.baselines.conditional.binning_run import (
 from era100x.research.stage_2.baselines.conditional.receipt_supplement import (
     build_receipt_distribution_supplement,
 )
+from era100x.research.stage_2.baselines.conditional.context_receipt_supplement import (
+    build_context_receipt_supplement,
+)
 from era100x.research.stage_2.baselines.conditional.execution_run import (
     run_full_execution,
     verify_published_run,
@@ -45,6 +48,11 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="audit-only CR-2026-027 append-only supplement; never creates Authority or Run",
     )
+    parser.add_argument(
+        "--build-context-supplement",
+        action="store_true",
+        help="audit-only CR-2026-028 price-trigger supplement; never creates Authority or Run",
+    )
     return parser
 
 
@@ -61,9 +69,21 @@ def main() -> int:
                 "authority_created": False,
                 "run_id_created": False,
             }
+        context_supplement_build = None
+        if args.build_context_supplement:
+            context_supplement, context_supplement_path = build_context_receipt_supplement()
+            context_supplement_build = {
+                "status": context_supplement["status"],
+                "manifest_hash": context_supplement["manifest_hash"],
+                "path": str(context_supplement_path),
+                "authority_created": False,
+                "run_id_created": False,
+            }
         result = audit_upstream()
         if supplement_build is not None:
             result["receiver_supplement_build"] = supplement_build
+        if context_supplement_build is not None:
+            result["context_receiver_supplement_build"] = context_supplement_build
     elif args.mode == "freeze-authority":
         authority, path = freeze_authority(audit_path=args.audit_report)
         result = {

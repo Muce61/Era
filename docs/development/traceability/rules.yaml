@@ -142,7 +142,7 @@ rules:
   - src/era100x/research/stage_2/metrics/path/ (S2-T12 IMPLEMENTED read-only Episode lineage)
   - src/era100x/research/stage_2/labels/first_passage/ (S2-T13 IMPLEMENTED fixture first-passage capability)
   - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 IMPLEMENTED historical ambiguity bounds)
-  - src/era100x/research/stage_2/baselines/conditional/ (S2-T15 v1.4 FAILED_UNPUBLISHED; sealed trigger Context fix implemented; CR-2026-028 approval required before successor)
+  - src/era100x/research/stage_2/baselines/conditional/ (S2-T15 v1.4 FAILED_UNPUBLISHED; CR-2026-028 approved; supplement/audit/quality/preflight required before the single successor)
   test_paths:
   - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); UT-EVT-011, FI-14
   - tests/research/stage_2/metrics/path/ (S2-T12 TESTED)
@@ -339,7 +339,7 @@ rules:
   - src/era100x/research/stage_2/metrics/path/ (S2-T12 IMPLEMENTED H1/H2 price-only metrics)
   - src/era100x/research/stage_2/labels/first_passage/ (S2-T13 IMPLEMENTED H1/H2 price-only classification)
   - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 IMPLEMENTED H1/H2 ambiguity bounds)
-  - src/era100x/research/stage_2/baselines/conditional/ (S2-T15 v1.4 historical-only production chain FAILED_UNPUBLISHED; OQ-S2-007 blocks successor)
+  - src/era100x/research/stage_2/baselines/conditional/ (S2-T15 v1.4 historical-only production chain FAILED_UNPUBLISHED; OQ-S2-007 resolved; CR-2026-028 gates the single successor)
   test_paths:
   - tests/research/stage_2/contracts/, tests/research/stage_2/gates/ (PLANNED); T-EVT-002
   - tests/research/stage_2/paths/extraction/ (S2-T11 TESTED)
@@ -2461,7 +2461,7 @@ rules:
     cr_s2_024_approved_by: Muce
     cr_s2_024_approved_at: '2026-07-21T13:37:13Z'
     s2_t15_task_version: '1.4'
-    s2_t15_status: FAILED_UNPUBLISHED_BLOCKED_ON_CR_2026_028
+    s2_t15_status: CR_2026_028_APPROVED_SUPPLEMENT_AUDIT_GATES
     s2_t15_approved_by: Muce
     s2_t15_approved_at: '2026-07-22T02:25:41Z'
     s2_t15_validation: docs/development/validations/stage_2/S2-T15.md
@@ -2479,8 +2479,10 @@ rules:
     s2_t15_failed_run_id: stage2-s2t15-conditional-20260722T071250Z-871c404c5f43
     s2_t15_failed_run_status: FAILED_UNPUBLISHED_NO_PUBLISHED_RESULT
     s2_t15_context_recovery_change_request: docs/development/changes/CR-2026-028.md
-    cr_s2_028_status: DRAFT_REQUIRES_HUMAN_APPROVAL
-    oq_s2_007_status: OPEN_BLOCKING_AUTHORITY_BINS_AND_SUCCESSOR_RUN
+    cr_s2_028_status: APPROVED_IMPLEMENTATION_AUTHORIZED
+    cr_s2_028_approved_by: Muce
+    cr_s2_028_approved_at: '2026-07-22T08:53:43Z'
+    oq_s2_007_status: RESOLVED_BY_CR_2026_028_IMPLEMENTATION_GATES_REMAIN
     draft_tasks: [S2-T16, S2-T17, S2-T18, S2-T20]
     oq_s2_004_status: RESOLVED
     decision_ref: docs/development/decisions/ADR-S2-004-primary-research-definition.md

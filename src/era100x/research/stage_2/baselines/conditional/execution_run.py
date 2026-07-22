@@ -23,6 +23,10 @@ from .h2_control_reader import H2ControlReader
 from .outcome_blind_producer import BinningIndex, SameFamilyIntervals, match_group
 from .outcome_run import produce_post_selection_evidence
 from .reconciliation import ControlReconciliation, EpisodeReconciliation
+from .successor_policy import (
+    require_single_successor_creation_state,
+    require_single_successor_resume_state,
+)
 from .t10_access import FixedT10Reader, read_json_file
 from .v14_contracts import (
     ConditionalBaselineMatchMatrix,
@@ -209,10 +213,8 @@ def run_full_execution(
         raise ValueError("T15 run requires the clean Authority commit")
     if bins.get("code_commit") != current_commit:
         raise ValueError("T15 binning set was not frozen by the Authority commit")
-    existing_runs = tuple(sorted(runs_root.glob("stage2-s2t15-conditional-*")))
     if resume_run_id is None:
-        if existing_runs:
-            raise ValueError("unique T15 Run already exists")
+        predecessor = require_single_successor_creation_state(runs_root)
         run_id = _new_run_id(authority.authority_hash)
         run_root = runs_root / run_id
         run_root.mkdir(parents=False, exist_ok=False)
@@ -227,6 +229,7 @@ def run_full_execution(
             "expected_group_count": 456,
             "authority_hash": authority.authority_hash,
             "binning_set_hash": bins["binning_set_hash"],
+            "supersedes_failed_run_id": predecessor.name,
             "historical_evidence_only": True,
             "stage3_locked": True,
         }
@@ -240,8 +243,7 @@ def run_full_execution(
             raise ValueError("unsafe T15 resume Run ID")
         run_id = resume_run_id
         run_root = runs_root / run_id
-        if run_root.is_symlink() or not run_root.is_dir() or existing_runs != (run_root,):
-            raise ValueError("resume requires the unique existing T15 Run")
+        predecessor = require_single_successor_resume_state(runs_root, run_id)
         checkpoint_path = run_root / "checkpoint.json"
         checkpoint = read_json_file(checkpoint_path)
         if (
@@ -269,6 +271,7 @@ def run_full_execution(
         "authority_hash": authority.authority_hash,
         "binning_set_hash": bins["binning_set_hash"],
         "code_commit": current_commit,
+        "supersedes_failed_run_id": predecessor.name,
         "expected_h2_path_count": EXPECTED_H2_PATHS,
         "expected_h2_outcome_cell_count": EXPECTED_H2_OUTCOME_CELLS,
         "expected_group_count": 456,

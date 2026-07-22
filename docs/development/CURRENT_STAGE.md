@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T15 v1.4 — conditional random baseline
-Status: S2_T15_V1_4_FAILED_UNPUBLISHED_BLOCKED_ON_CR_2026_028
+Status: S2_T15_V1_4_CR_2026_028_APPROVED_SUPPLEMENT_AUDIT_GATES
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
@@ -46,8 +46,11 @@ than binding the sealed T10 price-trigger Context. It published no result and co
 matching groups. Exact read-only reconciliation proves complete, conflict-free composite trigger
 bindings for BTC 220,201/220,201 and ETH 312,507/312,507, all `UP/PASS`. The implementation and
 automatic UI failure projection are corrected, but directly receiving `price_triggers` exposes
-4,752 additional legacy receipt-distribution omissions. Draft CR-2026-028 and OQ-S2-007 now block
-the supplement, replacement Authority/bins and exactly one successor Run pending human approval.
+4,752 additional legacy receipt-distribution omissions. Muce approved CR-2026-028 and resolved
+OQ-S2-007 at 2026-07-22T08:53:43Z, authorizing the independent read-only supplement, invalidation
+of the first unpublished chain and exactly one successor chain. Implementation quality, supplement
+and fresh audit remain mandatory before replacement Authority/bins; preflight remains mandatory
+before the single successor Run.
 No formal T15 research result exists. S2-T16 through
 S2-T18 and S2-T20 remain `DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
 
