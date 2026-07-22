@@ -1,4 +1,4 @@
-"""S2-T15 preregistered conditional-random baseline fixture capability."""
+"""S2-T15 preregistered historical conditional-random baseline capability."""
 
 from .matcher import match_conditional_controls, summarize_conditional_matches
 from .models import (
@@ -9,6 +9,14 @@ from .models import (
     FrozenQuintileBoundaries,
     PrimaryEpisode,
 )
+from .v14_contracts import (
+    ConditionalBaselineMatchMatrix,
+    ControlAnchor,
+    ControlOutcomeMatrix,
+    S2T15ContractAuthority,
+    V14ControlCandidate,
+    V14PrimaryEpisode,
+)
 
 __all__ = [
     "ConditionalBaselineManifest",
@@ -17,6 +25,12 @@ __all__ = [
     "ControlCandidate",
     "FrozenQuintileBoundaries",
     "PrimaryEpisode",
+    "ConditionalBaselineMatchMatrix",
+    "ControlAnchor",
+    "ControlOutcomeMatrix",
+    "S2T15ContractAuthority",
+    "V14ControlCandidate",
+    "V14PrimaryEpisode",
     "match_conditional_controls",
     "summarize_conditional_matches",
 ]

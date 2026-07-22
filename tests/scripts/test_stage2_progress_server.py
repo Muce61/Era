@@ -16,6 +16,7 @@ _stage2_task_projection = MODULE._stage2_task_projection
 _stage2_path_metrics_projection = MODULE._stage2_path_metrics_projection
 _stage2_first_passage_projection = MODULE._stage2_first_passage_projection
 _stage2_ambiguity_bounds_projection = MODULE._stage2_ambiguity_bounds_projection
+_stage2_conditional_baseline_projection = MODULE._stage2_conditional_baseline_projection
 _json_hash = MODULE._json_hash
 
 T12_RUN_ID = "stage2-s2t12-metrics-20260721T040435Z-abcdef123456"
@@ -799,13 +800,87 @@ def test_ui_derives_current_task_version_count_and_acceptance_without_hardcoded_
     page = MODULE_PATH.with_name("stage2_progress_ui.html").read_text(encoding="utf-8")
 
     assert 'task.task_version || "UNKNOWN"' in page
-    assert "/ 15 PASSED" in page
+    assert "/ 16 PASSED" in page
     assert "S2-T11 v1.2" not in page
-    assert "S2-T14<b>CHECKING</b>" in page
-    assert "S2-T14<b>PASSED</b>" not in page
+    assert "S2-T15<b>CHECKING</b>" in page
+    assert "S2-T15<b>PASSED</b>" not in page
     assert 'tasks["S2-T14"]' in page
+    assert 'tasks["S2-T15"]' in page
     assert "VALIDATED · AWAITING HUMAN" in page
     assert "PASSED · HUMAN ACCEPTED" in page
+    assert "等待 OQ-S2-006 的人工输入绑定决定" in page
+    assert "missing receipt distributions" in page
+
+
+def test_s2_t15_audit_projects_not_started_without_authority_or_run(tmp_path: Path) -> None:
+    audit = {
+        "status": "PASS",
+        "authority_created": False,
+        "run_id_created": False,
+        "upstream_binding_hash": "a" * 64,
+        "t13": {"h2_path_count": 532708, "h2_outcome_cell_count": 15981240},
+        "t14": {"binding_mode": "AGGREGATE_POLICY_ONLY_NO_EPISODE_JOIN"},
+    }
+    _write(
+        tmp_path / "authorities/S2-T15/v1.4/audits" / f"{'a' * 64}.json",
+        json.dumps(audit),
+    )
+
+    result = _stage2_conditional_baseline_projection(tmp_path)
+
+    assert result["status"] == "NOT_STARTED"
+    assert result["audit_status"] == "PASS"
+    assert result["authority_count"] == 0
+    assert result["run_count"] == 0
+
+
+def test_s2_t15_verify_alone_cannot_project_pass(tmp_path: Path) -> None:
+    authority_hash = "b" * 64
+    _write(
+        tmp_path / "authorities/S2-T15/v1.4" / f"authority-{authority_hash}.json",
+        "{}",
+    )
+    run_id = "stage2-s2t15-conditional-20260722T000000Z-000000000000"
+    _write(
+        tmp_path / "runs" / run_id / "reports/verify.json",
+        json.dumps(
+            {
+                "status": "PASS",
+                "reconciliation_status": "PASS",
+                "historical_evidence_only": True,
+                "stage3_locked": True,
+                "run_id": run_id,
+                "authority_hash": authority_hash,
+            }
+        ),
+    )
+
+    result = _stage2_conditional_baseline_projection(tmp_path)
+
+    assert result["status"] == "IN_PROGRESS"
+    assert result["verify_status"] == "PASS"
+    assert result["validation_status"] != "PASS"
+
+
+def test_s2_t15_blocked_audit_projects_blocked(tmp_path: Path) -> None:
+    audit = {
+        "status": "BLOCKED",
+        "reason_code": "S2_T15_UPSTREAM_T10_RECEIPT_DISTRIBUTIONS_MISSING",
+        "authority_created": False,
+        "run_id_created": False,
+        "t13": {"h2_path_count": 532708, "h2_outcome_cell_count": 15981240},
+        "t14": {"binding_mode": "AGGREGATE_POLICY_ONLY_NO_EPISODE_JOIN"},
+    }
+    _write(
+        tmp_path / "authorities/S2-T15/v1.4/audits" / f"{'c' * 64}.json",
+        json.dumps(audit),
+    )
+
+    result = _stage2_conditional_baseline_projection(tmp_path)
+
+    assert result["status"] == "BLOCKED"
+    assert result["audit_status"] == "BLOCKED"
+    assert result["reason_code"] == "S2_T15_UPSTREAM_T10_RECEIPT_DISTRIBUTIONS_MISSING"
 
 
 def test_s2_t11_malformed_symlink_and_conflicting_chain_fail_closed(tmp_path: Path) -> None:

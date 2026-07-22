@@ -3,8 +3,8 @@
 ```text
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
-Current Task: S2-T15 v1.3 — conditional random baseline
-Status: S2_T15_V1_3_APPROVED_BLOCKED_BEFORE_AUTHORITY_OR_RUN_BY_OQ_S2_005
+Current Task: S2-T15 v1.4 — conditional random baseline
+Status: S2_T15_V1_4_IMPLEMENTATION_READY_CLEAN_COMMIT_AND_FINAL_AUDIT_NO_RUN
 ```
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
@@ -34,7 +34,15 @@ pass. Muce approved CR-2026-025 and the minimum v1.3 full research/read-only UI 
 2026-07-21T14:41:46Z. The mandatory pre-Run audit then proved that the repository and complete Git
 history do not contain executable volatility/Trades-activity formulas, split/fold boundaries,
 exact purge/embargo duration or a deterministic non-event control-anchor rule. OQ-S2-005 therefore
-blocks Authority/Run creation. No full output or T15 UI PASS evidence exists. S2-T16 through
+blocked Authority/Run creation at that time. On 2026-07-22T02:25:41Z Muce approved CR-2026-026,
+ADR-S2-009, S2-T15 v1.4 and the T19 append-only addendum. OQ-S2-005 is now RESOLVED; v1.4
+implementation upstream binding Hash `a1f73a8…9f92` then found 14,256 fixed T10 Group-1 receipts without the
+field-distribution digests required by their DatasetSpecs. Muce approved CR-2026-027; the first
+append-only supplement verified 14,256/14,256 with zero T10 changes and audit Hash
+`c964e890…a03` passed. The complete v1.4 Authority/bin/run/verify implementation and the 588-test
+quality gate now pass. A clean implementation commit, supplement rebuild bound to final governance
+and fresh audit remain before Authority. No T15 Authority, bin snapshot, Run ID or formal result
+exists. S2-T16 through
 S2-T18 and S2-T20 remain `DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
 
 S2-T11 v1.3 full-output Run `stage2-s2t11-paths-20260721T023117Z-029707f3c111` published

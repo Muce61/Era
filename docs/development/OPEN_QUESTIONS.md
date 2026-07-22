@@ -28,7 +28,8 @@ These questions are inherited from V1.3.4 Appendix N. They do not block planning
 | OQ-S2-002 | Stage 2预注册的主标的、主假设、主标签、主匹配方案，以及U-007/U-008/U-009/U-011参数域与失败线是什么？ | RESOLVED | Stage 2 preregistration | NONE | 2026-07-16T14:33:04+08:00 Muce批准：BTC primary、ETH independent secondary；严格TARGET_FIRST_STRICT高于同标的条件随机基线，AMBIGUOUS主结果按失败；primary target/stop=20/25bp，target域20/30/40/50/70/100，stop域15/20/25/30/35，max target=100；merge域5/10/15(primary10)，gap域60/300/900(primary300)s，re-arm域300/900/1800(primary900)s；primary时间30/30/180s；cluster=instrument×UTC week，bootstrap=5000，双侧95%CI。U-007/U-008/U-009/U-011仍为RESEARCH，不冻结最终参数；补充精确定义见ADR-S2-004。 |
 | OQ-S2-003 | Stage 2事件说明是否需要类似带K线、步骤、门和研究问题的可视化图片？ | RESOLVED | Stage 2 reporting | NONE | 2026-07-14 Muce明确要求加入。Plan v1.2将带显著水印的`EVENT_EXPLAINER`与真实数据驱动的`EVENT_EVIDENCE_CARD`折入S2-T20验收报告要求，不再保留独立S2-T21；正式证据必须确定性、可追溯且不得伪造历史或执行字段。精确字体/配色和渲染依赖在S2-T20批准前冻结。 |
 | OQ-S2-004 | 2026-07-16审批引用的T1/T3/T4精确时间组合、三个预注册时期、条件随机匹配bin/固定放宽层级和主失败线在仓库及全部本地历史中均无定义；其精确值是什么？ | RESOLVED | Stage 2 preregistration completion | NONE | 2026-07-16T14:51:38+08:00 Muce人工批准完整定义；见[ADR-S2-004](decisions/ADR-S2-004-primary-research-definition.md)。T2是唯一Primary；P1/P2/P3、L0～L5、5 controls、matching/bootstrap seed 20260716、AMBIGUOUS失败、F1～F10与ETH分类均已预注册。全部为BASELINE/RESEARCH，不是最优或FROZEN。 |
-| OQ-S2-005 | ADR-S2-004声称沿用已批准的1m波动率和Trades活跃度公式，但仓库及全部Git历史均无公式本体；正式条件基线也缺少split/fold边界、精确purge/embargo长度和非事件control锚点生成规则。精确定义是什么？ | OPEN | S2-T15 full conditional baseline | S2-T15 AUTHORITY/RUN/UI PASS | 必须在任何Authority或Run ID之前由Muce人工批准可执行定义并产生新版预注册；不得由Codex从数据或结果猜测。见CR-2026-025。 |
+| OQ-S2-005 | ADR-S2-004声称沿用已批准的1m波动率和Trades活跃度公式，但仓库及全部Git历史均无公式本体；正式条件基线也缺少split/fold边界、精确purge/embargo长度和非事件control锚点生成规则。精确定义是什么？ | RESOLVED | S2-T15 full conditional baseline | NONE | 2026-07-22T02:25:41Z Muce批准CR-2026-026、ADR-S2-009、S2-T15 v1.4及T19 append-only addendum；冻结三特征、关键位距离、F0-F3滚动折、3600/600秒、daily grid、三层control identity、T13/T14绑定和全量对账。未知结果不预先获批。 |
+| OQ-S2-006 | 固定T10的14,256个Group-1关键位/MarketEpisode分区收据未携带其DatasetSpec要求的`field.*`分布摘要，当前权威`CatalogReaderV2`因此拒绝读取。T15应如何获得可验证且不改写密封T10的只读输入？ | RESOLVED | S2-T15 upstream binding | NONE | 2026-07-22T03:24:18Z Muce批准独立CR-2026-027；只读补证已验证14,256/14,256，T10修改为0，新audit PASS。正式Authority仍需最终干净提交和最终治理Hash重审计。 |
 
 New questions must record discovery/source, affected rules/contracts/baselines, evidence required, owner, status, and linked ADR/CR. No unresolved question may be answered by assumption.
 
@@ -44,9 +45,32 @@ New questions must record discovery/source, affected rules/contracts/baselines, 
   formula and lookback; UTC split/fold boundaries and assignment; exact purge/embargo duration;
   deterministic non-event control-anchor grid, exclusion and outcome-source rule; a new immutable
   preregistration version binding these values before an Authority or Run ID exists.
-- Owner/status: Muce / `OPEN`.
-- Linked governance: [ADR-S2-004](decisions/ADR-S2-004-primary-research-definition.md) and
+- Owner/status: Muce / `RESOLVED` at 2026-07-22T02:25:41Z.
+- Linked governance: [ADR-S2-009](decisions/ADR-S2-009-conditional-baseline-v1.4.md),
+  [CR-2026-026](changes/CR-2026-026.md), preserved
+  [ADR-S2-004](decisions/ADR-S2-004-primary-research-definition.md) and
   [CR-2026-025](changes/CR-2026-025.md).
+
+## OQ-S2-006 audit record
+
+- Discovery/source: S2-T15 v1.4 mandatory read-only audit at `2026-07-22T03:00:27Z`, upstream
+  binding Hash `a1f73a8f115262efa47f735593d4b142493e2baede551f0a193ff82ea7929f92`. The fixed T10
+  Manifest declares distribution fields, but 4,752 `canonical_key_levels` receipts and 9,504
+  PRICE/FLOW `market_episodes` receipts have an empty `distributions` tuple. A direct accepted
+  Catalog read fails closed with `distribution digest mismatch for parameter_set_id`.
+- Affected rules/contracts/baselines: `EVENT-CONSUME-MARKET-EPISODE`,
+  `STRATEGY-V1-PRICE-ONLY-HISTORICAL`, Runtime V2 Catalog integrity, CR-2026-026 upstream binding
+  and S2-T15 v1.4. T10 bytes and its historical PASS record remain immutable and are not rewritten.
+- Evidence required: an append-only input binding that the current authority reader can validate,
+  or an approved new read-only receiver contract defining an equally strict replacement check for
+  the absent distribution digests; deterministic tests and a new PASS audit are required before
+  Authority or bins.
+- Owner/status: Muce / `RESOLVED` at `2026-07-22T03:24:18Z`;首份supplement Manifest Hash为
+  `2ccb7d71…d71c`，新audit upstream binding Hash为`c964e890…a03`。最终代码干净提交和
+  最终治理Hash重审计仍是Authority前置门。
+- Linked governance: [CR-2026-027](changes/CR-2026-027.md),
+  [CR-2026-026](changes/CR-2026-026.md) and
+  [ADR-S2-009](decisions/ADR-S2-009-conditional-baseline-v1.4.md).
 
 U-001～U-003 remain OPEN after Stage 0 final approval. They block only their recorded downstream execution/adaptation scopes and do not invalidate the offline Stage 0 v1.0 baseline.
 

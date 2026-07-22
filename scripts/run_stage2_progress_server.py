@@ -37,6 +37,8 @@ S2T14_SUMMARY_RELATIVE_PATH = Path(
     "artifacts/manifests/stage_2/s2_t14_ambiguity_bounds_summary.json"
 )
 S2T14_VALIDATION_RELATIVE_PATH = Path("docs/development/validations/stage_2/S2-T14.md")
+S2T15_RUN_PREFIX = "stage2-s2t15-conditional-"
+S2T15_VALIDATION_RELATIVE_PATH = Path("docs/development/validations/stage_2/S2-T15.md")
 
 _PAGE_PATH = Path(__file__).with_name("stage2_progress_ui.html")
 RUNTIME_TASK_RECEIPTS = {
@@ -1044,6 +1046,140 @@ def _s2_t14_base(status: str, reason_code: str) -> dict[str, Any]:
     }
 
 
+def _stage2_conditional_baseline_projection(stage2_root: Path) -> dict[str, Any]:
+    """Project T15 only from governance and append-only evidence; never infer PASS."""
+
+    task_path = REPOSITORY_ROOT / "docs/development/tasks/stage_2/S2-T15-task.md"
+    oq_path = REPOSITORY_ROOT / "docs/development/OPEN_QUESTIONS.md"
+    cr_path = REPOSITORY_ROOT / "docs/development/changes/CR-2026-026.md"
+    governance = all(
+        path.is_file() and not path.is_symlink() for path in (task_path, oq_path, cr_path)
+    )
+    approved = False
+    if governance:
+        approved = (
+            "task_version: 1.4" in task_path.read_text()
+            and "status: APPROVED" in cr_path.read_text()
+            and "| RESOLVED | S2-T15 full conditional baseline" in oq_path.read_text()
+        )
+    audit_root = stage2_root / "authorities/S2-T15/v1.4/audits"
+    audits = (
+        tuple(
+            path
+            for path in audit_root.glob("*.json")
+            if path.is_file() and not path.is_symlink() and not path.name.startswith("._")
+        )
+        if audit_root.is_dir() and not audit_root.is_symlink()
+        else ()
+    )
+    audit = (
+        _safe_json_object(max(audits, key=lambda path: (path.stat().st_mtime_ns, path.name)))
+        if audits
+        else {}
+    )
+    audit_pass = (
+        audit.get("status") == "PASS"
+        and audit.get("authority_created") is False
+        and audit.get("run_id_created") is False
+        and audit.get("t13", {}).get("h2_path_count") == 532708
+        and audit.get("t13", {}).get("h2_outcome_cell_count") == 15981240
+        and audit.get("t14", {}).get("binding_mode") == "AGGREGATE_POLICY_ONLY_NO_EPISODE_JOIN"
+    )
+    authority_root = stage2_root / "authorities/S2-T15/v1.4"
+    authorities = (
+        tuple(
+            path
+            for path in authority_root.glob("authority-*.json")
+            if path.is_file() and not path.is_symlink() and not path.name.startswith("._")
+        )
+        if authority_root.is_dir() and not authority_root.is_symlink()
+        else ()
+    )
+    runs_root = stage2_root / "runs"
+    runs = (
+        tuple(
+            path
+            for path in runs_root.glob(f"{S2T15_RUN_PREFIX}*")
+            if path.is_dir() and not path.is_symlink()
+        )
+        if runs_root.is_dir() and not runs_root.is_symlink()
+        else ()
+    )
+    status = "BLOCKED"
+    reason = "S2_T15_GOVERNANCE_NOT_APPROVED"
+    if approved:
+        status = "NOT_STARTED"
+        reason = "S2_T15_APPROVED_AWAITING_FINAL_CODE_AUTHORITY"
+    if approved and audit_pass:
+        reason = "S2_T15_AUDIT_PASS_AWAITING_FINAL_CODE_AUTHORITY"
+    if approved and audit.get("status") == "BLOCKED":
+        status = "BLOCKED"
+        reason = str(audit.get("reason_code") or "S2_T15_UPSTREAM_AUDIT_BLOCKED")
+    if authorities:
+        reason = "S2_T15_AUTHORITY_FROZEN_AWAITING_BINS_AND_RUN"
+    newest: Path | None = None
+    verify_status = "NOT_RUN"
+    validation_status = "NOT_RUN"
+    if runs:
+        newest = max(runs, key=lambda path: (path.stat().st_mtime_ns, path.name))
+        failure = _safe_json_object(newest / "reports/failure.json")
+        verify = _safe_json_object(newest / "reports/verify.json")
+        validation_path = REPOSITORY_ROOT / S2T15_VALIDATION_RELATIVE_PATH
+        validation = (
+            validation_path.read_text(encoding="utf-8")
+            if validation_path.is_file() and not validation_path.is_symlink()
+            else ""
+        )
+        validation_pass = (
+            "task_version: 1.4" in validation
+            and "task_validation: PASS" in validation
+            and str(newest.name) in validation
+        )
+        verify_pass = (
+            verify.get("status") == "PASS"
+            and verify.get("reconciliation_status") == "PASS"
+            and verify.get("historical_evidence_only") is True
+            and verify.get("stage3_locked") is True
+            and verify.get("run_id") == newest.name
+            and verify.get("authority_hash")
+            in {path.stem.removeprefix("authority-") for path in authorities}
+        )
+        verify_status = "PASS" if verify_pass else "FAIL" if verify else "NOT_RUN"
+        validation_status = "PASS" if validation_pass else "FAIL" if validation else "NOT_RUN"
+        status = (
+            "FAILED" if failure else "PASS" if verify_pass and validation_pass else "IN_PROGRESS"
+        )
+        reason = (
+            "S2_T15_FAILED_UNPUBLISHED"
+            if failure
+            else "S2_T15_FULL_VERIFY_PASS"
+            if status == "PASS"
+            else "S2_T15_RUN_IN_PROGRESS"
+        )
+    return {
+        "task_id": "S2-T15",
+        "task_version": "1.4",
+        "status": status,
+        "reason_code": reason,
+        "governance_approved": approved,
+        "audit_status": str(audit.get("status") or "NOT_RUN"),
+        "upstream_binding_hash": audit.get("upstream_binding_hash"),
+        "authority_count": len(authorities),
+        "run_count": len(runs),
+        "run_id": newest.name if newest is not None else None,
+        "verify_status": verify_status,
+        "validation_status": validation_status,
+        "h2_path_count": audit.get("t13", {}).get("h2_path_count", 0),
+        "h2_outcome_cell_count": audit.get("t13", {}).get("h2_outcome_cell_count", 0),
+        "missing_distribution_partition_count": audit.get("t10", {}).get(
+            "missing_distribution_partition_count", 0
+        ),
+        "historical_evidence_only": True,
+        "research_result": "DESCRIPTIVE_ONLY / PRIMARY_PENDING_T18",
+        "stage3_locked": True,
+    }
+
+
 def _s2_t14_invalid(reason: str, *, run_id: str | None = None) -> dict[str, Any]:
     result = _s2_t14_base("EVIDENCE_INVALID", "S2_T14_EVIDENCE_INVALID")
     result["reason"] = reason
@@ -1485,6 +1621,7 @@ class ProgressHandler(BaseHTTPRequestHandler):
                     "S2-T12": _stage2_path_metrics_projection(self.server.stage2_root),
                     "S2-T13": _stage2_first_passage_projection(self.server.stage2_root),
                     "S2-T14": _stage2_ambiguity_bounds_projection(self.server.stage2_root),
+                    "S2-T15": _stage2_conditional_baseline_projection(self.server.stage2_root),
                 }
                 payload["execution_observability"] = observability
                 self._reply_json(HTTPStatus.OK, payload)

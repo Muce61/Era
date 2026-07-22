@@ -261,7 +261,7 @@
       <div class="title">ERA / Stage 2 · Event Research</div>
       <div class="top-status">
         <div class="tag approved">Plan v1.2<b>APPROVED</b></div>
-        <div id="taskProgressTag" class="tag progress">S2-T14<b>CHECKING</b></div>
+        <div id="taskProgressTag" class="tag progress">S2-T15<b>CHECKING</b></div>
         <div id="gateChip" class="gate-chip">LOADING</div>
       </div>
       <div id="processNote" class="process-note">正在读取 append-only 证据</div>
@@ -271,7 +271,7 @@
 
     <section class="layout">
       <aside class="panel task-rail" aria-label="阶段任务轨道">
-        <h2 class="panel-title"><span>阶段任务轨道</span><span id="passedCount" class="passed-count">10 / 15 PASSED</span></h2>
+        <h2 class="panel-title"><span>阶段任务轨道</span><span id="passedCount" class="passed-count">10 / 16 PASSED</span></h2>
         <ol class="task-list">
           <li class="task-item"><button class="task-button" data-task="Manifest：冻结预注册输入、输出布局与 Group-1 执行边界。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">S2-T19</span><span class="task-name">Manifest（前置）</span><span class="task-state">PASSED</span></button></li>
           <li class="task-item"><button class="task-button" data-task="Contracts：Stage 2 输入边界、注册表与 CanonicalKeyLevel 契约。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">01 S2-T01</span><span class="task-name">Contracts</span><span class="task-state">PASSED</span></button></li>
@@ -288,6 +288,7 @@
           <li id="s2t12Item" class="task-item active"><button id="s2t12Button" class="task-button" aria-current="step" data-task="路径指标：从最新 Authority、Run、Catalog、Verify 与 validation 自动识别 BTC/ETH 的 H1/H2 历史指标状态。"><span id="s2t12Node" class="node">12</span><span class="task-code">S2-T12</span><span class="task-name">Path Metrics</span><span id="s2t12State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
           <li id="s2t13Item" class="task-item active"><button id="s2t13Button" class="task-button" aria-current="step" data-task="First Passage：从最新 Authority、Run、Catalog、Verify 与 validation 自动识别 H1/H2 的目标先、止损先、过期和歧义状态。"><span id="s2t13Node" class="node">13</span><span class="task-code">S2-T13</span><span class="task-name">First Passage</span><span id="s2t13State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
           <li id="s2t14Item" class="task-item active"><button id="s2t14Button" class="task-button" aria-current="step" data-task="Ambiguity Bounds：从最新 Authority、Run、Catalog、Verify 与 validation 自动识别 Primary、条件口径与理论上界，且不删除原始 AMBIGUOUS。"><span id="s2t14Node" class="node">14</span><span class="task-code">S2-T14</span><span class="task-name">Ambiguity Bounds</span><span id="s2t14State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
+          <li id="s2t15Item" class="task-item active"><button id="s2t15Button" class="task-button" aria-current="step" data-task="Conditional Baseline：从治理、只读审计、Authority、Run、Verify 与 validation 自动识别，不预设 PASS。"><span id="s2t15Node" class="node">15</span><span class="task-code">S2-T15</span><span class="task-name">Conditional Baseline</span><span id="s2t15State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
         </ol>
         <div id="taskHint" class="task-hint">选择节点查看职责。</div>
       </aside>
@@ -408,7 +409,7 @@
   <dialog id="gateDialog">
     <div class="dialog-head"><h2>CR-2026-018 / 019 · 完成证据</h2><button class="icon-button" data-close-dialog type="button" aria-label="关闭"><i class="fa-solid fa-xmark"></i></button></div>
     <div class="dialog-body">
-      <p>此监控页每 5 秒自动读取 append-only 证据，并据此判定 S2-T10、Group 1 与当前 Stage 2 Task；HTML 不预置最终 PASS（包括 S2-T11、S2-T12、S2-T13 与 S2-T14）。</p>
+      <p>此监控页每 5 秒自动读取 append-only 证据，并据此判定 S2-T10、Group 1 与当前 Stage 2 Task；HTML 不预置最终 PASS（包括 S2-T11 至 S2-T15）。</p>
       <ul class="checklist">
         <li><i class="fa-regular fa-circle"></i><span>读取 successor 停用证据及复用、删除边界</span></li>
         <li><i class="fa-regular fa-circle"></i><span>读取 208 个对象、208 个 Seal 与 80,784 个分区证据</span></li>
@@ -430,6 +431,7 @@
     <section class="evidence-block"><h3>S2-T12 historical path metrics</h3><p id="metricsEvidence">正在从最新 Authority、Run、Catalog、Verify 与 validation 自动读取。</p><code id="metricsRunId">尚无合法 Run</code></section>
     <section class="evidence-block"><h3>S2-T13 historical first passage</h3><p id="passageEvidence">正在从最新 Authority、Run、Catalog、Verify 与 validation 自动读取。</p><code id="passageRunId">尚无合法 Run</code></section>
     <section class="evidence-block"><h3>S2-T14 historical ambiguity bounds</h3><p id="ambiguityEvidence">正在从最新 Authority、Run、Catalog、Verify 与 validation 自动读取。</p><code id="ambiguityRunId">尚无合法 Run</code></section>
+    <section class="evidence-block"><h3>S2-T15 historical conditional baseline</h3><p id="conditionalEvidence">正在从治理、audit、Authority、Run、Verify 与 validation 自动读取。</p><code id="conditionalRunId">尚无合法 Run</code></section>
   </aside>
 
   <script>
@@ -655,7 +657,7 @@
       byId("taskProgressTag").className = passed ? "tag approved" : "tag progress";
       const taskVersion = escapeText(task.task_version || "UNKNOWN");
       byId("taskProgressTag").innerHTML = `S2-T13 v${taskVersion}<b>${raw}</b>`;
-      byId("passedCount").textContent = `${10 + (s2t10Passed ? 1 : 0) + (s2t11Passed ? 1 : 0) + (s2t12Passed ? 1 : 0) + (passed ? 1 : 0)} / 15 PASSED`;
+      byId("passedCount").textContent = `${10 + (s2t10Passed ? 1 : 0) + (s2t11Passed ? 1 : 0) + (s2t12Passed ? 1 : 0) + (passed ? 1 : 0)} / 16 PASSED`;
       byId("passageRunId").textContent = escapeText(task.run_id);
       byId("passageEvidence").textContent = `${raw} · BTC ${number(btc.classification_count)} · ETH ${number(eth.classification_count)} · total ${number(task.total_classification_count)} classifications · historical evidence only`;
       return {task, passed, failed, running};
@@ -699,10 +701,31 @@
       const taskVersion = escapeText(task.task_version || "UNKNOWN");
       const tagStatus = accepted ? "PASSED · HUMAN ACCEPTED" : passed ? "VALIDATED · AWAITING HUMAN" : raw;
       byId("taskProgressTag").innerHTML = `S2-T14 v${taskVersion}<b>${tagStatus}</b>`;
-      byId("passedCount").textContent = `${priorPassedCount + (accepted ? 1 : 0)} / 15 PASSED`;
+      byId("passedCount").textContent = `${priorPassedCount + (accepted ? 1 : 0)} / 16 PASSED`;
       byId("ambiguityRunId").textContent = escapeText(task.run_id);
       byId("ambiguityEvidence").textContent = `${visibleStatus} · BTC ${number(btc.ambiguous_count)} AMBIGUOUS · ETH ${number(eth.ambiguous_count)} AMBIGUOUS · ${number(task.total_distribution_count)} compact distributions · historical evidence only`;
       return {task, passed, failed, running, accepted};
+    }
+
+    function renderConditionalTask(status, priorPassedCount) {
+      const tasks = ((status.execution_observability || {}).stage2_tasks || {});
+      const task = tasks["S2-T15"] || {status:"BLOCKED", reason_code:"S2_T15_CHECKING"};
+      const raw = escapeText(task.status);
+      const passed = raw === "PASS";
+      const failed = raw === "FAILED";
+      const blocked = raw === "BLOCKED";
+      const active = raw === "IN_PROGRESS" || raw === "NOT_STARTED";
+      byId("s2t15Item").classList.toggle("active", active);
+      byId("s2t15Item").classList.toggle("failed", failed);
+      byId("s2t15Item").classList.toggle("blocked", blocked);
+      byId("s2t15Node").innerHTML = passed ? '<i class="fa-solid fa-check"></i>' : failed ? '<i class="fa-solid fa-xmark"></i>' : blocked ? '<i class="fa-solid fa-pause"></i>' : "15";
+      byId("s2t15State").textContent = raw;
+      byId("taskProgressTag").className = passed ? "tag approved" : "tag progress";
+      byId("taskProgressTag").innerHTML = `S2-T15 v${escapeText(task.task_version || "1.4")}<b>${raw}</b>`;
+      byId("passedCount").textContent = `${priorPassedCount + (passed ? 1 : 0)} / 16 PASSED`;
+      byId("conditionalRunId").textContent = escapeText(task.run_id);
+      byId("conditionalEvidence").textContent = `${raw} · audit ${escapeText(task.audit_status)} · missing receipt distributions ${number(task.missing_distribution_partition_count)} · Authority ${number(task.authority_count)} · H2 paths ${number(task.h2_path_count)} · cells ${number(task.h2_outcome_cell_count)} · ${escapeText(task.research_result)} · Stage 3 LOCKED`;
+      return {task, passed, failed, blocked, running: raw === "IN_PROGRESS"};
     }
 
     async function refresh() {
@@ -720,6 +743,7 @@
         const passageTask = renderFirstPassageTask(status, taskPassed, pathTask.passed, metricsTask.passed);
         const priorPassedCount = 10 + (taskPassed ? 1 : 0) + (pathTask.passed ? 1 : 0) + (metricsTask.passed ? 1 : 0) + (passageTask.passed ? 1 : 0);
         const ambiguityTask = renderAmbiguityTask(status, priorPassedCount);
+        const conditionalTask = renderConditionalTask(status, priorPassedCount + (ambiguityTask.accepted ? 1 : 0));
         const liveSubflow = [...(status.pipeline_subflows || [])].reverse().find((item) => item.status === "RUNNING");
         byId("updatedAt").textContent = "数据更新：" + dateTime(status.updated_at);
         const activeLabel = status.active_task || (liveSubflow && liveSubflow.current_item);
@@ -874,6 +898,27 @@
             byId("stageLockNote").textContent = "S2-T13 已通过；S2-T14 尚无合法全量证据，Stage 3 保持 LOCKED。";
             byId("currentConclusion").textContent = "S2-T14 尚未产生可自动验收的 Authority、Run 与 validation 联合证据。";
             byId("nextAction").innerHTML = "<b>等待合法的 S2-T14 append-only 证据</b>；不得硬编码 PASS。";
+          }
+        }
+        if (ambiguityTask.accepted) {
+          byId("processNote").textContent = `S2-T15 · ${escapeText(conditionalTask.task.status)} · ${escapeText(conditionalTask.task.reason_code)}`;
+          byId("gateChip").textContent = conditionalTask.passed ? "S2-T15 PASS" : conditionalTask.failed ? "S2-T15 FAILED" : conditionalTask.running ? "S2-T15 RUNNING" : `S2-T15 ${escapeText(conditionalTask.task.status)}`;
+          byId("stageLockNote").textContent = "S2-T15 只展示 H2 historical conditional evidence；Stage 3 始终保持 LOCKED。";
+          if (conditionalTask.passed) {
+            byId("currentConclusion").textContent = "S2-T15 全量 Run、Verify 与 validation 已从真实 append-only 证据自动判定 PASS；研究结论仍是 DESCRIPTIVE_ONLY / PRIMARY_PENDING_T18。";
+            byId("nextAction").innerHTML = "<b>停止并等待人工验收 S2-T15</b>；不得自动开始 S2-T16。";
+          } else if (conditionalTask.failed) {
+            byId("currentConclusion").textContent = `S2-T15 FAILED_UNPUBLISHED：${escapeText(conditionalTask.task.reason_code)}。`;
+            byId("nextAction").innerHTML = "<b>停止自动流程并检查证据</b>；不得生成 PASS，也不得改规则补样本。";
+          } else if (conditionalTask.blocked) {
+            byId("currentConclusion").textContent = `S2-T15 BLOCKED：固定 T10 有 ${number(conditionalTask.task.missing_distribution_partition_count)} 个必需收据缺少字段分布摘要，Authority 和 Run 均未创建。`;
+            byId("nextAction").innerHTML = "<b>等待 OQ-S2-006 的人工输入绑定决定</b>；不得绕过 CatalogReaderV2 或修改密封 T10。";
+          } else if (conditionalTask.running) {
+            byId("currentConclusion").textContent = `S2-T15 当前 Run ${escapeText(conditionalTask.task.run_id)} 正在执行；页面只读，不触发任何写操作。`;
+            byId("nextAction").innerHTML = "<b>继续只读观察</b>；不得从页面触发 run、verify 或发布。";
+          } else {
+            byId("currentConclusion").textContent = `S2-T15 ${escapeText(conditionalTask.task.status)}：上游只读 audit ${escapeText(conditionalTask.task.audit_status)}，Authority ${number(conditionalTask.task.authority_count)}，尚无正式 Run。`;
+            byId("nextAction").innerHTML = "<b>等待 final-code Authority、TRAIN bins 与正式 Run</b>；HTML 不硬编码 PASS。";
           }
         }
       } catch (error) {

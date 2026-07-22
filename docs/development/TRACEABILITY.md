@@ -108,7 +108,7 @@ Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～
 
 ## Stage 2 Plan v1.2 APPROVED Coverage
 
-Stage 2 is `IN_PROGRESS / S2_T15_V1_3_APPROVED_BLOCKED_BEFORE_RUN_BY_OQ_S2_005`. S2-T19 and S2-T01～S2-T14 are PASSED;
+Stage 2 is `IN_PROGRESS / S2_T15_V1_4_IMPLEMENTATION_READY_FINAL_AUDIT_NO_RUN`. S2-T19 and S2-T01～S2-T14 are PASSED;
 the fixed Runtime V2 Run is published with Quality/Verify PASS and the exact Run-A comparison
 matches 61,776/61,776 Group-1 partitions with zero differences. S2-T11 v1.3 and CR-2026-021 are
 human-approved. Full-output Run `stage2-s2t11-paths-20260721T023117Z-029707f3c111` published
@@ -135,8 +135,14 @@ evidence passed at 2026-07-21T14:15:01Z. Muce approved S2-T15 v1.2 method-fixtur
 gate pass within the fixture boundary. Muce approved CR-2026-025 and v1.3 at
 2026-07-21T14:41:46Z, but the pre-Run audit found the executable volatility/Trades-activity
 formulas, split/fold boundaries, exact purge/embargo duration and non-event control-anchor rule
-absent from the repository and complete Git history. OQ-S2-005 blocks Authority/Run creation; no
-formal output or T15 UI PASS evidence exists. S2-T16 through S2-T18 and S2-T20 remain
+absent from the repository and complete Git history. OQ-S2-005 blocked Authority/Run creation at
+that time. Muce approved CR-2026-026, ADR-S2-009, S2-T15 v1.4 and the T19 append-only addendum at
+2026-07-22T02:25:41Z, closing OQ-S2-005 with executable definitions. The v1.4 upstream audit then
+found 14,256 fixed T10 Group-1 receipts missing required field-distribution digests. Muce approved
+CR-2026-027; its first supplement verified 14,256/14,256 with no T10 mutation and a fresh audit
+passed. The complete v1.4 production chain and 588-test quality gate pass. The clean implementation
+commit, supplement rebuild bound to final governance and final audit remain before Authority. No
+Authority, Run or formal output exists. S2-T16 through S2-T18 and S2-T20 remain
 `DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
 [CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
 approve a bounded hybrid transition without changing Stage 1, preregistration, config, parameters,
@@ -211,7 +217,7 @@ run is immutable; its sealed objects require a new-run adoption Manifest and ful
 | Historical first-passage labels | S2-T13 v1.3 | strict H1/H2 TARGET_FIRST/STOP_FIRST/EXPIRED/AMBIGUOUS; 1,065,416 path rows; 31,962,480 classifications; full Verify/UI PASS; no PnL/ROUND_SUCCESS/bounds | PASSED / HUMAN ACCEPTED |
 | Historical AMBIGUOUS bounds | S2-T14 v1.3 | immutable raw labels; Primary failure treatment; conditional exclusion; theoretical upper; H1 adverse/optimistic bounds; 31,962,480 classifications; 2,280 compact distributions; full Verify/UI PASS; no PnL/ROUND_SUCCESS | PASSED / HUMAN ACCEPTED; CR-2026-024 |
 | Historical H1/H2 path extraction | S2-T11 v1.3 | `paths/extraction`; approved lossless source-slice CLI; BTC 220,201 + ETH 312,507 episodes; Manifest `d4d6a2f5…`; verify/UI/quality PASS; Muce accepted 2026-07-21; `validations/stage_2/S2-T11.md` | PASSED / HUMAN ACCEPTED |
-| Conditional random baseline | S2-T15 v1.3 | exact fields; cumulative L0-L5; 5 controls; seed 20260716; purge/embargo; Episode-equal weighting; 16 directed / 553 total tests PASS; no PnL/return | CR-2026-025 APPROVED / OQ-S2-005 BLOCKS AUTHORITY AND RUN |
+| Conditional random baseline | S2-T15 v1.4 | causal RMS/activity/distance; rolling F0-F3; 3600/600s; outcome-blind 5 controls shared by 30 H2 cells; T13 row/T14 aggregate binding; no PnL/return | IMPLEMENTATION + QUALITY PASS / CR-2026-027 RECEIVER VALIDATED / FINAL AUDIT THEN AUTHORITY |
 | Placebo | S2-T16 | preregistered placebo; separate future Task | DRAFT_NOT_APPROVED |
 | Cluster ownership and cluster bootstrap CI | S2-T17, S2-T18 | BTC/ETH-separated clustering and cluster-level resampling | DRAFT_NOT_APPROVED |
 | Stage 2 research gate and deterministic evidence-card reporting | S2-T20 | Stage validation and human Go/No-Go; no automatic Stage 3 | DRAFT_NOT_APPROVED |

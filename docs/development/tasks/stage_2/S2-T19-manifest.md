@@ -121,3 +121,20 @@ Manifest必须完整、机器可验证地锁定[ADR-S2-004](../../decisions/ADR-
 ## 23. ADR-S2-005事件构造绑定
 
 This Task freezes both preregistration and execution Manifest layers, the 20 OFAT parameter sets, Stage 1 physical and logical hashes, Contract Price inventory hash, approved external-root space gate and the single CLI contract from ADR-S2-005. It generates no candidate event or research result.
+
+## 24. Append-only S2-T15 v1.4 preregistration addendum
+
+Approved by Muce at 2026-07-22T02:25:41Z under CR-2026-026 and ADR-S2-009. This addendum does
+not alter the earlier T19 Manifest or delete prior registrations. It freezes only the executable
+S2-T15 v1.4 conditional-baseline contract: three feature IDs and formulas; exact setup/context;
+active-key-level distance enabled and never relaxed; P1/P2/P3 five-block expanding F0-F3 folds;
+3600-second backward purge and 600-second forward embargo; deterministic daily-offset grid and
+seed 20260716; outcome-blind three-layer control identity; T13 row-label and T14 aggregate-policy
+bindings; one five-control selection per H2 path shared across the 30-cell frozen combination
+order; complete-zero-Trade AMBIGUOUS semantics; and fail-closed reconciliation.
+
+The exact executable values and invalidation list are in
+[ADR-S2-009](../../decisions/ADR-S2-009-conditional-baseline-v1.4.md) and
+[CR-2026-026](../../changes/CR-2026-026.md). No S2-T16+, bootstrap, CI, F1, PnL, Stage 3 or live
+execution is added. Authority remains forbidden until final-code quality gates pass; Run ID is
+created only by the approved T15 `run` command after sealed bins and preflight.

@@ -142,13 +142,13 @@ rules:
   - src/era100x/research/stage_2/metrics/path/ (S2-T12 IMPLEMENTED read-only Episode lineage)
   - src/era100x/research/stage_2/labels/first_passage/ (S2-T13 IMPLEMENTED fixture first-passage capability)
   - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 IMPLEMENTED historical ambiguity bounds)
-  - src/era100x/research/stage_2/baselines/conditional/ (S2-T15 v1.3 APPROVED; method fixture implemented; full run blocked by OQ-S2-005)
+  - src/era100x/research/stage_2/baselines/conditional/ (S2-T15 v1.4 IMPLEMENTED; CR-2026-027 receiver validated; final audit required before Authority)
   test_paths:
   - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); UT-EVT-011, FI-14
   - tests/research/stage_2/metrics/path/ (S2-T12 TESTED)
   - tests/research/stage_2/labels/first_passage/ (S2-T13 TESTED)
   - tests/research/stage_2/labels/ambiguity/ (S2-T14 TESTED)
-  - tests/research/stage_2/baselines/conditional/ (S2-T15 TESTED method fixture)
+  - tests/research/stage_2/baselines/conditional/ (S2-T15 v1.4 directed tests PASS)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   stage_2_identity_delivery:
@@ -180,7 +180,7 @@ rules:
     implementation: src/era100x/research/stage_2/baselines/conditional/
     tests: tests/research/stage_2/baselines/conditional/
     validation: docs/development/validations/stage_2/S2-T15.md
-    state: V1_3_APPROVED_BLOCKED_BEFORE_AUTHORITY_OR_RUN_BY_OQ_S2_005
+    state: V1_4_IMPLEMENTATION_READY_FINAL_AUDIT_NO_RUN
   state: PLANNED
 - rule_id: FILL-FIRST-NONZERO-PROTECT
   rule_status: FROZEN
@@ -339,14 +339,14 @@ rules:
   - src/era100x/research/stage_2/metrics/path/ (S2-T12 IMPLEMENTED H1/H2 price-only metrics)
   - src/era100x/research/stage_2/labels/first_passage/ (S2-T13 IMPLEMENTED H1/H2 price-only classification)
   - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 IMPLEMENTED H1/H2 ambiguity bounds)
-  - src/era100x/research/stage_2/baselines/conditional/ (S2-T15 v1.3 APPROVED; historical fixture implemented; full run blocked by OQ-S2-005)
+  - src/era100x/research/stage_2/baselines/conditional/ (S2-T15 v1.4 historical-only production chain IMPLEMENTED; final audit required before Authority)
   test_paths:
   - tests/research/stage_2/contracts/, tests/research/stage_2/gates/ (PLANNED); T-EVT-002
   - tests/research/stage_2/paths/extraction/ (S2-T11 TESTED)
   - tests/research/stage_2/metrics/path/ (S2-T12 TESTED)
   - tests/research/stage_2/labels/first_passage/ (S2-T13 TESTED)
   - tests/research/stage_2/labels/ambiguity/ (S2-T14 TESTED)
-  - tests/research/stage_2/baselines/conditional/ (S2-T15 TESTED historical-only boundary)
+  - tests/research/stage_2/baselines/conditional/ (S2-T15 v1.4 historical-only directed tests PASS)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   stage_1_delivery:
@@ -381,7 +381,7 @@ rules:
     implementation: src/era100x/research/stage_2/baselines/conditional/
     tests: tests/research/stage_2/baselines/conditional/
     validation: docs/development/validations/stage_2/S2-T15.md
-    state: V1_3_APPROVED_BLOCKED_BEFORE_AUTHORITY_OR_RUN_BY_OQ_S2_005
+    state: V1_4_IMPLEMENTATION_READY_FINAL_AUDIT_NO_RUN
   state: PLANNED
 - rule_id: RESEARCH-H3-CONDITIONAL-ROUND-PROB
   rule_status: FROZEN
@@ -2408,7 +2408,7 @@ rules:
     approved_by: Muce
     approved_at: '2026-07-16T14:33:04+08:00'
     approved_tasks: [S2-T19, S2-T01, S2-T02, S2-T03, S2-T04, S2-T05, S2-T06, S2-T07, S2-T08, S2-T09, S2-T10, S2-T11, S2-T12, S2-T13, S2-T14, S2-T15]
-    approved_task_version: '1.3'
+    approved_task_version: '1.4'
     s2_t09_identity_task_version: '1.4'
     s2_t11_task_version: '1.3'
     s2_t11_status: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
@@ -2460,16 +2460,22 @@ rules:
     cr_s2_024_status: APPROVED_IMPLEMENTED_VALIDATED_HUMAN_ACCEPTED
     cr_s2_024_approved_by: Muce
     cr_s2_024_approved_at: '2026-07-21T13:37:13Z'
-    s2_t15_task_version: '1.3'
-    s2_t15_status: APPROVED_BLOCKED_BEFORE_AUTHORITY_OR_RUN_BY_OQ_S2_005
+    s2_t15_task_version: '1.4'
+    s2_t15_status: APPROVED_IMPLEMENTATION_READY_FINAL_AUDIT_NO_RUN
     s2_t15_approved_by: Muce
-    s2_t15_approved_at: '2026-07-21T14:41:46Z'
+    s2_t15_approved_at: '2026-07-22T02:25:41Z'
     s2_t15_validation: docs/development/validations/stage_2/S2-T15.md
     s2_t15_full_output_ui_change_request: docs/development/changes/CR-2026-025.md
     cr_s2_025_status: APPROVED_BLOCKED_BEFORE_AUTHORITY_OR_RUN
     cr_s2_025_approved_by: Muce
     cr_s2_025_approved_at: '2026-07-21T14:41:46Z'
-    oq_s2_005_status: OPEN_BLOCKS_S2_T15_AUTHORITY_RUN_AND_UI_PASS
+    s2_t15_v14_contract_change_request: docs/development/changes/CR-2026-026.md
+    s2_t15_v14_decision: docs/development/decisions/ADR-S2-009-conditional-baseline-v1.4.md
+    cr_s2_026_status: APPROVED_IMPLEMENTATION_READY_CR_2026_027_VALIDATED
+    cr_s2_026_approved_by: Muce
+    cr_s2_026_approved_at: '2026-07-22T02:25:41Z'
+    oq_s2_005_status: RESOLVED_BY_CR_2026_026_AND_ADR_S2_009
+    oq_s2_006_status: RESOLVED_CR_2026_027_VALIDATED_FINAL_AUDIT_REQUIRED
     draft_tasks: [S2-T16, S2-T17, S2-T18, S2-T20]
     oq_s2_004_status: RESOLVED
     decision_ref: docs/development/decisions/ADR-S2-004-primary-research-definition.md
