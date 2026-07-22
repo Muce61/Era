@@ -4,8 +4,22 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T15 v1.4 — conditional random baseline
-Status: S2_T15_V1_4_CR_2026_030_APPROVED_IMPLEMENTATION_GATES
+Status: S2_T15_STOPPED_OQ_S2_009_AND_OQ_S2_010_OPEN
 ```
+
+No T15 long-running process is active. Muce stopped the latest TRAIN-bin preparation before a
+Binning Set or Run ID existed. Six complete prepared blocks and one incomplete temporary block
+remain preserved and unpublished. The current prepared Authority is
+`5a1a3faa1f87f74ce5a0008cf6e6a6613b3097d5f96e9e9ab8047ef15b4e7b56`; the new missingness and
+lifecycle governance drafts change its bound repository/governance state, so it must not resume or
+be reused as a formal chain.
+
+OQ-S2-009 records the observed 61-row BTC/P1 boundary availability issue and requires a complete
+BTC/ETH read-only availability audit plus human approval of CR-2026-031/ADR-S2-010. OQ-S2-010
+records the proposed separation between immutable raw event paths and a future theoretical
+full-lifecycle strategy study. CR-2026-032/ADR-S2-011 are DRAFT only: exact landmark, activation,
+near-zero H3 PnL, closure and censor contracts remain undefined. Neither CR authorizes a new
+Authority, bins, Run, S2-T16+ or Stage 3.
 
 The unique CR-2026-028 successor
 `stage2-s2t15-conditional-20260722T120658Z-023f47cffef2` passed the corrected sealed Episode

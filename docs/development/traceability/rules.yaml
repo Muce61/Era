@@ -142,7 +142,7 @@ rules:
   - src/era100x/research/stage_2/metrics/path/ (S2-T12 IMPLEMENTED read-only Episode lineage)
   - src/era100x/research/stage_2/labels/first_passage/ (S2-T13 IMPLEMENTED fixture first-passage capability)
   - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 IMPLEMENTED historical ambiguity bounds)
-  - src/era100x/research/stage_2/baselines/conditional/ (S2-T15 v1.4 CR-2026-030 APPROVED; final-clean-code rehearsal/quality/fresh-audit gates remain)
+  - src/era100x/research/stage_2/baselines/conditional/ (S2-T15 v1.4 STOPPED; CR-2026-031/ADR-S2-010 availability audit and OQ-S2-009 approval required before any new Authority/bin/Run)
   test_paths:
   - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); UT-EVT-011, FI-14
   - tests/research/stage_2/metrics/path/ (S2-T12 TESTED)
@@ -180,7 +180,7 @@ rules:
     implementation: src/era100x/research/stage_2/baselines/conditional/
     tests: tests/research/stage_2/baselines/conditional/
     validation: docs/development/validations/stage_2/S2-T15.md
-    state: V1_4_IMPLEMENTATION_READY_FINAL_AUDIT_NO_RUN
+    state: V1_4_STOPPED_OQ_S2_009_AND_OQ_S2_010_OPEN
   state: PLANNED
 - rule_id: FILL-FIRST-NONZERO-PROTECT
   rule_status: FROZEN
@@ -339,7 +339,7 @@ rules:
   - src/era100x/research/stage_2/metrics/path/ (S2-T12 IMPLEMENTED H1/H2 price-only metrics)
   - src/era100x/research/stage_2/labels/first_passage/ (S2-T13 IMPLEMENTED H1/H2 price-only classification)
   - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 IMPLEMENTED H1/H2 ambiguity bounds)
-  - src/era100x/research/stage_2/baselines/conditional/ (S2-T15 v1.4 historical-only CR-2026-030 replacement chain authorized after gates; no formal result yet)
+  - src/era100x/research/stage_2/baselines/conditional/ (S2-T15 v1.4 historical-only STOPPED; no formal result; raw event paths remain separate from proposed H3 lifecycle CR-2026-032)
   test_paths:
   - tests/research/stage_2/contracts/, tests/research/stage_2/gates/ (PLANNED); T-EVT-002
   - tests/research/stage_2/paths/extraction/ (S2-T11 TESTED)

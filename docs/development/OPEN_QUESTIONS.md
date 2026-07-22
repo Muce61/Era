@@ -63,8 +63,40 @@ These questions are inherited from V1.3.4 Appendix N. They do not block planning
 | OQ-S2-004 | 2026-07-16审批引用的T1/T3/T4精确时间组合、三个预注册时期、条件随机匹配bin/固定放宽层级和主失败线在仓库及全部本地历史中均无定义；其精确值是什么？ | RESOLVED | Stage 2 preregistration completion | NONE | 2026-07-16T14:51:38+08:00 Muce人工批准完整定义；见[ADR-S2-004](decisions/ADR-S2-004-primary-research-definition.md)。T2是唯一Primary；P1/P2/P3、L0～L5、5 controls、matching/bootstrap seed 20260716、AMBIGUOUS失败、F1～F10与ETH分类均已预注册。全部为BASELINE/RESEARCH，不是最优或FROZEN。 |
 | OQ-S2-005 | ADR-S2-004声称沿用已批准的1m波动率和Trades活跃度公式，但仓库及全部Git历史均无公式本体；正式条件基线也缺少split/fold边界、精确purge/embargo长度和非事件control锚点生成规则。精确定义是什么？ | RESOLVED | S2-T15 full conditional baseline | NONE | 2026-07-22T02:25:41Z Muce批准CR-2026-026、ADR-S2-009、S2-T15 v1.4及T19 append-only addendum；冻结三特征、关键位距离、F0-F3滚动折、3600/600秒、daily grid、三层control identity、T13/T14绑定和全量对账。未知结果不预先获批。 |
 | OQ-S2-006 | 固定T10的14,256个Group-1关键位/MarketEpisode分区收据未携带其DatasetSpec要求的`field.*`分布摘要，当前权威`CatalogReaderV2`因此拒绝读取。T15应如何获得可验证且不改写密封T10的只读输入？ | RESOLVED | S2-T15 upstream binding | NONE | 2026-07-22T03:24:18Z Muce批准独立CR-2026-027；只读补证已验证14,256/14,256，T10修改为0，新audit PASS。正式Authority仍需最终干净提交和最终治理Hash重审计。 |
+| OQ-S2-009 | T15已准备BTC/P1/B0的210,240个grid anchors中，首61个因61-bar回看越过历史起点而`PRICE_FEATURE_UNAVAILABLE`；BTC/ETH全范围是否还有边界warmup、声明gap或未绑定分区，分别怎样处理？ | OPEN | S2-T15 availability audit | S2-T15 Authority/bin/Run | 必须先批准[CR-2026-031](changes/CR-2026-031.md)与[ADR-S2-010](decisions/ADR-S2-010-historical-missingness.md)，完成BTC/ETH全范围只读审计并冻结逐类预期数量；不得填充、缩短窗口或把缺失当0。 |
+| OQ-S2-010 | “存活较长、尚未激活、净可退出PnL接近零”各自精确定义什么，理论策略从何时入场、怎样运行到完全平仓、何时右删失，以及如何避免幸存者偏差？ | OPEN | future Stage 2/Stage 3 lifecycle preregistration | lifecycle implementation/Authority/Run | 必须人工冻结landmark、激活状态、H3近零带、成本/成交情景、退出优先级、最大horizon、删失、subgroup和多重检验；见[CR-2026-032](changes/CR-2026-032.md)与[ADR-S2-011](decisions/ADR-S2-011-event-path-and-strategy-lifecycle-separation.md)。 |
 
 New questions must record discovery/source, affected rules/contracts/baselines, evidence required, owner, status, and linked ADR/CR. No unresolved question may be answered by assumption.
+
+## OQ-S2-009 audit record
+
+- Discovery/source: Muce stopped the active T15 bin preparation after a read-only progress view
+  exposed data unavailability. The complete BTC/P1/B0 prepared block has 210,179 available and 61
+  unavailable price-feature anchors; the exact unavailable range is
+  `2020-01-01T00:00:09Z` through `2020-01-01T01:00:09Z` at one-minute intervals.
+- Affected rules/contracts/baselines: `EVENT-CONSUME-MARKET-EPISODE`,
+  `STRATEGY-V1-PRICE-ONLY-HISTORICAL`, `DATA-HISTORICAL-NO-FAKE-EXECUTION`, S2-T15 v1.4 feature,
+  split and reconciliation contracts. Stage 1 and sealed T10-T14 bytes remain unchanged.
+- Evidence required: whole-range read-only BTC/ETH availability inventory, exact boundary/gap/
+  unbound/invalid/zero-observation classification, per-group reconciliation and immutable Hashes.
+- Owner/status: Muce / `OPEN`.
+- Linked governance: [CR-2026-031](changes/CR-2026-031.md) and
+  [ADR-S2-010](decisions/ADR-S2-010-historical-missingness.md).
+
+## OQ-S2-010 audit record
+
+- Discovery/source: Muce requested separate exit-rule-free event paths and a complete theoretical
+  strategy lifecycle, with a preregistered delayed-activation/decay sub-hypothesis.
+- Affected rules/contracts/baselines: `EVENT-CONSUME-MARKET-EPISODE`,
+  `STRATEGY-V1-PRICE-ONLY-HISTORICAL`, `DATA-HISTORICAL-NO-FAKE-EXECUTION`,
+  `EXEC-EXIT-COORDINATOR-ONLY`, U-010, U-011 and U-012. Accepted T1-T4 raw evidence and the sole
+  Primary T2 remain unchanged.
+- Evidence required: exact landmark, activation, H3 near-zero-PnL, theoretical entry/closure,
+  cost/fill, censor, subgroup, multiplicity and risk-set matching definitions before any code or
+  outcome is read.
+- Owner/status: Muce / `OPEN`.
+- Linked governance: [CR-2026-032](changes/CR-2026-032.md) and
+  [ADR-S2-011](decisions/ADR-S2-011-event-path-and-strategy-lifecycle-separation.md).
 
 ## OQ-S2-005 audit record
 

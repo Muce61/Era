@@ -108,7 +108,7 @@ Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～
 
 ## Stage 2 Plan v1.2 APPROVED Coverage
 
-Stage 2 is `IN_PROGRESS / S2_T15_V1_4_IMPLEMENTATION_READY_FINAL_AUDIT_NO_RUN`. S2-T19 and S2-T01～S2-T14 are PASSED;
+Stage 2 is `IN_PROGRESS / S2_T15_STOPPED_OQ_S2_009_AND_OQ_S2_010_OPEN`. S2-T19 and S2-T01～S2-T14 are PASSED;
 the fixed Runtime V2 Run is published with Quality/Verify PASS and the exact Run-A comparison
 matches 61,776/61,776 Group-1 partitions with zero differences. S2-T11 v1.3 and CR-2026-021 are
 human-approved. Full-output Run `stage2-s2t11-paths-20260721T023117Z-029707f3c111` published
@@ -165,6 +165,13 @@ records the stopped `e3d9814f…c365` Authority. Muce approved CR-2026-030 at
 `2026-07-22T14:47:04Z`, authorizing exactly one replacement Authority/bin/Run chain only after the
 final-clean-code seven-day rehearsal, full quality gate and fresh audit pass. The rehearsal is
 simulation-only and does not change the formal research result.
+The replacement Authority `5a1a3faa…e7b56` then began TRAIN feature preparation, but Muce stopped
+it before a Binning Set or Run ID after the read-only view exposed 61 unavailable BTC/P1 boundary
+anchors. CR-2026-031/ADR-S2-010 and OQ-S2-009 now require a typed whole-range BTC/ETH availability
+audit; the prepared files remain unpublished and non-reusable. CR-2026-032/ADR-S2-011 and
+OQ-S2-010 separately propose immutable exit-rule-free event paths plus an H3 theoretical
+full-lifecycle study with landmark risk-set comparison. They are DRAFT and authorize no code,
+Authority, Run, S2-T16+ or Stage 3.
 S2-T16 through S2-T18 and S2-T20 remain `DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
 [CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
 approve a bounded hybrid transition without changing Stage 1, preregistration, config, parameters,
@@ -239,7 +246,8 @@ run is immutable; its sealed objects require a new-run adoption Manifest and ful
 | Historical first-passage labels | S2-T13 v1.3 | strict H1/H2 TARGET_FIRST/STOP_FIRST/EXPIRED/AMBIGUOUS; 1,065,416 path rows; 31,962,480 classifications; full Verify/UI PASS; no PnL/ROUND_SUCCESS/bounds | PASSED / HUMAN ACCEPTED |
 | Historical AMBIGUOUS bounds | S2-T14 v1.3 | immutable raw labels; Primary failure treatment; conditional exclusion; theoretical upper; H1 adverse/optimistic bounds; 31,962,480 classifications; 2,280 compact distributions; full Verify/UI PASS; no PnL/ROUND_SUCCESS | PASSED / HUMAN ACCEPTED; CR-2026-024 |
 | Historical H1/H2 path extraction | S2-T11 v1.3 | `paths/extraction`; approved lossless source-slice CLI; BTC 220,201 + ETH 312,507 episodes; Manifest `d4d6a2f5…`; verify/UI/quality PASS; Muce accepted 2026-07-21; `validations/stage_2/S2-T11.md` | PASSED / HUMAN ACCEPTED |
-| Conditional random baseline | S2-T15 v1.4 | causal RMS/activity/distance; rolling F0-F3; sealed T10 trigger Context for Episodes; outcome-blind 5 controls shared by 30 H2 cells; no PnL/return | CR-2026-029 APPROVED / QUALITY AND FINAL-CHAIN GATES |
+| Conditional random baseline | S2-T15 v1.4 | causal RMS/activity/distance; rolling F0-F3; sealed T10 trigger Context for Episodes; outcome-blind 5 controls shared by 30 H2 cells; no PnL/return | STOPPED / OQ-S2-009 AVAILABILITY AUDIT OPEN / NO FORMAL RESULT |
+| Raw event path vs theoretical full lifecycle | future Plan/Task amendment | immutable T1-T4 paths; separate H3 theoretical-entry-to-full-closure replay; landmark delayed-activation hypothesis; no real `POSITION_FLAT` | CR-2026-032 + ADR-S2-011 DRAFT / OQ-S2-010 OPEN |
 | Placebo | S2-T16 | preregistered placebo; separate future Task | DRAFT_NOT_APPROVED |
 | Cluster ownership and cluster bootstrap CI | S2-T17, S2-T18 | BTC/ETH-separated clustering and cluster-level resampling | DRAFT_NOT_APPROVED |
 | Stage 2 research gate and deterministic evidence-card reporting | S2-T20 | Stage validation and human Go/No-Go; no automatic Stage 3 | DRAFT_NOT_APPROVED |

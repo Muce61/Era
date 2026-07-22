@@ -138,3 +138,25 @@ The exact executable values and invalidation list are in
 [CR-2026-026](../../changes/CR-2026-026.md). No S2-T16+, bootstrap, CI, F1, PnL, Stage 3 or live
 execution is added. Authority remains forbidden until final-code quality gates pass; Run ID is
 created only by the approved T15 `run` command after sealed bins and preflight.
+
+## 25. Proposed append-only lifecycle sub-hypothesis addendum
+
+Status: **DRAFT / NOT APPROVED / NOT EXECUTABLE**. Linked governance is
+[CR-2026-032](../../changes/CR-2026-032.md),
+[ADR-S2-011](../../decisions/ADR-S2-011-event-path-and-strategy-lifecycle-separation.md) and
+OQ-S2-010.
+
+The proposed sub-hypothesis is preserved verbatim:
+
+> 事件在存活较长时间、尚未激活、且净可退出 PnL 接近零时，后续目标优先概率和净期望是否提高？
+
+Raw T1-T4 event paths remain immutable and exit-rule-free. Any complete-strategy research must be
+a separate variable-length H3 evidence family from theoretical entry through
+`THEORETICAL_FULLY_FLAT` or an explicit right-censor state. It must not use the real-execution term
+`POSITION_FLAT`, alter the T2 Primary, or calculate PnL from H1/H2 facts alone.
+
+This section intentionally freezes no numeric contract. Implementation and Authority/Run creation
+are blocked until human approval defines all OQ-S2-010 landmarks, activation, near-zero band,
+cost/fill/closure, maximum horizon, censor, subgroup and multiplicity values in a new Plan/Task
+version. The three possible interpretations—delayed activation, momentum decay, or conditional
+time rules—must all be reported; observing one does not authorize post-hoc rule replacement.
