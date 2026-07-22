@@ -94,7 +94,9 @@ class BinningIndex:
             feature_kind if parameter_set_id is None else f"KEY_LEVEL_DISTANCE__{parameter_set_id}"
         )
         path = self.root / "boundaries" / instrument / period / fold / f"{name}.json"
-        boundary = FrozenQuintileBoundaries.model_validate(read_json_file(path))
+        boundary = FrozenQuintileBoundaries.model_validate_json(
+            json.dumps(read_json_file(path), ensure_ascii=False, sort_keys=True)
+        )
         if boundary.boundary_hash != boundary.computed_hash():
             raise ValueError("binning boundary changed before matching")
         self._cache[key] = boundary

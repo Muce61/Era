@@ -558,7 +558,9 @@ def freeze_authority(*, audit_path: Path | None = None) -> tuple[S2T15ContractAu
 
 
 def preflight(*, authority_path: Path, binning_set_path: Path) -> dict[str, Any]:
-    authority = S2T15ContractAuthority.model_validate(_read_json(authority_path))
+    authority = S2T15ContractAuthority.model_validate_json(
+        json.dumps(_read_json(authority_path), ensure_ascii=False, sort_keys=True)
+    )
     if authority.authority_hash != authority.computed_hash():
         raise ValueError("Authority changed before preflight")
     if authority.code_commit != current_code_commit() or not repository_is_clean():

@@ -115,6 +115,7 @@ def test_authority_is_hash_bound_and_contains_no_run_id() -> None:
         }
     )
     assert authority.authority_hash == authority.computed_hash()
+    assert S2T15ContractAuthority.model_validate_json(authority.model_dump_json()) == authority
     assert "run_id" not in type(authority).model_fields
     with pytest.raises(ValidationError, match="Authority hash mismatch"):
         S2T15ContractAuthority.model_validate(

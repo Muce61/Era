@@ -201,7 +201,9 @@ def run_full_execution(
     repository_clean: bool,
     resume_run_id: str | None = None,
 ) -> tuple[dict[str, Any], Path]:
-    authority = S2T15ContractAuthority.model_validate(read_json_file(authority_path))
+    authority = S2T15ContractAuthority.model_validate_json(
+        json.dumps(read_json_file(authority_path), ensure_ascii=False, sort_keys=True)
+    )
     bins = read_binning_set(binning_set_path, authority_hash=authority.authority_hash)
     if authority.code_commit != current_commit or not repository_clean:
         raise ValueError("T15 run requires the clean Authority commit")
@@ -250,8 +252,12 @@ def run_full_execution(
             not in {"IN_PROGRESS", "COMPLETE_PENDING_VERIFY", "VERIFIED_PASS"}
         ):
             raise ValueError("T15 resume checkpoint binding or status drift")
-        stored_authority = S2T15ContractAuthority.model_validate(
-            read_json_file(run_root / "manifests" / "authority.json")
+        stored_authority = S2T15ContractAuthority.model_validate_json(
+            json.dumps(
+                read_json_file(run_root / "manifests" / "authority.json"),
+                ensure_ascii=False,
+                sort_keys=True,
+            )
         )
         stored_bins = read_json_file(run_root / "manifests" / "binning-set.json")
         if stored_authority != authority or stored_bins != bins:
@@ -543,7 +549,7 @@ def verify_published_run(*, run_root: Path) -> tuple[dict[str, Any], Path]:
         columns=["control_candidate_id", "control_outcome_matrix_id", "matrix_json"],
     ):
         for row in pa.Table.from_batches([batch]).to_pylist():
-            control_matrix = ControlOutcomeMatrix.model_validate(json.loads(row["matrix_json"]))
+            control_matrix = ControlOutcomeMatrix.model_validate_json(row["matrix_json"])
             if (
                 control_matrix.control_candidate_id != row["control_candidate_id"]
                 or control_matrix.control_outcome_matrix_id != row["control_outcome_matrix_id"]
@@ -563,9 +569,7 @@ def verify_published_run(*, run_root: Path) -> tuple[dict[str, Any], Path]:
     assignment_total = 0
     for batch in pq.ParquetFile(match_path).iter_batches(batch_size=2_000):
         for row in pa.Table.from_batches([batch]).to_pylist():
-            match_matrix = ConditionalBaselineMatchMatrix.model_validate(
-                json.loads(row["matrix_json"])
-            )
+            match_matrix = ConditionalBaselineMatchMatrix.model_validate_json(row["matrix_json"])
             if match_matrix.output_hash != row["output_hash"]:
                 raise ValueError("conditional match matrix output hash drift")
             if match_matrix.source_h2_path_hash in observed_episode_hashes:

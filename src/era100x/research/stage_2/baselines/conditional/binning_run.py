@@ -245,7 +245,9 @@ def freeze_binning_snapshots(
 ) -> tuple[dict[str, Any], Path]:
     """Prepare TRAIN blocks and freeze all 504 registered boundary objects."""
 
-    authority = S2T15ContractAuthority.model_validate(read_json_file(authority_path))
+    authority = S2T15ContractAuthority.model_validate_json(
+        json.dumps(read_json_file(authority_path), ensure_ascii=False, sort_keys=True)
+    )
     if authority.authority_hash != authority.computed_hash():
         raise ValueError("Authority changed before TRAIN binning")
     if authority.code_commit != current_commit or not repository_clean:

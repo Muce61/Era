@@ -225,7 +225,7 @@ def _outcome_lookup(
         for candidate_id, matrix_id, matrix_json in rows:
             if matrix_id is None or matrix_json is None:
                 raise ValueError("selected control lacks an H2 outcome matrix")
-            matrix = ControlOutcomeMatrix.model_validate(json.loads(matrix_json))
+            matrix = ControlOutcomeMatrix.model_validate_json(matrix_json)
             if matrix.control_outcome_matrix_id != str(matrix_id):
                 raise ValueError("control matrix lookup identity drift")
             result[str(candidate_id)] = matrix
