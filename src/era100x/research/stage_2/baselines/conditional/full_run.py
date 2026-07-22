@@ -17,7 +17,7 @@ from era100x.research.stage_2.runtime_v2.models import Receipt
 from .context_receipt_supplement import latest_valid_context_receipt_supplement
 from .receipt_supplement import latest_valid_receipt_distribution_supplement
 from .binning_run import read_binning_set
-from .successor_policy import require_single_successor_creation_state
+from .successor_policy import require_final_successor_creation_state
 from .v14_contracts import (
     COMBINATION_ORDER,
     EXPECTED_H2_OUTCOME_CELLS,
@@ -53,6 +53,7 @@ GOVERNANCE_FILES = (
     REPOSITORY_ROOT / "docs/development/changes/CR-2026-026.md",
     REPOSITORY_ROOT / "docs/development/changes/CR-2026-027.md",
     REPOSITORY_ROOT / "docs/development/changes/CR-2026-028.md",
+    REPOSITORY_ROOT / "docs/development/changes/CR-2026-029.md",
     REPOSITORY_ROOT / "docs/development/decisions/ADR-S2-009-conditional-baseline-v1.4.md",
     REPOSITORY_ROOT / "docs/development/tasks/stage_2/S2-T15-task.md",
     REPOSITORY_ROOT / "docs/development/tasks/stage_2/S2-T19-manifest.md",
@@ -116,13 +117,15 @@ def _governance_binding() -> dict[str, str]:
     cr = GOVERNANCE_FILES[0].read_text()
     receiver_cr = GOVERNANCE_FILES[1].read_text()
     context_cr = GOVERNANCE_FILES[2].read_text()
-    adr = GOVERNANCE_FILES[3].read_text()
-    task = GOVERNANCE_FILES[4].read_text()
+    decimal_cr = GOVERNANCE_FILES[3].read_text()
+    adr = GOVERNANCE_FILES[4].read_text()
+    task = GOVERNANCE_FILES[5].read_text()
     oq = (REPOSITORY_ROOT / "docs/development/OPEN_QUESTIONS.md").read_text()
     required = (
         ("CR approval", "status: APPROVED", cr),
         ("receiver CR approval", "status: APPROVED", receiver_cr),
         ("Context receiver CR approval", "status: APPROVED", context_cr),
+        ("Decimal receiver CR approval", "status: APPROVED", decimal_cr),
         ("ADR approval", "APPROVED", adr),
         ("Task v1.4", "task_version: 1.4", task),
         ("OQ resolution", "OQ-S2-005", oq),
@@ -130,6 +133,8 @@ def _governance_binding() -> dict[str, str]:
         ("receiver OQ resolved state", "| RESOLVED | S2-T15 upstream binding", oq),
         ("Context receiver OQ", "OQ-S2-007", oq),
         ("Context receiver OQ resolved state", "RESOLVED BY CR-2026-028", oq),
+        ("Decimal receiver OQ", "OQ-S2-008", oq),
+        ("Decimal receiver OQ resolved state", "RESOLVED BY CR-2026-029", oq),
     )
     for label, marker, content in required:
         if marker not in content:
@@ -608,7 +613,7 @@ def preflight(*, authority_path: Path, binning_set_path: Path) -> dict[str, Any]
     binning = read_binning_set(binning_set_path, authority_hash=authority.authority_hash)
     if binning.get("code_commit") != authority.code_commit:
         raise ValueError("binning snapshot set code commit drift")
-    predecessor = require_single_successor_creation_state(RUNS_ROOT)
+    predecessor = require_final_successor_creation_state(RUNS_ROOT)
     free_bytes = shutil.disk_usage(STAGE2_ROOT).free
     if free_bytes < 10 * 1024**3:
         raise ValueError("insufficient free space for S2-T15")

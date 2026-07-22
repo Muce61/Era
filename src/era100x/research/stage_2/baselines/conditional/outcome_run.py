@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, cast
 
@@ -85,6 +85,24 @@ def _json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
+def _candidate_from_canonical_json(payload: dict[str, Any]) -> V14ControlCandidate:
+    """Restore the one Decimal field without relaxing strict candidate validation."""
+
+    raw_price = payload.get("control_entry_price")
+    if not isinstance(raw_price, str):
+        raise ValueError("control_entry_price must be a canonical JSON decimal string")
+    try:
+        price = Decimal(raw_price)
+    except InvalidOperation as error:
+        raise ValueError("control_entry_price is not a valid decimal string") from error
+    if not price.is_finite() or price <= 0:
+        raise ValueError("control_entry_price must be finite and positive")
+    if format(price, "f") != raw_price:
+        raise ValueError("control_entry_price is not canonically formatted")
+    restored = {**payload, "control_entry_price": price}
+    return V14ControlCandidate.model_validate(restored)
+
+
 def _ingest_candidates(database: sqlite3.Connection, files: tuple[Path, ...]) -> int:
     database.execute(
         """
@@ -106,7 +124,9 @@ def _ingest_candidates(database: sqlite3.Connection, files: tuple[Path, ...]) ->
         table = pq.read_table(path, columns=["selected_candidates_json"])
         for encoded in table["selected_candidates_json"].to_pylist():
             for payload in json.loads(str(encoded)):
-                candidate = V14ControlCandidate.model_validate(payload)
+                if not isinstance(payload, dict):
+                    raise ValueError("selected candidate payload must be a JSON object")
+                candidate = _candidate_from_canonical_json(payload)
                 canonical = _json(payload)
                 existing = database.execute(
                     "SELECT payload_json FROM candidates WHERE control_candidate_id = ?",

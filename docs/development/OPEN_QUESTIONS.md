@@ -2,7 +2,7 @@
 
 ## OQ-S2-008 — S2-T15 strict Decimal receiver and final successor recovery
 
-- status: OPEN / BLOCKS CODE CHANGE AND NEW AUTHORITY OR RUN
+- status: RESOLVED BY CR-2026-029 / IMPLEMENTATION GATES REMAIN
 - task: S2-T15 v1.4
 - proposed_resolution: CR-2026-029
 - evidence: The CR-2026-028 successor completed `456 / 456` outcome-blind groups, then failed
@@ -12,6 +12,11 @@
   successor chain and exactly one final replacement Authority/bin/Run chain.
 - boundary: no in-place override, no partial-result publication, no contract change, no S2-T16+,
   and Stage 3 remains locked.
+- decision: Muce approved the minimum strict Decimal receiver correction, invalidation of the
+  failed CR-2026-028 successor chain and exactly one final replacement chain at
+  `2026-07-22T14:12:52Z`.
+- remaining_gates: regression tests, full quality, fresh audit, corrected Authority/TRAIN bins and
+  final preflight must PASS before the final Run ID.
 
 ## OQ-S2-007 — S2-T15 sealed Episode Context receiver and successor recovery
 

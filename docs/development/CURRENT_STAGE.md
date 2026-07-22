@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T15 v1.4 — conditional random baseline
-Status: S2_T15_V1_4_FAILED_UNPUBLISHED_OQ_S2_008_BLOCKS_RECOVERY
+Status: S2_T15_V1_4_CR_2026_029_APPROVED_IMPLEMENTATION_GATES
 ```
 
 The unique CR-2026-028 successor
@@ -13,9 +13,11 @@ Context boundary and completed all `456 / 456` outcome-blind matching groups. It
 before the first selected-control H2 outcome because the post-selection receiver passed the
 canonical JSON string form of `control_entry_price` to strict Decimal validation. The checkpoint
 is `FAILED_UNPUBLISHED`, `published=false`, `resume_allowed=false`; no outcome matrix, summary,
-reconciliation, Catalog, Manifest, Verify or research delta exists. OQ-S2-008 and draft
-CR-2026-029 block any code correction, new Authority or further Run. S2-T16+ remain unauthorized
-and Stage 3 remains locked.
+reconciliation, Catalog, Manifest, Verify or research delta exists. Muce approved CR-2026-029 and
+resolved OQ-S2-008 at `2026-07-22T14:12:52Z`, authorizing only the strict Decimal receiver fix,
+invalidation of the failed successor chain and exactly one final replacement chain. Quality,
+fresh-audit, Authority/bin and preflight gates remain. S2-T16+ remain unauthorized and Stage 3
+remains locked.
 
 Stage 0 and Stage 1 remain PASSED with VALID baselines. Stage 2 Plan v1.2 remains APPROVED;
 S2-T19 and S2-T01～S2-T12 are PASSED. Muce approved S2-T12 v1.3 at

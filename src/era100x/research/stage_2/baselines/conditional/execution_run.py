@@ -24,8 +24,8 @@ from .outcome_blind_producer import BinningIndex, SameFamilyIntervals, match_gro
 from .outcome_run import produce_post_selection_evidence
 from .reconciliation import ControlReconciliation, EpisodeReconciliation
 from .successor_policy import (
-    require_single_successor_creation_state,
-    require_single_successor_resume_state,
+    require_final_successor_creation_state,
+    require_final_successor_resume_state,
 )
 from .t10_access import FixedT10Reader, read_json_file
 from .v14_contracts import (
@@ -214,7 +214,7 @@ def run_full_execution(
     if bins.get("code_commit") != current_commit:
         raise ValueError("T15 binning set was not frozen by the Authority commit")
     if resume_run_id is None:
-        predecessor = require_single_successor_creation_state(runs_root)
+        predecessor = require_final_successor_creation_state(runs_root)
         run_id = _new_run_id(authority.authority_hash)
         run_root = runs_root / run_id
         run_root.mkdir(parents=False, exist_ok=False)
@@ -243,7 +243,7 @@ def run_full_execution(
             raise ValueError("unsafe T15 resume Run ID")
         run_id = resume_run_id
         run_root = runs_root / run_id
-        predecessor = require_single_successor_resume_state(runs_root, run_id)
+        predecessor = require_final_successor_resume_state(runs_root, run_id)
         checkpoint_path = run_root / "checkpoint.json"
         checkpoint = read_json_file(checkpoint_path)
         if (
