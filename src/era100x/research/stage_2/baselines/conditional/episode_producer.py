@@ -86,6 +86,21 @@ def _episode_key(row: dict[str, Any]) -> tuple[str, str, str, str]:
 def _load_t10_bindings(
     reader: FixedT10Reader, *, instrument: str
 ) -> dict[tuple[str, str, str, str], dict[str, Any]]:
+    trigger_rows = reader.read_physical_dataset(
+        dataset_name="price_triggers",
+        dataset_version="group1-v1-price-v1",
+        instrument=instrument,
+        variant="V1_PRICE",
+        columns=["trigger_id", "event_parameter_set_id", "context_state", "status"],
+    ).to_pylist()
+    trigger_contexts: dict[tuple[str, str], tuple[str, str]] = {}
+    for row in trigger_rows:
+        trigger_key = (str(row["trigger_id"]), str(row["event_parameter_set_id"]))
+        value = (str(row["context_state"]), str(row["status"]))
+        existing_trigger = trigger_contexts.get(trigger_key)
+        if existing_trigger is not None and existing_trigger != value:
+            raise ValueError("T10 price-trigger composite Context binding conflict")
+        trigger_contexts[trigger_key] = value
     result: dict[tuple[str, str, str, str], dict[str, Any]] = {}
     columns = [
         "market_episode_id",
@@ -94,6 +109,7 @@ def _load_t10_bindings(
         "variant_id",
         "canonical_key_level_id",
         "available_at_ts",
+        "trigger_id",
     ]
     for version, variant in (
         ("group1-v1-price-v1", "V1_PRICE"),
@@ -107,6 +123,13 @@ def _load_t10_bindings(
             columns=columns,
         )
         for row in table.to_pylist():
+            trigger_key = (str(row["trigger_id"]), str(row["parameter_set_id"]))
+            context = trigger_contexts.get(trigger_key)
+            if context is None:
+                raise ValueError("T10 Episode lacks its sealed price-trigger Context")
+            if context != ("UP", "PASS"):
+                raise ValueError("T10 Episode binds a non-PASS or non-UP price trigger")
+            row["context_state"] = context[0]
             key = _episode_key(row)
             existing = result.get(key)
             if existing is not None and existing != row:
@@ -261,6 +284,7 @@ def prepare_episode_evidence(
                             parameter_set_id=str(row["parameter_set_id"]),
                             canonical_key_level_id=str(binding["canonical_key_level_id"]),
                             reference_price=Decimal(row["reference_price"]),
+                            high_timeframe_trend_state=str(binding["context_state"]),
                         )
                         grouped.setdefault(_utc_date(anchor_ns), []).append(base)
             for owner_date, rows in sorted(grouped.items()):
@@ -280,10 +304,6 @@ def prepare_episode_evidence(
                         base["exclusion_reason"] = reason
                         exclusion_counts[reason] += 1
                     else:
-                        if feature.high_timeframe_trend_state != "UP":
-                            raise ValueError(
-                                "reconstructed control Context disagrees with T10 Episode"
-                            )
                         base.update(
                             {
                                 "episode_status": "ELIGIBLE",

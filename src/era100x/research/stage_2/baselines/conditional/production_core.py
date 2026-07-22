@@ -65,6 +65,7 @@ class EpisodeFeatureRequest:
     parameter_set_id: str
     canonical_key_level_id: str
     reference_price: Decimal
+    high_timeframe_trend_state: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -612,7 +613,6 @@ def prepare_episode_features(
     )
     volatility = _volatility_values(bar_rows, instrument=instrument, anchors=anchors)
     activity = _activity_values(activity_rows, anchors)
-    contexts = _context_values(bar_rows, instrument=instrument, anchors=anchors)
     by_binding: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for row in level_rows:
         by_binding.setdefault(
@@ -624,7 +624,7 @@ def prepare_episode_features(
         if request.reference_price <= 0 or request.anchor_ns not in volatility:
             excluded[request.episode_row_id] = "FEATURE_UNAVAILABLE"
             continue
-        if request.anchor_ns not in activity or request.anchor_ns not in contexts:
+        if request.anchor_ns not in activity:
             excluded[request.episode_row_id] = "FEATURE_UNAVAILABLE"
             continue
         bound = tuple(
@@ -653,7 +653,7 @@ def prepare_episode_features(
             reference_price=request.reference_price,
             volatility_rms_bps=volatility[request.anchor_ns],
             activity_count_60s=activity[request.anchor_ns],
-            high_timeframe_trend_state=contexts[request.anchor_ns],
+            high_timeframe_trend_state=request.high_timeframe_trend_state,
             key_level_distance_bps=distance,
         )
     return prepared, excluded

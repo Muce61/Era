@@ -1123,7 +1123,23 @@ def _stage2_conditional_baseline_projection(stage2_root: Path) -> dict[str, Any]
     if runs:
         newest = max(runs, key=lambda path: (path.stat().st_mtime_ns, path.name))
         failure = _safe_json_object(newest / "reports/failure.json")
-        verify = _safe_json_object(newest / "reports/verify.json")
+        checkpoint = _safe_json_object(newest / "checkpoint.json")
+        verify_files = (
+            tuple(
+                path
+                for path in (newest / "verify").glob("*.json")
+                if path.is_file() and not path.is_symlink() and not path.name.startswith("._")
+            )
+            if (newest / "verify").is_dir() and not (newest / "verify").is_symlink()
+            else ()
+        )
+        verify = (
+            _safe_json_object(
+                max(verify_files, key=lambda path: (path.stat().st_mtime_ns, path.name))
+            )
+            if verify_files
+            else _safe_json_object(newest / "reports/verify.json")
+        )
         validation_path = REPOSITORY_ROOT / S2T15_VALIDATION_RELATIVE_PATH
         validation = (
             validation_path.read_text(encoding="utf-8")
@@ -1137,21 +1153,33 @@ def _stage2_conditional_baseline_projection(stage2_root: Path) -> dict[str, Any]
         )
         verify_pass = (
             verify.get("status") == "PASS"
-            and verify.get("reconciliation_status") == "PASS"
+            and (
+                bool(verify.get("reconciliation_hash"))
+                or verify.get("reconciliation_status") == "PASS"
+            )
             and verify.get("historical_evidence_only") is True
             and verify.get("stage3_locked") is True
             and verify.get("run_id") == newest.name
-            and verify.get("authority_hash")
+            and (checkpoint.get("authority_hash") or verify.get("authority_hash"))
             in {path.stem.removeprefix("authority-") for path in authorities}
         )
+        checkpoint_failed = checkpoint.get("status") in {
+            "FAILED",
+            "FAILED_UNPUBLISHED",
+            "INVALIDATED",
+        }
         verify_status = "PASS" if verify_pass else "FAIL" if verify else "NOT_RUN"
         validation_status = "PASS" if validation_pass else "FAIL" if validation else "NOT_RUN"
         status = (
-            "FAILED" if failure else "PASS" if verify_pass and validation_pass else "IN_PROGRESS"
+            "FAILED"
+            if failure or checkpoint_failed
+            else "PASS"
+            if verify_pass and validation_pass
+            else "IN_PROGRESS"
         )
         reason = (
             "S2_T15_FAILED_UNPUBLISHED"
-            if failure
+            if failure or checkpoint_failed
             else "S2_T15_FULL_VERIFY_PASS"
             if status == "PASS"
             else "S2_T15_RUN_IN_PROGRESS"

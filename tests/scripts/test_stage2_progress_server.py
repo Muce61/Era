@@ -883,6 +883,27 @@ def test_s2_t15_blocked_audit_projects_blocked(tmp_path: Path) -> None:
     assert result["reason_code"] == "S2_T15_UPSTREAM_T10_RECEIPT_DISTRIBUTIONS_MISSING"
 
 
+def test_s2_t15_failed_checkpoint_overrides_stale_run_in_progress(tmp_path: Path) -> None:
+    run_id = "stage2-s2t15-conditional-20260722T000000Z-000000000000"
+    _write(
+        tmp_path / "runs" / run_id / "checkpoint.json",
+        json.dumps(
+            {
+                "run_id": run_id,
+                "status": "FAILED_UNPUBLISHED",
+                "phase": "FAILED",
+                "published": False,
+                "stage3_locked": True,
+            }
+        ),
+    )
+
+    result = _stage2_conditional_baseline_projection(tmp_path)
+
+    assert result["status"] == "FAILED"
+    assert result["reason_code"] == "S2_T15_FAILED_UNPUBLISHED"
+
+
 def test_s2_t11_malformed_symlink_and_conflicting_chain_fail_closed(tmp_path: Path) -> None:
     directory = tmp_path / "task-evidence/S2-T11"
     _write(directory / "broken.json", "not-json")

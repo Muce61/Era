@@ -59,6 +59,7 @@ REQUIRED_T10_DATASETS = {
     ("trade_second_primitives", "2.0"),
     ("contract_price_1s", "2.0"),
     ("canonical_key_levels", "group1-v1-price-v1"),
+    ("price_triggers", "group1-v1-price-v1"),
     ("market_episodes", "group1-v1-price-v1"),
     ("market_episodes", "group1-v1-flow-v1"),
 }
@@ -220,6 +221,13 @@ def audit_upstream(*, write_report: bool = True) -> dict[str, Any]:
             "expires_at_ns",
             "status",
             "event_parameter_set_id",
+        },
+        ("price_triggers", "group1-v1-price-v1"): {
+            "instrument",
+            "trigger_id",
+            "event_parameter_set_id",
+            "context_state",
+            "status",
         },
         ("market_episodes", "group1-v1-price-v1"): {
             "instrument",
