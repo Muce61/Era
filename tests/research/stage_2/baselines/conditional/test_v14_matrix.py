@@ -105,7 +105,7 @@ def _cells(label: str = "TARGET_FIRST") -> tuple[OutcomeCell, ...]:
 def test_authority_is_hash_bound_and_contains_no_run_id() -> None:
     authority = S2T15ContractAuthority.seal(
         {
-            "code_commit": "1" * 64,
+            "code_commit": "1" * 40,
             "upstream_binding_hash": "2" * 64,
             "source_s2t11_binding_hash": "5" * 64,
             "stage1_binding_hash": "6" * 64,

@@ -17,6 +17,7 @@ from era100x.research.stage_2.contracts.models import Direction, Instrument, Str
 from era100x.research.stage_2.paths.extraction.models import _canonical_json
 
 SHA256_PATTERN = r"^[0-9a-f]{64}$"
+GIT_COMMIT_PATTERN = r"^[0-9a-f]{40}$"
 TASK_VERSION = "1.4"
 SETUP_ID = "KEY_LOW_SWEEP_RECLAIM_HOLD_V1@1.0"
 CONTEXT_MODEL_ID = "CAUSAL_EMA20_1H@1.0"
@@ -135,7 +136,7 @@ class S2T15ContractAuthority(StrictEventModel):
     manual_version: Literal["V1.3.4"] = "V1.3.4"
     change_request: Literal["CR-2026-026"] = "CR-2026-026"
     decision_record: Literal["ADR-S2-009"] = "ADR-S2-009"
-    code_commit: str = Field(pattern=SHA256_PATTERN)
+    code_commit: str = Field(pattern=GIT_COMMIT_PATTERN)
     upstream_binding_hash: str = Field(pattern=SHA256_PATTERN)
     source_s2t11_binding_hash: str = Field(pattern=SHA256_PATTERN)
     stage1_binding_hash: str = Field(pattern=SHA256_PATTERN)
