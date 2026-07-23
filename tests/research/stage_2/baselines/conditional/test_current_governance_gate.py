@@ -1,0 +1,79 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from era100x.foundation.governance import GovernanceBlockedError
+from era100x.research.stage_2.baselines.conditional.binning_run import (
+    freeze_binning_snapshots,
+)
+from era100x.research.stage_2.baselines.conditional.context_receipt_supplement import (
+    build_context_receipt_supplement,
+)
+from era100x.research.stage_2.baselines.conditional.full_run import freeze_authority, preflight
+from era100x.research.stage_2.baselines.conditional.receipt_supplement import (
+    build_receipt_distribution_supplement,
+)
+from era100x.research.stage_2.baselines.conditional.successor_policy import (
+    require_final_successor_creation_state,
+    require_final_successor_resume_state,
+)
+
+
+def _assert_stopped(error: pytest.ExceptionInfo[GovernanceBlockedError], operation: str) -> None:
+    assert error.value.reason_code == "GOVERNANCE_CURRENT_TASK_STOPPED"
+    assert error.value.operation == operation
+    assert error.value.blocking_questions == ("OQ-S2-009", "OQ-S2-010", "OQ-S2-011")
+
+
+def test_direct_authority_freeze_is_blocked_before_reading_an_audit() -> None:
+    with pytest.raises(GovernanceBlockedError) as error:
+        freeze_authority(audit_path=Path("does-not-exist.json"))
+    _assert_stopped(error, "FREEZE_AUTHORITY")
+
+
+def test_direct_preflight_is_blocked_before_reading_inputs() -> None:
+    with pytest.raises(GovernanceBlockedError) as error:
+        preflight(
+            authority_path=Path("does-not-exist-authority.json"),
+            binning_set_path=Path("does-not-exist-bins.json"),
+        )
+    _assert_stopped(error, "PREFLIGHT")
+
+
+def test_direct_bin_freeze_is_blocked_before_reading_inputs() -> None:
+    with pytest.raises(GovernanceBlockedError) as error:
+        freeze_binning_snapshots(
+            authority_path=Path("does-not-exist-authority.json"),
+            bin_root=Path("does-not-exist-bin-root"),
+            t10_snapshot=Path("does-not-exist-t10"),
+            t10_snapshot_id="missing",
+            current_commit="0" * 40,
+            repository_clean=True,
+        )
+    _assert_stopped(error, "FREEZE_BINS")
+
+
+def test_direct_receiver_supplement_build_is_blocked_before_source_reads() -> None:
+    with pytest.raises(GovernanceBlockedError) as error:
+        build_receipt_distribution_supplement()
+    _assert_stopped(error, "BUILD_AUDIT_SUPPLEMENT")
+
+
+def test_direct_context_supplement_build_is_blocked_before_source_reads() -> None:
+    with pytest.raises(GovernanceBlockedError) as error:
+        build_context_receipt_supplement()
+    _assert_stopped(error, "BUILD_AUDIT_SUPPLEMENT")
+
+
+def test_direct_new_run_is_blocked_before_inspecting_run_directories(tmp_path: Path) -> None:
+    with pytest.raises(GovernanceBlockedError) as error:
+        require_final_successor_creation_state(tmp_path)
+    _assert_stopped(error, "RUN")
+
+
+def test_direct_resume_is_blocked_before_inspecting_run_directories(tmp_path: Path) -> None:
+    with pytest.raises(GovernanceBlockedError) as error:
+        require_final_successor_resume_state(tmp_path, "stage2-s2t15-conditional-fake")
+    _assert_stopped(error, "RESUME")
