@@ -382,7 +382,7 @@ def _t16_probe(*, reader: FixedT10Reader, row: dict[str, Any]) -> dict[str, Any]
     binding = bindings[_episode_key(row)]
     episode_context = str(binding["context_state"])
     features: list[PreparedMarketFeature] = []
-    for owner_date in (date(2020, 1, 2), date(2020, 1, 3)):
+    for owner_date in (date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)):
         features.extend(
             prepare_daily_features(
                 reader,
