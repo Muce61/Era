@@ -258,7 +258,9 @@ def _validated_rows(reader: CatalogReaderV2) -> tuple[list[dict[str, Any]], dict
             }
             row["supplement_row_hash"] = _row_hash(row)
             rows.append(row)
-            dataset_counts[f"{receipt.partition.dataset_name}@{receipt.partition.dataset_version}"] += 1
+            dataset_counts[
+                f"{receipt.partition.dataset_name}@{receipt.partition.dataset_version}"
+            ] += 1
 
     for receipt in empty_receipts:
         spec = reader.specs[receipt.partition.dataset_spec_hash]
