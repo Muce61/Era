@@ -49,10 +49,10 @@ _DOCUMENT_MARKERS: dict[str, tuple[str, ...]] = {
     ),
     "docs/development/TRACEABILITY.md": (
         "S2_T15_STOPPED_SRP_S2_001_EXEMPTIONS_APPROVED_NOT_EXECUTABLE",
-        "No formal T15 research result exists",
+        "No code, Authority, Run, S2-T16+ or Stage 3 is authorized.",
     ),
     "docs/development/DEPENDENCY_GRAPH.md": (
-        "S2-T11～S2-T14 are PASSED",
+        "S2-T19 and S2-T01～S2-T14 are PASSED",
         "S2-T15 is STOPPED",
         "Stage 3 remains locked",
     ),
