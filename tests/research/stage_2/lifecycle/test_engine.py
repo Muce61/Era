@@ -9,6 +9,7 @@ from era100x.research.stage_2.lifecycle import (
     CostScenario,
     FundingTrack,
     LifecycleObservation,
+    PriceObservationSource,
     SourceCoverage,
     evaluate_lifecycle_pair,
 )
@@ -31,14 +32,18 @@ SCENARIO = CostScenario(
 
 
 def _observation(
-    seconds: int, price: str, *, trade_id: int = 1, **kwargs: bool
+    seconds: int,
+    price: str,
+    *,
+    trade_id: int = 1,
+    source: PriceObservationSource = PriceObservationSource.CONTRACT_PRICE_1S,
 ) -> LifecycleObservation:
     return LifecycleObservation(
         ts_event_ns=ENTRY_NS + seconds * 1_000_000_000,
+        price_source=source,
         venue_trade_id=trade_id,
         canonical_trade_id=f"{trade_id:064x}",
         price=Decimal(price),
-        **kwargs,
     )
 
 
@@ -65,7 +70,12 @@ def test_primary_near_zero_and_unactivated_pair_closes_target() -> None:
     result = _evaluate(
         (
             _observation(PRIMARY_LANDMARK_SECONDS, "100.10", trade_id=1),
-            _observation(PRIMARY_LANDMARK_SECONDS + 60, "101.36", trade_id=2),
+            _observation(
+                PRIMARY_LANDMARK_SECONDS + 60,
+                "101.36",
+                trade_id=2,
+                source=PriceObservationSource.CANONICAL_TRADE,
+            ),
         )
     )
     assert result.eligible_at_primary_landmark is True
@@ -73,7 +83,9 @@ def test_primary_near_zero_and_unactivated_pair_closes_target() -> None:
     assert result.immediate_exit.terminal_state == "THEORETICAL_FULLY_FLAT"
     assert result.continue_holding.exit_reason == "TICKET_DOUBLE_TARGET"
     assert result.continue_holding.remaining_proxy_quantity == 0
-    assert result.price_proxy_source == "CONTRACT_PRICE_H3_PROXY"
+    assert result.price_proxy_source == "CONTRACT_PRICE_1S"
+    assert result.protection_exit_model == "NOT_MODELLED_STAGE2"
+    assert result.structure_exit_model == "NOT_MODELLED_STAGE2"
     assert result.historical_mark_price_claim is False
     assert result.output_hash == result.computed_hash()
 
@@ -82,7 +94,12 @@ def test_twenty_bp_auxiliary_crossing_does_not_close_the_lifecycle() -> None:
     result = _evaluate(
         (
             _observation(PRIMARY_LANDMARK_SECONDS, "100.10", trade_id=1),
-            _observation(PRIMARY_LANDMARK_SECONDS + 60, "100.20", trade_id=2),
+            _observation(
+                PRIMARY_LANDMARK_SECONDS + 60,
+                "100.20",
+                trade_id=2,
+                source=PriceObservationSource.CANONICAL_TRADE,
+            ),
         ),
     )
     assert result.continue_holding.terminal_state == "RIGHT_CENSORED"
@@ -117,7 +134,12 @@ def test_fill_scenarios_reconcile_remaining_quantity_to_zero(fill_ratio: str) ->
         entry_price=ENTRY,
         observations=(
             _observation(PRIMARY_LANDMARK_SECONDS, "100.10", trade_id=1),
-            _observation(PRIMARY_LANDMARK_SECONDS + 1, "99.75", trade_id=2),
+            _observation(
+                PRIMARY_LANDMARK_SECONDS + 1,
+                "99.75",
+                trade_id=2,
+                source=PriceObservationSource.CANONICAL_TRADE,
+            ),
         ),
         source_coverage=SourceCoverage.COMPLETE,
         scenario=scenario,
@@ -202,6 +224,23 @@ def test_liquidation_scenario_is_named_as_scenario_not_real_fact() -> None:
     assert result.continue_holding.historical_execution_claim is False
 
 
+def test_contract_risk_precedes_trade_target_in_the_same_second() -> None:
+    second = PRIMARY_LANDMARK_SECONDS + 1
+    result = _evaluate(
+        (
+            _observation(PRIMARY_LANDMARK_SECONDS, "100.10", trade_id=1),
+            _observation(second, "99.00", trade_id=2),
+            _observation(
+                second,
+                "101.50",
+                trade_id=3,
+                source=PriceObservationSource.CANONICAL_TRADE,
+            ),
+        )
+    )
+    assert result.continue_holding.exit_reason == "SCENARIO_LIQUIDATION_BOUNDARY_CROSSED"
+
+
 def test_funding_is_deducted_at_landmark() -> None:
     base = _observation(PRIMARY_LANDMARK_SECONDS, "100.10", trade_id=1)
     funded = replace(base, cumulative_funding=Decimal("0.25"))
@@ -248,10 +287,12 @@ def test_ticket_doubling_target_moves_with_accumulated_funding() -> None:
             replace(
                 _observation(PRIMARY_LANDMARK_SECONDS + 60, "101.36", trade_id=2),
                 cumulative_funding=Decimal("0.25"),
+                price_source=PriceObservationSource.CANONICAL_TRADE,
             ),
             replace(
                 _observation(PRIMARY_LANDMARK_SECONDS + 120, "101.40", trade_id=3),
                 cumulative_funding=Decimal("0.25"),
+                price_source=PriceObservationSource.CANONICAL_TRADE,
             ),
         )
     )

@@ -1345,7 +1345,7 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
     assert result["execution_gates"]["FINAL_CODE_7_DAY_REHEARSAL"] == "PENDING"
     assert result["stage3_locked"] is True
     assert result["formal_successor_result_exists"] is False
-    assert result["price_proxy_source"] == "CONTRACT_PRICE_H3_PROXY"
+    assert result["price_proxy_source"] == "CONTRACT_PRICE_1S"
     assert result["historical_mark_price_claim"] is False
     assert result["lifecycle_target_contract"] == "DYNAMIC_NET_TICKET_DOUBLE_APPROX_136BP"
     assert result["auxiliary_first_passage_target_bps"] == 20
@@ -1394,6 +1394,15 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
                 }
             ],
             "conditional_baseline_probe": [{"instrument": "BTCUSDT", "match_level": "L3"}],
+            "handoffs": [
+                {
+                    "task_id": task,
+                    "row_count": index,
+                    "output_hash": str(index) * 64,
+                    "verify_status": "PASS",
+                }
+                for index, task in enumerate(MODULE.V13_TASKS, start=1)
+            ],
         },
         "report_hash",
     )
@@ -1427,6 +1436,9 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
     assert rehearsed["rehearsal_report_valid"] is True
     assert rehearsed["right_censored_count"] == 1
     assert rehearsed["rehearsal_t16_match_levels"] == {"BTCUSDT": "L3"}
+    assert rehearsed["price_proxy_source"] == "CONTRACT_PRICE_1S"
+    assert rehearsed["tasks"]["S2P13-T14"]["row_count"] == 4
+    assert rehearsed["tasks"]["S2P13-T14"]["verify_status"] == "PASS"
     assert all(
         task["reason_code"] == "SEVEN_DAY_REHEARSAL_PASS_NOT_FORMAL"
         for task in rehearsed["tasks"].values()

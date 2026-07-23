@@ -428,7 +428,9 @@ class _MetricState:
             "source_gap_codes": sorted(set(gap_codes)),
             "source_ambiguity_codes": sorted(ambiguity),
             "historical_evidence_only": True,
-            "source_s2t11_snapshot_id": SOURCE_S2T11_SNAPSHOT_ID,
+            "source_s2t11_snapshot_id": source.get(
+                "source_s2t11_snapshot_id", SOURCE_S2T11_SNAPSHOT_ID
+            ),
             "source_s2t11_manifest_hash": source["source_s2t11_manifest_hash"],
             "source_s2t11_catalog_hash": source["source_s2t11_catalog_hash"],
             "source_s2t10_snapshot_id": self.lineage["source_snapshot_id"],
@@ -485,6 +487,8 @@ class _MetricsWriter:
 
 def _load_inputs(
     instrument: Instrument,
+    *,
+    source_snapshot_root: Path = SOURCE_S2T11_SNAPSHOT_ROOT,
 ) -> tuple[
     list[dict[str, Any]],
     dict[str, dict[str, Any]],
@@ -492,7 +496,7 @@ def _load_inputs(
     list[dict[str, Any]],
     list[dict[str, Any]],
 ]:
-    root = SOURCE_S2T11_SNAPSHOT_ROOT / instrument
+    root = source_snapshot_root / instrument
     episodes = pq.read_table(root / "episode_paths.parquet").to_pylist()
     quality_rows = pq.read_table(root / "path_quality.parquet").to_pylist()
     lineage_rows = pq.read_table(root / "lineage.parquet").to_pylist()
@@ -506,10 +510,14 @@ def _load_inputs(
     return episodes, quality, lineage, h1_slices, h2_slices
 
 
-def _reference_prices() -> dict[str, Decimal]:
+def _reference_prices(
+    *,
+    source_s2t10_snapshot_root: Path = SOURCE_S2T10_SNAPSHOT_ROOT,
+    source_s2t10_snapshot_id: str = FIXED_SNAPSHOT_ID,
+) -> dict[str, Decimal]:
     reader = CatalogReaderV2.open(
-        SOURCE_S2T10_SNAPSHOT_ROOT,
-        expected_snapshot_id=FIXED_SNAPSHOT_ID,
+        source_s2t10_snapshot_root,
+        expected_snapshot_id=source_s2t10_snapshot_id,
         deep_verify_objects=False,
     )
     triggers = _objects_for_spec(
@@ -695,11 +703,20 @@ def _build_instrument(
     thresholds: tuple[Decimal, ...],
     source: dict[str, str],
     references: dict[str, Decimal],
+    source_s2t11_snapshot_root: Path = SOURCE_S2T11_SNAPSHOT_ROOT,
+    source_s2t10_snapshot_root: Path = SOURCE_S2T10_SNAPSHOT_ROOT,
+    source_s2t10_snapshot_id: str = FIXED_SNAPSHOT_ID,
 ) -> dict[str, Any]:
-    episodes, quality, lineage, h1_slices, h2_slices = _load_inputs(instrument)
+    if source_s2t11_snapshot_root == SOURCE_S2T11_SNAPSHOT_ROOT:
+        episodes, quality, lineage, h1_slices, h2_slices = _load_inputs(instrument)
+    else:
+        episodes, quality, lineage, h1_slices, h2_slices = _load_inputs(
+            instrument,
+            source_snapshot_root=source_s2t11_snapshot_root,
+        )
     source_reader = CatalogReaderV2.open(
-        SOURCE_S2T10_SNAPSHOT_ROOT,
-        expected_snapshot_id=FIXED_SNAPSHOT_ID,
+        source_s2t10_snapshot_root,
+        expected_snapshot_id=source_s2t10_snapshot_id,
         deep_verify_objects=False,
     )
     destination.parent.mkdir(parents=True, exist_ok=False)

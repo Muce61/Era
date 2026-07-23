@@ -56,6 +56,15 @@ class FundingTrack(StrEnum):
     STRESS_NO_FUNDING_CREDIT = "STRESS_NO_FUNDING_CREDIT"
 
 
+class PriceObservationSource(StrEnum):
+    CONTRACT_PRICE_1S = "CONTRACT_PRICE_1S"
+    CANONICAL_TRADE = "CANONICAL_TRADE"
+
+
+class OptionalExitModelStatus(StrEnum):
+    NOT_MODELLED_STAGE2 = "NOT_MODELLED_STAGE2"
+
+
 def _convert(value: Any) -> Any:
     if isinstance(value, Decimal):
         return format(value, "f")
@@ -107,18 +116,27 @@ class CostScenario:
 @dataclass(frozen=True, order=True)
 class LifecycleObservation:
     ts_event_ns: int
+    price_source: PriceObservationSource
     venue_trade_id: int
     canonical_trade_id: str
     price: Decimal
     cumulative_funding: Decimal = Decimal("0")
-    protection_exit: bool = False
-    structure_exit: bool = False
 
     def __post_init__(self) -> None:
         if self.ts_event_ns < 0 or self.venue_trade_id < 0:
             raise ValueError("observation identity cannot be negative")
         if not self.canonical_trade_id or self.price <= 0:
             raise ValueError("observation requires identity and positive price")
+
+    @property
+    def stable_order_key(self) -> tuple[int, int, int, str]:
+        source_priority = 0 if self.price_source is PriceObservationSource.CONTRACT_PRICE_1S else 1
+        return (
+            self.ts_event_ns,
+            source_priority,
+            self.venue_trade_id,
+            self.canonical_trade_id,
+        )
 
 
 @dataclass(frozen=True)
@@ -149,6 +167,8 @@ class LifecyclePairResult:
     source_coverage: SourceCoverage
     funding_track: FundingTrack
     price_proxy_source: str
+    protection_exit_model: OptionalExitModelStatus
+    structure_exit_model: OptionalExitModelStatus
     historical_mark_price_claim: bool
     output_hash: str
 

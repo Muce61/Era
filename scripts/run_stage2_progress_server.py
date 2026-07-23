@@ -314,6 +314,11 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         if rehearsal_report_valid
         else []
     )
+    rehearsal_handoffs = {
+        str(item.get("task_id")): item
+        for item in cast(list[dict[str, Any]], rehearsal_report.get("handoffs", []))
+        if isinstance(item, dict)
+    }
     pending_execution_gates = [] if rehearsal_pass else ["FINAL_CODE_7_DAY_REHEARSAL"]
     checkpoint_valid = (
         checkpoint.get("schema_name") == "stage2-plan-v13-successor-checkpoint-v1"
@@ -352,6 +357,9 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
             task: {
                 "status": "PASS",
                 "reason_code": "SEVEN_DAY_REHEARSAL_PASS_NOT_FORMAL",
+                "row_count": rehearsal_handoffs.get(task, {}).get("row_count"),
+                "output_hash": rehearsal_handoffs.get(task, {}).get("output_hash"),
+                "verify_status": rehearsal_handoffs.get(task, {}).get("verify_status"),
             }
             for task in V13_TASKS
         }
@@ -360,6 +368,9 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
             task: {
                 "status": "PASS",
                 "reason_code": "SEVEN_DAY_REHEARSAL_PASS_PENDING_UI_CHECK",
+                "row_count": rehearsal_handoffs.get(task, {}).get("row_count"),
+                "output_hash": rehearsal_handoffs.get(task, {}).get("output_hash"),
+                "verify_status": rehearsal_handoffs.get(task, {}).get("verify_status"),
             }
             for task in V13_TASKS
         }
@@ -423,7 +434,7 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         ),
         "ticket_double_probability_delta": checkpoint.get("ticket_double_probability_delta"),
         "ticket_equity_per_day_delta": checkpoint.get("ticket_equity_per_day_delta"),
-        "price_proxy_source": "CONTRACT_PRICE_H3_PROXY",
+        "price_proxy_source": "CONTRACT_PRICE_1S",
         "historical_mark_price_claim": False,
         "lifecycle_target_contract": "DYNAMIC_NET_TICKET_DOUBLE_APPROX_136BP",
         "auxiliary_first_passage_target_bps": 20,

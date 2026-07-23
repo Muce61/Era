@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import sys
 from pathlib import Path
 
@@ -33,6 +34,8 @@ def _seal(payload: dict[str, object], field: str) -> dict[str, object]:
 def _approved_plan(tmp_path: Path, *, commit: str = "a" * 40) -> Path:
     evidence_root = tmp_path / "evidence"
     evidence_root.mkdir()
+    preregistration = tmp_path / "S2P13-T20-preregistration.md"
+    preregistration.write_text("frozen preregistration", encoding="utf-8")
     tasks: dict[str, object] = {}
     for task_id in TASKS:
         task_root = evidence_root / task_id
@@ -55,6 +58,8 @@ def _approved_plan(tmp_path: Path, *, commit: str = "a" * 40) -> Path:
             "stage_plan_version": "1.3",
             "code_commit": commit,
             "evidence_root": str(evidence_root),
+            "preregistration_path": str(preregistration),
+            "preregistration_hash": hashlib.sha256(preregistration.read_bytes()).hexdigest(),
             "tasks": tasks,
             "formal_run_created": False,
         },
@@ -188,6 +193,8 @@ def test_adapter_runs_real_argv_and_accepts_only_bound_receipt(tmp_path: Path) -
         adapter_plan_hash="2" * 64,
         supervisor_checkpoint_path=checkpoint,
         repository_root=Path.cwd(),
+        preregistration_path=producer,
+        preregistration_hash=hashlib.sha256(producer.read_bytes()).hexdigest(),
     )
     adapter.static_preflight()
     adapter.input_preflight()
@@ -229,6 +236,8 @@ def test_retryable_exit_does_not_become_terminal_handoff(tmp_path: Path) -> None
         adapter_plan_hash="2" * 64,
         supervisor_checkpoint_path=tmp_path / "supervisor/checkpoint.json",
         repository_root=Path.cwd(),
+        preregistration_path=producer,
+        preregistration_hash=hashlib.sha256(producer.read_bytes()).hexdigest(),
     )
     with pytest.raises(RetryableInterruption, match="interrupted"):
         adapter.run_or_resume()

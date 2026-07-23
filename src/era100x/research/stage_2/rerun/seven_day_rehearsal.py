@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import tempfile
 from collections import Counter
+from functools import lru_cache
 from dataclasses import asdict, is_dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
@@ -33,7 +34,6 @@ from era100x.research.stage_2.baselines.conditional.full_run import (
     REPOSITORY_ROOT,
     T10_SNAPSHOT,
     T10_SNAPSHOT_ID,
-    T13_SNAPSHOT,
 )
 from era100x.research.stage_2.baselines.conditional.matrix_matcher import (
     attach_outcome_matrices,
@@ -63,14 +63,30 @@ from era100x.research.stage_2.baselines.conditional.v14_contracts import (
 )
 from era100x.research.stage_2.funding import verify_funding_acceptance
 from era100x.research.stage_2.lifecycle import (
+    CanonicalTradePoint,
+    ContractPricePoint,
     CostScenario,
+    FundingSettlement,
     FundingTrack,
     LifecycleObservation,
+    LifecyclePairResult,
     SourceCoverage,
+    assemble_lifecycle_observations,
     evaluate_lifecycle_pair,
+    replay_single_position_admission,
 )
+from era100x.research.stage_2.metrics.path.full_run import _reference_prices
+from era100x.research.stage_2.paths.extraction.full_run import _episode_tables
+from era100x.research.stage_2.runtime_v2.catalog import CatalogReaderV2
 
 from .orchestrator import REHEARSAL_SCHEMA, TASKS, TaskHandoff, current_commit
+from .producer_contracts import ExecutionScope, UpstreamArtifact
+from .scoped_producers import (
+    produce_scoped_ambiguity,
+    produce_scoped_first_passage,
+    produce_scoped_metrics,
+    produce_scoped_paths,
+)
 
 NS = 1_000_000_000
 DAY_NS = 86_400 * NS
@@ -191,34 +207,9 @@ def _verified_trade_window(
     cursor = _date_from_ns(start_ns)
     last_date = _date_from_ns(end_ns - 1)
     while cursor <= last_date:
-        parquet_path, receipt_path = _partition_paths(instrument, cursor)
-        receipt = _read_json(receipt_path)
-        if (
-            parquet_path.is_symlink()
-            or not parquet_path.is_file()
-            or receipt.get("instrument") != instrument
-            or receipt.get("date") != cursor.isoformat()
-            or receipt.get("byte_sha256") != _file_hash(parquet_path)
-            or int(receipt.get("venue_trade_id_reversal_count", -1)) != 0
-            or int(receipt.get("duplicate_exact_count", -1)) != 0
-        ):
-            raise ValueError(f"Stage 1 Trade partition Verify failed: {instrument} {cursor}")
-        gap_count = int(receipt.get("venue_trade_id_gap_count", -1))
-        if gap_count < 0:
-            raise ValueError(f"Stage 1 Trade gap classification missing: {instrument} {cursor}")
-        if gap_count:
-            declared_gaps.append(
-                {
-                    "instrument": instrument,
-                    "date": cursor.isoformat(),
-                    "venue_trade_id_gap_count": gap_count,
-                    "venue_trade_id_gap_examples": receipt.get("venue_trade_id_gap_examples", []),
-                }
-            )
-        table = pq.read_table(
-            parquet_path,
-            columns=["ts_event_ns", "venue_trade_id", "canonical_trade_id", "price"],
-        )
+        table, partition_hash, gap = _verified_trade_day(instrument, cursor)
+        if gap is not None:
+            declared_gaps.append(gap)
         table = table.filter(pc.greater_equal(table["ts_event_ns"], start_ns))
         table = table.filter(pc.less(table["ts_event_ns"], end_ns))
         rows.extend(
@@ -230,7 +221,7 @@ def _verified_trade_window(
             )
             for row in table.to_pylist()
         )
-        partition_hashes.append(str(receipt["byte_sha256"]))
+        partition_hashes.append(partition_hash)
         cursor += timedelta(days=1)
     ordered = tuple(
         sorted(rows, key=lambda row: (row.ts_event_ns, row.venue_trade_id, row.canonical_trade_id))
@@ -241,6 +232,66 @@ def _verified_trade_window(
     if len(identities) != len(set(identities)):
         raise ValueError("Stage 1 Trade window contains duplicate stable identities")
     return ordered, tuple(partition_hashes), tuple(declared_gaps)
+
+
+@lru_cache(maxsize=16)
+def _verified_trade_receipt_day(
+    instrument: str, owner_date: date
+) -> tuple[Path, str, dict[str, Any] | None]:
+    parquet_path, receipt_path = _partition_paths(instrument, owner_date)
+    receipt = _read_json(receipt_path)
+    if (
+        parquet_path.is_symlink()
+        or not parquet_path.is_file()
+        or receipt.get("instrument") != instrument
+        or receipt.get("date") != owner_date.isoformat()
+        or receipt.get("byte_sha256") != _file_hash(parquet_path)
+        or int(receipt.get("venue_trade_id_reversal_count", -1)) != 0
+        or int(receipt.get("duplicate_exact_count", -1)) != 0
+    ):
+        raise ValueError(f"Stage 1 Trade partition Verify failed: {instrument} {owner_date}")
+    gap_count = int(receipt.get("venue_trade_id_gap_count", -1))
+    if gap_count < 0:
+        raise ValueError(f"Stage 1 Trade gap classification missing: {instrument} {owner_date}")
+    gap = (
+        {
+            "instrument": instrument,
+            "date": owner_date.isoformat(),
+            "venue_trade_id_gap_count": gap_count,
+            "venue_trade_id_gap_examples": receipt.get("venue_trade_id_gap_examples", []),
+        }
+        if gap_count
+        else None
+    )
+    return parquet_path, str(receipt["byte_sha256"]), gap
+
+
+@lru_cache(maxsize=16)
+def _verified_trade_day(
+    instrument: str, owner_date: date
+) -> tuple[Any, str, dict[str, Any] | None]:
+    parquet_path, partition_hash, gap = _verified_trade_receipt_day(instrument, owner_date)
+    table = pq.read_table(
+        parquet_path,
+        columns=["ts_event_ns", "venue_trade_id", "canonical_trade_id", "price"],
+    )
+    return table, partition_hash, gap
+
+
+def _verified_trade_metadata(
+    *, instrument: str, start_ns: int, end_ns: int
+) -> tuple[tuple[str, ...], tuple[dict[str, Any], ...]]:
+    hashes: list[str] = []
+    gaps: list[dict[str, Any]] = []
+    cursor = _date_from_ns(start_ns)
+    last_date = _date_from_ns(end_ns - 1)
+    while cursor <= last_date:
+        _, partition_hash, gap = _verified_trade_receipt_day(instrument, cursor)
+        hashes.append(partition_hash)
+        if gap is not None:
+            gaps.append(gap)
+        cursor += timedelta(days=1)
+    return tuple(hashes), tuple(gaps)
 
 
 def _funding_rows(
@@ -267,16 +318,54 @@ def _funding_rows(
     return tuple(result)
 
 
-def _selected_t13_rows() -> dict[str, dict[str, Any]]:
-    start_ns = int(datetime(2020, 1, 1, tzinfo=UTC).timestamp() * NS)
-    end_ns = int(datetime(2020, 1, 8, tzinfo=UTC).timestamp() * NS)
+def _selected_t10_rows(
+    *, start_date: date = START_DATE, end_date_exclusive: date = END_DATE
+) -> dict[str, list[dict[str, Any]]]:
+    start_ns = int(datetime.combine(start_date, datetime.min.time(), UTC).timestamp() * NS)
+    end_ns = int(datetime.combine(end_date_exclusive, datetime.min.time(), UTC).timestamp() * NS)
+    reader = CatalogReaderV2.open(
+        T10_SNAPSHOT,
+        expected_snapshot_id=T10_SNAPSHOT_ID,
+        deep_verify_objects=False,
+    )
+    references = _reference_prices(
+        source_s2t10_snapshot_root=T10_SNAPSHOT,
+        source_s2t10_snapshot_id=T10_SNAPSHOT_ID,
+    )
+    result: dict[str, list[dict[str, Any]]] = {}
+    for instrument in ("BTCUSDT", "ETHUSDT"):
+        table = _episode_tables(
+            reader,
+            cast(Any, instrument),
+            scope_start_ns=start_ns,
+            scope_end_ns=end_ns,
+        )
+        matches = [
+            {
+                **row,
+                "window_start_ns": int(row["available_at_ts"]),
+                "reference_price": references[str(row["canonical_candidate_id"])],
+                "source_t10_snapshot_id": T10_SNAPSHOT_ID,
+            }
+            for row in table.to_pylist()
+            if row["parameter_set_id"] == PRIMARY_PARAMETER_SET
+            and row["time_combination_id"] == PRIMARY_TIMING
+            and bool(row["primary_eligible"])
+            and row["variant_id"] == "V1_PRICE"
+        ]
+        if not matches:
+            raise ValueError(f"seven-day window has no Primary T10 Episode: {instrument}")
+        result[instrument] = sorted(
+            matches,
+            key=lambda row: (int(row["window_start_ns"]), str(row["market_episode_id"])),
+        )
+    return result
+
+
+def _selected_first_passage_rows(snapshot_root: Path) -> dict[str, dict[str, Any]]:
     result: dict[str, dict[str, Any]] = {}
     for instrument in ("BTCUSDT", "ETHUSDT"):
-        path = T13_SNAPSHOT / instrument / "first_passage.parquet"
-        table = pq.read_table(
-            path,
-            filters=[("window_start_ns", ">=", start_ns), ("window_start_ns", "<", end_ns)],
-        )
+        table = pq.read_table(snapshot_root / instrument / "first_passage.parquet")
         matches = [
             row
             for row in table.to_pylist()
@@ -288,34 +377,84 @@ def _selected_t13_rows() -> dict[str, dict[str, Any]]:
             and row["variant_id"] == "V1_PRICE"
         ]
         if not matches:
-            raise ValueError(f"seven-day window has no complete Primary H2 Episode: {instrument}")
+            raise ValueError(f"scoped T14 has no complete Primary H2 Episode: {instrument}")
         result[instrument] = min(matches, key=lambda row: int(row["window_start_ns"]))
     return result
 
 
-def _lifecycle_probe(*, row: dict[str, Any], acceptance: dict[str, Any]) -> dict[str, Any]:
+def _contract_prices(
+    reader: FixedT10Reader, *, instrument: str, start_ns: int, end_ns: int
+) -> tuple[ContractPricePoint, ...]:
+    rows: list[ContractPricePoint] = []
+    cursor = _date_from_ns(start_ns)
+    last_date = _date_from_ns(end_ns - 1)
+    while cursor <= last_date:
+        table = _contract_price_day(reader, instrument, cursor)
+        table = table.filter(pc.greater_equal(table["event_ts_ns"], start_ns))
+        table = table.filter(pc.less(table["event_ts_ns"], end_ns))
+        rows.extend(
+            ContractPricePoint(
+                event_ts_ns=int(item["event_ts_ns"]),
+                available_at_ns=int(item["available_at_ns"]),
+                close=Decimal(item["close"]),
+            )
+            for item in table.to_pylist()
+        )
+        cursor += timedelta(days=1)
+    return tuple(sorted(rows, key=lambda item: item.event_ts_ns))
+
+
+@lru_cache(maxsize=16)
+def _contract_price_day(reader: FixedT10Reader, instrument: str, owner_date: date) -> Any:
+    return reader.read(
+        dataset_name="contract_price_1s",
+        dataset_version="2.0",
+        instrument=instrument,
+        variant="FOUNDATION",
+        owner_date=owner_date,
+        columns=["event_ts_ns", "available_at_ns", "close"],
+    )
+
+
+def _lifecycle_probe(
+    *, reader: FixedT10Reader, row: dict[str, Any], acceptance: dict[str, Any]
+) -> tuple[dict[str, Any], tuple[LifecyclePairResult, ...]]:
     instrument = str(row["instrument"])
     start_ns = int(row["window_start_ns"])
     end_ns = start_ns + 7 * DAY_NS
-    trades, partition_hashes, declared_gaps = _verified_trade_window(
-        instrument=instrument, start_ns=start_ns, end_ns=end_ns
+    partition_hashes, declared_gaps = _verified_trade_metadata(
+        instrument=instrument,
+        start_ns=start_ns,
+        end_ns=end_ns,
     )
     funding = _funding_rows(acceptance, instrument=instrument, start_ns=start_ns, end_ns=end_ns)
-    cumulative = Decimal(0)
-    funding_cursor = 0
-    observations: list[LifecycleObservation] = []
-    for trade in trades:
-        while funding_cursor < len(funding) and funding[funding_cursor][0] <= trade.ts_event_ns:
-            cumulative += Decimal("800") * funding[funding_cursor][1]
-            funding_cursor += 1
-        observations.append(
-            LifecycleObservation(
-                ts_event_ns=trade.ts_event_ns,
-                venue_trade_id=trade.venue_trade_id,
-                canonical_trade_id=trade.canonical_trade_id,
-                price=trade.price,
-                cumulative_funding=cumulative,
-            )
+    if declared_gaps:
+        trades: tuple[H2Trade, ...] = ()
+        prices: tuple[ContractPricePoint, ...] = ()
+        observations: tuple[LifecycleObservation, ...] = ()
+    else:
+        trades, _, _ = _verified_trade_window(
+            instrument=instrument,
+            start_ns=start_ns,
+            end_ns=end_ns,
+        )
+        prices = _contract_prices(reader, instrument=instrument, start_ns=start_ns, end_ns=end_ns)
+        observations = assemble_lifecycle_observations(
+            entry_price=Decimal(row["reference_price"]),
+            contract_prices=prices,
+            trades=tuple(
+                CanonicalTradePoint(
+                    ts_event_ns=trade.ts_event_ns,
+                    venue_trade_id=trade.venue_trade_id,
+                    canonical_trade_id=trade.canonical_trade_id,
+                    price=trade.price,
+                )
+                for trade in trades
+            ),
+            funding=tuple(
+                FundingSettlement(settlement_ts_ns=timestamp_ns, signed_rate=rate)
+                for timestamp_ns, rate in funding
+            ),
         )
     scenario = CostScenario(
         scenario_id="PRIMARY_9BP_FEE_2BP_SLIPPAGE_250MS_100PCT",
@@ -330,7 +469,7 @@ def _lifecycle_probe(*, row: dict[str, Any], acceptance: dict[str, Any]) -> dict
             instrument=instrument,
             entry_ts_ns=start_ns,
             entry_price=Decimal(row["reference_price"]),
-            observations=tuple(observations),
+            observations=observations,
             source_coverage=(
                 SourceCoverage.DECLARED_GAP if declared_gaps else SourceCoverage.COMPLETE
             ),
@@ -344,10 +483,12 @@ def _lifecycle_probe(*, row: dict[str, Any], acceptance: dict[str, Any]) -> dict
     return {
         "instrument": instrument,
         "market_episode_id": row["market_episode_id"],
-        "source_t13_classification_row_hash": row["classification_row_hash"],
+        "source_t10_snapshot_id": row["source_t10_snapshot_id"],
         "entry_ts_ns": start_ns,
         "entry_reference_price": row["reference_price"],
-        "trade_observation_count": len(observations),
+        "contract_price_observation_count": len(prices),
+        "trade_observation_count": len(trades),
+        "merged_observation_count": len(observations),
         "stage1_partition_hashes": partition_hashes,
         "declared_source_gaps": declared_gaps,
         "source_coverage": "DECLARED_GAP" if declared_gaps else "COMPLETE",
@@ -356,7 +497,7 @@ def _lifecycle_probe(*, row: dict[str, Any], acceptance: dict[str, Any]) -> dict
         "funding_tracks": results,
         "strict_consumer_readback": "PASS",
         "historical_execution_claim": False,
-    }
+    }, tuple(results)
 
 
 def _event_cells(row: dict[str, Any]) -> tuple[OutcomeCell, ...]:
@@ -515,6 +656,69 @@ def _t16_probe(*, reader: FixedT10Reader, row: dict[str, Any]) -> dict[str, Any]
     }
 
 
+def produce_scoped_lifecycle(
+    *,
+    start_date: date,
+    end_date_exclusive: date,
+) -> dict[str, Any]:
+    """Execute the explicit-input lifecycle core for all Primary episodes in scope."""
+
+    rows = _selected_t10_rows(
+        start_date=start_date,
+        end_date_exclusive=end_date_exclusive,
+    )
+    reader = FixedT10Reader(T10_SNAPSHOT, expected_snapshot_id=T10_SNAPSHOT_ID)
+    acceptance = _read_json(FUNDING_ACCEPTANCE)
+    lifecycle: list[dict[str, Any]] = []
+    admission: list[Any] = []
+    for instrument in ("BTCUSDT", "ETHUSDT"):
+        instrument_results: list[LifecyclePairResult] = []
+        entry_by_episode: dict[str, int] = {}
+        for row in rows[instrument]:
+            probe, results = _lifecycle_probe(
+                reader=reader,
+                row=row,
+                acceptance=acceptance,
+            )
+            lifecycle.append(probe)
+            primary = next(
+                item
+                for item in results
+                if item.funding_track is FundingTrack.PRIMARY_HISTORICAL_ACTUAL
+            )
+            instrument_results.append(primary)
+            entry_by_episode[primary.market_episode_id] = int(row["window_start_ns"])
+        admission.extend(
+            replay_single_position_admission(
+                tuple(instrument_results),
+                entry_ts_ns_by_episode=entry_by_episode,
+            )
+        )
+    return {
+        "task_id": "S2P13-T11",
+        "lifecycle": lifecycle,
+        "single_position_admission": admission,
+        "funding_source": "HISTORICAL_ACTUAL_PLUS_PREREGISTERED_STRESS",
+        "source_t10_snapshot_id": T10_SNAPSHOT_ID,
+        "row_count": len(lifecycle) * len(FundingTrack),
+    }
+
+
+def produce_scoped_conditional_baseline(*, source_first_passage_root: Path) -> dict[str, Any]:
+    """Run the outcome-blind T16 rehearsal consumer on the current T14 handoff."""
+
+    reader = FixedT10Reader(T10_SNAPSHOT, expected_snapshot_id=T10_SNAPSHOT_ID)
+    rows = _selected_first_passage_rows(source_first_passage_root)
+    probes = [_t16_probe(reader=reader, row=rows[item]) for item in ("BTCUSDT", "ETHUSDT")]
+    return {
+        "task_id": "S2P13-T16",
+        "probes": probes,
+        "row_count": len(probes),
+        "formal_binning_snapshot_created": False,
+        "binning_semantics": "REHEARSAL_ONLY_NOT_FORMAL_BINS",
+    }
+
+
 def _governance_binding() -> dict[str, str]:
     relative = (
         "docs/spec/system_manual_v1.3.5_final.md",
@@ -535,9 +739,10 @@ def _handoff(
     *,
     root: Path,
     execution_scope_hash: str,
+    upstream_handoffs: dict[str, dict[str, Any]] | None = None,
 ) -> TaskHandoff:
     task_root = root / "task-handoffs" / task_id
-    task_root.mkdir(parents=True, exist_ok=False)
+    task_root.mkdir(parents=True, exist_ok=True)
     output_hash = _canonical_hash(payload)
     manifest = {
         "schema_name": "stage2-plan-v13-rehearsal-task-manifest-v2",
@@ -548,6 +753,7 @@ def _handoff(
         "output_hash": output_hash,
         "row_count": row_count,
         "execution_scope_hash": execution_scope_hash,
+        "upstream_handoffs": upstream_handoffs or {},
     }
     manifest["manifest_hash"] = _canonical_hash(manifest)
     manifest_path = task_root / "manifest.json"
@@ -557,7 +763,15 @@ def _handoff(
         "stage_plan_version": "1.3",
         "task_id": task_id,
         "manifest_hash": manifest["manifest_hash"],
-        "files": [],
+        "files": [
+            {
+                "relative_path": str(path.relative_to(task_root)),
+                "sha256": _file_hash(path),
+                "byte_size": path.stat().st_size,
+            }
+            for path in sorted(item for item in task_root.rglob("*") if item.is_file())
+            if path.name not in {"manifest.json", "catalog.json"}
+        ],
     }
     catalog["catalog_hash"] = _canonical_hash(catalog)
     catalog_path = task_root / "catalog.json"
@@ -618,72 +832,119 @@ def run_final_code_rehearsal(*, output_root: Path) -> tuple[dict[str, Any], Path
         or source_verify["status"] != "PASS"
     ):
         raise ValueError("real seven-day source audit did not pass executable scopes")
-    t13_rows = _selected_t13_rows()
-    lifecycle = [
-        _lifecycle_probe(row=t13_rows[instrument], acceptance=_read_json(FUNDING_ACCEPTANCE))
-        for instrument in ("BTCUSDT", "ETHUSDT")
-    ]
-    reader = FixedT10Reader(T10_SNAPSHOT, expected_snapshot_id=T10_SNAPSHOT_ID)
-    t16 = [_t16_probe(reader=reader, row=t13_rows[item]) for item in ("BTCUSDT", "ETHUSDT")]
-    raw = cast(dict[str, Any], source_audit["raw_path_non_pollution"])
-    feature = cast(dict[str, Any], source_audit["feature_availability"])
-    evidence_id = f"rehearsal-7d-{commit[:12]}"
-    execution_scope_hash = _canonical_hash(
-        {
-            "mode": "REHEARSAL",
-            "start_date": START_DATE.isoformat(),
-            "end_date_exclusive": END_DATE.isoformat(),
-        }
+    lifecycle_payload = produce_scoped_lifecycle(
+        start_date=START_DATE,
+        end_date_exclusive=END_DATE,
     )
-    handoffs = (
+    lifecycle = cast(list[dict[str, Any]], lifecycle_payload["lifecycle"])
+    evidence_id = f"rehearsal-7d-{commit[:12]}"
+    execution_scope_hash = ExecutionScope.seal(
+        mode="SEVEN_DAY",
+        start_date=START_DATE.isoformat(),
+        end_date_exclusive=END_DATE.isoformat(),
+    ).execution_scope_hash
+    handoffs: list[TaskHandoff] = []
+    t11_payload = lifecycle_payload
+    handoffs.append(
         _handoff(
             "S2P13-T11",
             evidence_id,
-            lifecycle,
-            len(lifecycle) * len(FundingTrack),
+            t11_payload,
+            int(lifecycle_payload["row_count"]),
             root=root,
             execution_scope_hash=execution_scope_hash,
-        ),
+        )
+    )
+    t12_data = root / "task-handoffs/S2P13-T12/data"
+    t12 = produce_scoped_paths(
+        output_root=t12_data,
+        start_date=START_DATE,
+        end_date_exclusive=END_DATE,
+    )
+    handoffs.append(
         _handoff(
             "S2P13-T12",
             evidence_id,
-            {"raw": raw["reports"], "source": "accepted T11"},
-            int(raw["total_raw_path_row_count"]),
+            t12,
+            int(t12["row_count"]),
             root=root,
             execution_scope_hash=execution_scope_hash,
-        ),
+            upstream_handoffs={"S2P13-T11": handoffs[0].payload()},
+        )
+    )
+    t13_data = root / "task-handoffs/S2P13-T13/data"
+    t13 = produce_scoped_metrics(
+        output_root=t13_data,
+        source_paths_root=t12_data,
+        source_snapshot_id=handoffs[1].snapshot_id,
+        source_manifest_hash=handoffs[1].manifest_hash,
+        source_catalog_hash=handoffs[1].catalog_hash,
+    )
+    handoffs.append(
         _handoff(
             "S2P13-T13",
             evidence_id,
-            {"feature": feature, "source": "accepted T12"},
-            int(feature["total_valid_market_anchor_count"]),
+            t13,
+            int(t13["row_count"]),
             root=root,
             execution_scope_hash=execution_scope_hash,
-        ),
+            upstream_handoffs={"S2P13-T12": handoffs[1].payload()},
+        )
+    )
+    t14_data = root / "task-handoffs/S2P13-T14/data"
+    t14 = produce_scoped_first_passage(
+        output_root=t14_data,
+        source_paths_root=t12_data,
+        source_snapshot_id=handoffs[1].snapshot_id,
+        source_manifest_hash=handoffs[1].manifest_hash,
+        source_catalog_hash=handoffs[1].catalog_hash,
+    )
+    handoffs.append(
         _handoff(
             "S2P13-T14",
             evidence_id,
-            {"t13": raw["reports"], "source": "accepted T13"},
-            sum(int(item["t13_derived_row_count"]) for item in raw["reports"]),
+            t14,
+            int(t14["row_count"]),
             root=root,
             execution_scope_hash=execution_scope_hash,
-        ),
+            upstream_handoffs={"S2P13-T12": handoffs[1].payload()},
+        )
+    )
+    t15_data = root / "task-handoffs/S2P13-T15/data"
+    t15 = produce_scoped_ambiguity(
+        output_root=t15_data,
+        source_first_passage_root=t14_data,
+    )
+    handoffs.append(
         _handoff(
             "S2P13-T15",
             evidence_id,
-            {"ambiguity_policy": "AMBIGUOUS_AS_FAILURE", "t13": raw["reports"]},
-            sum(int(item["t13_derived_row_count"]) for item in raw["reports"]),
+            t15,
+            int(t15["row_count"]),
             root=root,
             execution_scope_hash=execution_scope_hash,
-        ),
+            upstream_handoffs={"S2P13-T14": handoffs[3].payload()},
+        )
+    )
+    t16_payload = produce_scoped_conditional_baseline(source_first_passage_root=t14_data)
+    t16 = cast(list[dict[str, Any]], t16_payload["probes"])
+    handoffs.append(
         _handoff(
             "S2P13-T16",
             evidence_id,
-            t16,
-            len(t16),
+            t16_payload,
+            int(t16_payload["row_count"]),
             root=root,
             execution_scope_hash=execution_scope_hash,
-        ),
+            upstream_handoffs={
+                task: handoffs[index].payload()
+                for task, index in (
+                    ("S2P13-T11", 0),
+                    ("S2P13-T13", 2),
+                    ("S2P13-T15", 4),
+                )
+            },
+        )
     )
     report: dict[str, Any] = {
         "schema_name": "stage2-plan-v13-seven-day-rehearsal-report-v1",
@@ -712,6 +973,17 @@ def run_final_code_rehearsal(*, output_root: Path) -> tuple[dict[str, Any], Path
         "later_tasks_executed": False,
         "stage3_locked": True,
         "research_result": "NOT_PRODUCED_REHEARSAL_ONLY",
+        "simulated_acceptance_criteria": {
+            "all_six_tasks_use_successor_core": True,
+            "t12_reads_t10_and_only_binds_t11_gate": True,
+            "t13_t14_share_t12_but_are_independent": True,
+            "declared_gap_is_right_censored_not_win_loss": True,
+            "all_handoffs_strict_readback": True,
+            "all_counts_reconcile": True,
+            "ui_must_observe_exact_commit": True,
+            "formal_authority_bins_run_created": False,
+            "stage3_locked": True,
+        },
     }
     report["report_hash"] = _canonical_hash(report)
     report_path = root / "seven-day-rehearsal-report.json"
@@ -806,9 +1078,42 @@ def verify_final_code_rehearsal(report_path: Path) -> dict[str, Any]:
         or report.get("formal_run_id_created") is not False
         or report.get("later_tasks_executed") is not False
         or report.get("stage3_locked") is not True
+        or report.get("simulated_acceptance_criteria")
+        != {
+            "all_six_tasks_use_successor_core": True,
+            "t12_reads_t10_and_only_binds_t11_gate": True,
+            "t13_t14_share_t12_but_are_independent": True,
+            "declared_gap_is_right_censored_not_win_loss": True,
+            "all_handoffs_strict_readback": True,
+            "all_counts_reconcile": True,
+            "ui_must_observe_exact_commit": True,
+            "formal_authority_bins_run_created": False,
+            "stage3_locked": True,
+        }
     ):
         raise ValueError("seven-day rehearsal report reconciliation failed")
     counts = Counter(item["task_id"] for item in report["handoffs"])
     if counts != Counter(TASKS):
         raise ValueError("seven-day rehearsal task handoff universe mismatch")
+    for raw_handoff in cast(list[dict[str, Any]], report["handoffs"]):
+        handoff = UpstreamArtifact.from_payload(
+            str(raw_handoff["task_id"]),
+            raw_handoff,
+        )
+        manifest = _read_json(handoff.manifest_path)
+        catalog = _read_json(handoff.catalog_path)
+        if (
+            manifest.get("output_hash") != handoff.output_hash
+            or int(manifest.get("row_count", -1)) != handoff.row_count
+        ):
+            raise ValueError("rehearsal Manifest output reconciliation drift")
+        for item in cast(list[dict[str, Any]], catalog.get("files", [])):
+            path = handoff.artifact_root / str(item["relative_path"])
+            if (
+                path.is_symlink()
+                or not path.is_file()
+                or _file_hash(path) != item.get("sha256")
+                or path.stat().st_size != int(item.get("byte_size", -1))
+            ):
+                raise ValueError("rehearsal Catalog file read-back drift")
     return report

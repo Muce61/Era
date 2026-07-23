@@ -22,6 +22,8 @@ from .models import (
     LifecycleObservation,
     LifecyclePairResult,
     LifecyclePolicyResult,
+    OptionalExitModelStatus,
+    PriceObservationSource,
     SourceCoverage,
 )
 
@@ -132,9 +134,7 @@ def evaluate_lifecycle_pair(
         raise ValueError("historical funding source must be bound before any funding track")
     if source_coverage in {SourceCoverage.UNBOUND, SourceCoverage.HASH_DRIFT}:
         raise ValueError(f"run-level source integrity failure: {source_coverage.value}")
-    keys = tuple(
-        (item.ts_event_ns, item.venue_trade_id, item.canonical_trade_id) for item in observations
-    )
+    keys = tuple(item.stable_order_key for item in observations)
     if keys != tuple(sorted(keys)) or len(keys) != len(set(keys)):
         raise ValueError("lifecycle observations must use unique frozen H2 stable order")
     incomplete_reason = _source_censor_reason(source_coverage)
@@ -157,7 +157,9 @@ def evaluate_lifecycle_pair(
             ),
             source_coverage=source_coverage,
             funding_track=funding_track,
-            price_proxy_source="CONTRACT_PRICE_H3_PROXY",
+            price_proxy_source="CONTRACT_PRICE_1S",
+            protection_exit_model=OptionalExitModelStatus.NOT_MODELLED_STAGE2,
+            structure_exit_model=OptionalExitModelStatus.NOT_MODELLED_STAGE2,
             historical_mark_price_claim=False,
             output_hash="",
         )
@@ -166,7 +168,12 @@ def evaluate_lifecycle_pair(
     landmark_ns = entry_ts_ns + PRIMARY_LANDMARK_SECONDS * 1_000_000_000
     notional = USABLE_MARGIN * Decimal("100")
     stop_price = entry_price * (Decimal(1) - stop_bps / BPS)
-    before_landmark = tuple(item for item in observations if item.ts_event_ns <= landmark_ns)
+    before_landmark = tuple(
+        item
+        for item in observations
+        if item.ts_event_ns <= landmark_ns
+        and item.price_source is PriceObservationSource.CONTRACT_PRICE_1S
+    )
     with localcontext() as context:
         context.prec = 50
         net_values = tuple(
@@ -224,16 +231,14 @@ def evaluate_lifecycle_pair(
                 scenario=scenario,
             )
             reason: ExitReason | None = None
-            if net <= -USABLE_MARGIN:
-                reason = ExitReason.SCENARIO_LIQUIDATION_BOUNDARY_CROSSED
-            elif item.price <= stop_price:
-                reason = ExitReason.STOP
-            elif item.protection_exit:
-                reason = ExitReason.PROTECTION
-            elif item.structure_exit:
-                reason = ExitReason.STRUCTURE
-            elif net >= TICKET_EQUITY:
-                reason = ExitReason.TICKET_DOUBLE_TARGET
+            if item.price_source is PriceObservationSource.CONTRACT_PRICE_1S:
+                if net <= -USABLE_MARGIN:
+                    reason = ExitReason.SCENARIO_LIQUIDATION_BOUNDARY_CROSSED
+            else:
+                if item.price <= stop_price:
+                    reason = ExitReason.STOP
+                elif net >= TICKET_EQUITY:
+                    reason = ExitReason.TICKET_DOUBLE_TARGET
             if reason is not None:
                 continued = _close(
                     policy_id="CONTINUE_TO_THEORETICAL_CLOSE",
@@ -260,7 +265,9 @@ def evaluate_lifecycle_pair(
         continue_holding=continued,
         source_coverage=source_coverage,
         funding_track=funding_track,
-        price_proxy_source="CONTRACT_PRICE_H3_PROXY",
+        price_proxy_source="CONTRACT_PRICE_1S",
+        protection_exit_model=OptionalExitModelStatus.NOT_MODELLED_STAGE2,
+        structure_exit_model=OptionalExitModelStatus.NOT_MODELLED_STAGE2,
         historical_mark_price_claim=False,
         output_hash="",
     )

@@ -561,7 +561,13 @@ class _BufferedParquet:
         self.writer.close()
 
 
-def _episode_tables(reader: CatalogReaderV2, instrument: Instrument) -> pa.Table:
+def _episode_tables(
+    reader: CatalogReaderV2,
+    instrument: Instrument,
+    *,
+    scope_start_ns: int | None = None,
+    scope_end_ns: int | None = None,
+) -> pa.Table:
     columns = [
         "instrument",
         "market_episode_id",
@@ -584,6 +590,10 @@ def _episode_tables(reader: CatalogReaderV2, instrument: Instrument) -> pa.Table
         tables.append(table.append_column("source_episode_dataset_spec_hash", spec_column))
     combined = pa.concat_tables(tables).combine_chunks()
     combined = combined.filter(pc.equal(combined["episode_status"], "CANDIDATE"))
+    if scope_start_ns is not None:
+        combined = combined.filter(pc.greater_equal(combined["available_at_ts"], scope_start_ns))
+    if scope_end_ns is not None:
+        combined = combined.filter(pc.less(combined["available_at_ts"], scope_end_ns))
     return combined.sort_by(
         [
             ("available_at_ts", "ascending"),
@@ -601,9 +611,18 @@ def build_instrument_outputs(
     h1: dict[tuple[Instrument, date], H1Partition],
     h2: dict[tuple[Instrument, date], tuple[H2RowGroup, ...]],
     quality: dict[tuple[Instrument, date], dict[str, int]],
+    scope_start_ns: int | None = None,
+    scope_end_ns: int | None = None,
+    source_snapshot_id: str = FIXED_SNAPSHOT_ID,
+    stage1_data_run_id: str = STAGE1_RUN_ID,
 ) -> dict[str, Any]:
     destination.mkdir(parents=True, exist_ok=False)
-    episodes = _episode_tables(reader, instrument)
+    episodes = _episode_tables(
+        reader,
+        instrument,
+        scope_start_ns=scope_start_ns,
+        scope_end_ns=scope_end_ns,
+    )
     horizons = {
         item.timing_id: item.first_passage_horizon_seconds * 1_000_000_000
         for item in timing_configurations()
@@ -742,13 +761,13 @@ def build_instrument_outputs(
                         "canonical_candidate_id": episode["canonical_candidate_id"],
                         "candidate_version_id": episode["candidate_version_id"],
                         "canonical_payload_hash": episode["canonical_payload_hash"],
-                        "source_snapshot_id": FIXED_SNAPSHOT_ID,
+                        "source_snapshot_id": source_snapshot_id,
                         "source_episode_dataset_spec_hash": episode[
                             "source_episode_dataset_spec_hash"
                         ],
                         "h1_dataset_spec_hash": H1_SPEC_HASH,
                         "h2_index_dataset_spec_hash": H2_INDEX_SPEC_HASH,
-                        "stage1_data_run_id": STAGE1_RUN_ID,
+                        "stage1_data_run_id": stage1_data_run_id,
                         "variant_id": episode["variant_id"],
                     }
                 )

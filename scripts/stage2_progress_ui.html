@@ -753,7 +753,7 @@
           name:`${taskId} · ${label}`,
           icon:taskId === "S2P13-T11" ? "fa-hourglass-half" : "fa-diagram-project",
           state,
-          detail:`${raw} · ${task.reason_code || "—"}`,
+          detail:`${raw} · ${task.reason_code || "—"} · rows ${number(task.row_count)} · Verify ${task.verify_status || "—"}`,
           progress:state === "pass" ? 100 : state === "running" ? 35 : 0
         };
       });

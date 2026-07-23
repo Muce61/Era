@@ -7,7 +7,17 @@ from .models import (
     LifecycleObservation,
     LifecyclePairResult,
     LifecyclePolicyResult,
+    OptionalExitModelStatus,
+    PriceObservationSource,
     SourceCoverage,
+)
+from .producer import (
+    AdmissionDecision,
+    CanonicalTradePoint,
+    ContractPricePoint,
+    FundingSettlement,
+    assemble_lifecycle_observations,
+    replay_single_position_admission,
 )
 
 __all__ = [
@@ -16,6 +26,14 @@ __all__ = [
     "LifecycleObservation",
     "LifecyclePairResult",
     "LifecyclePolicyResult",
+    "OptionalExitModelStatus",
+    "PriceObservationSource",
     "SourceCoverage",
     "evaluate_lifecycle_pair",
+    "AdmissionDecision",
+    "CanonicalTradePoint",
+    "ContractPricePoint",
+    "FundingSettlement",
+    "assemble_lifecycle_observations",
+    "replay_single_position_admission",
 ]

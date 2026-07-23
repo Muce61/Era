@@ -16,10 +16,14 @@ corrects the DAG so T13 and T14 both consume T12 while T12 binds T11 only as a P
 adapter distinguishes retryable process interruption from terminal producer failure and never
 invokes commands through a shell.
 
-OQ-S2-012 now blocks the real producer and final rehearsal because protection/structure exit facts,
-Contract Price/Trade crossing precedence, funding notional and single-position collision handling
-are not fully specified. No implementation may silently substitute `false`, invent an execution
-fact or import a Stage 3 rule.
+CR-2026-042/ADR-S2-019 resolve OQ-S2-012 with a minimum price-only producer: protection/structure
+are explicitly not modeled, Contract Price owns scenario valuation and funding notional, canonical
+Trades own target/stop, and immediate/continue use independent single-position timelines.
+The shared extraction/metric/First-Passage cores now accept explicit successor roots and scope;
+the Plan v1.3 producer CLI seals full upstream handoffs, preregistration, scope, Manifest, Catalog,
+output and receipt hashes. A real pre-commit seven-day component chain passed T12 through T15 and
+the lifecycle component correctly fail-closed all 42 Primary Episodes as declared-gap censored.
+The clean-commit full chain and UI observation remain the active gate.
 
 No V1.3 Authority, bins, Run ID, publication or formal H3 result exists. CR-2026-038 resolves
 OQ-S2-010 by binding the accepted BTC/ETH historical funding source. CR-2026-039 resolves
@@ -301,7 +305,7 @@ run is immutable; its sealed objects require a new-run adoption Manifest and ful
 | Conditional random baseline | S2-T15 v1.4 | causal RMS/activity/distance; rolling F0-F3; sealed T10 trigger Context for Episodes; outcome-blind 5 controls shared by 30 H2 cells; no PnL/return | STOPPED / OQ-S2-009 RESOLVED / FINAL-CODE 7-DAY EXECUTION GATE PENDING / NO FORMAL RESULT |
 | Seven-day theoretical lifecycle | Plan v1.3 S2P13-T11 | `stage_2/lifecycle`; Contract Price H3 proxy; 20bp auxiliary; dynamic net ticket-doubling; historical Primary and adverse Stress funding; -8U margin depletion | IMPLEMENTED CORE / DIRECTED TESTS PASS / CR-2026-038 FUNDING ACCEPTANCE REHEARSAL AUTHORIZED |
 | Historical funding acceptance | Plan v1.3 S2P13-T11 | `stage_2/funding`; complete local BTC/ETH history plus seven-day official sample; checksum, append-only acceptance, Manifest/Catalog/Verify, strict read-back | HUMAN ACCEPTED / 7,128+7,128 LOCAL ROWS HASH-BOUND / MONTHLY RECONCILIATION WAIVED / NO LIFECYCLE RUN |
-| Plan v1.3 successor orchestration | S2P13-T11～T16 | CR-2026-041; `stage_2/rerun`; static/input preflight, exclusive lock, approved argv adapters, complete source bindings, checkpoint/readback/reconciliation/Verify handoff, retryable-vs-terminal failure, human receipt gate | V2 HANDOFF IN PROGRESS / PRODUCER BLOCKED BY OQ-S2-012 / NO FORMAL RUN |
+| Plan v1.3 successor orchestration | S2P13-T11～T16 | CR-2026-041/042; `stage_2/rerun`; static/input preflight, exclusive lock, approved argv adapters, complete source bindings, minimum price-only lifecycle, checkpoint/readback/reconciliation/Verify handoff, retryable-vs-terminal failure, human receipt gate | V2 PRODUCER IMPLEMENTATION IN PROGRESS / FINAL REHEARSAL PENDING / NO FORMAL RUN |
 | Special research point explicit exemptions | Plan v1.3 governance; SRP-S2-001 | default all-rules inheritance; explicit exact exemptions; non-waivable truth/safety/governance; unknown/wildcard/hash drift rejection; formal consumer rejection | FRAMEWORK IMPLEMENTED / FULL QUALITY PASS / OQ-S2-011 RESOLVED; SRP-S2-001 EXEMPTIONS EXPIRED |
 | Placebo | S2-T16 | preregistered placebo; separate future Task | DRAFT_NOT_APPROVED |
 | Cluster ownership and cluster bootstrap CI | S2-T17, S2-T18 | BTC/ETH-separated clustering and cluster-level resampling | DRAFT_NOT_APPROVED |

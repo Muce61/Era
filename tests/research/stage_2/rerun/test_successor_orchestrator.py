@@ -145,8 +145,8 @@ def test_current_repository_state_blocks_formal_approval(tmp_path: Path) -> None
     state = load_current_development_state()
     result = approval_readiness(state=state, rehearsal_path=None, repository_root=Path.cwd())
     assert result["status"] == "BLOCKED"
-    assert result["blocking_questions"] == ["OQ-S2-012"]
-    assert result["reason_code"] == "S2_V13_GOVERNANCE_BLOCKED"
+    assert result["blocking_questions"] == []
+    assert result["reason_code"] == "S2_V13_WRITE_OPERATIONS_NOT_AUTHORIZED"
 
 
 def test_chain_preflights_all_tasks_before_first_run(

@@ -21,7 +21,7 @@ def test_repository_current_state_is_v13_implementation_gated_and_hash_valid() -
     assert state.current_plan == "stage_2_plan_v1.3"
     assert state.current_task == "S2P13-T11"
     assert state.current_task_version == "1.0"
-    assert state.task_status == "IMPLEMENTATION_BLOCKED_BY_OQ_S2_012"
+    assert state.task_status == "IMPLEMENTATION_IN_PROGRESS"
     assert state.formal_successor_result_exists is False
     assert state.stage3_locked is True
     assert state.srp_execution_status == "FRAMEWORK_IMPLEMENTED_FORMAL_OUTPUT_FORBIDDEN"
@@ -37,6 +37,7 @@ def test_repository_current_state_is_v13_implementation_gated_and_hash_valid() -
         "VERIFY_EXISTING_EVIDENCE",
         "READ_ONLY_UI",
         "BUILD_FUNDING_AUDIT_SUPPLEMENT",
+        "RUN_SEVEN_DAY_REHEARSAL",
     ],
 )
 def test_current_state_allows_only_scoped_audit_operations(operation: str) -> None:
@@ -48,7 +49,6 @@ def test_current_state_allows_only_scoped_audit_operations(operation: str) -> No
     "operation",
     [
         "BUILD_AUDIT_SUPPLEMENT",
-        "RUN_SEVEN_DAY_REHEARSAL",
         "FREEZE_AUTHORITY",
         "FREEZE_BINS",
         "PREFLIGHT",
@@ -63,7 +63,7 @@ def test_current_state_blocks_every_write_or_run_operation(operation: str) -> No
 
     assert error.value.reason_code == "GOVERNANCE_OPERATION_NOT_AUTHORIZED"
     assert error.value.operation == operation
-    assert error.value.blocking_questions == ("OQ-S2-012",)
+    assert error.value.blocking_questions == ()
 
 
 def test_state_hash_drift_fails_closed(tmp_path: Path) -> None:
@@ -87,7 +87,7 @@ def test_resealed_state_can_be_loaded_but_does_not_change_repository_authority(
 
     state = load_current_development_state(path)
     assert state.task_status == "IN_PROGRESS"
-    assert load_current_development_state().task_status == "IMPLEMENTATION_BLOCKED_BY_OQ_S2_012"
+    assert load_current_development_state().task_status == "IMPLEMENTATION_IN_PROGRESS"
 
 
 def test_unknown_operation_is_rejected() -> None:

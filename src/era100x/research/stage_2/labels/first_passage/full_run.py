@@ -519,7 +519,9 @@ class _PassageState:
             ),
             "historical_evidence_only": True,
             "prohibited_interpretations": list(PROHIBITED_INTERPRETATIONS),
-            "source_s2t11_snapshot_id": SOURCE_S2T11_SNAPSHOT_ID,
+            "source_s2t11_snapshot_id": source.get(
+                "source_s2t11_snapshot_id", SOURCE_S2T11_SNAPSHOT_ID
+            ),
             "source_s2t11_manifest_hash": source["source_s2t11_manifest_hash"],
             "source_s2t11_catalog_hash": source["source_s2t11_catalog_hash"],
             "source_s2t10_snapshot_id": self.lineage["source_snapshot_id"],
@@ -728,11 +730,19 @@ def _build_instrument(
     *,
     source: dict[str, str],
     references: dict[str, Decimal],
+    source_s2t11_snapshot_root: Path = SOURCE_S2T11_SNAPSHOT_ROOT,
+    source_s2t10_snapshot_root: Path = SOURCE_S2T10_SNAPSHOT_ROOT,
 ) -> dict[str, Any]:
-    episodes, quality, lineage, h1_slices, h2_slices = _load_inputs(instrument)
+    if source_s2t11_snapshot_root == SOURCE_S2T11_SNAPSHOT_ROOT:
+        episodes, quality, lineage, h1_slices, h2_slices = _load_inputs(instrument)
+    else:
+        episodes, quality, lineage, h1_slices, h2_slices = _load_inputs(
+            instrument,
+            source_snapshot_root=source_s2t11_snapshot_root,
+        )
     reader = CatalogReaderV2.open(
-        SOURCE_S2T10_SNAPSHOT_ROOT,
-        expected_snapshot_id=SOURCE_S2T10_SNAPSHOT_ROOT.name,
+        source_s2t10_snapshot_root,
+        expected_snapshot_id=source_s2t10_snapshot_root.name,
         deep_verify_objects=False,
     )
     destination.parent.mkdir(parents=True, exist_ok=False)

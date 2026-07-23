@@ -17,26 +17,45 @@ class _ResultFixture:
 
 
 def _report(path: Path) -> dict[str, object]:
+    scope_hash = subject.ExecutionScope.seal(
+        mode="SEVEN_DAY",
+        start_date="2020-01-01",
+        end_date_exclusive="2020-01-08",
+    ).execution_scope_hash
+    handoffs = [
+        subject._handoff(
+            task,
+            "fixture-rehearsal",
+            {"task": task},
+            1,
+            root=path.parent,
+            execution_scope_hash=scope_hash,
+        ).payload()
+        for task in TASKS
+    ]
     payload: dict[str, object] = {
         "schema_name": "stage2-plan-v13-seven-day-rehearsal-report-v1",
         "status": "PASS",
         "day_count": 7,
         "code_commit": "a" * 40,
-        "handoffs": [
-            {
-                "task_id": task,
-                "consumer_readback": "PASS",
-                "reconciliation": "PASS",
-                "verify_status": "PASS",
-            }
-            for task in TASKS
-        ],
+        "handoffs": handoffs,
         "authority_created": False,
         "formal_binning_snapshot_created": False,
         "formal_run_id_created": False,
         "later_tasks_executed": False,
         "stage3_locked": True,
         "ui_projection": "PENDING_EXTERNAL_BROWSER_CHECK",
+        "simulated_acceptance_criteria": {
+            "all_six_tasks_use_successor_core": True,
+            "t12_reads_t10_and_only_binds_t11_gate": True,
+            "t13_t14_share_t12_but_are_independent": True,
+            "declared_gap_is_right_censored_not_win_loss": True,
+            "all_handoffs_strict_readback": True,
+            "all_counts_reconcile": True,
+            "ui_must_observe_exact_commit": True,
+            "formal_authority_bins_run_created": False,
+            "stage3_locked": True,
+        },
     }
     payload["report_hash"] = subject.canonical_hash(payload)
     path.write_bytes(subject._encoded(payload))

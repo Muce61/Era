@@ -9,6 +9,7 @@ strict ``TaskHandoff`` value.
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import subprocess
 from collections.abc import Mapping, Sequence
@@ -35,6 +36,15 @@ UPSTREAM_TASKS: dict[str, tuple[str, ...]] = {
     "S2P13-T15": ("S2P13-T14",),
     "S2P13-T16": ("S2P13-T11", "S2P13-T13", "S2P13-T15"),
 }
+PREREGISTRATION_CONSUMERS = frozenset({"S2P13-T11", "S2P13-T16"})
+
+
+def _file_hash(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def _safe_json(path: Path) -> dict[str, Any]:
@@ -93,6 +103,8 @@ class ProductionAdapterPlan:
     plan_hash: str
     code_commit: str
     evidence_root: Path
+    preregistration_path: Path
+    preregistration_hash: str
     tasks: dict[str, ProductionTaskSpec]
 
 
@@ -111,6 +123,16 @@ def load_adapter_plan(path: Path, *, code_commit: str) -> ProductionAdapterPlan:
     evidence_root = Path(str(payload.get("evidence_root", "")))
     if not evidence_root.is_absolute() or evidence_root.is_symlink() or not evidence_root.is_dir():
         raise ValueError("production adapter evidence root is unsafe or missing")
+    preregistration_path = Path(str(payload.get("preregistration_path", "")))
+    preregistration_hash = str(payload.get("preregistration_hash", ""))
+    if (
+        not preregistration_path.is_absolute()
+        or preregistration_path.is_symlink()
+        or not preregistration_path.is_file()
+        or len(preregistration_hash) != 64
+        or _file_hash(preregistration_path) != preregistration_hash
+    ):
+        raise ValueError("production preregistration binding is unsafe or drifted")
     raw_tasks = payload.get("tasks")
     if not isinstance(raw_tasks, dict) or set(raw_tasks) != set(TASKS):
         raise ValueError("production adapter plan requires six exact task specs")
@@ -162,6 +184,8 @@ def load_adapter_plan(path: Path, *, code_commit: str) -> ProductionAdapterPlan:
         plan_hash=str(payload["adapter_plan_hash"]),
         code_commit=code_commit,
         evidence_root=evidence_root,
+        preregistration_path=preregistration_path,
+        preregistration_hash=preregistration_hash,
         tasks=tasks,
     )
 
@@ -177,12 +201,16 @@ class CommandTaskAdapter(TaskAdapter):
         adapter_plan_hash: str,
         supervisor_checkpoint_path: Path,
         repository_root: Path,
+        preregistration_path: Path,
+        preregistration_hash: str,
     ) -> None:
         self.spec = spec
         self.code_commit = code_commit
         self.adapter_plan_hash = adapter_plan_hash
         self.supervisor_checkpoint_path = supervisor_checkpoint_path
         self.repository_root = repository_root
+        self.preregistration_path = preregistration_path
+        self.preregistration_hash = preregistration_hash
 
     def _upstream_handoffs(self) -> dict[str, dict[str, Any]]:
         if not self.spec.required_upstream_tasks:
@@ -224,6 +252,8 @@ class CommandTaskAdapter(TaskAdapter):
             ),
             "ERA_S2P13_TASK_RECEIPT_PATH": str(self.spec.receipt_path),
             "ERA_S2P13_TASK_CHECKPOINT_PATH": str(self.spec.checkpoint_path),
+            "ERA_S2P13_PREREGISTRATION_PATH": str(self.preregistration_path),
+            "ERA_S2P13_PREREGISTRATION_HASH": self.preregistration_hash,
         }
 
     def _execute(
@@ -312,6 +342,11 @@ class CommandTaskAdapter(TaskAdapter):
             "manifest_hash"
         ) != payload.get("manifest_hash"):
             raise ValueError(f"{self.spec.task_id} Manifest binding mismatch")
+        if (
+            self.spec.task_id in PREREGISTRATION_CONSUMERS
+            and manifest.get("preregistration_hash") != self.preregistration_hash
+        ):
+            raise ValueError(f"{self.spec.task_id} preregistration binding mismatch")
         if not _self_hash_valid(catalog, "catalog_hash") or catalog.get(
             "catalog_hash"
         ) != payload.get("catalog_hash"):
@@ -368,6 +403,8 @@ def build_production_adapters(
             adapter_plan_hash=plan.plan_hash,
             supervisor_checkpoint_path=checkpoint_path,
             repository_root=repository_root,
+            preregistration_path=plan.preregistration_path,
+            preregistration_hash=plan.preregistration_hash,
         )
         for task_id in TASKS
     }
