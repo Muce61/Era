@@ -64,7 +64,12 @@ def _hash_file(path: Path) -> str:
 
 def _tree_summary(root: Path) -> dict[str, Any]:
     files = []
-    for path in sorted(item for item in root.rglob("*") if item.is_file()):
+    for path in sorted(
+        item
+        for item in root.rglob("*")
+        if item.is_file()
+        and not any(part.startswith("._") for part in item.relative_to(root).parts)
+    ):
         files.append(
             {
                 "relative_path": str(path.relative_to(root)),

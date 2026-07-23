@@ -771,6 +771,7 @@ def _handoff(
             }
             for path in sorted(item for item in task_root.rglob("*") if item.is_file())
             if path.name not in {"manifest.json", "catalog.json"}
+            and not any(part.startswith("._") for part in path.relative_to(task_root).parts)
         ],
     }
     catalog["catalog_hash"] = _canonical_hash(catalog)

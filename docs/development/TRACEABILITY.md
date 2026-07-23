@@ -24,6 +24,10 @@ the Plan v1.3 producer CLI seals full upstream handoffs, preregistration, scope,
 output and receipt hashes. A real pre-commit seven-day component chain passed T12 through T15 and
 the lifecycle component correctly fail-closed all 42 Primary Episodes as declared-gap censored.
 The clean-commit full chain and UI observation remain the active gate.
+The first clean-commit attempt at `0c27e41` failed closed on external-volume AppleDouble
+`._*.parquet` sidecars during T12 inventory. The unpublished failed root is retained; the scoped
+inventory now ignores only those metadata sidecars and has a dedicated regression test. The next
+commit must rerun the complete chain.
 
 No V1.3 Authority, bins, Run ID, publication or formal H3 result exists. CR-2026-038 resolves
 OQ-S2-010 by binding the accepted BTC/ETH historical funding source. CR-2026-039 resolves
