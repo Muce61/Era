@@ -11,7 +11,9 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import shutil
 import subprocess
+import tempfile
 from collections import Counter
 from dataclasses import asdict, is_dataclass
 from datetime import UTC, date, datetime, timedelta
@@ -524,10 +526,16 @@ def run_final_code_rehearsal(*, output_root: Path) -> tuple[dict[str, Any], Path
     funding_verify = verify_funding_acceptance(FUNDING_ACCEPTANCE.parent)
     if funding_verify.get("status") != "PASS":
         raise ValueError("accepted funding Verify is not PASS")
-    source_audit, source_report_path = run_seven_day_audit(
-        output_root=root / "source-audit",
-        start_date=START_DATE,
-    )
+    with tempfile.TemporaryDirectory(prefix="s2p13-final-code-7d-", dir="/private/tmp") as temp:
+        temporary_audit_root = Path(temp) / "source-audit"
+        source_audit, source_report_path = run_seven_day_audit(
+            output_root=temporary_audit_root,
+            start_date=START_DATE,
+        )
+        verify_seven_day_audit(report_path=source_report_path)
+        durable_audit_root = root / "source-audit"
+        shutil.copytree(temporary_audit_root, durable_audit_root)
+    source_report_path = durable_audit_root / "seven-day-audit-report.json"
     source_verify = verify_seven_day_audit(report_path=source_report_path)
     if (
         source_audit["feature_availability"]["status"] != "PASS"
