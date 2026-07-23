@@ -396,7 +396,6 @@ def _t16_probe(*, reader: FixedT10Reader, row: dict[str, Any]) -> dict[str, Any]
         feature
         for feature in features
         if feature.high_timeframe_trend_state == episode_context
-        and (feature.anchor_ns // (4 * 3600 * NS)) % 6 == episode_bucket
         and PRIMARY_PARAMETER_SET in feature.distance_bps_by_parameter
         and feature.anchor_ns + FORWARD_EMBARGO_SECONDS * NS
         <= anchor_ns - BACKWARD_PURGE_SECONDS * NS
@@ -452,7 +451,7 @@ def _t16_probe(*, reader: FixedT10Reader, row: dict[str, Any]) -> dict[str, Any]
                     "volatility_quintile": 3,
                     "activity_quintile": 3,
                     "key_level_distance_quintile": 3,
-                    "utc_four_hour_bucket": int(episode_bucket),
+                    "utc_four_hour_bucket": int((feature.anchor_ns // (4 * 3600 * NS)) % 6),
                     "utc_calendar_quarter": 1,
                     "utc_calendar_year": 2020,
                     "binning_snapshot_hash": REHEARSAL_BIN_HASH,
