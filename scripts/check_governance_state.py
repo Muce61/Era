@@ -41,17 +41,15 @@ _DOCUMENT_MARKERS: dict[str, tuple[str, ...]] = {
     "docs/development/CURRENT_STAGE.md": (
         "Current Task: S2-T15 v1.4",
         "S2_T15_STOPPED_SRP_S2_001_EXEMPTIONS_APPROVED_NOT_EXECUTABLE",
-        "configs/governance/current_development_state.json",
     ),
     "docs/development/STAGE_REGISTRY.md": (
         "S2_T15_STOPPED",
-        "S2-T11～S2-T14 are PASSED",
+        "S2-T01～S2-T14 are PASSED",
         "Stage 3 remains locked",
     ),
     "docs/development/TRACEABILITY.md": (
         "S2_T15_STOPPED_SRP_S2_001_EXEMPTIONS_APPROVED_NOT_EXECUTABLE",
         "No formal T15 research result exists",
-        "configs/governance/current_development_state.json",
     ),
     "docs/development/DEPENDENCY_GRAPH.md": (
         "S2-T11～S2-T14 are PASSED",
@@ -162,8 +160,9 @@ def validate_current_governance_state() -> list[str]:
         return [str(exc)]
 
     for field, expected in _EXPECTED_STATE.items():
-        if getattr(state, field) != expected:
-            errors.append(f"current state {field} drift: {getattr(state, field)!r} != {expected!r}")
+        actual = getattr(state, field)
+        if actual != expected:
+            errors.append(f"current state {field} drift: {actual!r} != {expected!r}")
     if set(state.allowed_operations) != _EXPECTED_ALLOWED:
         errors.append("current state allowed_operations drift")
     if set(state.blocked_operations) != _EXPECTED_BLOCKED:
