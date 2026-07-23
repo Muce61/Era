@@ -3,16 +3,16 @@
 ## Metadata
 
 - task_id: S2-T14
-- task_version: 0.1
-- status: DRAFT
+- task_version: 1.3
+- status: PASSED / HUMAN ACCEPTED
 - stage_id: S2
-- stage_plan_version: 0.1
+- stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
-- created_from_commit: 28bfb764f8286d2b4f23568a81f1233bb2b57b15
-- dependencies: S2-T13
-- supersedes: NONE
-- approved_by: NONE
-- approved_at: NONE
+- created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
+- dependencies: S2-T13 PASS
+- supersedes: task_version 1.2
+- approved_by: Muce
+- approved_at: 2026-07-21T13:07:08Z
 
 ## 1. 目标
 
@@ -31,7 +31,7 @@
 
 ## 4. 前置条件
 
-Stage 2 Plan 0.1 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和基线已核验。
+Stage 2 Plan v1.2 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和Stage 1 Baseline v1.0已核验。
 
 ## 5. 允许范围
 
@@ -43,7 +43,7 @@ Stage 2 Plan 0.1 与本 Task 均已人工批准；依赖项有真实 validation�
 
 ## 7. 允许修改的路径
 
-src/research/events/, tests/research/events/, artifacts/experiments/ (all paths PLANNED; final paths require approved Stage review)
+以第21节的v1.0精确路径为准；未列路径禁止修改。
 
 ## 8. 禁止修改的路径
 
@@ -71,9 +71,7 @@ src/research/events/, tests/research/events/, artifacts/experiments/ (all paths 
 
 ## 14. 必须运行的命令
 
-TO_BE_DEFINED_IN_STAGE_0
-
-不得虚构不存在的命令。Stage 0 冻结工具链后，Task 新版本必须替换为实际命令并重新审批。
+以第21节的定向pytest命令和现有统一质量门为准；全量研究CLI必须由S2-T19预注册后通过Task新版本冻结。
 
 ## 15. 完成报告格式
 
@@ -97,4 +95,50 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 
 ## 20. 变更历史
 
-- 2026-07-12：v0.1，依据 Stage 2 Plan 0.1 创建，状态 DRAFT，未执行。
+- 2026-07-12：v0.1，依据 Stage 2 Plan v0.1 创建，状态 DRAFT，未执行。
+- 2026-07-14：v1.0，按Stage 1 Trade Identity v2与Stage 2 Plan v1.0重规划；状态DRAFT，未执行。
+- 2026-07-14：v1.1，加入可扩展研究setup架构与事件说明图规划；状态DRAFT，未执行。
+- 2026-07-16：v1.2，按Plan v1.2收口分组、前置S2-T19并修订DAG；状态DRAFT，未执行。
+- 2026-07-21：Muce以“开始t14”批准v1.2 fixture能力，从已人工验收的S2-T13提交
+  `65a547386ca400c3b581bcf44c51ac1dacc4d764`独立执行。正式全量分布CLI、外部Run和Web UI
+  自动识别不在v1.2允许范围内，必须先批准最小范围修订。
+- 2026-07-21：v1.2纯fixture边界、分布汇总、hash和隔离测试通过；定向15项及统一质量门
+  523项全部PASS。因全量分布与Web UI仍缺授权，提交CR-2026-024并停止，不启动正式Run
+  或S2-T15。
+- 2026-07-21：Muce以`webui接入t14，然后收尾t14`批准CR-2026-024与v1.3最小范围：
+  只增加正式全量分布CLI、追加式Authority/Run/Manifest/Catalog/Verify证据、轻量仓库摘要和
+  只读Web UI自动识别；不授权S2-T15+、H3、基线、placebo、聚类、bootstrap或Stage 3。
+- 2026-07-21：Authority `3a563bd2…f7a`、正式Run
+  `stage2-s2t14-ambiguity-bounds-20260721T140507Z-8b4cf765602d`、全量Verify、统一质量门与
+  真实浏览器自动投影全部PASS。Muce的明确收尾指令于证据通过后生效，S2-T14 v1.3在
+  2026-07-21T14:15:01Z完成并人工接收；S2-T15未开始，Stage 3继续锁定。
+
+## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
+
+- 数据与能力边界：无法由数据粒度确定顺序时必须保留AMBIGUOUS；H1主结果不利先发生并另报乐观上界。
+- 允许修改路径：`src/era100x/research/stage_2/labels/ambiguity/`、`tests/research/stage_2/labels/ambiguity/`，以及本Task validation/TRACEABILITY。禁止修改Stage 1实现/数据、\`docs/spec/**\`和Stage 3+。
+- 验证命令：\`uv run python -m pytest tests/research/stage_2/labels/ambiguity -q\`；\`uv run python scripts/run_quality_gate.py\`。全量研究CLI须由S2-T19冻结后再写入Task新版本，不得当前虚构。
+- 验收标准：同秒双触及、无序事件、H1上下界、H2可判定路径、禁止删除/重分类歧义测试通过。
+- 证据模式：\`FIXTURE_CAPABILITY + FULL DISTRIBUTION\`。无论fixture能力是否可验收，Stage 1最终PASSED与VALID data baseline之前均不得执行本Task。
+
+## 22. S2-T14 v1.2最小歧义边界合同
+
+- 输入只能是已验证的S2-T13 `HistoricalFirstPassageLabel`；输入hash不匹配时失败关闭，
+  不得修改、删除或重新分类原始标签。
+- Primary固定把`AMBIGUOUS`按失败处理；条件结果必须从分母排除`AMBIGUOUS`；理论上界将
+  `AMBIGUOUS`按成功计入。三种口径必须同时保留，不得用条件结果或理论上界替代Primary。
+- H1同事件同时触及目标和止损时，悲观路径标签为`STOP_FIRST`、乐观路径标签为
+  `TARGET_FIRST`，但原始标签仍是`AMBIGUOUS`。
+- 缺口、无观察或窗口截断等未解决来源歧义只能产生0/1成功指标边界，不得虚构悲观或
+  乐观路径顺序标签。
+- `TARGET_FIRST`、`STOP_FIRST`和`EXPIRED`等可判定路径的上下界必须收敛到原标签；H2
+  仍使用S2-T13的V2稳定顺序，不产生同事件伪歧义。
+- 分布必须按BTC/ETH、H1/H2、parameter set、target、stop和timing分别汇总；Primary率、
+  排除歧义的条件率和理论上界率均由原始计数精确推导，输入shuffle不得改变hash。
+- v1.3按已批准CR-2026-024增加全量分布与只读自动观测，但仍不得输出PnL、return、
+  ROUND_SUCCESS、live execution、条件基线、placebo、cluster、bootstrap或Stage 2 Go/No-Go。
+- 全量Run必须在创建Run ID前绑定已验收S2-T13的Authority、Run、Snapshot、Manifest、
+  Catalog、代码版本、输出hash与计数；逐条扫描全部31,962,480个分类，但只发布紧凑分布，
+  不复制或改写上游逐行分类。
+- 最新合法Run的状态由Web UI只读自动投影；HTML不得预置PASSED，失败、篡改、symlink或
+  更新但无效的证据必须失败关闭且不得回退到更旧PASS。

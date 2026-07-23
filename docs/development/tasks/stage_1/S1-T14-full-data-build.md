@@ -3,7 +3,7 @@
 ## Metadata
 - task_id: S1-T14
 - task_version: 1.5
-- status: IN_PROGRESS
+- status: PASSED
 - stage_id: S1
 - stage_plan_version: 1.1
 - created_from_spec_version: V1.3.4
@@ -59,3 +59,4 @@ OQ-S1-004与OQ-S1-005已关闭。CR-2026-001要求Trade Identity v2、官方月/
 - 2026-07-13：v1.3，人工批准处理官方BTCUSDT 2023-01月包跨日期交错；v1.2 run在68/162归档处停止且未发布，标记INVALIDATED。按真实UTC日期路由，日期内排序硬门保持不变。
 - 2026-07-13：v1.4，人工批准OQ-S1-004；按`(ts_event_ns, trade_id, canonical row)`执行磁盘外部稳定排序，记录输入hash、倒退次数和排序后逻辑hash；冲突重复/非法值继续失败。
 - 2026-07-14：v1.5，CR-2026-001；旧134/162 run INVALIDATED，使用`stage1-trades-v2`和v2排序，冲突经官方日包交叉验证后保留；IN_PROGRESS。
+- 2026-07-16：修复多标的调度器在active future暂时归零时提前结束的问题；完成162/162只读复核、20项定向回归及全量质量门，Validation为PASS；状态PASSED。

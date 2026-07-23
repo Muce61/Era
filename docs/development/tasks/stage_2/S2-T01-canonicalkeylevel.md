@@ -1,22 +1,22 @@
-# S2-T01：CanonicalKeyLevel
+# S2-T01：Stage 2研究契约、注册表与CanonicalKeyLevel
 
 ## Metadata
 
 - task_id: S2-T01
-- task_version: 0.1
-- status: DRAFT
+- task_version: 1.3
+- status: PASSED
 - stage_id: S2
-- stage_plan_version: 0.1
+- stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
-- created_from_commit: 28bfb764f8286d2b4f23568a81f1233bb2b57b15
-- dependencies: Stage 1 PASSED baseline and approved Stage 2 Plan
-- supersedes: NONE
-- approved_by: NONE
-- approved_at: NONE
+- created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
+- dependencies: S2-T19 PASS
+- supersedes: task_version 1.2
+- approved_by: Muce
+- approved_at: 2026-07-16T15:24:31+08:00
 
 ## 1. 目标
 
-规划并交付“CanonicalKeyLevel”这一单一能力，使其可独立测试、审查和回滚。
+定义Stage 2输入边界、可扩展ResearchSetup/ContextModel注册表与CanonicalKeyLevel契约，使当前事件家族可独立实现，并允许未来预注册行情上下文在不修改核心编排器的情况下接入。
 
 ## 2. 背景
 
@@ -31,7 +31,7 @@
 
 ## 4. 前置条件
 
-Stage 2 Plan 0.1 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和基线已核验。
+Stage 2 Plan v1.2 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和Stage 1 Baseline v1.0已核验。
 
 ## 5. 允许范围
 
@@ -43,7 +43,7 @@ Stage 2 Plan 0.1 与本 Task 均已人工批准；依赖项有真实 validation�
 
 ## 7. 允许修改的路径
 
-src/research/events/, tests/research/events/, artifacts/experiments/ (all paths PLANNED; final paths require approved Stage review)
+以第21节的v1.0精确路径为准；未列路径禁止修改。
 
 ## 8. 禁止修改的路径
 
@@ -71,9 +71,7 @@ src/research/events/, tests/research/events/, artifacts/experiments/ (all paths 
 
 ## 14. 必须运行的命令
 
-TO_BE_DEFINED_IN_STAGE_0
-
-不得虚构不存在的命令。Stage 0 冻结工具链后，Task 新版本必须替换为实际命令并重新审批。
+以第21节的定向pytest命令和现有统一质量门为准；全量研究CLI必须由S2-T19预注册后通过Task新版本冻结。
 
 ## 15. 完成报告格式
 
@@ -97,4 +95,25 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 
 ## 20. 变更历史
 
-- 2026-07-12：v0.1，依据 Stage 2 Plan 0.1 创建，状态 DRAFT，未执行。
+- 2026-07-16：v1.3，依据CR-2026-002与ADR-S2-005冻结第一组事件构造基线和CLI；Muce批准，状态APPROVED / NOT_EXECUTED。
+
+- 2026-07-12：v0.1，依据 Stage 2 Plan v0.1 创建，状态 DRAFT，未执行。
+- 2026-07-14：v1.0，按Stage 1 Trade Identity v2与Stage 2 Plan v1.0重规划；状态DRAFT，未执行。
+- 2026-07-14：v1.1，加入可扩展研究setup架构与事件说明图规划；状态DRAFT，未执行。
+- 2026-07-16：v1.2，按Plan v1.2收口分组、前置S2-T19并修订DAG；状态DRAFT，未执行。
+
+## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
+
+- 数据与能力边界：仅在Stage 1最终PASSED且data baseline VALID后绑定published manifest；fixture只可验证schema。Trades按canonical_trade_id唯一且v2稳定排序，CanonicalKeyLevel禁止右侧确认。注册表至少定义`setup_id/setup_version/context_model_id/context_version/required_data_capability/evidence_status`，当前唯一可执行setup为`KEY_LOW_SWEEP_RECLAIM_HOLD_V1`；dummy setup只用于架构测试。
+- 允许修改路径：`src/era100x/research/stage_2/contracts/`、`src/era100x/research/stage_2/registry/`、`tests/research/stage_2/contracts/`、`tests/research/stage_2/registry/`、`configs/research/stage_2/`、`tests/test_package_import.py`，以及本Task validation/TRACEABILITY。禁止修改Stage 1实现/数据、\`docs/spec/**\`和Stage 3+。
+- 验证命令：\`uv run python -m pytest tests/research/stage_2/contracts -q\`；\`uv run python scripts/run_quality_gate.py\`。本Task只做契约、注册表和小样本验证；全量候选运行唯一由S2-T10负责。
+- 验收标准：schema/unknown-field、BTC/ETH隔离、v2 identity、已完成数据边界、无右侧确认测试通过；dummy setup无需修改编排器即可注册；未知、未批准、数据能力不足或跨标的setup拒绝运行；context不得修改MarketEpisode消费语义；baseline绑定证据存在。
+- 证据模式：\`FIXTURE_CAPABILITY + PUBLISHED_BASELINE_BINDING\`；不得在本Task生成全量候选数据。
+
+## 22. ADR-S2-004预注册绑定
+
+本Task必须把[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)注册为批准的`BASELINE / RESEARCH`配置来源：UTC事件时间纳秒与左闭右开语义、P1～P3按Episode `available_at_ts`唯一归属、BTC/ETH与split/fold隔离，以及T1～T4版本身份必须进入契约/注册表；不得把其标记为最优或FROZEN。本Task仍为APPROVED / NOT_EXECUTED。
+
+## 23. ADR-S2-005事件构造绑定
+
+This Task binds the strict Decimal/UTC-nanosecond contracts, stable version-prefixed IDs, approved registries and CanonicalKeyLevel fields to ADR-S2-005. The FROZEN MarketEpisode identity remains outside the key-level ID.

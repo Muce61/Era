@@ -1,6 +1,8 @@
 import hashlib
 import json
+import threading
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pyarrow.parquet as pq
@@ -9,11 +11,17 @@ import era100x.data.full_build.builder as builder_module
 
 from era100x.data.full_build.builder import (
     ARROW_SCHEMA,
+    Frequency,
     FullBuild,
+    SchedulerState,
+    Symbol,
     archive_inventory,
     atomic_json,
+    download_archive,
     parse_checksum,
     process_archive,
+    round_robin_inventory,
+    classify_scheduler_state,
     validate_official_conflicts,
 )
 
@@ -206,3 +214,366 @@ def test_atomic_json_has_stable_content(tmp_path: Path) -> None:
         hashlib.sha256(path.read_bytes()).hexdigest()
         == hashlib.sha256(path.read_bytes()).hexdigest()
     )
+
+
+def test_truncated_download_resumes_without_resetting_partial(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    content = b"abcdefghij"
+    requests: list[str | None] = []
+
+    class Response:
+        def __init__(self, payload: bytes, status: int, headers: dict[str, str]) -> None:
+            self.payload = payload
+            self.status = status
+            self.headers = headers
+            self.offset = 0
+
+        def __enter__(self) -> "Response":
+            return self
+
+        def __exit__(self, *_: object) -> None:
+            return None
+
+        def read(self, size: int) -> bytes:
+            block = self.payload[self.offset : self.offset + size]
+            self.offset += len(block)
+            return block
+
+    def fake_urlopen(request: object, timeout: int) -> Response:
+        del timeout
+        range_header = request.get_header("Range")  # type: ignore[attr-defined]
+        requests.append(range_header)
+        if len(requests) == 1:
+            return Response(content[:3], 200, {"Content-Length": str(len(content))})
+        assert range_header == "bytes=3-"
+        return Response(content[3:], 206, {"Content-Range": "bytes 3-9/10"})
+
+    monkeypatch.setattr(builder_module, "urlopen", fake_urlopen)
+    monkeypatch.setattr("era100x.data.full_build.builder.time.sleep", lambda _: None)
+    destination = tmp_path / "archive.zip"
+    expected = hashlib.sha256(content).hexdigest()
+    assert download_archive("https://official/archive.zip", destination, expected) == destination
+    assert destination.read_bytes() == content
+    assert requests == [None, "bytes=3-"]
+
+
+def test_round_robin_inventory_keeps_symbols_separate_and_chronological() -> None:
+    pending: dict[Symbol, list[tuple[Symbol, str, Frequency]]] = {
+        "BTCUSDT": [
+            ("BTCUSDT", "2020-01", "monthly"),
+            ("BTCUSDT", "2020-02", "monthly"),
+        ],
+        "ETHUSDT": [
+            ("ETHUSDT", "2020-01", "monthly"),
+            ("ETHUSDT", "2020-02", "monthly"),
+        ],
+    }
+    assert round_robin_inventory(pending) == [
+        ("BTCUSDT", "2020-01", "monthly"),
+        ("ETHUSDT", "2020-01", "monthly"),
+        ("BTCUSDT", "2020-02", "monthly"),
+        ("ETHUSDT", "2020-02", "monthly"),
+    ]
+
+
+def test_full_build_overlaps_prefetch_with_symbol_builds(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    inventory: list[tuple[Symbol, str, Frequency]] = [
+        ("BTCUSDT", "2020-01", "monthly"),
+        ("BTCUSDT", "2020-02", "monthly"),
+        ("ETHUSDT", "2020-01", "monthly"),
+        ("ETHUSDT", "2020-02", "monthly"),
+    ]
+    build_started = threading.Event()
+    later_download_saw_build = threading.Event()
+
+    def fake_prepare(
+        work_root: str, symbol: Symbol, period: str, frequency: Frequency
+    ) -> tuple[str, str]:
+        del work_root
+        if period == "2020-02":
+            assert build_started.wait(timeout=2)
+            later_download_saw_build.set()
+        return f"{symbol}/{frequency}/{period}", "a" * 64
+
+    def fake_build(
+        work_root: str,
+        run_id: str,
+        symbol: Symbol,
+        period: str,
+        frequency: Frequency,
+        expected: str,
+    ) -> tuple[str, list[dict[str, object]]]:
+        del work_root, run_id, expected
+        build_started.set()
+        return f"{symbol}/{frequency}/{period}", []
+
+    monkeypatch.setattr(builder_module, "archive_inventory", lambda: inventory)
+    monkeypatch.setattr(builder_module, "prepare_archive", fake_prepare)
+    monkeypatch.setattr(builder_module, "build_prepared_archive", fake_build)
+    monkeypatch.setattr(builder_module, "ProcessPoolExecutor", ThreadPoolExecutor)
+    monkeypatch.setattr(builder_module, "DOWNLOAD_WORKERS", 4)
+    monkeypatch.setattr(builder_module, "MINIMUM_FREE_BYTES", 0)
+    monkeypatch.setattr(FullBuild, "_finalize", lambda self, checkpoint: None)
+    root = tmp_path / "work"
+    root.mkdir()
+    checkpoint = FullBuild(root, "run", "commit", "config").run()
+    assert later_download_saw_build.is_set()
+    assert checkpoint["completed_archives"] == [
+        "BTCUSDT/monthly/2020-01",
+        "ETHUSDT/monthly/2020-01",
+        "BTCUSDT/monthly/2020-02",
+        "ETHUSDT/monthly/2020-02",
+    ] or set(checkpoint["completed_archives"]) == {
+        "BTCUSDT/monthly/2020-01",
+        "ETHUSDT/monthly/2020-01",
+        "BTCUSDT/monthly/2020-02",
+        "ETHUSDT/monthly/2020-02",
+    }
+
+
+@pytest.mark.parametrize(
+    ("short_symbol", "long_symbol"),
+    [("BTCUSDT", "ETHUSDT"), ("ETHUSDT", "BTCUSDT")],
+)
+def test_scheduler_does_not_stop_when_one_symbol_has_an_asymmetric_tail(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    short_symbol: Symbol,
+    long_symbol: Symbol,
+) -> None:
+    inventory: list[tuple[Symbol, str, Frequency]] = [
+        (short_symbol, "2020-01", "monthly"),
+        (long_symbol, "2020-01", "monthly"),
+        (long_symbol, "2020-02", "monthly"),
+    ]
+
+    def fake_prepare(
+        work_root: str, symbol: Symbol, period: str, frequency: Frequency
+    ) -> tuple[str, str]:
+        del work_root
+        return f"{symbol}/{frequency}/{period}", "a" * 64
+
+    def fake_build(
+        work_root: str,
+        run_id: str,
+        symbol: Symbol,
+        period: str,
+        frequency: Frequency,
+        expected: str,
+    ) -> tuple[str, list[dict[str, object]]]:
+        del work_root, run_id, expected
+        return f"{symbol}/{frequency}/{period}", []
+
+    monkeypatch.setattr(builder_module, "archive_inventory", lambda: inventory)
+    monkeypatch.setattr(builder_module, "prepare_archive", fake_prepare)
+    monkeypatch.setattr(builder_module, "build_prepared_archive", fake_build)
+    monkeypatch.setattr(builder_module, "ProcessPoolExecutor", ThreadPoolExecutor)
+    monkeypatch.setattr(builder_module, "DOWNLOAD_WORKERS", len(inventory))
+    monkeypatch.setattr(builder_module, "MINIMUM_FREE_BYTES", 0)
+    monkeypatch.setattr(FullBuild, "_finalize", lambda self, checkpoint: None)
+    root = tmp_path / "work"
+    root.mkdir()
+
+    checkpoint = FullBuild(root, "run", "commit", "config").run()
+
+    assert set(checkpoint["completed_archives"]) == {
+        f"{short_symbol}/monthly/2020-01",
+        f"{long_symbol}/monthly/2020-01",
+        f"{long_symbol}/monthly/2020-02",
+    }
+
+
+def test_scheduler_state_never_treats_idle_or_symbol_completion_as_global() -> None:
+    planned = {"BTC/a", "ETH/a", "ETH/b"}
+    completed = {"BTC/a", "ETH/a"}
+    assert (
+        classify_scheduler_state(
+            planned=planned,
+            completed=completed,
+            pending_count=1,
+            active_count=0,
+        )
+        is SchedulerState.TEMPORARILY_IDLE
+    )
+    assert (
+        classify_scheduler_state(
+            planned=planned,
+            completed=completed,
+            pending_count=1,
+            active_count=0,
+            recovery_count=1,
+        )
+        is SchedulerState.RECOVERY_REQUIRED
+    )
+    assert (
+        classify_scheduler_state(
+            planned=planned,
+            completed=completed,
+            pending_count=1,
+            active_count=0,
+            failed_count=1,
+        )
+        is SchedulerState.FAILED
+    )
+    assert (
+        classify_scheduler_state(
+            planned=planned,
+            completed=completed,
+            pending_count=0,
+            active_count=0,
+            unknown_count=1,
+        )
+        is SchedulerState.UNKNOWN
+    )
+    assert (
+        classify_scheduler_state(
+            planned=planned,
+            completed=planned,
+            pending_count=0,
+            active_count=0,
+        )
+        is SchedulerState.GLOBAL_BUILD_COMPLETE
+    )
+
+
+def test_interrupted_archive_recovers_and_schedules_later_tail(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    inventory: list[tuple[Symbol, str, Frequency]] = [
+        ("BTCUSDT", "2020-01", "monthly"),
+        ("ETHUSDT", "2020-01", "monthly"),
+        ("ETHUSDT", "2020-02", "monthly"),
+        ("ETHUSDT", "2020-03", "monthly"),
+    ]
+    fail_once = True
+
+    def fake_prepare(
+        work_root: str, symbol: Symbol, period: str, frequency: Frequency
+    ) -> tuple[str, str]:
+        del work_root
+        return f"{symbol}/{frequency}/{period}", "a" * 64
+
+    def fake_build(
+        work_root: str,
+        run_id: str,
+        symbol: Symbol,
+        period: str,
+        frequency: Frequency,
+        expected: str,
+    ) -> tuple[str, list[dict[str, object]]]:
+        nonlocal fail_once
+        del work_root, run_id, expected
+        if symbol == "ETHUSDT" and period == "2020-02" and fail_once:
+            fail_once = False
+            raise RuntimeError("simulated interruption")
+        return f"{symbol}/{frequency}/{period}", []
+
+    monkeypatch.setattr(builder_module, "archive_inventory", lambda: inventory)
+    monkeypatch.setattr(builder_module, "prepare_archive", fake_prepare)
+    monkeypatch.setattr(builder_module, "build_prepared_archive", fake_build)
+    monkeypatch.setattr(builder_module, "ProcessPoolExecutor", ThreadPoolExecutor)
+    monkeypatch.setattr(builder_module, "DOWNLOAD_WORKERS", len(inventory))
+    monkeypatch.setattr(builder_module, "MINIMUM_FREE_BYTES", 0)
+    monkeypatch.setattr(FullBuild, "_finalize", lambda self, checkpoint: None)
+    root = tmp_path / "work"
+    root.mkdir()
+    build = FullBuild(root, "run", "commit", "config")
+
+    with pytest.raises(RuntimeError, match="simulated interruption"):
+        build.run()
+    checkpoint = build.run()
+
+    assert set(checkpoint["completed_archives"]) == {
+        f"{symbol}/{frequency}/{period}" for symbol, period, frequency in inventory
+    }
+    assert checkpoint["symbols"]["BTCUSDT"]["schedule_status"] == "SYMBOL_COMPLETE"
+    assert checkpoint["symbols"]["ETHUSDT"]["schedule_status"] == "SYMBOL_COMPLETE"
+    assert checkpoint["errors"][0]["resolved_at"]
+    assert len(checkpoint["completed_archives"]) == len(set(checkpoint["completed_archives"]))
+
+
+def test_out_of_order_worker_completion_still_drains_both_symbols(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    inventory: list[tuple[Symbol, str, Frequency]] = [
+        ("BTCUSDT", "2020-01", "monthly"),
+        ("ETHUSDT", "2020-01", "monthly"),
+    ]
+    eth_finished = threading.Event()
+    completion_order: list[Symbol] = []
+
+    def fake_prepare(
+        work_root: str, symbol: Symbol, period: str, frequency: Frequency
+    ) -> tuple[str, str]:
+        del work_root
+        return f"{symbol}/{frequency}/{period}", "a" * 64
+
+    def fake_build(
+        work_root: str,
+        run_id: str,
+        symbol: Symbol,
+        period: str,
+        frequency: Frequency,
+        expected: str,
+    ) -> tuple[str, list[dict[str, object]]]:
+        del work_root, run_id, expected
+        if symbol == "BTCUSDT":
+            assert eth_finished.wait(timeout=2)
+        else:
+            eth_finished.set()
+        completion_order.append(symbol)
+        return f"{symbol}/{frequency}/{period}", []
+
+    monkeypatch.setattr(builder_module, "archive_inventory", lambda: inventory)
+    monkeypatch.setattr(builder_module, "prepare_archive", fake_prepare)
+    monkeypatch.setattr(builder_module, "build_prepared_archive", fake_build)
+    monkeypatch.setattr(builder_module, "ProcessPoolExecutor", ThreadPoolExecutor)
+    monkeypatch.setattr(builder_module, "DOWNLOAD_WORKERS", 2)
+    monkeypatch.setattr(builder_module, "MINIMUM_FREE_BYTES", 0)
+    monkeypatch.setattr(FullBuild, "_finalize", lambda self, checkpoint: None)
+    root = tmp_path / "work"
+    root.mkdir()
+
+    checkpoint = FullBuild(root, "run", "commit", "config").run()
+
+    assert completion_order == ["ETHUSDT", "BTCUSDT"]
+    assert set(checkpoint["completed_archives"]) == {
+        "BTCUSDT/monthly/2020-01",
+        "ETHUSDT/monthly/2020-01",
+    }
+
+
+def test_complete_run_scan_is_read_only_and_never_republishes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    inventory: list[tuple[Symbol, str, Frequency]] = [
+        ("BTCUSDT", "2020-01", "monthly"),
+        ("ETHUSDT", "2020-01", "monthly"),
+    ]
+    root = tmp_path / "work"
+    root.mkdir()
+    build = FullBuild(root, "run", "commit", "config")
+    checkpoint = build.initial_checkpoint()
+    checkpoint["status"] = "COMPLETE"
+    checkpoint["completed_archives"] = [
+        f"{symbol}/{frequency}/{period}" for symbol, period, frequency in inventory
+    ]
+    for symbol in ("BTCUSDT", "ETHUSDT"):
+        checkpoint["symbols"][symbol]["status"] = "PUBLISHED"
+        (root / "published" / builder_module.SCHEMA_VERSION / "run" / symbol).mkdir(parents=True)
+    atomic_json(build.checkpoint_path, checkpoint)
+    monkeypatch.setattr(builder_module, "archive_inventory", lambda: inventory)
+    monkeypatch.setattr(
+        FullBuild,
+        "_finalize",
+        lambda self, checkpoint: pytest.fail("complete scan attempted duplicate publish"),
+    )
+    before = build.checkpoint_path.read_bytes()
+
+    result = build.run()
+
+    assert result["scheduler_state"] == "GLOBAL_BUILD_COMPLETE"
+    assert build.checkpoint_path.read_bytes() == before

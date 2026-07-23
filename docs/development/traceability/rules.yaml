@@ -129,13 +129,58 @@ rules:
   planned_tasks:
   - S0-T10
   - S0-T04
-  - S2-T01
+  - S2-T09
+  - S2-T10
+  - S2-T11
+  - S2-T12
+  - S2-T13
+  - S2-T14
+  - S2-T15
+  - S2-T20
   implementation_paths:
-  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/ (PLANNED)
+  - src/era100x/research/stage_2/metrics/path/ (S2-T12 IMPLEMENTED read-only Episode lineage)
+  - src/era100x/research/stage_2/labels/first_passage/ (S2-T13 IMPLEMENTED fixture first-passage capability)
+  - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 IMPLEMENTED historical ambiguity bounds)
+  - src/era100x/research/stage_2/baselines/conditional/ (S2-T15 v1.4 STOPPED; CR-2026-031 seven-day availability PASS, whole-history OQ-S2-009 open; CR-2026-032 raw paths PASS but lifecycle source stops at 600s)
   test_paths:
-  - tests/stage_2/ (PLANNED); UT-EVT-011, FI-14
+  - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); UT-EVT-011, FI-14
+  - tests/research/stage_2/metrics/path/ (S2-T12 TESTED)
+  - tests/research/stage_2/labels/first_passage/ (S2-T13 TESTED)
+  - tests/research/stage_2/labels/ambiguity/ (S2-T14 TESTED)
+  - tests/research/stage_2/baselines/conditional/ (S2-T15 v1.4 directed tests PASS)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
+  stage_2_identity_delivery:
+    implementation: src/era100x/research/stage_2/episodes/identity/
+    tests: tests/research/stage_2/episodes/identity/
+    validation: docs/development/validations/stage_2/S2-T09.md
+    state: PASSED
+  s2_t11_delivery:
+    implementation: src/era100x/research/stage_2/paths/extraction/
+    tests: tests/research/stage_2/paths/extraction/
+    validation: docs/development/validations/stage_2/S2-T11.md
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t12_delivery:
+    implementation: src/era100x/research/stage_2/metrics/path/
+    tests: tests/research/stage_2/metrics/path/
+    validation: docs/development/validations/stage_2/S2-T12.md
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t13_delivery:
+    implementation: src/era100x/research/stage_2/labels/first_passage/
+    tests: tests/research/stage_2/labels/first_passage/
+    validation: docs/development/validations/stage_2/S2-T13.md
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t14_delivery:
+    implementation: src/era100x/research/stage_2/labels/ambiguity/
+    tests: tests/research/stage_2/labels/ambiguity/
+    validation: docs/development/validations/stage_2/S2-T14.md
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t15_delivery:
+    implementation: src/era100x/research/stage_2/baselines/conditional/
+    tests: tests/research/stage_2/baselines/conditional/
+    validation: docs/development/validations/stage_2/S2-T15.md
+    state: V1_4_STOPPED_7_DAY_RAW_PATH_PASS_FULL_LIFECYCLE_BLOCKED
   state: PLANNED
 - rule_id: FILL-FIRST-NONZERO-PROTECT
   rule_status: FROZEN
@@ -195,15 +240,47 @@ rules:
   - S1-T12
   - S1-T14
   - S1-T15
+  - S2-T11
+  - S2-T12
+  - S2-T13
+  - S2-T14
   - S5-T01
   implementation_paths:
   - src/era100x/data/evidence/, tests/data/evidence/, artifacts/manifests/stage_1/ (PLANNED Stage 1 boundary)
+  - artifacts/reports/stage_2/ (PLANNED Stage 2 deterministic evidence reporting boundary)
+  - src/era100x/research/stage_2/paths/extraction/ (S2-T11 IMPLEMENTED fixture capability)
+  - src/era100x/research/stage_2/metrics/path/ (S2-T12 IMPLEMENTED historical price-only metrics)
+  - src/era100x/research/stage_2/labels/first_passage/ (S2-T13 IMPLEMENTED historical price-only classification)
+  - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 IMPLEMENTED historical-only ambiguity bounds)
   - src/forward/, tests/forward/, artifacts/manifests/ (PLANNED Stage 5 forward fields)
   test_paths:
   - tests/data/evidence/ (PLANNED); UT-DATA-013
+  - docs/development/validations/stage_2/ (PLANNED historical field and illustration/evidence isolation review)
+  - tests/research/stage_2/paths/extraction/ (S2-T11 TESTED)
+  - tests/research/stage_2/metrics/path/ (S2-T12 TESTED; no execution-field fabrication)
+  - tests/research/stage_2/labels/first_passage/ (S2-T13 TESTED; no execution-field fabrication)
+  - tests/research/stage_2/labels/ambiguity/ (S2-T14 TESTED; no execution-field fabrication)
   - tests/stage_5/ (PLANNED forward regression)
   validation_paths:
   - docs/development/validations/stage_5/ (PLANNED)
+  stage_1_delivery:
+    implementation: IMPLEMENTED
+    tests: TESTED
+    validation: VALIDATED
+    tasks: [S1-T02, S1-T10, S1-T12, S1-T14, S1-T15]
+    implementation_paths: [src/era100x/data/evidence/historical.py, src/era100x/data/full_build/builder.py]
+    test_paths: [tests/data/evidence/test_historical_boundary.py, tests/data/full_build/test_full_build.py]
+    validation_path: docs/development/validations/stage_1_validation.md
+  s2_t13_delivery:
+    implementation: src/era100x/research/stage_2/labels/first_passage/
+    tests: tests/research/stage_2/labels/first_passage/
+    validation: docs/development/validations/stage_2/S2-T13.md
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t14_delivery:
+    implementation: src/era100x/research/stage_2/labels/ambiguity/
+    tests: tests/research/stage_2/labels/ambiguity/
+    validation: docs/development/validations/stage_2/S2-T14.md
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
   state: PLANNED
 - rule_id: RESEARCH-LOCKED-REPLAY-ONCE
   rule_status: FROZEN
@@ -247,13 +324,64 @@ rules:
   - S1-T10
   - S1-T15
   - S2-T01
+  - S2-T07
+  - S2-T08
+  - S2-T11
+  - S2-T12
+  - S2-T13
+  - S2-T14
+  - S2-T15
+  - S2-T20
   implementation_paths:
   - src/era100x/data/readers/, src/era100x/data/aggregate/, tests/data/ (PLANNED Stage 1 input boundary)
-  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED Stage 2 behavior)
+  - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/gates/ (PLANNED Stage 2 behavior separation)
+  - src/era100x/research/stage_2/paths/extraction/ (S2-T11 IMPLEMENTED historical-only path boundary)
+  - src/era100x/research/stage_2/metrics/path/ (S2-T12 IMPLEMENTED H1/H2 price-only metrics)
+  - src/era100x/research/stage_2/labels/first_passage/ (S2-T13 IMPLEMENTED H1/H2 price-only classification)
+  - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 IMPLEMENTED H1/H2 ambiguity bounds)
+  - src/era100x/research/stage_2/baselines/conditional/ (S2-T15 historical-only STOPPED; seven-day raw-path non-pollution PASS; H3 lifecycle BLOCKED because T11 ends at 600s and OQ-S2-010 is open)
   test_paths:
-  - tests/stage_2/ (PLANNED); T-EVT-002
+  - tests/research/stage_2/contracts/, tests/research/stage_2/gates/ (PLANNED); T-EVT-002
+  - tests/research/stage_2/paths/extraction/ (S2-T11 TESTED)
+  - tests/research/stage_2/metrics/path/ (S2-T12 TESTED)
+  - tests/research/stage_2/labels/first_passage/ (S2-T13 TESTED)
+  - tests/research/stage_2/labels/ambiguity/ (S2-T14 TESTED)
+  - tests/research/stage_2/baselines/conditional/ (S2-T15 v1.4 historical-only directed tests PASS)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
+  stage_1_delivery:
+    implementation: IMPLEMENTED
+    tests: TESTED
+    validation: VALIDATED
+    tasks: [S1-T03, S1-T09, S1-T10, S1-T15]
+    implementation_paths: [src/era100x/data/readers/contract_price.py, src/era100x/data/aggregate/bars.py, src/era100x/data/evidence/historical.py]
+    test_paths: [tests/data/readers/test_contract_price_reader.py, tests/data/aggregate/test_bars.py, tests/data/evidence/test_historical_boundary.py]
+    validation_path: docs/development/validations/stage_1_validation.md
+  s2_t11_delivery:
+    implementation: src/era100x/research/stage_2/paths/extraction/
+    tests: tests/research/stage_2/paths/extraction/
+    validation: docs/development/validations/stage_2/S2-T11.md
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t12_delivery:
+    implementation: src/era100x/research/stage_2/metrics/path/
+    tests: tests/research/stage_2/metrics/path/
+    validation: docs/development/validations/stage_2/S2-T12.md
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t13_delivery:
+    implementation: src/era100x/research/stage_2/labels/first_passage/
+    tests: tests/research/stage_2/labels/first_passage/
+    validation: docs/development/validations/stage_2/S2-T13.md
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t14_delivery:
+    implementation: src/era100x/research/stage_2/labels/ambiguity/
+    tests: tests/research/stage_2/labels/ambiguity/
+    validation: docs/development/validations/stage_2/S2-T14.md
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t15_delivery:
+    implementation: src/era100x/research/stage_2/baselines/conditional/
+    tests: tests/research/stage_2/baselines/conditional/
+    validation: docs/development/validations/stage_2/S2-T15.md
+    state: V1_4_IMPLEMENTATION_READY_FINAL_AUDIT_NO_RUN
   state: PLANNED
 - rule_id: RESEARCH-H3-CONDITIONAL-ROUND-PROB
   rule_status: FROZEN
@@ -557,13 +685,37 @@ rules:
   planned_stage: S2
   planned_tasks:
   - S0-T10
-  - S2-T15
+  - S2-T09
+  - S2-T10
+  - S2-T11
+  - S2-T12
+  - S2-T13
+  - S2-T14
+  - S2-T20
   implementation_paths:
-  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/ (PLANNED)
+  - src/era100x/research/stage_2/paths/extraction/ (S2-T11 read-only episode lineage)
+  - src/era100x/research/stage_2/metrics/path/ (S2-T12 read-only episode lineage)
+  - src/era100x/research/stage_2/labels/first_passage/ (S2-T13 immutable episode lineage)
+  - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 immutable first-passage lineage)
   test_paths:
-  - tests/stage_2/ (PLANNED); FI-14
+  - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); FI-14
+  - tests/research/stage_2/paths/extraction/ (S2-T11 immutable lineage regression)
+  - tests/research/stage_2/metrics/path/ (S2-T12 immutable lineage regression)
+  - tests/research/stage_2/labels/first_passage/ (S2-T13 immutable lineage regression)
+  - tests/research/stage_2/labels/ambiguity/ (S2-T14 immutable lineage regression)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
+  s2_t13_delivery:
+    implementation: src/era100x/research/stage_2/labels/first_passage/
+    tests: tests/research/stage_2/labels/first_passage/
+    validation: docs/development/validations/stage_2/S2-T13.md
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t14_delivery:
+    implementation: src/era100x/research/stage_2/labels/ambiguity/
+    tests: tests/research/stage_2/labels/ambiguity/
+    validation: docs/development/validations/stage_2/S2-T14.md
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
   state: PLANNED
 - rule_id: INV-006
   rule_status: FROZEN
@@ -641,13 +793,37 @@ rules:
   planned_stage: S2
   planned_tasks:
   - S0-T10
-  - S2-T15
+  - S2-T09
+  - S2-T10
+  - S2-T11
+  - S2-T12
+  - S2-T13
+  - S2-T14
+  - S2-T20
   implementation_paths:
-  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/ (PLANNED)
+  - src/era100x/research/stage_2/paths/extraction/ (S2-T11 strategy-independent lineage)
+  - src/era100x/research/stage_2/metrics/path/ (S2-T12 strategy-independent lineage)
+  - src/era100x/research/stage_2/labels/first_passage/ (S2-T13 strategy-independent lineage)
+  - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 strategy-independent lineage)
   test_paths:
-  - tests/stage_2/ (PLANNED); UT-EVT-011
+  - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); UT-EVT-011
+  - tests/research/stage_2/paths/extraction/ (S2-T11 lineage regression)
+  - tests/research/stage_2/metrics/path/ (S2-T12 lineage regression)
+  - tests/research/stage_2/labels/first_passage/ (S2-T13 lineage regression)
+  - tests/research/stage_2/labels/ambiguity/ (S2-T14 lineage regression)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
+  s2_t13_delivery:
+    implementation: src/era100x/research/stage_2/labels/first_passage/
+    tests: tests/research/stage_2/labels/first_passage/
+    validation: docs/development/validations/stage_2/S2-T13.md
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t14_delivery:
+    implementation: src/era100x/research/stage_2/labels/ambiguity/
+    tests: tests/research/stage_2/labels/ambiguity/
+    validation: docs/development/validations/stage_2/S2-T14.md
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
   state: PLANNED
 - rule_id: INV-012
   rule_status: FROZEN
@@ -669,13 +845,52 @@ rules:
   planned_stage: S2
   planned_tasks:
   - S0-T10
-  - S2-T15
+  - S1-T02
+  - S1-T10
+  - S1-T12
+  - S1-T14
+  - S1-T15
+  - S2-T01
+  - S2-T07
+  - S2-T08
+  - S2-T10
+  - S2-T11
+  - S2-T12
+  - S2-T13
+  - S2-T14
+  - S2-T20
   implementation_paths:
-  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/gates/, src/era100x/research/stage_2/pipelines/candidates/ (PLANNED)
+  - src/era100x/research/stage_2/paths/extraction/ (S2-T11 IMPLEMENTED no-fabrication boundary)
+  - src/era100x/research/stage_2/metrics/path/ (S2-T12 IMPLEMENTED no-fabrication metric boundary)
+  - src/era100x/research/stage_2/labels/first_passage/ (S2-T13 IMPLEMENTED no-fabrication label boundary)
+  - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 IMPLEMENTED no-fabrication bounds boundary)
   test_paths:
-  - tests/stage_2/ (PLANNED); UT-DATA-013
+  - tests/research/stage_2/ (PLANNED); UT-DATA-013
+  - tests/research/stage_2/paths/extraction/ (S2-T11 TESTED)
+  - tests/research/stage_2/metrics/path/ (S2-T12 TESTED; UT-DATA-013 boundary)
+  - tests/research/stage_2/labels/first_passage/ (S2-T13 TESTED; UT-DATA-013 boundary)
+  - tests/research/stage_2/labels/ambiguity/ (S2-T14 TESTED; UT-DATA-013 boundary)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
+  stage_1_delivery:
+    implementation: IMPLEMENTED
+    tests: TESTED
+    validation: VALIDATED
+    tasks: [S1-T02, S1-T10, S1-T12, S1-T14, S1-T15]
+    implementation_paths: [src/era100x/data/evidence/historical.py, src/era100x/data/schema/models.py, src/era100x/data/full_build/builder.py]
+    test_paths: [tests/data/evidence/test_historical_boundary.py, tests/data/schema/test_data_schema_models.py, tests/data/full_build/test_full_build.py]
+    validation_path: docs/development/validations/stage_1_validation.md
+  s2_t13_delivery:
+    implementation: src/era100x/research/stage_2/labels/first_passage/
+    tests: tests/research/stage_2/labels/first_passage/
+    validation: docs/development/validations/stage_2/S2-T13.md
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t14_delivery:
+    implementation: src/era100x/research/stage_2/labels/ambiguity/
+    tests: tests/research/stage_2/labels/ambiguity/
+    validation: docs/development/validations/stage_2/S2-T14.md
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
   state: PLANNED
 - rule_id: INV-014
   rule_status: FROZEN
@@ -1104,10 +1319,12 @@ rules:
   planned_tasks:
   - S0-T08
   - S2-T01
+  - S2-T02
+  - S2-T03
   implementation_paths:
-  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/key_levels/ (PLANNED)
   test_paths:
-  - tests/stage_2/ (PLANNED)
+  - tests/research/stage_2/contracts/, tests/research/stage_2/key_levels/ (PLANNED)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   state: PLANNED
@@ -1118,12 +1335,38 @@ rules:
   planned_tasks:
   - S0-T08
   - S2-T01
+  - S2-T04
+  - S2-T05
+  - S2-T06
+  - S2-T09
+  - S2-T11
+  - S2-T12
+  - S2-T13
+  - S2-T14
   implementation_paths:
-  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/episodes/ (PLANNED)
+  - src/era100x/research/stage_2/paths/extraction/ (S2-T11 MarketEpisode lineage input)
+  - src/era100x/research/stage_2/metrics/path/ (S2-T12 MarketEpisode lineage input)
+  - src/era100x/research/stage_2/labels/first_passage/ (S2-T13 MarketEpisode lineage input)
+  - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 immutable first-passage input)
   test_paths:
-  - tests/stage_2/ (PLANNED)
+  - tests/research/stage_2/contracts/, tests/research/stage_2/episodes/ (PLANNED)
+  - tests/research/stage_2/paths/extraction/ (S2-T11 TESTED)
+  - tests/research/stage_2/metrics/path/ (S2-T12 TESTED)
+  - tests/research/stage_2/labels/first_passage/ (S2-T13 TESTED)
+  - tests/research/stage_2/labels/ambiguity/ (S2-T14 TESTED)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
+  s2_t13_delivery:
+    implementation: src/era100x/research/stage_2/labels/first_passage/
+    tests: tests/research/stage_2/labels/first_passage/
+    validation: docs/development/validations/stage_2/S2-T13.md
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+  s2_t14_delivery:
+    implementation: src/era100x/research/stage_2/labels/ambiguity/
+    tests: tests/research/stage_2/labels/ambiguity/
+    validation: docs/development/validations/stage_2/S2-T14.md
+    state: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
   state: PLANNED
 - rule_id: CONTRACT-ENTRY-INTENT
   rule_status: RESEARCH
@@ -1132,10 +1375,13 @@ rules:
   planned_tasks:
   - S0-T08
   - S2-T01
+  - S2-T07
+  - S2-T09
+  - S2-T10
   implementation_paths:
-  - src/research/events/, tests/research/events/, artifacts/experiments/ (PLANNED)
+  - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/gates/, src/era100x/research/stage_2/pipelines/candidates/ (PLANNED)
   test_paths:
-  - tests/stage_2/ (PLANNED)
+  - tests/research/stage_2/ (PLANNED)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   state: PLANNED
@@ -1314,12 +1560,21 @@ rules:
   planned_tasks:
   - S0-T06
   - S0-T08
+  - S2-T19
   implementation_paths:
   - src/foundation/, tests/foundation/, configs/ (PLANNED)
+  - src/era100x/research/stage_2/manifests/, configs/research/stage_2/, artifacts/manifests/stage_2/ (PLANNED)
   test_paths:
   - tests/stage_0/ (PLANNED)
+  - tests/research/stage_2/manifests/ (PLANNED)
   validation_paths:
   - docs/development/validations/stage_0/ (PLANNED)
+  - docs/development/validations/stage_2/ (PLANNED)
+  stage_2_delivery:
+    implementation: src/era100x/research/stage_2/manifests/
+    tests: tests/research/stage_2/manifests/
+    validation: docs/development/validations/stage_2/S2-T19.md
+    state: PASSED
   state: PLANNED
 - rule_id: REASON-ACCOUNT_MODE_INVALID
   rule_status: FROZEN
@@ -2123,12 +2378,18 @@ rules:
   - S1-T14
   - S1-T15
   implementation_paths:
-  - NONE (governance gate)
+  - docs/development/tasks/stage_1/ (S1-T01 through S1-T15 PASSED)
   test_paths:
-  - docs/development/validations/stage_1/ (PLANNED)
+  - tests/data/ (TESTED)
   validation_paths:
-  - docs/development/validations/stage_1/ (PLANNED)
-  state: PLANNED
+  - docs/development/validations/stage_1_validation.md (VALIDATED)
+  stage_1_delivery:
+    implementation: IMPLEMENTED
+    tests: TESTED
+    validation: VALIDATED
+    tasks: [S1-T12, S1-T14, S1-T15]
+    validation_path: docs/development/validations/stage_1_validation.md
+  state: VALIDATED
 - rule_id: GATE-STAGE-2
   rule_status: FROZEN
   source_section: §30; Appendix L
@@ -2141,6 +2402,245 @@ rules:
   - docs/development/validations/stage_2/ (PLANNED)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
+  stage_2_governance:
+    plan_version: '1.2'
+    plan_status: APPROVED
+    approved_by: Muce
+    approved_at: '2026-07-16T14:33:04+08:00'
+    approved_tasks: [S2-T19, S2-T01, S2-T02, S2-T03, S2-T04, S2-T05, S2-T06, S2-T07, S2-T08, S2-T09, S2-T10, S2-T11, S2-T12, S2-T13, S2-T14, S2-T15]
+    approved_task_version: '1.4'
+    s2_t09_identity_task_version: '1.4'
+    s2_t11_task_version: '1.3'
+    s2_t11_status: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+    s2_t12_task_version: '1.3'
+    s2_t12_status: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+    s2_t12_approved_by: Muce
+    s2_t12_approved_at: '2026-07-21T03:02:25Z'
+    s2_t12_accepted_by: Muce
+    s2_t12_accepted_at: '2026-07-21T06:39:21Z'
+    s2_t12_run_id: stage2-s2t12-metrics-20260721T040435Z-de9aaea56f2a
+    s2_t12_snapshot_id: f32b0c2838c73e8d5719a2b1bf76ebf79346715334310d30ebfbaeeb7c114bec
+    s2_t12_validation: docs/development/validations/stage_2/S2-T12.md
+    s2_t12_ui_change_request: docs/development/changes/CR-2026-022.md
+    cr_s2_022_status: APPROVED_IMPLEMENTED_VALIDATED_READ_ONLY_UI
+    s2_t11_ui_change_request: docs/development/changes/CR-2026-020.md
+    s2_t11_full_output_change_request: docs/development/changes/CR-2026-021.md
+    cr_s2_021_status: APPROVED_L3_FULL_OUTPUT_CONTRACT
+    s2_t13_task_version: '1.3'
+    s2_t13_status: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+    s2_t13_approved_by: Muce
+    s2_t13_approved_at: '2026-07-21T07:45:12Z'
+    s2_t13_accepted_by: Muce
+    s2_t13_accepted_at: '2026-07-21T12:52:58Z'
+    s2_t13_validation: docs/development/validations/stage_2/S2-T13.md
+    s2_t13_full_output_ui_change_request: docs/development/changes/CR-2026-023.md
+    cr_s2_023_status: APPROVED_IMPLEMENTED_VALIDATED_HUMAN_ACCEPTED
+    s2_t13_run_id: stage2-s2t13-first-passage-20260721T110224Z-d3f0c0331395
+    s2_t13_authority_hash: ab76072c501742199cf5952fda85be25d704fc7020430be192ad40ea514cbbbe
+    s2_t13_snapshot_id: 3ea1f8e188c4cf605c05c49bc86118925784b27a3b7c0e9c1969edda7a295da0
+    s2_t13_total_path_rows: 1065416
+    s2_t13_total_classifications: 31962480
+    s2_t14_task_version: '1.3'
+    s2_t14_status: PASSED_FULL_OUTPUT_VERIFIED_HUMAN_ACCEPTED
+    s2_t14_approved_by: Muce
+    s2_t14_approved_at: '2026-07-21T13:07:08Z'
+    s2_t14_validation: docs/development/validations/stage_2/S2-T14.md
+    s2_t14_full_output_ui_change_request: docs/development/changes/CR-2026-024.md
+    s2_t14_accepted_by: Muce
+    s2_t14_accepted_at: '2026-07-21T14:15:01Z'
+    s2_t14_run_id: stage2-s2t14-ambiguity-bounds-20260721T140507Z-8b4cf765602d
+    s2_t14_authority_hash: 3a563bd23f2bf2f51c487ce0ab0af68f6551d88012a615cc889904594d192f7a
+    s2_t14_snapshot_id: d1c21c10ceb344814d321c1ca4b52f44977cdced55f63d79b54bff86e0e6cf2c
+    s2_t14_manifest_hash: a6182c2ea80af92d081631f41864d5e54c6b8c4494ebe56c18a7a4df0894276a
+    s2_t14_catalog_hash: ab9abf9635ec263888bb4b6f9d5ae350fac44745544590098f3c12ceb8ecdf19
+    s2_t14_total_path_rows: 1065416
+    s2_t14_total_classifications: 31962480
+    s2_t14_total_distributions: 2280
+    s2_t14_total_ambiguous: 2862231
+    cr_s2_024_status: APPROVED_IMPLEMENTED_VALIDATED_HUMAN_ACCEPTED
+    cr_s2_024_approved_by: Muce
+    cr_s2_024_approved_at: '2026-07-21T13:37:13Z'
+    s2_t15_task_version: '1.4'
+    s2_t15_status: CR_2026_029_APPROVED_IMPLEMENTATION_GATES
+    s2_t15_approved_by: Muce
+    s2_t15_approved_at: '2026-07-22T02:25:41Z'
+    s2_t15_validation: docs/development/validations/stage_2/S2-T15.md
+    s2_t15_full_output_ui_change_request: docs/development/changes/CR-2026-025.md
+    cr_s2_025_status: APPROVED_BLOCKED_BEFORE_AUTHORITY_OR_RUN
+    cr_s2_025_approved_by: Muce
+    cr_s2_025_approved_at: '2026-07-21T14:41:46Z'
+    s2_t15_v14_contract_change_request: docs/development/changes/CR-2026-026.md
+    s2_t15_v14_decision: docs/development/decisions/ADR-S2-009-conditional-baseline-v1.4.md
+    cr_s2_026_status: APPROVED_IMPLEMENTATION_READY_CR_2026_027_VALIDATED
+    cr_s2_026_approved_by: Muce
+    cr_s2_026_approved_at: '2026-07-22T02:25:41Z'
+    oq_s2_005_status: RESOLVED_BY_CR_2026_026_AND_ADR_S2_009
+    oq_s2_006_status: RESOLVED_CR_2026_027_VALIDATED_FINAL_AUDIT_REQUIRED
+    s2_t15_failed_run_id: stage2-s2t15-conditional-20260722T071250Z-871c404c5f43
+    s2_t15_failed_run_status: FAILED_UNPUBLISHED_NO_PUBLISHED_RESULT
+    s2_t15_context_recovery_change_request: docs/development/changes/CR-2026-028.md
+    cr_s2_028_status: APPROVED_IMPLEMENTATION_AUTHORIZED
+    cr_s2_028_approved_by: Muce
+    cr_s2_028_approved_at: '2026-07-22T08:53:43Z'
+    oq_s2_007_status: RESOLVED_BY_CR_2026_028_IMPLEMENTATION_GATES_REMAIN
+    s2_t15_cr_2026_028_successor_run_id: stage2-s2t15-conditional-20260722T120658Z-023f47cffef2
+    s2_t15_cr_2026_028_successor_status: FAILED_UNPUBLISHED_456_OF_456_SELECTIONS_ZERO_CONTROL_OUTCOMES
+    s2_t15_decimal_receiver_change_request: docs/development/changes/CR-2026-029.md
+    cr_s2_029_status: APPROVED_IMPLEMENTATION_AUTHORIZED
+    cr_s2_029_approved_by: Muce
+    cr_s2_029_approved_at: '2026-07-22T14:12:52Z'
+    oq_s2_008_status: RESOLVED_BY_CR_2026_029_IMPLEMENTATION_GATES_REMAIN
+    draft_tasks: [S2-T16, S2-T17, S2-T18, S2-T20]
+    oq_s2_004_status: RESOLVED
+    decision_ref: docs/development/decisions/ADR-S2-004-primary-research-definition.md
+    event_construction_decision_ref: docs/development/decisions/ADR-S2-005-event-construction-baseline.md
+    change_request_ref: docs/development/changes/CR-2026-005.md
+    implemented_change_request_ref: docs/development/changes/CR-2026-003.md
+    s2_t10_recovery_task_version: '1.13'
+    s2_t10_final_task_version: '1.14'
+    s2_t10_status: PASSED
+    group_1_status: PASSED
+    cr_s2_004_status: RESOLVED_IMPLEMENTED_VALIDATED_L2
+    cr_s2_004_validation: docs/development/validations/stage_2/CR-2026-004.md
+    cr_s2_005_status: RESOLVED_IMPLEMENTED_VALIDATED_L2
+    cr_s2_005_validation: docs/development/validations/stage_2/CR-2026-005.md
+    release_recovery_change_request_ref: docs/development/changes/CR-2026-006.md
+    cr_s2_006_status: APPROVED_L2_RELEASE_TOOL_VERSION_SEPARATION
+    cr_s2_006_validation: docs/development/validations/stage_2/CR-2026-006.md
+    feature_foundation_change_request_ref: docs/development/changes/CR-2026-007.md
+    cr_s2_007_status: APPROVED_L2_DATA_CONTRACT_AND_MODULE_INTERFACE
+    cr_s2_007_validation: docs/development/validations/stage_2/CR-2026-007.md
+    determinism_protocol_change_request_ref: docs/development/changes/CR-2026-008.md
+    cr_s2_008_status: APPROVED_L3_RESEARCH_VALIDATION_PROTOCOL
+    cr_s2_008_validation: docs/development/validations/stage_2/CR-2026-008.md
+    authority_release_change_request_ref: docs/development/changes/CR-2026-009.md
+    cr_s2_009_status: RESOLVED_IMPLEMENTED_VALIDATED
+    run_a_supplement_compatibility_change_request_ref: docs/development/changes/CR-2026-010.md
+    cr_s2_010_status: APPROVED_IMPLEMENTED_VALIDATED
+    cr_s2_010_validation: docs/development/validations/stage_2/CR-2026-010.md
+    foundation_rss_change_request_ref: docs/development/changes/CR-2026-011.md
+    cr_s2_011_status: APPROVED_IMPLEMENTED_VALIDATED_L2_RUNTIME_RESOURCE_CORRECTION
+    cr_s2_011_validation: docs/development/validations/stage_2/CR-2026-011.md
+    foundation_finalization_rss_change_request_ref: docs/development/changes/CR-2026-012.md
+    cr_s2_012_status: APPROVED_IMPLEMENTED_VALIDATED_READY_FOR_AUTHORITY_REFREEZE
+    cr_s2_012_validation: docs/development/validations/stage_2/CR-2026-012.md
+    resource_anomaly_change_request_ref: docs/development/changes/CR-2026-013.md
+    cr_s2_013_status: APPROVED_IMPLEMENTATION_IN_PROGRESS_L2_RESOURCE_ANOMALY_SEMANTICS
+    cr_s2_013_validation: docs/development/validations/stage_2/CR-2026-013.md
+    group1_execution_optimization_change_request_ref: docs/development/changes/CR-2026-014.md
+    cr_s2_014_status: APPROVED_IMPLEMENTED_3_02X_HUMAN_ACCEPTED_READY_FOR_FINAL_QUALITY_GATE
+    cr_s2_014_validation: docs/development/validations/stage_2/CR-2026-014.md
+    cr_s2_014_decision_ref: docs/development/decisions/ADR-S2-007-group1-price-execution-optimization.md
+    group1_packing_recovery_change_request_ref: docs/development/changes/CR-2026-015.md
+    cr_s2_015_status: APPROVED_IMPLEMENTATION_IN_PROGRESS_L2_PACKING_RECOVERY
+    cr_s2_015_validation: docs/development/validations/stage_2/CR-2026-015.md
+    cr_s2_015_decision_ref: docs/development/decisions/ADR-S2-008-group1-packing-recovery.md
+    cr_s2_015_failed_run_b_id: stage2-g1-v2-b-20260719T141315Z-bf8c6a186f66
+    cr_s2_015_failed_run_b_status: FAILED_INTEGRITY_UNPUBLISHED_FINAL_COMPONENT_SORT
+    cr_s2_015_completed_v2_logical_partitions: 80784
+    cr_s2_015_completed_group1_logical_partitions: 61776
+    cr_s2_015_packed_artifact_count: 19
+    cr_s2_015_duplicate_packed_artifact_count: 0
+    cr_s2_015_packed_artifact_audit_sha256: c3f45a60524c1959618c9e0c714b46ed30ece5ca6e9b4929caaf9750ec9f00bd
+    cr_s2_016_status: SUCCESSOR_RELEASE_FAILED_UNPUBLISHED_SUPERSEDED_BY_DRAFT_CR_2026_017
+    cr_s2_016_change_request_ref: docs/development/changes/CR-2026-016.md
+    cr_s2_016_validation: docs/development/validations/stage_2/CR-2026-016.md
+    cr_s2_016_preflight_run_b_id: stage2-g1-v2-b-20260720T084846Z-3885667a
+    cr_s2_016_preflight_run_b_status: INVALIDATED_PRECHECK_ONLY_RESUME_REUSE_DELETE_FALSE
+    cr_s2_016_preflight_run_b_disablement_sha256: 1fd87e60ebd834d2bee3f25853cc9c14274c74b14c5f05591c744cc6b4fbd41a
+    cr_s2_016_final_code_commit: 9c4b7c423a0479e3d1eb8b6f6423c2d09f2f2813
+    cr_s2_016_quality_evidence_sha256: dc95c05ec7643f97d53f47ee2b0447d1280da2096319bb6508364c54b03a004c
+    cr_s2_016_authority_run_id: stage2-g1-v2-authority-20260720T111704Z-9c4b7c423a04
+    cr_s2_016_authority_bundle_hash: f8e44c9f04b7fd218e88667dedfd07ecf9cb3d54bb471d461204cab5b87ba1e9
+    cr_s2_016_authority_receipt_physical_sha256: 523c60ea68b479c23181a7b19a60c750e33c21897e01c6c67fcfe789aa819563
+    cr_s2_016_authority_tree_sha256: 4c326f9336578e70ca38ded4b4a8a71914be477694602032fea49448af62451a
+    cr_s2_016_successor_run_b_id: stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04
+    cr_s2_016_successor_run_b_status: PREFLIGHT_PASSED_ZERO_COMPLETED_ZERO_STAGING_ZERO_PUBLISHED
+    cr_s2_016_successor_snapshot_id: df15b9cbb208a6f921b3a68bee24be44f77e83eb2c8ac1582ef942b108708d33
+    cr_s2_016_successor_runtime_manifest_hash: 7c4c40c482b309108ae821cdd8185d6f5674721a71411bae4163fd4184cddb53
+    cr_s2_016_foundation_monthly_checkpoint_count: 632
+    cr_s2_016_foundation_packed_checkpoint_count: 164
+    cr_s2_016_group1_monthly_checkpoint_count: 158
+    cr_s2_016_group1_monthly_dataset_seal_count: 2054
+    cr_s2_017_status: SUPERSEDED_BY_EXECUTED_CR_2026_018_019
+    cr_s2_017_change_request_ref: docs/development/changes/CR-2026-017.md
+    cr_s2_017_validation: docs/development/validations/stage_2/CR-2026-017.md
+    cr_s2_017_failed_release_run_b_id: stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04
+    cr_s2_017_failed_release_run_b_status: RELEASE_FAILED_UNPUBLISHED_STALE_200_OBJECT_GATE
+    cr_s2_017_catalog_object_count: 208
+    cr_s2_017_catalog_seal_count: 208
+    cr_s2_017_foundation_object_count: 164
+    cr_s2_017_group1_object_count: 44
+    cr_s2_017_completed_v2_logical_partitions: 80784
+    cr_s2_017_completed_group1_logical_partitions: 61776
+    cr_s2_017_publication_record_present: false
+    cr_s2_017_resource_semantics_audit: docs/development/validations/resource_threshold_semantics_audit.md
+    cr_s2_017_runtime_v2_test_count: 214
+    cr_s2_017_repository_test_count: 427
+    cr_s2_017_successor_authorization: APPROVED_EXACTLY_ONE
+    cr_s2_017_failed_run_disablement: SUPERSEDED_BY_CR_2026_018_FIXED_RUN_BOUNDARY
+    cr_s2_017_authority_freeze_requirement: TWO_BYTE_IDENTICAL_FREEZES_BINDING_DISABLEMENT
+    cr_s2_018_status: APPROVED_EXECUTED_RELEASE_VERIFY_PASS
+    cr_s2_018_change_request_ref: docs/development/changes/CR-2026-018.md
+    cr_s2_018_release_code_commit: 9857bd83c73c0b0e103e5600e41f89d3e698ae41
+    cr_s2_018_fixed_run_b_id: stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04
+    cr_s2_018_fixed_run_b_status: PUBLISHED_WITH_RESOURCE_ANOMALIES_QUALITY_VERIFY_PASS
+    cr_s2_018_total_partitions: 80784
+    cr_s2_018_fragment_count: 77265
+    cr_s2_018_object_count: 208
+    cr_s2_018_seal_count: 208
+    cr_s2_019_status: IMPLEMENTED_EXECUTED_EXACT_COMPARE_PASS
+    cr_s2_019_change_request_ref: docs/development/changes/CR-2026-019.md
+    cr_s2_019_compare_code_commit: a9140b585d53370c4eb7818b9235737288220d1c
+    cr_s2_019_compare_authority_sha256: e3688ca21a987849388cb9e694929033aac51ed245d1f0eb5337c43f554eb740
+    cr_s2_019_comparison_report_sha256: 69298e5d05161223b354e1b60a65ef032e9370e4017da487e35657264af8e9f0
+    cr_s2_019_comparison_semantic_sha256: 8e409adaa66209695b99da45fd0367833059d6035fb24747226cd869e449487d
+    cr_s2_019_run_a_partitions: 61776
+    cr_s2_019_run_b_partitions: 61776
+    cr_s2_019_matched_partitions: 61776
+    cr_s2_019_missing_partitions: 0
+    cr_s2_019_extra_partitions: 0
+    cr_s2_019_difference_count: 0
+    cr_s2_019_global_distributions_equal: true
+    formal_run_a_id: stage2-g1-full-a-20260716T144233Z-366a541b7956
+    formal_run_a_status: PUBLISHED_QUALITY_PASS
+    formal_run_a_logical_partitions: 61776
+    formal_run_a_published_logical_hash: 8583f220dc880bf5b7e7ace1435ca2285e59b80dd48aa7d15bd2f8cacac60870
+    formal_run_a_published_physical_hash: 9fe33a4e7fde1ace3281a208c46f7474f66bc5c5a0e538871b273b2f20131578
+    failed_authority_run_id: stage2-g1-v2-authority-20260717T155227Z-b739106b8dca
+    failed_authority_reason: MIXED_ARCHIVE_DAILY_TAIL_REJECTED_BY_MONTH_ONLY_V2_CONTRACT
+    replacement_authority_bundle_status: CR_2026_010_FROZEN_REPEATED_HASH_PASS
+    replacement_authority_bundle_id: stage2-v2-authority-bundle-c1cfc26395ab34736ce2706b
+    replacement_authority_bundle_hash: c1cfc26395ab34736ce2706b0b5254c8deea4120b705c2092e6dbafdf49393e4
+    v2_run_b_status: FAILED_INTEGRITY_UNPUBLISHED_FINAL_COMPONENT_SORT
+    v2_run_b_id: stage2-g1-v2-b-20260719T141315Z-bf8c6a186f66
+    v2_run_b_completed_tasks: 2
+    v2_run_b_published_files: 0
+    cr_s2_011_memory_profile_evidence_sha256: e722601ce60cc929693b6bde799b9c61118517127a2c3b76ead629891142b789
+    cr_s2_011_arrow_inflight_limit_bytes: 1073741824
+    cr_s2_011_current_rss_limit_bytes: 3221225472
+    cr_s2_011_peak_rss_delta_limit_bytes: 1073741824
+    cr_s2_012_arrow_inflight_limit_bytes: 1073741824
+    cr_s2_012_current_rss_limit_bytes: 3221225472
+    cr_s2_012_phase_current_rss_delta_limit_bytes: 1073741824
+    cr_s2_012_lifetime_peak_policy: AUDIT_ONLY
+    cr_s2_012_failed_run_b_id: stage2-g1-v2-b-20260718T105814Z-cb5c25abd485
+    cr_s2_012_finalization_profile_sha256: cb84ce635f31d0eb5562602916042d68177ff3c3da0738ec09da7b4ee3c9d691
+    cr_s2_012_profile_packed_row_groups: 9504
+    cr_s2_012_profile_receipts: 9504
+    cr_s2_013_failed_run_b_id: stage2-g1-v2-b-20260718T141137Z-f0c150bfa1c9
+    cr_s2_013_failed_run_b_status: FAILED_UNPUBLISHED_IMMUTABLE
+    cr_s2_013_adoptable_btc_month_objects: 316
+    cr_s2_014_stopped_run_b_id: stage2-g1-v2-b-20260719T045142Z-0eeb27e0be21
+    cr_s2_014_stopped_run_b_status: INTERRUPTED_RECOVERABLE_UNPUBLISHED
+    cr_s2_014_performance_gate: FIXED_BTC_ETH_JULY_AT_LEAST_4X
+    next_authorized_state_after_authority_validation: NONE_S2_T10_COMPLETE
+    hybrid_architecture_decision_ref: docs/development/decisions/ADR-S2-006-hybrid-v2-feature-foundation.md
+    plan_dag_change: NONE
+    legacy_run_b_authorized: false
+    later_group_execution_authorized: false
+    execution_blocker: NONE
+    execution_state: S2_T10_AND_GROUP_1_PASSED_AWAITING_SEPARATE_TASK_APPROVAL
   state: PLANNED
 - rule_id: GATE-STAGE-3
   rule_status: FROZEN

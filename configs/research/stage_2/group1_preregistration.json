@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "status": "BASELINE_RESEARCH_PREREGISTERED",
+  "primary_parameter_set_id": "G1-PRIMARY-V1",
+  "parameter_set_ids": [
+    "G1-PRIMARY-V1", "G1-TIMING_T1-V1", "G1-TIMING_T3-V1", "G1-TIMING_T4-V1",
+    "G1-MERGE_5-V1", "G1-MERGE_15-V1", "G1-GAP_60-V1", "G1-GAP_900-V1",
+    "G1-REARM_300-V1", "G1-REARM_1800-V1", "G1-SWEEP_5-V1", "G1-SWEEP_10-V1",
+    "G1-SWEEP_15-V1", "G1-SWEEP_25-V1", "G1-RECLAIM_0-V1", "G1-RECLAIM_2-V1",
+    "G1-RECLAIM_3-V1", "G1-HOLD_0-V1", "G1-HOLD_2-V1", "G1-HOLD_3-V1"
+  ],
+  "key_level_sources": {
+    "rolling_low_1m": "min(low,last_60_closed_1m_bars)",
+    "rolling_low_5m": "min(low,last_12_closed_5m_bars)",
+    "range_low": "low(previous_closed_15m_or_1h_or_4h_or_1d_bar)"
+  },
+  "primary": {
+    "timing_id": "T2",
+    "merge_tolerance_bps": "10",
+    "minimum_episode_gap_seconds": 300,
+    "rearm_above_level_seconds": 900,
+    "sweep_confirmation_bps": "2",
+    "reclaim_buffer_bps": "1",
+    "hold_failure_buffer_bps": "1",
+    "max_sweep_depth_bps": "25",
+    "max_episode_duration_seconds": 120
+  },
+  "g1": "closed_1h_close_vs_causal_ema20_up_only",
+  "g3": "first_strict_positive_1s_and_5s_within_30s_no_new_structural_low",
+  "g4": "trades_[t-5s,t)_positive_signed_qty_and_count_acceleration",
+  "full_run_cli": "uv run python scripts/run_stage2_group1_candidates.py {preflight,run,resume,verify}",
+  "config_hash": "adb6295e210de66d1e69aa008e6161e8fef1e1fd72001ff812b68597f8c72e3f"
+}

@@ -11,14 +11,14 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOT = REPOSITORY_ROOT / "src"
-APPROVED_STAGE_ZERO_TOP_LEVEL_PACKAGES = frozenset({"contracts", "data", "foundation", "spike"})
+APPROVED_TOP_LEVEL_PACKAGES = frozenset({"contracts", "data", "foundation", "research", "spike"})
 
 
 def assert_only_approved_top_level_packages(discovered: set[str]) -> None:
-    unexpected = discovered - APPROVED_STAGE_ZERO_TOP_LEVEL_PACKAGES
+    unexpected = discovered - APPROVED_TOP_LEVEL_PACKAGES
     if unexpected:
         raise AssertionError(f"unapproved top-level packages: {sorted(unexpected)}")
-    missing = APPROVED_STAGE_ZERO_TOP_LEVEL_PACKAGES - discovered
+    missing = APPROVED_TOP_LEVEL_PACKAGES - discovered
     if missing:
         raise AssertionError(f"missing approved top-level packages: {sorted(missing)}")
 
@@ -48,7 +48,7 @@ class PackageImportTest(unittest.TestCase):
     def test_unknown_top_level_package_is_rejected(self) -> None:
         with self.assertRaisesRegex(AssertionError, "unapproved top-level packages"):
             assert_only_approved_top_level_packages(
-                {*APPROVED_STAGE_ZERO_TOP_LEVEL_PACKAGES, "unapproved_package"}
+                {*APPROVED_TOP_LEVEL_PACKAGES, "unapproved_package"}
             )
 
     def test_unapproved_business_packages_cannot_be_imported(self) -> None:
@@ -57,7 +57,6 @@ class PackageImportTest(unittest.TestCase):
             "era100x.analytics",
             "era100x.domain",
             "era100x.execution",
-            "era100x.research",
             "era100x.risk",
             "era100x.state",
             "era100x.strategy",

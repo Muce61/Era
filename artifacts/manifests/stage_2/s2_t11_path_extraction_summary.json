@@ -1,0 +1,23 @@
+{
+  "authoritative_preflight_hash": "029707f3c11104e8cf4919afd0cf25e608dfdc3b20cf6bd85f3f6e710f7eeef6",
+  "btc_episode_count": 220201,
+  "btc_output_hash": "5d952a2d9a15971db7ee906563b38505a5e1453c5c463185f2c23cde70d9a346",
+  "catalog_hash": "82f065f1af9fb39a597572fd4ae0b1f7fed4b05e6fb046726486b5c855189362",
+  "eth_episode_count": 312507,
+  "eth_output_hash": "9c75943beb3bdf5633291ee2206f2d3f39e3039f0195da5e9b262f974c55ae8e",
+  "evidence_level": "H1_H2_HISTORICAL_PATH_SLICE_INDEX",
+  "manifest_hash": "d4d6a2f5c72a9fb8c964585a009d2c11048b1baa34432d3d16fb68ee9ff3979c",
+  "quality_report_hash": "45f892713b047875f4b52228b543b76b3a0f4923db60afc0236191933303420a",
+  "run_id": "stage2-s2t11-paths-20260721T023117Z-029707f3c111",
+  "source_code_commit": "bfcec8c3d2f5e63bfe6169d0b44f569530205062",
+  "stage3_status": "LOCKED",
+  "status": "PASSED_HUMAN_ACCEPTED",
+  "task_id": "S2-T11",
+  "task_version": "1.3",
+  "accepted_at": "2026-07-21T02:47:07Z",
+  "accepted_by": "Muce",
+  "acceptance_code_commit": "4866ca52a62a95c49039ed0dcec2ca056460c1a2",
+  "acceptance_receipt_hash": "e16b77c80c4cfbd1b42fda071ce117534aaa302f6ea70fe4c4a0cfbff61383ac",
+  "superseded_acceptance_receipt_hash": "906a66fe3120ccbffa613359ca18686f061b31c48bdd9271ef42900c87b3a615",
+  "unconsumed_superseded_preflight_hash": "005157a08cb654ad25a2627da5f0f692955d0df476f266e989686de16d2f5879"
+}

@@ -1,0 +1,46 @@
+{
+  "activation_semantics": "HISTORICAL_PRICE_ONLY_FAVORABLE_THRESHOLD_PROXY_NOT_LIVE_PROTECTION",
+  "activation_thresholds_bps": [
+    "15",
+    "20",
+    "25",
+    "30",
+    "35",
+    "40",
+    "50",
+    "70",
+    "100"
+  ],
+  "evidence_levels": [
+    "H1",
+    "H2"
+  ],
+  "evidence_mode": "FIXTURE_CAPABILITY_PLUS_FULL_STATISTICS",
+  "full_run_cli": "uv run python scripts/run_stage2_path_metrics.py {preflight,run,resume,verify}",
+  "instruments": [
+    "BTCUSDT",
+    "ETHUSDT"
+  ],
+  "manual_version": "V1.3.4",
+  "mae_sign": "NON_POSITIVE_SIGNED_BPS",
+  "metric_decimal_places": 18,
+  "metric_decimal_rounding": "ROUND_HALF_EVEN",
+  "mfe_sign": "NON_NEGATIVE_SIGNED_BPS",
+  "reference_price_source": "FIXED_S2T10_PRICE_TRIGGER_FACT",
+  "read_only_recovery_overlays": [
+    {
+      "official_archive_sha256": "e4a909df273586e48bd49c41de6f3d1a317f5e37763440144003173addf9b3c9",
+      "overlay_path": "/Volumes/FuckingLife/era100x_stage2/tmp/S2-T12-recovery/rebuild-2022-03-01/date=2022-03-01/part-000.parquet",
+      "source_byte_sha256": "fc0f50e0d92b46520644666b040512b19cafbbcf0d143f714d92b4525315c296",
+      "source_logical_sha256": "eee2263fe964b5dcfb8d7fd8e063a240442dc844cbd66e1025c7aa9202b6fd84",
+      "source_relative_path": "BTCUSDT/archive=2022-03/date=2022-03-01/part-000.parquet"
+    }
+  ],
+  "source_s2t10_run_id": "stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04",
+  "source_s2t10_snapshot_id": "df15b9cbb208a6f921b3a68bee24be44f77e83eb2c8ac1582ef942b108708d33",
+  "source_s2t11_run_id": "stage2-s2t11-paths-20260721T023117Z-029707f3c111",
+  "source_s2t11_snapshot_id": "d4d6a2f5c72a9fb8c964585a009d2c11048b1baa34432d3d16fb68ee9ff3979c",
+  "task_id": "S2-T12",
+  "task_version": "1.3",
+  "time_semantics": "UTC_EVENT_NS_LEFT_CLOSED_RIGHT_OPEN"
+}

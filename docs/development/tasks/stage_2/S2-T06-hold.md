@@ -3,16 +3,16 @@
 ## Metadata
 
 - task_id: S2-T06
-- task_version: 0.1
-- status: DRAFT
+- task_version: 1.3
+- status: PASSED
 - stage_id: S2
-- stage_plan_version: 0.1
+- stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
-- created_from_commit: 28bfb764f8286d2b4f23568a81f1233bb2b57b15
-- dependencies: S2-T05
-- supersedes: NONE
-- approved_by: NONE
-- approved_at: NONE
+- created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
+- dependencies: S2-T05 PASS
+- supersedes: task_version 1.2
+- approved_by: Muce
+- approved_at: 2026-07-16T15:24:31+08:00
 
 ## 1. 目标
 
@@ -31,7 +31,7 @@
 
 ## 4. 前置条件
 
-Stage 2 Plan 0.1 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和基线已核验。
+Stage 2 Plan v1.2 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和Stage 1 Baseline v1.0已核验。
 
 ## 5. 允许范围
 
@@ -43,7 +43,7 @@ Stage 2 Plan 0.1 与本 Task 均已人工批准；依赖项有真实 validation�
 
 ## 7. 允许修改的路径
 
-src/research/events/, tests/research/events/, artifacts/experiments/ (all paths PLANNED; final paths require approved Stage review)
+以第21节的v1.0精确路径为准；未列路径禁止修改。
 
 ## 8. 禁止修改的路径
 
@@ -71,9 +71,7 @@ src/research/events/, tests/research/events/, artifacts/experiments/ (all paths 
 
 ## 14. 必须运行的命令
 
-TO_BE_DEFINED_IN_STAGE_0
-
-不得虚构不存在的命令。Stage 0 冻结工具链后，Task 新版本必须替换为实际命令并重新审批。
+以第21节的定向pytest命令和现有统一质量门为准；全量研究CLI必须由S2-T19预注册后通过Task新版本冻结。
 
 ## 15. 完成报告格式
 
@@ -97,4 +95,25 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 
 ## 20. 变更历史
 
-- 2026-07-12：v0.1，依据 Stage 2 Plan 0.1 创建，状态 DRAFT，未执行。
+- 2026-07-16：v1.3，依据CR-2026-002与ADR-S2-005冻结第一组事件构造基线和CLI；Muce批准，状态APPROVED / NOT_EXECUTED。
+
+- 2026-07-12：v0.1，依据 Stage 2 Plan v0.1 创建，状态 DRAFT，未执行。
+- 2026-07-14：v1.0，按Stage 1 Trade Identity v2与Stage 2 Plan v1.0重规划；状态DRAFT，未执行。
+- 2026-07-14：v1.1，加入可扩展研究setup架构与事件说明图规划；状态DRAFT，未执行。
+- 2026-07-16：v1.2，按Plan v1.2收口分组、前置S2-T19并修订DAG；状态DRAFT，未执行。
+
+## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
+
+- 数据与能力边界：reclaim后连续窗口不低于failure boundary；超时、重破或数据不可用明确失效。
+- 允许修改路径：`src/era100x/research/stage_2/episodes/hold/`、`tests/research/stage_2/episodes/hold/`，以及本Task validation/TRACEABILITY。禁止修改Stage 1实现/数据、\`docs/spec/**\`和Stage 3+。
+- 验证命令：\`uv run python -m pytest tests/research/stage_2/episodes/hold -q\`；\`uv run python scripts/run_quality_gate.py\`。本Task只做fixture窗口、失败和确定性验证；全量候选运行唯一由S2-T10负责。
+- 验收标准：连续窗口、边界、缺秒/缺trade、重破、失效原因和输入打乱确定性测试通过。
+- 证据模式：\`FIXTURE_CAPABILITY\`；不得在本Task生成全量参数地形。
+
+## 22. ADR-S2-004预注册绑定
+
+Hold fixture必须覆盖[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)的T1/T2/T3/T4确认窗口15/30/30/60秒，从`reclaim_available_at_ts`起算并采用UTC纳秒左闭右开语义；窗口后事实不得参与确认。本Task仍为APPROVED / NOT_EXECUTED。
+
+## 23. ADR-S2-005事件构造绑定
+
+This Task implements ADR-S2-005 Hold failure buffers and ADR-S2-004 T1-T4 causal windows without reading Trigger outcomes.

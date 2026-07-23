@@ -1,0 +1,13 @@
+{
+  "schema_name": "stage2-group1-execution-summary",
+  "manifest_version": "1.0",
+  "execution_manifest_hash": "84f6fcdd2d4710fd98112dc7a39d798d0f488accb6e7b2a7962f98ba589e3b74",
+  "preregistration_manifest_hash": "6b0f66e4007b86e08b58a9b366170eeee952199baa203d7f174b2ca69478c1f9",
+  "config_hash": "adb6295e210de66d1e69aa008e6161e8fef1e1fd72001ff812b68597f8c72e3f",
+  "code_commit": "7200a0f963069064c60916c83aba2bf8c8b34222",
+  "fixture_logical_hash": "2fcb1602c86207e7e81c419178acfa9249482231ba26de2e6e80b7603bc7dcf6",
+  "small_sample_logical_hash": "25224850e422e259fb2d65a9715b7c71c5156c9bf84debad25c2d29bdf0942b2",
+  "small_sample_report_sha256": "73287e72e480d5946db013377c5dafa11810c720968a957a3b2d73c1032abae8",
+  "invalidated_predecessor": "6e4c5f7b30726071f8ec2283a95334d387af852eecc777a15f133fc499f153c7",
+  "state": "LOCKED_FOR_S2_T10"
+}

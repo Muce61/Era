@@ -3,16 +3,18 @@
 ## Metadata
 
 - task_id: S2-T13
-- task_version: 0.1
-- status: DRAFT
+- task_version: 1.3
+- status: PASSED / HUMAN ACCEPTED
 - stage_id: S2
-- stage_plan_version: 0.1
+- stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
-- created_from_commit: 28bfb764f8286d2b4f23568a81f1233bb2b57b15
-- dependencies: S2-T12
-- supersedes: NONE
-- approved_by: NONE
-- approved_at: NONE
+- created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
+- dependencies: S2-T11 PASS
+- supersedes: task_version 1.2
+- approved_by: Muce
+- approved_at: 2026-07-21T10:41:50Z
+- accepted_by: Muce
+- accepted_at: 2026-07-21T12:52:58Z
 
 ## 1. 目标
 
@@ -31,7 +33,7 @@
 
 ## 4. 前置条件
 
-Stage 2 Plan 0.1 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和基线已核验。
+Stage 2 Plan v1.2 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和Stage 1 Baseline v1.0已核验。
 
 ## 5. 允许范围
 
@@ -43,7 +45,7 @@ Stage 2 Plan 0.1 与本 Task 均已人工批准；依赖项有真实 validation�
 
 ## 7. 允许修改的路径
 
-src/research/events/, tests/research/events/, artifacts/experiments/ (all paths PLANNED; final paths require approved Stage review)
+以第21节的v1.0精确路径为准；未列路径禁止修改。
 
 ## 8. 禁止修改的路径
 
@@ -71,9 +73,7 @@ src/research/events/, tests/research/events/, artifacts/experiments/ (all paths 
 
 ## 14. 必须运行的命令
 
-TO_BE_DEFINED_IN_STAGE_0
-
-不得虚构不存在的命令。Stage 0 冻结工具链后，Task 新版本必须替换为实际命令并重新审批。
+以第21节的定向pytest命令和现有统一质量门为准；全量研究CLI必须由S2-T19预注册后通过Task新版本冻结。
 
 ## 15. 完成报告格式
 
@@ -97,4 +97,59 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 
 ## 20. 变更历史
 
-- 2026-07-12：v0.1，依据 Stage 2 Plan 0.1 创建，状态 DRAFT，未执行。
+- 2026-07-12：v0.1，依据 Stage 2 Plan v0.1 创建，状态 DRAFT，未执行。
+- 2026-07-14：v1.0，按Stage 1 Trade Identity v2与Stage 2 Plan v1.0重规划；状态DRAFT，未执行。
+- 2026-07-14：v1.1，加入可扩展研究setup架构与事件说明图规划；状态DRAFT，未执行。
+- 2026-07-16：v1.2，按Plan v1.2收口分组、前置S2-T19并修订DAG；状态DRAFT，未执行。
+- 2026-07-21：Muce以“开始T13”批准v1.2；完成严格first-passage合同和fixture能力，
+  定向测试与统一质量门通过。现有v1.2未冻结正式全量CLI，Web UI允许范围也未覆盖T13；
+  提交CR-2026-023后停止，不批准T14或Stage 3。
+- 2026-07-21：Muce批准CR-2026-023及v1.3最小全量合同；允许固定全量CLI、只读
+  Authority/Run/Manifest/Catalog/Verify与Web UI自动识别。T14及Stage 3仍未批准。
+- 2026-07-21：正式全量Run、Verify、Validation、统一质量门与真实Web UI自动识别通过；
+  Muce于2026-07-21T12:52:58Z以“收尾t13”完成人工验收。状态更新为
+  `PASSED / HUMAN ACCEPTED`；S2-T14仍须单独批准，Stage 3保持锁定。
+
+## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
+
+- 数据与能力边界：产生TARGET_FIRST/STOP_FIRST/EXPIRED/AMBIGUOUS历史标签；TARGET_TOUCHED不得替代ROUND_SUCCESS。
+- 允许修改路径：`src/era100x/research/stage_2/labels/first_passage/`、`tests/research/stage_2/labels/first_passage/`，以及本Task validation/TRACEABILITY。禁止修改Stage 1实现/数据、\`docs/spec/**\`和Stage 3+。
+- 验证命令：\`uv run python -m pytest tests/research/stage_2/labels/first_passage -q\`；\`uv run python scripts/run_quality_gate.py\`。全量研究CLI须由S2-T19冻结后再写入Task新版本，不得当前虚构。
+- 验收标准：目标先/止损先/过期/同秒、状态生效顺序、H1/H2差异和禁止ROUND_SUCCESS字段测试通过。
+- 证据模式：\`FIXTURE_CAPABILITY + FULL LABELS\`。无论fixture能力是否可验收，Stage 1最终PASSED与VALID data baseline之前均不得执行本Task。
+
+## 22. S2-T13 v1.2最小实现合同
+
+- 只研究LONG历史价格路径；H1使用Contract bar，H2使用Trade，BTC与ETH保持分离。
+- 目标域固定为20/30/40/50/70/100 bp；止损域固定为15/20/25/30/35 bp；
+  T1/T2/T3/T4 horizon固定为60/180/300/600秒，与S2-T19预注册完全一致。
+- 窗口是UTC event-time左闭右开；H2顺序固定为
+  `(ts_event_ns, venue_trade_id, canonical_trade_id)`。
+- H1同一事件同时触及目标和止损时，原始标签为`AMBIGUOUS`，并记录手册要求的
+  adverse-first主处理为`STOP_FIRST`；本Task不计算T14的乐观/悲观上下界。
+- 在首个可见决策前存在缺口、没有任何观察或窗口提前截断时，不得虚构`EXPIRED`；
+  必须保守标记`AMBIGUOUS`并保留来源质量、缺口、歧义和MarketEpisode lineage。
+- 只有原始标签`TARGET_FIRST`才令`strict_target_first=true`。`TARGET_TOUCHED`或
+  `TARGET_FIRST`均不得描述为`ROUND_SUCCESS`、PnL、return或真实执行结果。
+- v1.2只批准fixture级独立能力。正式全量CLI、Authority/Manifest/Catalog发布和Web UI
+  自动识别必须先批准CR-2026-023及相应v1.3合同。
+
+## 23. S2-T13 v1.3正式全量合同
+
+- 唯一CLI为`uv run python scripts/run_stage2_first_passage.py
+  {preflight,run,resume,verify}`。`preflight`不得创建Run ID；Authority必须绑定实现commit、
+  S2-T11 Snapshot、S2-T10参考价事实、只读恢复overlay、BTC/ETH计数、参数域和资源门。
+- 每个MarketEpisode只使用其已冻结的`time_combination_id`及对应T1/T2/T3/T4窗口；不得
+  把短路径外推为更长horizon。全体Episode必须覆盖四种timing。
+- 对每个Episode分别生成H1与H2行；每行按target-major、stop-minor稳定顺序完整保存
+  `6 targets × 5 stops = 30`个分类。固定532,708 Episodes对应1,065,416条路径行和
+  31,962,480个分类。
+- H1/H2、BTC/ETH、原始标签与保守主标签必须分离。H1同事件双触达原始为
+  `AMBIGUOUS`、主处理为`STOP_FIRST`；不得生成S2-T14上下界。
+- 运行按BTC/ETH独立生成，失败Run保持未发布且不可恢复；成功结果通过同卷原子发布，
+  Manifest/Catalog/行哈希/文件哈希自校验。Verify只读遍历全部行，核对30组合、标签分布、
+  lineage、历史证据边界与禁止字段。
+- Web UI只从最新合法Authority、Run、Catalog、Verify、repository summary与validation
+  联合证据推导状态；较新的失败或无效Run不得回退，HTML不得预置PASSED。
+- 允许新增/修改`labels/first_passage/full_run.py`、`scripts/run_stage2_first_passage.py`、
+  对应测试、S2-T13治理/summary，以及进度server、HTML和现有进度测试。其他范围不变。

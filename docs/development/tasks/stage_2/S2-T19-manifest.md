@@ -3,20 +3,20 @@
 ## Metadata
 
 - task_id: S2-T19
-- task_version: 0.1
-- status: DRAFT
+- task_version: 1.3
+- status: PASSED
 - stage_id: S2
-- stage_plan_version: 0.1
+- stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
-- created_from_commit: 28bfb764f8286d2b4f23568a81f1233bb2b57b15
-- dependencies: S2-T18
-- supersedes: NONE
-- approved_by: NONE
-- approved_at: NONE
+- created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
+- dependencies: Stage 1 PASSED / VALID; Stage 2 Plan v1.2 APPROVED; input data baseline confirmed; no blocking OPEN QUESTION
+- supersedes: task_version 1.2
+- approved_by: Muce
+- approved_at: 2026-07-16T15:24:31+08:00
 
 ## 1. 目标
 
-规划并交付“预注册实验 Manifest”这一单一能力，使其可独立测试、审查和回滚。
+在任何Stage 2实现或研究运行之前，交付可版本化、可验证且不可覆盖的预注册Manifest能力；本Task只定义和锁定研究输入，不执行收益研究或产生研究结论。
 
 ## 2. 背景
 
@@ -31,7 +31,7 @@
 
 ## 4. 前置条件
 
-Stage 2 Plan 0.1 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和基线已核验。
+Stage 2 Plan v1.2 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和Stage 1 Baseline v1.0已核验。
 
 ## 5. 允许范围
 
@@ -43,7 +43,7 @@ Stage 2 Plan 0.1 与本 Task 均已人工批准；依赖项有真实 validation�
 
 ## 7. 允许修改的路径
 
-src/research/events/, tests/research/events/, artifacts/experiments/ (all paths PLANNED; final paths require approved Stage review)
+以第21节的v1.0精确路径为准；未列路径禁止修改。
 
 ## 8. 禁止修改的路径
 
@@ -71,9 +71,7 @@ src/research/events/, tests/research/events/, artifacts/experiments/ (all paths 
 
 ## 14. 必须运行的命令
 
-TO_BE_DEFINED_IN_STAGE_0
-
-不得虚构不存在的命令。Stage 0 冻结工具链后，Task 新版本必须替换为实际命令并重新审批。
+以第21节的定向pytest命令和现有统一质量门为准；全量研究CLI必须由S2-T19预注册后通过Task新版本冻结。
 
 ## 15. 完成报告格式
 
@@ -85,7 +83,9 @@ TO_BE_DEFINED_IN_STAGE_0
 
 ## 17. 开放问题
 
-只记录影响本 Task 的 U/CR/ADR；需要改变风险、数据边界、执行语义或 Binance 能力判断时停止并请求人工决定。
+OQ-S2-004 已由Muce人工决定并通过[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)关闭，Blocking Scope为NONE。其值仅为BASELINE/RESEARCH预注册定义，不是最优或FROZEN。
+
+其他情况下，只记录影响本 Task 的 U/CR/ADR；需要改变风险、数据边界、执行语义或 Binance 能力判断时停止并请求人工决定。
 
 ## 18. 变化触发器
 
@@ -97,4 +97,113 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 
 ## 20. 变更历史
 
-- 2026-07-12：v0.1，依据 Stage 2 Plan 0.1 创建，状态 DRAFT，未执行。
+- 2026-07-16：v1.3，依据CR-2026-002与ADR-S2-005冻结第一组事件构造基线和CLI；Muce批准，状态APPROVED / NOT_EXECUTED。
+
+- 2026-07-12：v0.1，依据 Stage 2 Plan v0.1 创建，状态 DRAFT，未执行。
+- 2026-07-14：v1.0，按Stage 1 Trade Identity v2与Stage 2 Plan v1.0重规划；状态DRAFT，未执行。
+- 2026-07-14：v1.1，加入可扩展研究setup架构与事件说明图规划；状态DRAFT，未执行。
+- 2026-07-16：v1.2，按Plan v1.2收口分组、前置S2-T19并修订DAG；状态DRAFT，未执行。
+- 2026-07-16：Plan v1.2 与本 Task 由 Muce 批准；状态 APPROVED / NOT_EXECUTED，OQ-S2-004 阻塞执行。
+- 2026-07-16：OQ-S2-004由ADR-S2-004正式关闭；Blocking Scope为NONE，本Task仍为APPROVED / NOT_EXECUTED。
+
+## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
+
+- 数据与能力边界：在任何Stage 2业务Task开始前冻结研究运行Manifest Schema、`parameter_set_id/parameter_set_version`、Stage 1 baseline tag/commit/data_run_id/manifest/schema/logical hashes、代码版本、UTC时间切分与purge/embargo、instrument、evidence_level、`setup_id/setup_version/context_model_id/context_version`、允许指标、禁止指标、参数域、匹配放宽、失败线、seed、输出目录、run布局、原子发布/不可覆盖规则和失效条件。第一组全量运行配置必须在S2-T10之前锁定且append-only。
+- 允许修改路径：`src/era100x/research/stage_2/manifests/`、`tests/research/stage_2/manifests/`、`configs/research/stage_2/`、`artifacts/manifests/stage_2/`，以及本Task validation/TRACEABILITY。禁止修改Stage 1实现/数据、\`docs/spec/**\`和Stage 3+。
+- 验证命令：\`uv run python -m pytest tests/research/stage_2/manifests -q\`；\`uv run python scripts/run_quality_gate.py\`。全量研究CLI须由S2-T19冻结后再写入Task新版本，不得当前虚构。
+- 验收标准：所有必填字段、版本和hash可验证；BTC/ETH配置隔离；允许/禁止指标白名单生效；输出根必须来自OQ-S2-001决定；结果产生后拒绝修改或覆盖；失效传播、台账追加、未知setup/参数集/数据基线拒绝测试通过；第一组Manifest可被T01～T10只读引用。不得读取结果调参，不得生成候选事件、收益指标或研究结论。
+- 证据模式：\`PREREGISTRATION_GATE\`；这是第一组和整个Stage 2的首个Task。
+
+## 22. ADR-S2-004预注册Manifest要求
+
+Manifest必须完整、机器可验证地锁定[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)的T1～T4及唯一Primary T2、P1～P3、不可放宽字段、UTC四小时bucket、训练折quintile边界、L0～L5、5 controls、排除规则、`matching_seed=20260716`、Episode等权基线、AMBIGUOUS三种报告、cluster定义、5000次percentile bootstrap、`bootstrap_seed=20260716`、F1～F10、BH FDR `q<=0.10`及ETH分类。任一必填定义缺失或五分位bin无效必须BLOCKED。OQ关闭不代表本Task已执行或PASS；状态仍为APPROVED / NOT_EXECUTED。
+
+## 23. ADR-S2-005事件构造绑定
+
+This Task freezes both preregistration and execution Manifest layers, the 20 OFAT parameter sets, Stage 1 physical and logical hashes, Contract Price inventory hash, approved external-root space gate and the single CLI contract from ADR-S2-005. It generates no candidate event or research result.
+
+## 24. Append-only S2-T15 v1.4 preregistration addendum
+
+Approved by Muce at 2026-07-22T02:25:41Z under CR-2026-026 and ADR-S2-009. This addendum does
+not alter the earlier T19 Manifest or delete prior registrations. It freezes only the executable
+S2-T15 v1.4 conditional-baseline contract: three feature IDs and formulas; exact setup/context;
+active-key-level distance enabled and never relaxed; P1/P2/P3 five-block expanding F0-F3 folds;
+3600-second backward purge and 600-second forward embargo; deterministic daily-offset grid and
+seed 20260716; outcome-blind three-layer control identity; T13 row-label and T14 aggregate-policy
+bindings; one five-control selection per H2 path shared across the 30-cell frozen combination
+order; complete-zero-Trade AMBIGUOUS semantics; and fail-closed reconciliation.
+
+The exact executable values and invalidation list are in
+[ADR-S2-009](../../decisions/ADR-S2-009-conditional-baseline-v1.4.md) and
+[CR-2026-026](../../changes/CR-2026-026.md). No S2-T16+, bootstrap, CI, F1, PnL, Stage 3 or live
+execution is added. Authority remains forbidden until final-code quality gates pass; Run ID is
+created only by the approved T15 `run` command after sealed bins and preflight.
+
+## 25. Proposed append-only lifecycle sub-hypothesis addendum
+
+Status: **APPROVED DIRECTION / NUMERIC CONTRACT OPEN / NOT EXECUTABLE**. Muce approved the
+two-layer evidence direction and sub-hypothesis at `2026-07-22T16:27:27Z`. Linked governance is
+[CR-2026-032](../../changes/CR-2026-032.md),
+[ADR-S2-011](../../decisions/ADR-S2-011-event-path-and-strategy-lifecycle-separation.md) and
+OQ-S2-010.
+
+The proposed sub-hypothesis is preserved verbatim:
+
+> 事件在存活较长时间、尚未激活、且净可退出 PnL 接近零时，后续目标优先概率和净期望是否提高？
+
+Raw T1-T4 event paths remain immutable and exit-rule-free. Any complete-strategy research must be
+a separate variable-length H3 evidence family from theoretical entry through
+`THEORETICAL_FULLY_FLAT` or an explicit right-censor state. It must not use the real-execution term
+`POSITION_FLAT`, alter the T2 Primary, or calculate PnL from H1/H2 facts alone.
+
+This section intentionally freezes no numeric contract. Implementation and Authority/Run creation
+are blocked until human approval defines all OQ-S2-010 landmarks, activation, near-zero band,
+cost/fill/closure, maximum horizon, censor, subgroup and multiplicity values in a new Plan/Task
+version. The three possible interpretations—delayed activation, momentum decay, or conditional
+time rules—must all be reported; observing one does not authorize post-hoc rule replacement.
+
+## 26. Proposed special research point addendum
+
+Status: **DRAFT / NOT APPROVED / NOT IMPLEMENTED**. Linked governance is
+[CR-2026-033](../../changes/CR-2026-033.md),
+[ADR-S2-012](../../decisions/ADR-S2-012-special-research-point.md) and OQ-S2-011.
+
+A proposed `SPECIAL_RESEARCH_POINT` inherits every rule in the frozen registry by default. It may
+stop applying only an exact `rule_id` listed in its approved `declared_exemptions`; every omitted
+rule and every rule added to the registry later continues to apply automatically. Wildcards,
+unknown IDs, duplicate IDs, empty reasons, stale source hashes and implied exemptions fail closed.
+
+Each declared exemption must record its bounded scope, reason, risk, replacement safeguard, human
+approval and expiry. Framework approval alone would not approve any concrete exemption. Truth,
+sealed-input lineage, append-only evidence, no-real-API/funds/orders, execution/risk/closure,
+stage gates, Stage 3 lock, seven-day rehearsal, deprecated-rule and forward-validation boundaries
+remain non-waivable. Affected outputs must be isolated as `EXPLORATORY_NONCOMPLIANT` and must be
+rejected by formal baseline, acceptance, promotion and PASS projections.
+
+No schema, registry, Manifest, UI or execution code may implement this addendum until CR-2026-033
+and ADR-S2-012 receive explicit human approval and the exact S2-T19 v1.4 Task scope is authorized.
+
+### Seven-day audit evidence
+
+At clean commit `be507ff`, the `[2020-01-01,2020-01-08)` audit passed feature availability and
+raw-path non-pollution, but correctly blocked the lifecycle handoff. Nineteen Primary T4/H2 rows
+remain EXPIRED at the accepted 600-second source boundary. No executable lifecycle values were
+added. This addendum remains not executable until OQ-S2-010 approves a separate variable-length
+source and the full landmark/H3/censor contract.
+
+## 27. First classified special research point
+
+Status: **CLASSIFIED / EXEMPTIONS APPROVED / NOT EXECUTABLE**.
+
+Muce classified CR-2026-031/032 and ADR-S2-010/011 as
+[SRP-S2-001](../../special_research_points/SRP-S2-001.md). The A-layer availability and immutable
+raw-path work has an empty exemption set. Muce approved the B-layer lifecycle EX-001/002/003 at
+`2026-07-23T01:04:16Z`: `RESEARCH-LOCKED-REPLAY-ONCE`, the fixed T1-T4/600-second source boundary
+and the U-011 universal 5/8/15/25-minute time-exit baselines.
+
+Every other rule remains effective, including data truth, MarketEpisode binding, H3 conditional
+interpretation, execution/closure constraints, sealed evidence, Stage gates and seven-day
+rehearsal. Classification and exemption approval create no Manifest, Authority, Run or result.
+Activation remains blocked by CR-2026-033/ADR-S2-012 implementation and OQ-S2-009/010. The four
+source CR/ADR records remain retained; only SRP-S2-001 plus a later approved Task may become an
+execution entry.

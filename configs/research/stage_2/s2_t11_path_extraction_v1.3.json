@@ -1,0 +1,35 @@
+{
+  "change_request": "CR-2026-021",
+  "evidence_mode": "H1_H2_HISTORICAL_PATH_SLICE_INDEX",
+  "fixed_s2t10_run_id": "stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04",
+  "fixed_snapshot_id": "df15b9cbb208a6f921b3a68bee24be44f77e83eb2c8ac1582ef942b108708d33",
+  "full_run_cli": "uv run python scripts/run_stage2_path_extraction.py {preflight,run,resume,verify}",
+  "h1_dataset_spec_hash": "482d29417f543cdebdb3e6db2d2f37904b4adaa69b3252ddec0599bae59f62b1",
+  "h2_fact_identity": [
+    "instrument",
+    "canonical_trade_id"
+  ],
+  "h2_index_dataset_spec_hash": "02d72cf5331844c3a0bfd50fc791494b344803f4bc1bc3d208d006719cc16385",
+  "h2_stable_order": [
+    "ts_event_ns",
+    "venue_trade_id",
+    "canonical_trade_id"
+  ],
+  "instruments": [
+    "BTCUSDT",
+    "ETHUSDT"
+  ],
+  "manual_version": "V1.3.4",
+  "output_mode": "LOSSLESS_SOURCE_SLICE_INDEX",
+  "source_period": "[2020-01-01T00:00:00Z,2026-07-04T00:00:00Z)",
+  "stage1_data_run_id": "stage1-v1.0-20260714T090941Z-9676d50ae686-c70e5682",
+  "task_id": "S2-T11",
+  "task_version": "1.3",
+  "time_semantics": "UTC_EVENT_NS_LEFT_CLOSED_RIGHT_OPEN",
+  "timing_horizons_seconds": {
+    "T1": 60,
+    "T2": 180,
+    "T3": 300,
+    "T4": 600
+  }
+}

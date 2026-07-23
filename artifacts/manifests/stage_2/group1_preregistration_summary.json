@@ -1,0 +1,20 @@
+{
+  "schema_name": "stage2-group1-preregistration-summary",
+  "manifest_version": "1.0",
+  "manifest_hash": "6b0f66e4007b86e08b58a9b366170eeee952199baa203d7f174b2ca69478c1f9",
+  "config_hash": "adb6295e210de66d1e69aa008e6161e8fef1e1fd72001ff812b68597f8c72e3f",
+  "external_manifest": "/Volumes/FuckingLife/era100x_stage2/runs/stage2-g1-preregistration-v1.0/manifests/6b0f66e4007b86e08b58a9b366170eeee952199baa203d7f174b2ca69478c1f9.json",
+  "stage1_data_run_id": "stage1-v1.0-20260714T090941Z-9676d50ae686-c70e5682",
+  "stage1_canonical_manifest_sha256": "436ffbe36e310dd015a962a29593360729d06db25ff96eddf12644c62d76e94f",
+  "stage1_physical_manifest_sha256": "f2ff20a35c26705c32de097a4df851717bffaeb872e900e8d988ddd2c4ac0ff0",
+  "btc_catalog_sha256": "7381af50ae39675334cc378ad1a7a1c8ace16100ae007b9a3671744c3dd2a269",
+  "eth_catalog_sha256": "38397a3bcb2ef48412b8ebc7edf34013049b20c15831f363372406ef9ab60cfc",
+  "contract_price_inventory_hash": "f7798be7e5441d3dc5e9c6470da71bb15ecd10b2750e273bdf9860b9e9d06a69",
+  "contract_price_physical_file_count": 4774,
+  "estimated_peak_bytes": 1681706188800,
+  "required_free_bytes": 2018047426560,
+  "available_free_bytes": 2106043924480,
+  "space_gate": "PASS",
+  "candidate_events_generated": 0,
+  "research_results_generated": 0
+}

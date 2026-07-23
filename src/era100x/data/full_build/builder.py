@@ -5,15 +5,23 @@ import hashlib
 import io
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
 import time
 import zipfile
-from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
+from concurrent.futures import (
+    FIRST_COMPLETED,
+    Future,
+    ProcessPoolExecutor,
+    ThreadPoolExecutor,
+    wait,
+)
 from contextlib import suppress
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, Literal, cast
 from urllib.error import HTTPError
@@ -32,6 +40,7 @@ TARGET_START = date(2020, 1, 1)
 TARGET_END = date(2026, 7, 4)
 DETERMINISM_DATES = {date(2020, 1, 1), date(2023, 4, 2), date(2026, 7, 3)}
 MINIMUM_FREE_BYTES = 585_983_717_541
+DOWNLOAD_WORKERS = 6
 UNAVAILABLE_FIELDS = (
     "ts_recv",
     "bid",
@@ -43,6 +52,41 @@ UNAVAILABLE_FIELDS = (
     "order_slippage",
     "order_book_depth",
 )
+
+
+class SchedulerState(StrEnum):
+    """Explicit multi-symbol scheduler states used for safe completion."""
+
+    SYMBOL_COMPLETE = "SYMBOL_COMPLETE"
+    GLOBAL_BUILD_COMPLETE = "GLOBAL_BUILD_COMPLETE"
+    TEMPORARILY_IDLE = "TEMPORARILY_IDLE"
+    RECOVERY_REQUIRED = "RECOVERY_REQUIRED"
+    FAILED = "FAILED"
+    UNKNOWN = "UNKNOWN"
+
+
+def classify_scheduler_state(
+    *,
+    planned: set[str],
+    completed: set[str],
+    pending_count: int,
+    active_count: int,
+    recovery_count: int = 0,
+    failed_count: int = 0,
+    unknown_count: int = 0,
+) -> SchedulerState:
+    """Classify global state without treating an empty worker set as completion."""
+    if unknown_count:
+        return SchedulerState.UNKNOWN
+    if failed_count:
+        return SchedulerState.FAILED
+    if recovery_count:
+        return SchedulerState.RECOVERY_REQUIRED
+    if completed == planned and pending_count == 0 and active_count == 0:
+        return SchedulerState.GLOBAL_BUILD_COMPLETE
+    if completed <= planned and (pending_count > 0 or active_count > 0):
+        return SchedulerState.TEMPORARILY_IDLE
+    return SchedulerState.UNKNOWN
 
 
 class ArchiveOrderingError(ValueError):
@@ -146,15 +190,32 @@ def download_archive(url: str, destination: Path, expected_sha256: str) -> Path:
             with urlopen(request, timeout=60) as response:
                 status_code = getattr(response, "status", 200)
                 if offset and status_code != 206:
-                    partial.unlink(missing_ok=True)
-                    raise OSError("server refused Range resume; partial reset")
+                    raise OSError("server refused Range resume; partial preserved")
+                content_range = response.headers.get("Content-Range")
+                content_length = response.headers.get("Content-Length")
+                expected_size: int | None = None
+                if content_range:
+                    match = re.fullmatch(r"bytes \d+-\d+/(\d+)", content_range.strip())
+                    if match:
+                        expected_size = int(match.group(1))
+                elif content_length:
+                    expected_size = offset + int(content_length)
                 with partial.open("ab" if offset else "wb") as output:
                     for block in iter(lambda: response.read(4 * 1024 * 1024), b""):
                         output.write(block)
+            if expected_size is not None and partial.stat().st_size < expected_size:
+                raise OSError(
+                    "truncated response; partial preserved for Range resume: "
+                    f"{partial.stat().st_size}/{expected_size}"
+                )
+            if expected_size is not None and partial.stat().st_size > expected_size:
+                partial_size = partial.stat().st_size
+                raise ValueError(
+                    f"partial exceeds official object length: {partial_size}/{expected_size}"
+                )
             actual = sha256_file(partial)
             if actual != expected_sha256:
-                partial.unlink(missing_ok=True)
-                raise ValueError(f"archive checksum mismatch: {actual}")
+                raise ValueError(f"archive checksum mismatch; partial preserved: {actual}")
             os.chmod(partial, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
             os.replace(partial, destination)
             return destination
@@ -163,6 +224,8 @@ def download_archive(url: str, destination: Path, expected_sha256: str) -> Path:
                 raise FileNotFoundError(url) from exc
             if attempt == 7:
                 raise
+        except ValueError:
+            raise
         except Exception:
             if attempt == 7:
                 raise
@@ -746,14 +809,13 @@ def expected_dates() -> set[str]:
     return {(TARGET_START + timedelta(days=offset)).isoformat() for offset in range(days)}
 
 
-def build_one_archive(
+def prepare_archive(
     work_root_text: str,
-    run_id: str,
     symbol: Symbol,
     period: str,
     frequency: Frequency,
-) -> tuple[str, list[dict[str, object]]]:
-    """Download, validate and build one immutable archive in an isolated path."""
+) -> tuple[str, str]:
+    """Prefetch one immutable official archive and return its key and checksum."""
     work_root = Path(work_root_text)
     key = f"{symbol}/{frequency}/{period}"
     url = archive_url(symbol, period, frequency)
@@ -768,7 +830,26 @@ def build_one_archive(
     if not checksum_path.exists():
         checksum_path.write_text(checksum_text)
         os.chmod(checksum_path, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
-    archive = download_archive(url, raw_dir / filename, expected)
+    download_archive(url, raw_dir / filename, expected)
+    return key, expected
+
+
+def build_prepared_archive(
+    work_root_text: str,
+    run_id: str,
+    symbol: Symbol,
+    period: str,
+    frequency: Frequency,
+    expected: str,
+) -> tuple[str, list[dict[str, object]]]:
+    """Build one previously checksummed raw archive in an isolated staging path."""
+    work_root = Path(work_root_text)
+    key = f"{symbol}/{frequency}/{period}"
+    url = archive_url(symbol, period, frequency)
+    filename = url.rsplit("/", 1)[-1]
+    archive = work_root / "raw/trades" / symbol / frequency / filename
+    if not archive.exists():
+        raise FileNotFoundError(f"prefetched archive missing: {archive}")
     archive_root = work_root / "staging" / run_id / symbol / f"archive={period}"
     if archive_root.exists():
         archive_summary = json.loads((archive_root / "archive.json").read_text())
@@ -798,6 +879,31 @@ def build_one_archive(
     return key, entries
 
 
+def build_one_archive(
+    work_root_text: str,
+    run_id: str,
+    symbol: Symbol,
+    period: str,
+    frequency: Frequency,
+) -> tuple[str, list[dict[str, object]]]:
+    """Compatibility wrapper for one-shot download and build."""
+    _, expected = prepare_archive(work_root_text, symbol, period, frequency)
+    return build_prepared_archive(work_root_text, run_id, symbol, period, frequency, expected)
+
+
+def round_robin_inventory(
+    pending_by_symbol: dict[Symbol, list[tuple[Symbol, str, Frequency]]],
+) -> list[tuple[Symbol, str, Frequency]]:
+    """Interleave BTC and ETH downloads without changing per-symbol chronology."""
+    ordered: list[tuple[Symbol, str, Frequency]] = []
+    longest = max((len(items) for items in pending_by_symbol.values()), default=0)
+    for index in range(longest):
+        for symbol in SYMBOLS:
+            if index < len(pending_by_symbol[symbol]):
+                ordered.append(pending_by_symbol[symbol][index])
+    return ordered
+
+
 class FullBuild:
     def __init__(self, work_root: Path, run_id: str, code_commit: str, config_hash: str) -> None:
         self.work_root = work_root
@@ -817,7 +923,17 @@ class FullBuild:
             "status": "IN_PROGRESS",
             "created_at": datetime.now(tz=UTC).isoformat(),
             "completed_archives": [],
-            "symbols": {symbol: {"status": "PENDING", "entries": []} for symbol in SYMBOLS},
+            "prefetched_archives": [],
+            "download_workers": DOWNLOAD_WORKERS,
+            "scheduler_state": SchedulerState.TEMPORARILY_IDLE,
+            "symbols": {
+                symbol: {
+                    "status": "PENDING",
+                    "schedule_status": SchedulerState.TEMPORARILY_IDLE,
+                    "entries": [],
+                }
+                for symbol in SYMBOLS
+            },
             "errors": [],
         }
 
@@ -829,6 +945,8 @@ class FullBuild:
                 or checkpoint["config_hash"] != self.config_hash
             ):
                 raise ValueError("run identity does not match code/config")
+            checkpoint.setdefault("prefetched_archives", [])
+            checkpoint.setdefault("download_workers", DOWNLOAD_WORKERS)
             return checkpoint
         checkpoint = self.initial_checkpoint()
         atomic_json(self.checkpoint_path, checkpoint)
@@ -841,45 +959,172 @@ class FullBuild:
 
     def run(self) -> dict[str, Any]:
         checkpoint = self.load_or_create()
+        inventory = archive_inventory()
+        planned = {f"{symbol}/{frequency}/{period}" for symbol, period, frequency in inventory}
         completed = set(checkpoint["completed_archives"])
+        if checkpoint.get("status") == "COMPLETE":
+            if completed != planned:
+                raise ValueError("complete checkpoint does not cover the full archive plan")
+            for symbol in SYMBOLS:
+                published = self.work_root / "published" / SCHEMA_VERSION / self.run_id / symbol
+                symbol_is_published = checkpoint["symbols"][symbol].get("status") == "PUBLISHED"
+                if not symbol_is_published or not published.is_dir():
+                    raise ValueError(f"complete checkpoint has invalid publication state: {symbol}")
+            checkpoint["scheduler_state"] = SchedulerState.GLOBAL_BUILD_COMPLETE
+            return checkpoint
         pending_by_symbol = {
             symbol: [
                 item
-                for item in archive_inventory()
+                for item in inventory
                 if item[0] == symbol and f"{item[0]}/{item[2]}/{item[1]}" not in completed
             ]
             for symbol in SYMBOLS
         }
-        with ProcessPoolExecutor(max_workers=len(SYMBOLS)) as executor:
-            active: dict[Future[tuple[str, list[dict[str, object]]]], Symbol] = {}
+        download_queue = iter(round_robin_inventory(pending_by_symbol))
+        ready: dict[str, str] = {}
+        prefetched = set(cast(list[str], checkpoint["prefetched_archives"]))
+        with (
+            ThreadPoolExecutor(
+                max_workers=DOWNLOAD_WORKERS, thread_name_prefix="stage1-download"
+            ) as download_executor,
+            ProcessPoolExecutor(max_workers=len(SYMBOLS)) as build_executor,
+        ):
+            active_downloads: dict[Future[tuple[str, str]], tuple[Symbol, str, Frequency]] = {}
+            active_builds: dict[
+                Future[tuple[str, list[dict[str, object]]]],
+                tuple[Symbol, str, Frequency],
+            ] = {}
+            download_exhausted = False
 
-            def submit_next(symbol: Symbol) -> None:
-                if not pending_by_symbol[symbol]:
-                    return
-                self.assert_disk()
-                item = pending_by_symbol[symbol].pop(0)
-                future = executor.submit(
-                    build_one_archive,
-                    str(self.work_root),
-                    self.run_id,
-                    item[0],
-                    item[1],
-                    item[2],
+            def fill_download_pool() -> None:
+                nonlocal download_exhausted
+                while not download_exhausted and len(active_downloads) < DOWNLOAD_WORKERS:
+                    try:
+                        item = next(download_queue)
+                    except StopIteration:
+                        download_exhausted = True
+                        return
+                    self.assert_disk()
+                    future = download_executor.submit(
+                        prepare_archive,
+                        str(self.work_root),
+                        item[0],
+                        item[1],
+                        item[2],
+                    )
+                    active_downloads[future] = item
+
+            def submit_ready_builds() -> None:
+                busy_symbols = {item[0] for item in active_builds.values()}
+                for symbol in SYMBOLS:
+                    if symbol in busy_symbols or not pending_by_symbol[symbol]:
+                        continue
+                    item = pending_by_symbol[symbol][0]
+                    key = f"{item[0]}/{item[2]}/{item[1]}"
+                    expected = ready.get(key)
+                    if expected is None:
+                        continue
+                    self.assert_disk()
+                    future = build_executor.submit(
+                        build_prepared_archive,
+                        str(self.work_root),
+                        self.run_id,
+                        item[0],
+                        item[1],
+                        item[2],
+                        expected,
+                    )
+                    active_builds[future] = item
+
+            def record_failure(kind: str, key: str, exc: BaseException) -> None:
+                checkpoint["scheduler_state"] = SchedulerState.FAILED
+                checkpoint["last_error"] = {
+                    "at": datetime.now(tz=UTC).isoformat(),
+                    "kind": kind,
+                    "archive": key,
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+                checkpoint["errors"].append(checkpoint["last_error"])
+                atomic_json(self.checkpoint_path, checkpoint)
+
+            def resolve_prior_failures(key: str, kind: str) -> None:
+                resolved_at = datetime.now(tz=UTC).isoformat()
+                for error in checkpoint["errors"]:
+                    if (
+                        error.get("archive") == key
+                        and error.get("kind") == kind
+                        and "resolved_at" not in error
+                    ):
+                        error["resolved_at"] = resolved_at
+
+            fill_download_pool()
+            while True:
+                submit_ready_builds()
+                pending_count = sum(len(items) for items in pending_by_symbol.values())
+                active_count = len(active_downloads) + len(active_builds)
+                state = classify_scheduler_state(
+                    planned=planned,
+                    completed=completed,
+                    pending_count=pending_count,
+                    active_count=active_count,
                 )
-                active[future] = symbol
-
-            for symbol in SYMBOLS:
-                submit_next(symbol)
-            while active:
-                done, _ = wait(active, return_when=FIRST_COMPLETED)
-                for future in done:
-                    symbol = active.pop(future)
-                    key, entries = future.result()
-                    checkpoint["symbols"][symbol]["entries"].extend(entries)
-                    checkpoint["completed_archives"].append(key)
-                    completed.add(key)
+                checkpoint["scheduler_state"] = state
+                if state is SchedulerState.GLOBAL_BUILD_COMPLETE:
                     atomic_json(self.checkpoint_path, checkpoint)
-                    submit_next(symbol)
+                    break
+                all_active: set[Future[Any]] = set(active_downloads) | set(active_builds)
+                if not all_active:
+                    checkpoint["scheduler_state"] = SchedulerState.RECOVERY_REQUIRED
+                    atomic_json(self.checkpoint_path, checkpoint)
+                    raise RuntimeError("pipeline requires recovery with unfinished archives")
+                done, _ = wait(all_active, return_when=FIRST_COMPLETED)
+                for future in done:
+                    if future in active_downloads:
+                        item = active_downloads.pop(cast(Future[tuple[str, str]], future))
+                        key = f"{item[0]}/{item[2]}/{item[1]}"
+                        try:
+                            prepared_key, expected = future.result()
+                        except BaseException as exc:
+                            record_failure("DOWNLOAD", key, exc)
+                            for download_pending in active_downloads:
+                                download_pending.cancel()
+                            for build_pending in active_builds:
+                                build_pending.cancel()
+                            raise
+                        ready[prepared_key] = expected
+                        if prepared_key not in prefetched:
+                            checkpoint["prefetched_archives"].append(prepared_key)
+                            prefetched.add(prepared_key)
+                            atomic_json(self.checkpoint_path, checkpoint)
+                        resolve_prior_failures(prepared_key, "DOWNLOAD")
+                    else:
+                        typed_future = cast(Future[tuple[str, list[dict[str, object]]]], future)
+                        item = active_builds.pop(typed_future)
+                        key = f"{item[0]}/{item[2]}/{item[1]}"
+                        try:
+                            built_key, entries = typed_future.result()
+                        except BaseException as exc:
+                            record_failure("BUILD", key, exc)
+                            for download_pending in active_downloads:
+                                download_pending.cancel()
+                            for build_pending in active_builds:
+                                build_pending.cancel()
+                            raise
+                        symbol = item[0]
+                        if built_key != key or pending_by_symbol[symbol][0] != item:
+                            raise RuntimeError("pipeline archive ordering invariant failed")
+                        pending_by_symbol[symbol].pop(0)
+                        ready.pop(built_key, None)
+                        checkpoint["symbols"][symbol]["entries"].extend(entries)
+                        checkpoint["completed_archives"].append(built_key)
+                        completed.add(built_key)
+                        resolve_prior_failures(built_key, "BUILD")
+                        if not pending_by_symbol[symbol]:
+                            checkpoint["symbols"][symbol]["schedule_status"] = (
+                                SchedulerState.SYMBOL_COMPLETE
+                            )
+                        atomic_json(self.checkpoint_path, checkpoint)
+                fill_download_pool()
         self._finalize(checkpoint)
         return checkpoint
 
@@ -989,6 +1234,7 @@ class FullBuild:
             },
         )
         checkpoint["status"] = "COMPLETE"
+        checkpoint["scheduler_state"] = SchedulerState.GLOBAL_BUILD_COMPLETE
         checkpoint["completed_at"] = datetime.now(tz=UTC).isoformat()
         atomic_json(self.checkpoint_path, checkpoint)
 

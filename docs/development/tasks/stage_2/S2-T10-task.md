@@ -3,16 +3,20 @@
 ## Metadata
 
 - task_id: S2-T10
-- task_version: 0.1
-- status: DRAFT
+- task_version: 1.14
+- status: PASSED
 - stage_id: S2
-- stage_plan_version: 0.1
+- stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
-- created_from_commit: 28bfb764f8286d2b4f23568a81f1233bb2b57b15
-- dependencies: S2-T09
-- supersedes: NONE
-- approved_by: NONE
-- approved_at: NONE
+- created_from_commit: b7d4ff3d18dcfc515feb8892659cb0b186cd68f8
+- dependencies: S2-T01 PASS; S2-T02 PASS; S2-T03 PASS; S2-T04 PASS; S2-T05 PASS; S2-T06 PASS; S2-T07 PASS; S2-T08 PASS; S2-T09 PASS; S2-T19 PASS; locked Group-1 Manifest; CR-2026-007 APPROVED; CR-2026-008 APPROVED
+- supersedes: task_version 1.13
+- approved_by: Muce
+- approved_at: 2026-07-21
+- execution_started_at: 2026-07-17T19:09:18+08:00
+- completed_at: 2026-07-21T08:48:55+08:00
+- blocked_reason: NONE
+- final_acceptance: CR-2026-019 exact comparison PASS; Group 1 PASS
 
 ## 1. 目标
 
@@ -31,7 +35,7 @@
 
 ## 4. 前置条件
 
-Stage 2 Plan 0.1 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和基线已核验。
+Stage 2 Plan v1.2 与本 Task 均已人工批准；依赖项有真实 validation；适用 OPEN QUESTION 不阻塞；工作区和Stage 1 Baseline v1.0已核验。
 
 ## 5. 允许范围
 
@@ -43,7 +47,7 @@ Stage 2 Plan 0.1 与本 Task 均已人工批准；依赖项有真实 validation�
 
 ## 7. 允许修改的路径
 
-src/research/events/, tests/research/events/, artifacts/experiments/ (all paths PLANNED; final paths require approved Stage review)
+以第21节的v1.0精确路径为准；未列路径禁止修改。
 
 ## 8. 禁止修改的路径
 
@@ -71,9 +75,7 @@ src/research/events/, tests/research/events/, artifacts/experiments/ (all paths 
 
 ## 14. 必须运行的命令
 
-TO_BE_DEFINED_IN_STAGE_0
-
-不得虚构不存在的命令。Stage 0 冻结工具链后，Task 新版本必须替换为实际命令并重新审批。
+以第21节的定向pytest命令和现有统一质量门为准；全量研究CLI必须由S2-T19预注册后通过Task新版本冻结。
 
 ## 15. 完成报告格式
 
@@ -85,7 +87,18 @@ TO_BE_DEFINED_IN_STAGE_0
 
 ## 17. 开放问题
 
-只记录影响本 Task 的 U/CR/ADR；需要改变风险、数据边界、执行语义或 Binance 能力判断时停止并请求人工决定。
+CR-2026-004 and CR-2026-005 are RESOLVED / IMPLEMENTED / VALIDATED. Their identity and unique
+Sweep-start-minute ownership corrections remain binding and are not reopened by v1.8.
+
+CR-2026-006 remains APPROVED / IN_PROGRESS only for the already-running release child of source
+Run A `stage2-g1-full-a-20260716T144233Z-366a541b7956`. The legacy CR-2026-006 parent is stopped
+and must not create its planned legacy Run B.
+
+Muce approved [CR-2026-007](../../changes/CR-2026-007.md) and
+[CR-2026-008](../../changes/CR-2026-008.md). S2-T10 v1.8 therefore keeps the Run A release child,
+builds the complete Feature Foundation, performs a fresh V2 Group-1 reconstruction as Run B, and
+requires exact layout-independent semantic equivalence before PASS. This approval changes no
+Plan v1.2 dependency edge and does not authorize S2-T11～S2-T20.
 
 ## 18. 变化触发器
 
@@ -97,4 +110,197 @@ schema、标签、成本模型、事件定义、数据/配置哈希、git commit
 
 ## 20. 变更历史
 
-- 2026-07-12：v0.1，依据 Stage 2 Plan 0.1 创建，状态 DRAFT，未执行。
+- 2026-07-19：v1.12，Muce批准CR-2026-014。仅优化Runtime V2 Group-1 PRICE/FLOW执行：
+  processing-day缓存、Foundation滑动窗口、spawn月度并行、legacy Hash streaming、用户停止恢复
+  和只读Web进度。研究定义、参数、身份、payload、输出契约及Run A均不变。固定30日正确性与
+  4倍性能门通过前不得冻结新Authority或创建replacement Run B。
+  实际语义与806个receipt完全一致，但只达到2.18倍和1.73平均核；Task因此BLOCKED于
+  `NOT_READY_FOR_FULL_REEXECUTION`，未创建Authority或replacement Run B。
+  后续r8将固定窗口提升至3.02倍并继续保持逐receipt语义完全一致。月内三段并行r7因
+  重复Foundation读取退化至2.06倍，已撤回并保留诊断证据。Muce于2026-07-19接受3.02倍为
+  当前外盘架构的实际性能上限，Task恢复IN_PROGRESS并进入最终质量门；4倍和2.5核仍作为
+  未达性能目标记录，不放宽任何完整性、Hash或Run A精确比较门。
+
+- 2026-07-19：v1.11，Muce批准CR-2026-013。内存、Arrow inflight、对象大小/数量、容量估算
+  和性能阈值改为append-only资源异常，不再直接判定研究失败；不能安全继续时进入可恢复
+  资源暂停。完整性、身份、未来泄漏、authority/hash和精确语义比较仍保持硬失败。最新失败
+  Run B永久终态；其316个BTC月级密封对象只允许由新run通过逐对象adoption Manifest验证采用。
+
+- 2026-07-18：v1.9，Muce批准CR-2026-011。Runtime V2 Foundation改为逐Parquet row-group
+  聚合Trades，价格、bars、row-group index与秒级结果分阶段密封并显式释放；1 GiB Arrow、
+  3 GiB当前RSS与1 GiB相对阶段基线峰值增量分别硬门控。真实失败日、跨月日及BTC/ETH
+  最大交易量日剖析和确定性重放PASS；失败Run B永久终态，仅允许最终提交冻结的新Authority
+  创建一个replacement Run B。
+
+- 2026-07-17：v1.8，Muce批准CR-2026-007与CR-2026-008的混合切换：当前Run A发布子进程
+  继续，旧CR-2026-006父流程及其legacy Run B停止；新的Run B必须从冻结Stage 1完整构建
+  Feature Foundation并全量重算Group 1，随后与正式Run A执行逐owner-day精确语义比较。
+  Plan v1.2分组和Task DAG不变，Task保持IN_PROGRESS。
+
+- 2026-07-17：v1.7，Muce批准CR-2026-006 L2发布工具版本分离。固定复用已完成
+  9508/9508的v1.6 Run A staging，仅以append-only supplement、单扫描可恢复发布器完成深度
+  校验和发布；事件生成器、研究语义、参数、Stage 1、preregistration与config均不变。
+  Run A PASS后才可创建全新的Run B；双运行验收前Task保持IN_PROGRESS。
+
+- 2026-07-16：Muce关闭CR-2026-005并授权冻结新Execution Manifest以及执行全新的Run A / Run B
+  双全量确定性构建；Task恢复IN_PROGRESS，禁止复用旧staging和进入后续组。
+
+- 2026-07-16：v1.6 Option A实现与受控真实双重放PASS；Task状态
+  APPROVED_FOR_REEXECUTION，等待新的全量运行人工批准，未创建Execution Manifest或run_id。
+
+- 2026-07-16：v1.6，Muce批准CR-2026-005 Option A，仅修复Sweep-start UTC分钟所有权与runner失败终态并执行受控诊断；状态IN_PROGRESS，禁止创建全量run。
+
+- 2026-07-16：v1.5 Run A完成BTC PRICE 2376/2376日构造后，在2020-04-27 finalization发现两个same identity/different payload冲突并保持未发布失败；创建CR-2026-005，Task状态BLOCKED，未创建Run B。
+
+- 2026-07-16：v1.5，Muce批准CR-2026-004 L2及Case C按新身份拆分；重开Task以修复candidate identity、partition ownership和dedup finalization，本轮禁止创建全量run。
+
+- 2026-07-16：v1.5修复、前50日双重放和全部质量门PASS；状态APPROVED_FOR_REEXECUTION。本轮未创建Execution Manifest或全量run。
+
+- 2026-07-16：CR-2026-003路径修复及回归通过；全量前审计发现保留的BTC PRICE前50日分区3,781行中仅971个唯一candidate identity，2,810行为重复且均被标记included。创建CR-2026-004，Task状态BLOCKED，未创建新run。
+
+- 2026-07-16：v1.4，Muce批准CR-2026-003，仅允许修复Stage 1 Catalog到`archive=YYYY-MM/date=YYYY-MM-DD`的物理路径解析并以全新run重新执行；状态REOPENED。
+
+- 2026-07-16：v1.3 full run在首个BTCUSDT Flow分区因Stage 1 Trades物理路径解析遗漏`archive=YYYY-MM`层失败；2376/9504分区完成、无发布，状态FAILED；CR-2026-003待决策。
+
+- 2026-07-16：v1.3，依据CR-2026-002与ADR-S2-005冻结第一组事件构造基线和CLI；Muce批准，状态APPROVED / NOT_EXECUTED。
+
+- 2026-07-12：v0.1，依据 Stage 2 Plan v0.1 创建，状态 DRAFT，未执行。
+- 2026-07-14：v1.0，按Stage 1 Trade Identity v2与Stage 2 Plan v1.0重规划；状态DRAFT，未执行。
+- 2026-07-14：v1.1，加入可扩展研究setup架构与事件说明图规划；状态DRAFT，未执行。
+- 2026-07-16：v1.2，按Plan v1.2收口分组、前置S2-T19并修订DAG；状态DRAFT，未执行。
+
+## 21. Stage 2 Plan v1.2执行覆盖（优先于旧版通用占位）
+
+- 数据与能力边界：仅从Stage 1 published baseline全量生成宽松候选；由已批准ResearchSetup/ContextModel注册表驱动，核心编排器不得按具体行情类型分支硬编码；BTC/ETH、setup/context、V1_PRICE/V1_FLOW分run，输出append-only。
+- 允许修改路径：`src/era100x/research/stage_2/features/foundation/`、现有Stage 2 registry的
+  最小扩展、`src/era100x/research/stage_2/runtime_v2/`、
+  `src/era100x/research/stage_2/pipelines/v2/`、
+  `src/era100x/research/stage_2/pipelines/candidates/`及其对应
+  `tests/research/stage_2/`路径；还允许V2固定入口
+  `scripts/run_stage2_research.py`、经S2-T19冻结的V1候选CLI、V2
+  Manifest/Catalog/receipt、本Task validation和Traceability。禁止修改Stage 1实现/数据、
+  `docs/spec/**`和Stage 3+。
+- 验证命令：\`uv run python -m pytest tests/research/stage_2/pipelines/candidates -q\`；\`uv run python scripts/run_quality_gate.py\`。全量研究CLI须由S2-T19冻结后再写入Task新版本，不得当前虚构。
+- 验收标准：全量coverage/hash/manifest一致，无staging输入、无跨标的/跨setup/context证据混合、无重复episode、未知setup硬失败、所有尝试版本入账；同一MarketEpisode不能因setup/context不同而重复消费；仅fixture不得PASS。
+- 证据模式：\`FULL_DATA_REQUIRED\`。无论fixture能力是否可验收，Stage 1最终PASSED与VALID data baseline之前均不得执行本Task。
+
+## 22. ADR-S2-004预注册绑定
+
+S2-T10只能只读消费S2-T19锁定且引用[ADR-S2-004](../../decisions/ADR-S2-004-primary-research-definition.md)的第一组Manifest。全量候选须按instrument、T1～T4、P1～P3和split/fold隔离，保存配置/hash并append-only；本Task不执行匹配、First-passage、bootstrap或F1～F10统计。v1.4仅按已批准CR-2026-003修复物理路径解析；失败run不得恢复、复用、覆盖或清理。
+
+## 23. ADR-S2-005事件构造绑定
+
+For the immutable V1 Run A compatibility path, this Task uses only
+`uv run python scripts/run_stage2_group1_candidates.py {preflight,run,resume,verify}`. That V1
+command remains bound to its locked Manifest and is not the V2 Run B interface.
+
+S2-T10 v1.8 Run B must use the fixed V2 entry point
+`uv run python scripts/run_stage2_research.py {preflight,build-foundation,run-group1,resume,release,verify,compare}`.
+Every mutating subcommand requires the locked V2 Execution Manifest; resume requires identical
+content keys and hashes; verify is read-only. Under CR-2026-009, compare may only write one
+append-only deterministic evidence report and therefore requires a write probe and run lock.
+The fixed operator preparation scripts are `freeze_stage2_v2_authorities.py` and
+`record_stage2_v2_quality_evidence.py`; the three `diagnose_stage2_v2_*_rss.py` scripts are
+DIAGNOSTIC_ONLY. A sealed Foundation staging authority may feed Group 1 inside the same Run B,
+while publication remains a single combined atomic snapshot. No later-stage labels, metrics or
+research conclusions are produced.
+
+## 24. CR-2026-007 V2平台绑定
+
+S2-T10 v1.8 may build only the Feature Foundation, fail-closed registry, content-addressed build
+graph, logical owner-day receipts, layout-independent Catalog and current Group-1 compatibility
+projection defined by [ADR-S2-006](../../decisions/ADR-S2-006-hybrid-v2-feature-foundation.md).
+Only the already approved setup, context and variants may execute. The Foundation must preserve
+causal availability and Stage 1 evidence capability; physical compaction cannot change logical
+ownership or merge instruments, variants, research roles or parameter sets.
+
+The current Run A release child remains isolated and immutable. A fresh V2 Run B must begin from
+the frozen Stage 1 authorities, publish the complete Foundation, reconstruct every Group-1
+partition and produce the full compatibility projection. No Run A artifact may be reused as a
+Run B input.
+
+## 25. CR-2026-008确定性验收绑定
+
+Run A and Run B may differ in file count, physical path, compression and byte hash, but every
+canonical owner-day projection must match exactly in row count, empty state, canonical logical
+hash, ID association, payload hash, ownership, inclusion and registered distributions. Any
+semantic mismatch fails S2-T10; sampling or tolerance is forbidden.
+
+Future event Tasks, only after separate approval, must follow Tier F/E/D. An event whose
+primitives already exist in a frozen Feature Snapshot performs two complete event computations
+from that snapshot and must not rescan raw Stage 1 Trades. A missing primitive blocks execution
+until a separately approved Foundation extension is built and validated.
+
+## 26. CR-2026-011 production memory correction
+
+S2-T10 v1.9 may change only Runtime V2 Foundation physical processing and resource evidence. It
+must preserve the 1 GiB Arrow inflight hard limit, stream authoritative Trades row groups, release
+source tables after dependent features are sealed, and enforce separately recorded current-RSS and
+baseline-relative peak-RSS gates calibrated from approved real-data profiles. This correction may
+not change any logical row, hash, identity, availability, parameter, source authority or Group-1
+comparison rule. The calibrated limits are 3 GiB current RSS and 1 GiB baseline-relative peak RSS
+delta. The failed v1.8 Run B is terminal and cannot be resumed or reused.
+
+## 27. CR-2026-012 finalization memory-gate correction
+
+S2-T10 v1.10 may change only Runtime V2 Foundation packing/seal resource measurement and evidence.
+The 1 GiB Arrow inflight and 3 GiB current-RSS hard limits remain unchanged. Process-lifetime
+`ru_maxrss` is audit-only; phase-current RSS is sampled continuously and its delta from the phase
+baseline retains the 1 GiB hard limit. The terminal failed Run B
+`stage2-g1-v2-b-20260718T105814Z-cb5c25abd485` may not be resumed, reused, published or cleaned.
+No logical row, Hash, identity, payload, availability, parameter, source authority or Group-1
+comparison rule may change.
+
+The resource hard-failure clauses in sections 26 and 27 are historical execution records and are
+superseded only for resource classification by section 28. Their research-integrity and semantic
+constraints remain in force.
+
+## 28. CR-2026-013 resource-anomaly semantics
+
+S2-T10 v1.11 records resource and performance threshold crossings as deterministic execution
+anomalies. Threshold crossings do not change semantic quality or research conclusions. If bounded
+mitigation cannot continue safely, the run checkpoints a recoverable resource/storage pause.
+Only authority, hash, schema, checksum, identity, ownership, leakage, append-only, exact comparison
+or actual corruption defects may create `FAILED_INTEGRITY`. The terminal Run B
+`stage2-g1-v2-b-20260718T141137Z-f0c150bfa1c9` remains immutable. Its 316 BTC month objects may
+only be adopted by a new run through the CR-2026-013 sealed per-object verification contract.
+
+## 29. CR-2026-014 execution optimization
+
+S2-T10 v1.12 preserves every formal Group-1 row and Hash while eliminating repeated owner-day
+work, adding bounded Foundation caches, deterministic month workers, streaming compatibility Hash
+spools, recoverable user stops and the read-only progress dashboard. Muce accepted the measured
+3.02x result as the practical external-disk ceiling; the performance miss is anomaly evidence and
+does not weaken any semantic or integrity gate.
+
+## 30. CR-2026-015 final packing recovery
+
+S2-T10 v1.13 changes only final component artifact ordering and audited execution recovery. The
+component tuple is sorted by unique physical object SHA-256, exactly as its consumer validates.
+Run `stage2-g1-v2-b-20260719T141315Z-bf8c6a186f66` remains terminal and unpublished. A new run may
+adopt its fully verified Foundation and Group-1 monthly evidence, but never its Group-1 packed
+objects, partials or processing cache. The new run repeats final packing, release, verification and
+the complete Run A comparison. Recovery subflows and logs are visible in the read-only Web page.
+
+## 31. CR-2026-017 release correction and successor boundary
+
+The stale Catalog object/Seal count gate is removed while all semantic and integrity publication
+checks remain fail-closed. The failed-release Run
+`stage2-g1-v2-b-20260720T111704Z-9c4b7c423a04` must receive append-only disablement evidence with
+resume, reuse and deletion all false. That evidence must be bound into two byte-identical final-code
+Authority freezes before exactly one successor is created. The successor may adopt only the already
+authorized monthly evidence and must recreate packing, release, verify and all 61,776 exact Run-A
+comparisons. Approval does not itself mark this Task PASS or unlock a later Task or Stage.
+
+## 32. CR-2026-018 / 019 fixed-Run release and exact comparison
+
+CR-2026-018 supersedes only the unnecessary successor/repacking ceremony in section 31: it fixes
+the prior Run's 208-object/208-Seal set as immutable input and permits Release, Verify and Compare.
+CR-2026-019 corrects only the production comparator's algorithm-authority argument and permits
+only one comparison retry. It does not alter Receipt markers, rows, Hashes, distributions or
+research semantics.
+
+Acceptance is exact: Run A and Run B each contain 61,776 Group-1 partitions; matched partitions and
+daily row Hash matches must both equal 61,776; missing, extra and difference counts must all equal
+zero; global distributions must be equal. The executed report satisfies every condition, so
+S2-T10 v1.14 is PASS. No later Task or Stage is authorized by this acceptance.

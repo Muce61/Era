@@ -3,15 +3,15 @@
 ## Metadata
 - task_id: S1-T15
 - task_version: 1.0
-- status: DRAFT
+- status: PASSED
 - stage_id: S1
-- stage_plan_version: 1.0
+- stage_plan_version: 1.1
 - created_from_spec_version: V1.3.4
 - created_from_commit: 0cf9bbd
 - dependencies: S1-T01～S1-T14 PASS
 - supersedes: former S1-T13 v0.1
-- approved_by: NONE
-- approved_at: NONE
+- approved_by: Muce
+- approved_at: 2026-07-16
 
 ## 1. 目标
 汇总Stage 1真实代码、fixture和全量数据证据，形成不自动晋级的人工验收入口。
@@ -53,3 +53,5 @@ Task统计→数据覆盖→门槛→命令→OPEN/限制→Go/No-Go。
 上游重开、数据baseline失效或验收声明不实。
 ## 20. 变更历史
 - 2026-07-12：v1.0，从原T13改为依赖小样本与全量双门；状态DRAFT。
+- 2026-07-16：用户明确批准在S1-T14 PASS后执行Stage 1集成验收；状态IN_PROGRESS。
+- 2026-07-16：全量质量门、数据只读一致性、NULL能力边界、可恢复调度回归和Traceability全部通过；Stage Validation结论PASS，Task状态PASSED。

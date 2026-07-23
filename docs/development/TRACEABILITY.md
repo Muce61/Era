@@ -71,7 +71,7 @@ Stage 0 baseline validity: **VALID / PASSED**. Any later change to its code, con
 
 ## Stage 1 v1.1 Execution Coverage
 
-Stage 1 is `IN_PROGRESS` under approved Plan v1.1 and CR-2026-001. S1-T02/T05/T07/T08/T09/T12 v1.1 implement Trade Identity v2 and are PASSED after targeted regression; S1-T06/T10/T11 retain semantics and passed regression. `venue_trade_id` is a venue property, `canonical_trade_id` is the fact identity, and official conflicting venue IDs are retained only after monthly/daily canonical-set confirmation. S1-T14 v1.5 awaits a fresh run from merged `main`; the prior 134/162 run is INVALIDATED and unpublished. S1-T15 remains DRAFT.
+Stage 1 is `PASSED / VALID` under baseline version 1.0, approved Plan v1.1 and CR-2026-001. S1-T01～S1-T15 are PASSED and [`validations/stage_1_validation.md`](validations/stage_1_validation.md) concludes PASS. `venue_trade_id` is a venue property, `canonical_trade_id` is the fact identity, and official conflicting venue IDs are retained only after monthly/daily canonical-set confirmation. S1-T14 v1.5 uses the immutable 162/162 published run and read-only post-run verification; its scheduler-only repair changes no dataset semantics or recorded logical hash. The prior 134/162 run remains INVALIDATED and unpublished. The valid baseline tag is `stage-1-v1.0-passed`.
 
 | Requirement | Planned Tasks | Planned Evidence | State |
 | --- | --- | --- | --- |
@@ -97,9 +97,186 @@ Stage 1 is `IN_PROGRESS` under approved Plan v1.1 and CR-2026-001. S1-T02/T05/T0
 | S1-T11 delivered evidence | S1-T11 | `src/era100x/data/splits/`, `tests/data/splits/` | PASSED |
 | Small-sample capability acceptance | S1-T12 | fixture quality report marked NOT_RUN_FULL_DATA | PLANNED |
 | S1-T12 v1.1 delivered evidence | S1-T12 | v2 identity/conflict gates plus existing report/null/split regression | PASSED_V2 |
-| Full-data preflight and build | S1-T13, S1-T14 | approved paths/source/coverage, resumable builder, full catalog, repeat-build hash | T13_PASSED_T14_IN_PROGRESS |
-| S1-T14 v1.5 builder implementation | S1-T14 | `stage1-trades-v2`, official conflict cross-validation, `src/era100x/data/full_build/`, `tests/data/full_build/` | IN_PROGRESS_PRIOR_134_OF_162_RUN_INVALIDATED |
+| Full-data preflight and build | S1-T13, S1-T14 | approved paths/source/coverage, resumable builder, full catalog, repeat-build hash | PASSED |
+| S1-T14 v1.5 builder implementation and scheduler recovery | S1-T14 | `stage1-trades-v2`, official conflict cross-validation, explicit multi-symbol terminal-state scheduler, resumable `.part`, `src/era100x/data/full_build/`, `tests/data/full_build/` | PASSED_162_OF_162_READ_ONLY_REVERIFIED |
 | S1-T13 actual preflight | S1-T13 | 162/162 official archives; write probe; 20% disk safety calculation | PASSED |
-| Stage 1 gate | S1-T15 | Stage 1 validation; BTC/ETH separate conclusions | PLANNED |
+| Stage 1 gate | S1-T15 | `validations/stage_1_validation.md`; BTC/ETH separate PASS conclusions | PASSED_VALIDATED |
+
+Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～S1-T15 are PASSED. Historical data contracts resolve to `src/era100x/data/`, `tests/data/`, the immutable run Manifest/Catalogs and the Stage 1 Task/Stage Validations. Later-stage behavior remains PLANNED and is not promoted by this baseline.
 
 `DATA-HISTORICAL-NO-FAKE-EXECUTION` is enforced at the Stage 1 historical boundary by S1-T02/T10/T12/T14 and remains planned for Stage 5 forward-field separation. `STRATEGY-V1-PRICE-ONLY-HISTORICAL` is enforced at the Stage 1 input/source boundary by S1-T03/T09/T10; event behavior remains Stage 2. This does not promote either later behavioral implementation to PASSED.
+
+## Stage 2 Plan v1.2 APPROVED Coverage
+
+Stage 2 is `IN_PROGRESS / S2_T15_STOPPED_SRP_S2_001_EXEMPTIONS_APPROVED_NOT_EXECUTABLE`. S2-T19 and S2-T01～S2-T14 are PASSED;
+the fixed Runtime V2 Run is published with Quality/Verify PASS and the exact Run-A comparison
+matches 61,776/61,776 Group-1 partitions with zero differences. S2-T11 v1.3 and CR-2026-021 are
+human-approved. Full-output Run `stage2-s2t11-paths-20260721T023117Z-029707f3c111` published
+220,201 BTC and 312,507 ETH episode path indexes; read-only verify, repository quality gates and
+automatic UI projection pass. S2-T12 v1.3 is human-approved for historical price-only MFE/MAE/
+timing evidence. Full Run `stage2-s2t12-metrics-20260721T040435Z-de9aaea56f2a` and read-only
+Verify PASS over 220,201 BTC and 312,507 ETH Episodes, producing 1,065,416 separate H1/H2 metric
+rows. CR-2026-022 is approved, implemented and validated; the read-only UI derives the fixed Run,
+separate BTC/ETH H1/H2 counts and 16/16 checks from immutable evidence. Muce accepted S2-T12 at
+2026-07-21T06:39:21Z and approved S2-T13 v1.2 at 2026-07-21T07:45:12Z.
+[CR-2026-023](changes/CR-2026-023.md) was approved by Muce at 2026-07-21T10:41:50Z and freezes the
+S2-T13 v1.3 full-output and automatic read-only UI scope. Authority `ab76072c…bbbe` and formal Run
+`stage2-s2t13-first-passage-20260721T110224Z-d3f0c0331395` published 1,065,416 H1/H2 path rows and
+31,962,480 classifications; full Verify and the automatic real-evidence UI projection pass. Muce
+accepted and closed S2-T13 at 2026-07-21T12:52:58Z. Muce subsequently approved the S2-T14 v1.2
+fixture capability at 2026-07-21T13:07:08Z. The v1.2 deterministic fixture and repository quality
+gate pass. Muce approved CR-2026-024 and S2-T14 v1.3 at 2026-07-21T13:37:13Z for the minimum
+full-distribution and read-only automatic UI scope. Authority `3a563bd2…f7a` and Run
+`stage2-s2t14-ambiguity-bounds-20260721T140507Z-8b4cf765602d` passed full execution and read-only
+Verify over 1,065,416 H1/H2 rows, 31,962,480 classifications and 2,280 compact distributions; the
+automatic real-evidence UI also passed. Muce's explicit close instruction became effective after
+evidence passed at 2026-07-21T14:15:01Z. Muce approved S2-T15 v1.2 method-fixture work at
+2026-07-21T14:35:06Z. The exact L0-L5 conditional matcher, 16 directed tests and 553-test quality
+gate pass within the fixture boundary. Muce approved CR-2026-025 and v1.3 at
+2026-07-21T14:41:46Z, but the pre-Run audit found the executable volatility/Trades-activity
+formulas, split/fold boundaries, exact purge/embargo duration and non-event control-anchor rule
+absent from the repository and complete Git history. OQ-S2-005 blocked Authority/Run creation at
+that time. Muce approved CR-2026-026, ADR-S2-009, S2-T15 v1.4 and the T19 append-only addendum at
+2026-07-22T02:25:41Z, closing OQ-S2-005 with executable definitions. The v1.4 upstream audit then
+found 14,256 fixed T10 Group-1 receipts missing required field-distribution digests. Muce approved
+CR-2026-027; its final supplement verified 14,256/14,256 with no T10 mutation and audit binding
+`b1140c4b…380d` passed. The first formal T15 Run
+`stage2-s2t15-conditional-20260722T071250Z-871c404c5f43` stopped `FAILED_UNPUBLISHED` during
+Episode preparation with 0/456 matching groups and no published result: T15 reconstructed Context
+at final Episode availability rather than binding the sealed price-trigger Context. Exact read-only
+reconciliation proves BTC 220,201/220,201 and ETH 312,507/312,507 conflict-free
+`(trigger_id,event_parameter_set_id)` bindings, all `UP/PASS`. The correction and automatic FAILED
+UI projection are implemented, but direct `price_triggers` reception exposes 4,752 additional
+legacy distribution omissions. Muce approved CR-2026-028 and resolved OQ-S2-007 at
+2026-07-22T08:53:43Z, authorizing the independent read-only supplement, invalidation of the first
+unpublished chain and exactly one successor chain. Supplement/audit/quality/preflight gates remain;
+the successor then passed the corrected Episode Context boundary and completed 456/456
+outcome-blind groups, but stopped `FAILED_UNPUBLISHED` before the first control H2 outcome because
+the post-selection strict Decimal receiver rejected the canonical JSON string representation of
+`control_entry_price`. Muce approved CR-2026-029 and resolved OQ-S2-008 at
+`2026-07-22T14:12:52Z`, authorizing only the strict Decimal receiver correction, invalidation of
+that failed chain and exactly one final replacement chain; implementation gates remain.
+Muce then required a seven-day real-input rehearsal before every long-running task and stopped the
+CR-2026-029 TRAIN-bin freeze before any Binning Set or Run ID was created. The first isolated T15
+rehearsal exposed an invalid two-groups-in-one-file simulation package; the complete fresh rerun
+passed 20,160 feature rows, 42 boundary JSON round-trips, 10 real Decimal candidate receptions,
+10 H2 matrices, 300 outcome cells and exact 2-group/60-summary reconciliation. CR-2026-030
+records the stopped `e3d9814f…c365` Authority. Muce approved CR-2026-030 at
+`2026-07-22T14:47:04Z`, authorizing exactly one replacement Authority/bin/Run chain only after the
+final-clean-code seven-day rehearsal, full quality gate and fresh audit pass. The rehearsal is
+simulation-only and does not change the formal research result.
+The replacement Authority `5a1a3faa…e7b56` then began TRAIN feature preparation, but Muce stopped
+it before a Binning Set or Run ID after the read-only view exposed 61 unavailable BTC/P1 boundary
+anchors. CR-2026-031/ADR-S2-010 and OQ-S2-009 now require a typed whole-range BTC/ETH availability
+audit; the prepared files remain unpublished and non-reusable. CR-2026-032/ADR-S2-011 and
+OQ-S2-010 separately propose immutable exit-rule-free event paths plus an H3 theoretical
+full-lifecycle study with landmark risk-set comparison. Muce approved both governance pairs at
+`2026-07-22T16:27:27Z`: the availability audit and two-layer direction are authorized, while both
+OQs remain OPEN. No code, Authority, Run, S2-T16+ or Stage 3 is authorized.
+The clean CR-2026-031/032 seven-day audit then passed 20,160 feature-anchor reconciliation,
+strict receipt read-back and byte-identical T1-T4 raw-path consumption over 1,211 Episode paths.
+Its report/receipt Hashes are `a47b6488…b344` / `fed27311…a905`. The lifecycle consumer remains
+BLOCKED: T11 stops at 600 seconds and 19/52 H2 T4 rows remain Primary EXPIRED. The first audit
+attempt also exposed and fixed an audit-only daily-offset checker bug; a fresh full rerun passed.
+CR-2026-033 and ADR-S2-012 now propose an S2-T19 v1.4 `SPECIAL_RESEARCH_POINT` extension: all
+rules apply by default, only explicitly named research-rule exemptions may be considered, and
+truth, safety and governance rules remain non-waivable. OQ-S2-011 is OPEN. This proposal is DRAFT;
+there is no framework implementation, Authority, Run or formal result. Point-specific exemption
+approval is recorded separately below.
+Muce subsequently classified CR-2026-031/032 and ADR-S2-010/011 as `SRP-S2-001`. Its A-layer
+availability and raw-path evidence has an empty exemption set. Muce approved its B-layer
+EX-001/002/003 at `2026-07-23T01:04:16Z`: `RESEARCH-LOCKED-REPLAY-ONCE`, the T1-T4/600-second
+source boundary and the U-011 universal time-exit baselines. All undeclared rules remain effective.
+OQ-S2-009/010 and framework/Task implementation still block execution. CR-2026-031/ADR-S2-010 are
+retained as an active safety contract; CR-2026-032/ADR-S2-011 are retained as source authority with
+no standalone Authority/Run entry.
+S2-T16 through S2-T18 and S2-T20 remain `DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
+[CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
+approve a bounded hybrid transition without changing Stage 1, preregistration, config, parameters,
+candidate semantics or the Plan v1.2 DAG. Formal Run A is now PUBLISHED with Quality PASS,
+9508/9508 completed work items, zero failed/UNKNOWN work items, 61,776 logical partitions,
+published logical hash `8583f220dc880bf5b7e7ace1435ca2285e59b80dd48aa7d15bd2f8cacac60870` and published physical
+hash `9fe33a4e7fde1ace3281a208c46f7474f66bc5c5a0e538871b273b2f20131578`.
+[CR-2026-009](changes/CR-2026-009.md) is RESOLVED / IMPLEMENTED / VALIDATED. Its bounded
+release/operator corrections remain authoritative for formal Run A. The first V2
+authority freeze failed because the resolved-entry contract rejected the legitimate
+Catalog-authorized exact-day archive tail `archive=2026-07-01`; the failed run remains immutable.
+A write-once replacement Bundle resolved all 4,752 instrument-days, including six exact-day tails,
+but its conditionally authorized preflight exposed a separate frozen-parser drift: V2 accepted only
+release supplement v1.0/CR-2026-006 while formal Run A protection binds v1.1/CR-2026-009. The
+preflight consumed no Run B ID. [CR-2026-010](changes/CR-2026-010.md) approves the bounded read
+compatibility correction, exact match-count diagnostics, Authority refreeze and successor Run B
+only after all gates pass. The replacement Bundle froze twice identically and preflight passed,
+but the first `FOUNDATION:BTCUSDT` task failed unpublished when process RSS `1,704,640,512`
+exceeded the frozen `943,718,400` byte limit. No task, staging artifact, publication, Group-1 work
+or comparison completed. [CR-2026-011](changes/CR-2026-011.md) implements profiled row-group
+streaming, explicit source release and separate 1 GiB Arrow, 3 GiB current-RSS and 1 GiB
+baseline-relative peak-delta gates. Real-data failure/cross-month/high-volume profiles,
+deterministic replays and all quality gates PASS. The failed run remains terminal; one final-code
+Authority and unique replacement Run B are conditionally authorized. Groups 2～4 remain DRAFT and
+were not executed.
+
+The CR-2026-011 replacement then built all 316 BTC monthly and 82 BTC packed Foundation
+checkpoints, but failed before Task sealing because process-lifetime `ru_maxrss` was interpreted
+as a phase-local delta. [CR-2026-012](changes/CR-2026-012.md) approves the bounded v1.10
+correction: lifetime peak remains audit evidence, while Arrow inflight, absolute current RSS and
+continuously sampled phase-current delta remain fail-closed. No research semantics or comparison
+rule changes. The full 82-object/9,504-row-group packing/seal profile and repository quality gates
+PASS; the terminal failed run now awaits its append-only invalidation receipt and a final-code
+Authority refreeze.
+
+The subsequent replacement Run B `stage2-g1-v2-b-20260718T141137Z-f0c150bfa1c9` completed all
+316 BTC month-level Foundation objects and failed unpublished before packing when a 1 GiB
+phase-current RSS observation threshold was treated as a terminal research failure. Current RSS
+was below 3 GiB and no semantic defect existed. [CR-2026-013](changes/CR-2026-013.md) changes all
+resource/performance thresholds to deterministic anomaly evidence, adds recoverable resource and
+storage pauses, and preserves hard failures for integrity and exact comparison defects. The failed
+run is immutable; its sealed objects require a new-run adoption Manifest and full verification.
+
+| Requirement | Plan v1.2 Tasks | Planned implementation/tests | State |
+| --- | --- | --- | --- |
+| Pre-registration before any Stage 2 implementation/result | S2-T19 | manifest schema, parameter/data/code/time/evidence/metric/output/invalidation contracts; ADR-S2-004 | APPROVED_NOT_EXECUTED_READY |
+| S2-T19 v1.3 delivered evidence | S2-T19 | `src/era100x/research/stage_2/manifests/`, config/summary, immutable external Manifest and `validations/stage_2/S2-T19.md` | PASSED |
+| Stage 1 v2 baseline, ResearchSetup/ContextModel registry and CanonicalKeyLevel contract | S2-T01 | `contracts/`, `registry/` and fixture conformance tests | APPROVED_NOT_EXECUTED_AFTER_T19 |
+| S2-T01 v1.3 delivered evidence | S2-T01 | `src/era100x/research/stage_2/contracts/`, `registry/`, tests and `validations/stage_2/S2-T01.md` | PASSED |
+| Three causal key-level sources and arbitration | S2-T02, S2-T03 | fixture-only `key_levels/sources`, `key_levels/arbitration` | APPROVED_NOT_EXECUTED |
+| S2-T02 v1.3 delivered evidence | S2-T02 | independent sources, tests and `validations/stage_2/S2-T02.md` | PASSED |
+| S2-T03 v1.3 delivered evidence | S2-T03 | deterministic arbitration, source retention tests and `validations/stage_2/S2-T03.md` | PASSED |
+| Sweep → Reclaim → Hold and invalidation | S2-T04, S2-T05, S2-T06 | fixture-only `episodes/sweep`, `reclaim`, `hold` | APPROVED_NOT_EXECUTED |
+| S2-T04 v1.3 delivered evidence | S2-T04 | causal Sweep detector/tests and `validations/stage_2/S2-T04.md` | PASSED |
+| S2-T05 v1.3 delivered evidence | S2-T05 | causal Reclaim detector/tests and `validations/stage_2/S2-T05.md` | PASSED |
+| S2-T06 v1.3 delivered evidence | S2-T06 | causal Hold detector/tests and `validations/stage_2/S2-T06.md` | PASSED |
+| V1_PRICE G0-G3 and separate V1_FLOW G4 | S2-T07, S2-T08 | fixture-only `gates/price`, `gates/flow`; no G5/G6 | APPROVED_NOT_EXECUTED |
+| S2-T07 v1.3 delivered evidence | S2-T07 | causal G1/G3 facts/tests and `validations/stage_2/S2-T07.md` | PASSED |
+| S2-T08 v1.3 delivered evidence | S2-T08 | Trades-only G4 facts/tests and `validations/stage_2/S2-T08.md` | PASSED |
+| MarketEpisode identity, consume and re-arm | S2-T09 | fixture-only `episodes/identity`; FI-14, UT-EVT-011 | APPROVED_NOT_EXECUTED |
+| S2-T09 v1.4 identity correction | S2-T09 | CR-2026-004 canonical candidate identity/payload hash while preserving FROZEN MarketEpisode identity; `validations/stage_2/CR-2026-004.md` | PASSED |
+| Registry-driven full candidate generation; BTC/ETH, variant and Primary/Exploratory separate | S2-T10 v1.14 | CR-2026-006 through CR-2026-019; fixed Run B Quality/Verify PASS; exact comparison report `69298e5d05161223b354e1b60a65ef032e9370e4017da487e35657264af8e9f0` | S2-T10 PASS / GROUP 1 PASS |
+| Deterministic Group-1 PRICE/FLOW execution optimization | S2-T10 v1.12 | CR-2026-014; ADR-S2-007; processing-day/Foundation caches, spawn month workers, streaming compatibility Hash, read-only progress and performance history | IMPLEMENTED / SEMANTIC PASS / 3.02X HUMAN-ACCEPTED / READY_FOR_FINAL_QUALITY_GATE |
+| Group-1 final packing sorting and audited monthly-result recovery | S2-T10 v1.13 | CR-2026-015; ADR-S2-008; packed-artifact audit; monthly adoption Manifest; read-only recovery subflows | COMPLETED / 44 PACKED OBJECTS / 208 COMBINED SEALS |
+| CR-015 Foundation recovery coverage and successor authorization | S2-T10 v1.13 | CR-2026-016; exact 632 monthly + 164 packed Foundation checkpoint coverage; preflight-only Run B protection; validation `docs/development/validations/stage_2/CR-2026-016.md` | SUCCESSOR BUILT 80,784 / RELEASE FAILED UNPUBLISHED ON STALE 200-OBJECT GATE |
+| Catalog object-count observation correction | S2-T10 v1.13 | CR-2026-017/018; stale 200-object hard gate removed; fixed 208-object Run atomically published and independently verified | IMPLEMENTED / PUBLISHED / QUALITY PASS / VERIFY PASS |
+| Shared causal Feature Foundation, content DAG, receipts and layout-independent Catalog | S2-T10 v1.8 | `CR-2026-007`; `ADR-S2-006`; current approved setup/context/variants only | PASSED — 19,008 FOUNDATION PARTITIONS |
+| Cross-implementation determinism and future Feature Snapshot Tier F/E/D protocol | S2-T10 v1.14; future separately approved Tasks | CR-2026-008/019; exact full Run-A/Run-B comparison plus future approval boundary | VALIDATED — 61,776/61,776 MATCH; 0 DIFFERENCES |
+| Compare algorithm-authority production wiring | S2-T10 v1.14 | CR-2026-019; one-line production correction; compare-only Authority `e3688ca21a987849388cb9e694929033aac51ed245d1f0eb5337c43f554eb740` | IMPLEMENTED / 431 TESTS PASS / EXACT COMPARE PASS |
+| Group-1 small-sample integration | S2-T01～S2-T09 | fixture chain plus six controlled real windows; locked execution Manifest | PASSED |
+| Historical price-only path metrics | S2-T12 v1.3 | H1/H2 MFE/MAE, Time-to-Activation proxy and Time-since-MFE; 1,065,416 rows; Run/Verify/UI PASS; no PnL/return/first-passage | PASSED / HUMAN ACCEPTED; CR-2026-022 UI PASS |
+| Historical first-passage labels | S2-T13 v1.3 | strict H1/H2 TARGET_FIRST/STOP_FIRST/EXPIRED/AMBIGUOUS; 1,065,416 path rows; 31,962,480 classifications; full Verify/UI PASS; no PnL/ROUND_SUCCESS/bounds | PASSED / HUMAN ACCEPTED |
+| Historical AMBIGUOUS bounds | S2-T14 v1.3 | immutable raw labels; Primary failure treatment; conditional exclusion; theoretical upper; H1 adverse/optimistic bounds; 31,962,480 classifications; 2,280 compact distributions; full Verify/UI PASS; no PnL/ROUND_SUCCESS | PASSED / HUMAN ACCEPTED; CR-2026-024 |
+| Historical H1/H2 path extraction | S2-T11 v1.3 | `paths/extraction`; approved lossless source-slice CLI; BTC 220,201 + ETH 312,507 episodes; Manifest `d4d6a2f5…`; verify/UI/quality PASS; Muce accepted 2026-07-21; `validations/stage_2/S2-T11.md` | PASSED / HUMAN ACCEPTED |
+| Conditional random baseline | S2-T15 v1.4 | causal RMS/activity/distance; rolling F0-F3; sealed T10 trigger Context for Episodes; outcome-blind 5 controls shared by 30 H2 cells; no PnL/return | STOPPED / 7-DAY AVAILABILITY PASS / WHOLE-HISTORY OQ-S2-009 OPEN / NO FORMAL RESULT |
+| Raw event path vs theoretical full lifecycle | future Plan/Task amendment | immutable T1-T4 paths; separate H3 theoretical-entry-to-full-closure replay; landmark delayed-activation hypothesis; no real `POSITION_FLAT` | 7-DAY RAW PATH PASS / FULL LIFECYCLE BLOCKED AT 600S / OQ-S2-010 OPEN |
+| Special research point explicit exemptions | proposed S2-T19 v1.4; SRP-S2-001 | default all-rules inheritance; A-layer zero exemptions; B-layer three approved-not-executable exemptions; non-waivable truth/safety/governance; isolated `EXPLORATORY_NONCOMPLIANT` outputs | SRP-S2-001 EXEMPTIONS APPROVED / FRAMEWORK NOT IMPLEMENTED; OQ-S2-009/010/011 OPEN |
+| Placebo | S2-T16 | preregistered placebo; separate future Task | DRAFT_NOT_APPROVED |
+| Cluster ownership and cluster bootstrap CI | S2-T17, S2-T18 | BTC/ETH-separated clustering and cluster-level resampling | DRAFT_NOT_APPROVED |
+| Stage 2 research gate and deterministic evidence-card reporting | S2-T20 | Stage validation and human Go/No-Go; no automatic Stage 3 | DRAFT_NOT_APPROVED |
+
+Trade Identity v2 propagation is explicit: `(instrument, canonical_trade_id)` is the historical fact identity; `venue_trade_id` is only a venue attribute; ordering is `(ts_event_ns, venue_trade_id, canonical_trade_id)`; confirmed conflicting venue IDs remain separate facts and enter sensitivity/quality reporting. No Stage 2 task may deduplicate by venue ID or filter conflict-labelled facts without an approved L3 change.
+
+Research extensibility is bounded: only the V1.3.4 key-low sweep/reclaim/hold family is approved for Group 1; preregistered G1 context models may be added through the registry without altering MarketEpisode consumption. New strategy families remain outside this Plan. The former S2-T21 draft is folded into draft S2-T20 reporting acceptance and is not an additional business dependency. Approval never promotes a PLANNED implementation path to IMPLEMENTED.
+
+The Feature Foundation and Tier F/E/D protocol are internal S2-T10 v1.8 engineering and
+validation contracts, not new Task nodes. They add no edge to the Plan v1.2 DAG, do not create
+S2-T21/S2-T22/S2-T23 and do not authorize S2-T11 through S2-T20. Future event definitions require
+their own approved Task and preregistration even when they reuse an already frozen Feature
+Snapshot.
