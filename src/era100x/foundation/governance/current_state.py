@@ -6,7 +6,8 @@ import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final, Mapping, cast
+from typing import Final, cast
+from collections.abc import Mapping
 
 REPOSITORY_ROOT: Final[Path] = Path(__file__).resolve().parents[4]
 DEFAULT_CURRENT_STATE_PATH: Final[Path] = (
