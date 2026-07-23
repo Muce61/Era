@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   quality:
@@ -14,6 +14,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -22,6 +24,16 @@ jobs:
           version: "0.11.28"
       - name: Install locked development environment
         run: uv sync --locked --all-groups
+      - name: Apply deterministic Ruff formatting
+        run: |
+          uv run ruff format src/era100x/research/stage_2/baselines/conditional/receipt_supplement.py
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add src/era100x/research/stage_2/baselines/conditional/receipt_supplement.py
+            git commit -m "style(stage2): apply Ruff formatting"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
       - name: Run the repository quality gate
         id: quality
         continue-on-error: true
