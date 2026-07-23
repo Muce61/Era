@@ -79,6 +79,7 @@ def test_verify_and_finalize_are_append_only(
         observed_gate="PENDING",
     )
     receipt = json.loads(receipt_path.read_text())
+    assert receipt_path.name == f"seven-day-rehearsal-receipt.{'a' * 40}.json"
     assert receipt["status"] == "PASS"
     assert receipt["authority_created"] is False
     assert receipt["formal_binning_snapshot_created"] is False

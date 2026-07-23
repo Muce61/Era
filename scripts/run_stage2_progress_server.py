@@ -241,7 +241,11 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
     repo_commit = _repository_commit()
     operations_root = stage2_root / "operations/stage2-plan-v1.3-successor"
     checkpoint = _safe_json_object(operations_root / "checkpoint.json")
-    rehearsal_receipt = _safe_json_object(operations_root / "seven-day-rehearsal-receipt.json")
+    rehearsal_receipt = _safe_json_object(
+        operations_root / f"seven-day-rehearsal-receipt.{repo_commit}.json"
+    )
+    if not rehearsal_receipt:
+        rehearsal_receipt = _safe_json_object(operations_root / "seven-day-rehearsal-receipt.json")
     pending_rehearsal = _safe_json_object(
         operations_root / f"seven-day-rehearsal-receipt.{repo_commit}.pending.json"
     )

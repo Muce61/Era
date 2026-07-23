@@ -1051,7 +1051,7 @@ def finalize_ui_projection(
         "formal_run_id_created": False,
     }
     receipt["receipt_hash"] = _canonical_hash(receipt)
-    final_path = OPERATIONS_ROOT / "seven-day-rehearsal-receipt.json"
+    final_path = OPERATIONS_ROOT / (f"seven-day-rehearsal-receipt.{report['code_commit']}.json")
     _write_exclusive(final_path, receipt)
     return final_path
 

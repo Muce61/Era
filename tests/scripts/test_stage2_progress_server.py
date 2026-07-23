@@ -1425,7 +1425,9 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
         "receipt_hash",
     )
     _write(
-        tmp_path / "stage2/operations/stage2-plan-v1.3-successor/seven-day-rehearsal-receipt.json",
+        tmp_path
+        / "stage2/operations/stage2-plan-v1.3-successor"
+        / "seven-day-rehearsal-receipt.abc123.json",
         json.dumps(receipt),
     )
     rehearsed = _stage2_v13_projection(tmp_path / "stage2")
@@ -1449,7 +1451,9 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
         {key: value for key, value in receipt.items() if key != "receipt_hash"}
     )
     _write(
-        tmp_path / "stage2/operations/stage2-plan-v1.3-successor/seven-day-rehearsal-receipt.json",
+        tmp_path
+        / "stage2/operations/stage2-plan-v1.3-successor"
+        / "seven-day-rehearsal-receipt.abc123.json",
         json.dumps(receipt),
     )
     drifted = _stage2_v13_projection(tmp_path / "stage2")
