@@ -1374,6 +1374,30 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
     accepted = _stage2_v13_projection(tmp_path / "stage2")
     assert accepted["remaining_input_blockers"] == []
 
+    rehearsal_report_path = (
+        tmp_path / "stage2/rehearsals/final-code/seven-day-rehearsal-report.json"
+    )
+    rehearsal_report = _sealed(
+        {
+            "status": "PASS",
+            "code_commit": "abc123",
+            "lifecycle": [
+                {
+                    "funding_tracks": [
+                        {
+                            "continue_holding": {
+                                "terminal_state": "RIGHT_CENSORED",
+                                "exit_reason": None,
+                            }
+                        }
+                    ]
+                }
+            ],
+            "conditional_baseline_probe": [{"instrument": "BTCUSDT", "match_level": "L3"}],
+        },
+        "report_hash",
+    )
+    _write(rehearsal_report_path, json.dumps(rehearsal_report))
     receipt = _sealed(
         {
             "schema_name": "stage2-plan-v13-seven-day-rehearsal-v1",
@@ -1381,8 +1405,8 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
             "tasks": list(MODULE.V13_TASKS),
             "code_commit": "abc123",
             "day_count": 7,
-            "report_path": "/tmp/rehearsal-report.json",
-            "report_hash": "1" * 64,
+            "report_path": str(rehearsal_report_path),
+            "report_hash": rehearsal_report["report_hash"],
             "producer_serialization": "PASS",
             "strict_consumer_readback": "PASS",
             "reconciliation": "PASS",
@@ -1400,6 +1424,9 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
     assert rehearsed["execution_gates"]["FINAL_CODE_7_DAY_REHEARSAL"] == "PASS"
     assert rehearsed["pending_execution_gates"] == []
     assert rehearsed["status"] == "REHEARSAL_PASS_AWAITING_FORMAL_APPROVAL"
+    assert rehearsed["rehearsal_report_valid"] is True
+    assert rehearsed["right_censored_count"] == 1
+    assert rehearsed["rehearsal_t16_match_levels"] == {"BTCUSDT": "L3"}
     assert all(
         task["reason_code"] == "SEVEN_DAY_REHEARSAL_PASS_NOT_FORMAL"
         for task in rehearsed["tasks"].values()

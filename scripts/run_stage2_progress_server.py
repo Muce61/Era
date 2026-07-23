@@ -275,6 +275,45 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         and pending_rehearsal.get("verify") == "PASS"
         and pending_rehearsal.get("ui_projection") == "PENDING"
     )
+    active_rehearsal_receipt = (
+        rehearsal_receipt if rehearsal_pass else pending_rehearsal if rehearsal_pending else {}
+    )
+    rehearsal_report_path = Path(str(active_rehearsal_receipt.get("report_path", "")))
+    rehearsal_report = (
+        _safe_json_object(rehearsal_report_path)
+        if rehearsal_report_path.is_absolute()
+        and rehearsal_report_path.resolve().is_relative_to((stage2_root / "rehearsals").resolve())
+        else {}
+    )
+    rehearsal_report_valid = (
+        bool(rehearsal_report)
+        and _self_hash_matches(rehearsal_report, "report_hash")
+        and rehearsal_report.get("report_hash") == active_rehearsal_receipt.get("report_hash")
+        and rehearsal_report.get("code_commit") == repo_commit
+        and rehearsal_report.get("status") == "PASS"
+    )
+    rehearsal_lifecycle = (
+        cast(list[dict[str, Any]], rehearsal_report.get("lifecycle", []))
+        if rehearsal_report_valid
+        else []
+    )
+    rehearsal_policy_results = [
+        cast(dict[str, Any], result.get("continue_holding", {}))
+        for item in rehearsal_lifecycle
+        for result in cast(list[dict[str, Any]], item.get("funding_tracks", []))
+    ]
+    rehearsal_right_censored = sum(
+        result.get("terminal_state") == "RIGHT_CENSORED" for result in rehearsal_policy_results
+    )
+    rehearsal_scenario_liquidations = sum(
+        result.get("exit_reason") == "SCENARIO_LIQUIDATION_BOUNDARY_CROSSED"
+        for result in rehearsal_policy_results
+    )
+    rehearsal_t16 = (
+        cast(list[dict[str, Any]], rehearsal_report.get("conditional_baseline_probe", []))
+        if rehearsal_report_valid
+        else []
+    )
     pending_execution_gates = [] if rehearsal_pass else ["FINAL_CODE_7_DAY_REHEARSAL"]
     checkpoint_valid = (
         checkpoint.get("schema_name") == "stage2-plan-v13-successor-checkpoint-v1"
@@ -357,13 +396,7 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         "rehearsal_status": (
             "PASS" if rehearsal_pass else "PENDING_UI_CHECK" if rehearsal_pending else "NOT_STARTED"
         ),
-        "rehearsal_report_path": (
-            rehearsal_receipt.get("report_path")
-            if rehearsal_pass
-            else pending_rehearsal.get("report_path")
-            if rehearsal_pending
-            else None
-        ),
+        "rehearsal_report_path": active_rehearsal_receipt.get("report_path"),
         "rehearsal_report_hash": (
             rehearsal_receipt.get("report_hash")
             if rehearsal_pass
@@ -378,8 +411,16 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         "approved_execution_limit": state.approved_execution_limit,
         "checkpoint_present": checkpoint_valid,
         "tasks": tasks,
-        "right_censored_count": int(checkpoint.get("right_censored_count", 0)),
-        "scenario_liquidation_count": int(checkpoint.get("scenario_liquidation_count", 0)),
+        "rehearsal_report_valid": rehearsal_report_valid,
+        "rehearsal_t16_match_levels": {
+            str(item.get("instrument")): item.get("match_level") for item in rehearsal_t16
+        },
+        "right_censored_count": int(
+            checkpoint.get("right_censored_count", rehearsal_right_censored)
+        ),
+        "scenario_liquidation_count": int(
+            checkpoint.get("scenario_liquidation_count", rehearsal_scenario_liquidations)
+        ),
         "ticket_double_probability_delta": checkpoint.get("ticket_double_probability_delta"),
         "ticket_equity_per_day_delta": checkpoint.get("ticket_equity_per_day_delta"),
         "price_proxy_source": "CONTRACT_PRICE_H3_PROXY",
