@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from era100x.research.stage_2.baselines.conditional import successor_policy
 from era100x.research.stage_2.baselines.conditional.successor_policy import (
     FAILED_CR028_SUCCESSOR_AUTHORITY_HASH,
     FAILED_CR028_SUCCESSOR_BINNING_SET_HASH,
@@ -17,6 +18,13 @@ from era100x.research.stage_2.baselines.conditional.successor_policy import (
     require_final_successor_creation_state,
     require_final_successor_resume_state,
 )
+
+
+@pytest.fixture(autouse=True)
+def _isolate_legacy_successor_policy_logic(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise the frozen CR-030 policy separately from the current-state gate."""
+
+    monkeypatch.setattr(successor_policy, "require_operation_allowed", lambda operation: None)
 
 
 def _write_failed_predecessor(runs_root: Path) -> Path:
