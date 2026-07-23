@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
 
 from era100x.research.stage_2.rerun import seven_day_rehearsal as subject
 from era100x.research.stage_2.rerun.orchestrator import TASKS
+
+
+@dataclass(frozen=True)
+class _ResultFixture:
+    value: Decimal
 
 
 def _report(path: Path) -> dict[str, object]:
@@ -78,3 +85,9 @@ def test_verify_rejects_missing_task_handoff(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="reconciliation"):
         subject.verify_final_code_rehearsal(report_path)
+
+
+def test_canonical_hash_accepts_strict_result_objects() -> None:
+    assert subject._canonical_hash(_ResultFixture(Decimal("1.230"))) == subject._canonical_hash(
+        {"value": "1.230"}
+    )

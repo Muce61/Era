@@ -128,6 +128,10 @@ def _encoded(value: object) -> bytes:
     ).encode()
 
 
+def _canonical_hash(value: object) -> str:
+    return canonical_hash(_json_value(value))
+
+
 def _write_exclusive(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("xb") as handle:
@@ -527,7 +531,7 @@ def _handoff(task_id: str, run_id: str, payload: object, row_count: int) -> Task
     return TaskHandoff(
         task_id=task_id,
         run_id=run_id,
-        output_hash=canonical_hash(_json_value(payload)),
+        output_hash=_canonical_hash(payload),
         row_count=row_count,
         consumer_readback="PASS",
         reconciliation="PASS",
@@ -609,7 +613,7 @@ def run_final_code_rehearsal(*, output_root: Path) -> tuple[dict[str, Any], Path
         "code_commit": commit,
         "governance_binding": _governance_binding(),
         "preregistration_first": True,
-        "preregistration_binding_hash": canonical_hash(_governance_binding()),
+        "preregistration_binding_hash": _canonical_hash(_governance_binding()),
         "source_audit_report_hash": source_audit["report_hash"],
         "funding_acceptance_hash": funding_verify["acceptance_hash"],
         "lifecycle": lifecycle,
@@ -628,7 +632,7 @@ def run_final_code_rehearsal(*, output_root: Path) -> tuple[dict[str, Any], Path
         "stage3_locked": True,
         "research_result": "NOT_PRODUCED_REHEARSAL_ONLY",
     }
-    report["report_hash"] = canonical_hash(report)
+    report["report_hash"] = _canonical_hash(report)
     report_path = root / "seven-day-rehearsal-report.json"
     _write_exclusive(report_path, report)
     pending = {
@@ -648,7 +652,7 @@ def run_final_code_rehearsal(*, output_root: Path) -> tuple[dict[str, Any], Path
         "formal_binning_snapshot_created": False,
         "formal_run_id_created": False,
     }
-    pending["receipt_hash"] = canonical_hash(pending)
+    pending["receipt_hash"] = _canonical_hash(pending)
     pending_path = OPERATIONS_ROOT / "seven-day-rehearsal-receipt.pending.json"
     _write_exclusive(pending_path, pending)
     verify_final_code_rehearsal(report_path)
@@ -672,7 +676,7 @@ def finalize_ui_projection(
         },
     }
     final_report.pop("report_hash", None)
-    final_report["report_hash"] = canonical_hash(final_report)
+    final_report["report_hash"] = _canonical_hash(final_report)
     final_report_path = report_path.parent / "seven-day-rehearsal-report-ui-verified.json"
     _write_exclusive(final_report_path, final_report)
     receipt: dict[str, Any] = {
@@ -692,7 +696,7 @@ def finalize_ui_projection(
         "formal_binning_snapshot_created": False,
         "formal_run_id_created": False,
     }
-    receipt["receipt_hash"] = canonical_hash(receipt)
+    receipt["receipt_hash"] = _canonical_hash(receipt)
     final_path = OPERATIONS_ROOT / "seven-day-rehearsal-receipt.json"
     _write_exclusive(final_path, receipt)
     return final_path
@@ -702,7 +706,7 @@ def verify_final_code_rehearsal(report_path: Path) -> dict[str, Any]:
     """Strictly read back all task handoffs and the no-formal-run boundary."""
 
     report = _read_json(report_path)
-    if report.get("report_hash") != canonical_hash(
+    if report.get("report_hash") != _canonical_hash(
         {key: value for key, value in report.items() if key != "report_hash"}
     ):
         raise ValueError("seven-day rehearsal report hash mismatch")
