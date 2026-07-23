@@ -7,6 +7,7 @@ import argparse
 import json
 from pathlib import Path
 
+from era100x.foundation.governance import require_operation_allowed
 from era100x.research.stage_2.baselines.conditional.full_run import (
     BIN_ROOT,
     RUNS_ROOT,
@@ -56,8 +57,27 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _requested_operation(args: argparse.Namespace) -> str:
+    if args.mode == "audit":
+        if args.build_receiver_supplement or args.build_context_supplement:
+            return "BUILD_AUDIT_SUPPLEMENT"
+        return "READ_ONLY_AUDIT"
+    if args.mode == "freeze-authority":
+        return "FREEZE_AUTHORITY"
+    if args.mode == "freeze-bins":
+        return "FREEZE_BINS"
+    if args.mode == "preflight":
+        return "PREFLIGHT"
+    if args.mode == "run":
+        return "RESUME" if args.run_id is not None else "RUN"
+    if args.mode == "verify":
+        return "VERIFY_EXISTING_EVIDENCE"
+    raise AssertionError("unreachable mode")
+
+
 def main() -> int:
     args = _parser().parse_args()
+    require_operation_allowed(_requested_operation(args))
     if args.mode == "audit":
         supplement_build = None
         if args.build_receiver_supplement:
