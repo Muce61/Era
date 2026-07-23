@@ -5,7 +5,7 @@
   "current_plan": "stage_2_plan_v1.3",
   "current_task": "S2P13-T11",
   "current_task_version": "1.0",
-  "task_status": "IMPLEMENTATION_IN_PROGRESS",
+  "task_status": "IMPLEMENTATION_BLOCKED_BY_OQ_S2_012",
   "formal_successor_result_exists": false,
   "stage3_locked": true,
   "srp_execution_status": "FRAMEWORK_IMPLEMENTED_FORMAL_OUTPUT_FORBIDDEN",
@@ -15,10 +15,10 @@
     "READ_ONLY_AUDIT",
     "VERIFY_EXISTING_EVIDENCE",
     "READ_ONLY_UI",
-    "BUILD_FUNDING_AUDIT_SUPPLEMENT",
-    "RUN_SEVEN_DAY_REHEARSAL"
+    "BUILD_FUNDING_AUDIT_SUPPLEMENT"
   ],
   "blocked_operations": [
+    "RUN_SEVEN_DAY_REHEARSAL",
     "FREEZE_AUTHORITY",
     "FREEZE_BINS",
     "PREFLIGHT",
@@ -26,7 +26,9 @@
     "RESUME",
     "PUBLISH"
   ],
-  "blocking_questions": [],
+  "blocking_questions": [
+    "OQ-S2-012"
+  ],
   "sealed_tasks": [
     "S2-T10",
     "S2-T11",
@@ -52,6 +54,7 @@
     "docs/development/changes/CR-2026-038.md",
     "docs/development/changes/CR-2026-039.md",
     "docs/development/changes/CR-2026-040.md",
+    "docs/development/changes/CR-2026-041.md",
     "docs/development/decisions/ADR-S2-010-historical-missingness.md",
     "docs/development/decisions/ADR-S2-011-event-path-and-strategy-lifecycle-separation.md",
     "docs/development/decisions/ADR-S2-012-special-research-point.md",
@@ -63,8 +66,13 @@
     "docs/development/decisions/ADR-S2-018-seven-day-release-gate-full-run-fail-closed.md",
     "docs/development/plans/stage_2_plan_v1.3.md",
     "docs/development/tasks/stage_2/S2P13-T11-lifecycle.md",
+    "docs/development/tasks/stage_2/S2P13-T12-path-extraction.md",
+    "docs/development/tasks/stage_2/S2P13-T13-path-metrics.md",
+    "docs/development/tasks/stage_2/S2P13-T14-first-passage.md",
+    "docs/development/tasks/stage_2/S2P13-T15-ambiguity.md",
+    "docs/development/tasks/stage_2/S2P13-T16-conditional-baseline.md",
     "docs/development/validations/stage_2/S2P13-T11.md",
     "docs/development/special_research_points/SRP-S2-001.md"
   ],
-  "state_hash": "970ac6216ba6f90f4f02d8e9ccfa4eb57551504ca5dfb33ee60a01ffe93a8d0e"
+  "state_hash": "1744b9f6629025a5be1289881a768974b82cd51a60d5ead9014120a21ace3e26"
 }

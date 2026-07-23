@@ -24,14 +24,14 @@ from .orchestrator import (
     canonical_hash,
 )
 
-PLAN_SCHEMA = "stage2-plan-v13-production-adapter-plan-v1"
-RECEIPT_SCHEMA = "stage2-plan-v13-production-task-receipt-v1"
+PLAN_SCHEMA = "stage2-plan-v13-production-adapter-plan-v2"
+RECEIPT_SCHEMA = "stage2-plan-v13-production-task-receipt-v2"
 RETRYABLE_RETURN_CODES = frozenset({75, 130, 143})
 UPSTREAM_TASKS: dict[str, tuple[str, ...]] = {
     "S2P13-T11": (),
     "S2P13-T12": ("S2P13-T11",),
     "S2P13-T13": ("S2P13-T12",),
-    "S2P13-T14": ("S2P13-T13",),
+    "S2P13-T14": ("S2P13-T12",),
     "S2P13-T15": ("S2P13-T14",),
     "S2P13-T16": ("S2P13-T11", "S2P13-T13", "S2P13-T15"),
 }
@@ -78,9 +78,11 @@ def _command(value: object, *, field: str) -> tuple[str, ...]:
 class ProductionTaskSpec:
     task_id: str
     required_upstream_tasks: tuple[str, ...]
-    preflight_command: tuple[str, ...]
+    static_preflight_command: tuple[str, ...]
+    input_preflight_command: tuple[str, ...]
     run_command: tuple[str, ...]
     resume_command: tuple[str, ...]
+    allowed_artifact_root: Path
     checkpoint_path: Path
     receipt_path: Path
 
@@ -122,18 +124,31 @@ def load_adapter_plan(path: Path, *, code_commit: str) -> ProductionAdapterPlan:
             raise ValueError(f"production upstream DAG drift: {task_id}")
         checkpoint_path = Path(str(raw.get("checkpoint_path", "")))
         receipt_path = Path(str(raw.get("receipt_path", "")))
+        allowed_artifact_root = Path(str(raw.get("allowed_artifact_root", "")))
         _safe_absolute_child(checkpoint_path, evidence_root)
         _safe_absolute_child(receipt_path, evidence_root)
+        if (
+            not allowed_artifact_root.is_absolute()
+            or allowed_artifact_root.is_symlink()
+            or not allowed_artifact_root.is_dir()
+        ):
+            raise ValueError(f"unsafe or missing allowed artifact root: {task_id}")
         if checkpoint_path == receipt_path:
             raise ValueError("checkpoint and final receipt must be separate paths")
         tasks[task_id] = ProductionTaskSpec(
             task_id=task_id,
             required_upstream_tasks=upstream,
-            preflight_command=_command(
-                raw.get("preflight_command"), field=f"{task_id}.preflight_command"
+            static_preflight_command=_command(
+                raw.get("static_preflight_command"),
+                field=f"{task_id}.static_preflight_command",
+            ),
+            input_preflight_command=_command(
+                raw.get("input_preflight_command"),
+                field=f"{task_id}.input_preflight_command",
             ),
             run_command=_command(raw.get("run_command"), field=f"{task_id}.run_command"),
             resume_command=_command(raw.get("resume_command"), field=f"{task_id}.resume_command"),
+            allowed_artifact_root=allowed_artifact_root,
             checkpoint_path=checkpoint_path,
             receipt_path=receipt_path,
         )
@@ -169,14 +184,14 @@ class CommandTaskAdapter(TaskAdapter):
         self.supervisor_checkpoint_path = supervisor_checkpoint_path
         self.repository_root = repository_root
 
-    def _upstream_hashes(self) -> dict[str, str]:
+    def _upstream_handoffs(self) -> dict[str, dict[str, Any]]:
         if not self.spec.required_upstream_tasks:
             return {}
         checkpoint = _safe_json(self.supervisor_checkpoint_path)
         tasks = checkpoint.get("tasks")
         if not isinstance(tasks, dict):
             raise ValueError("successor checkpoint task map is missing")
-        result: dict[str, str] = {}
+        result: dict[str, dict[str, Any]] = {}
         for task_id in self.spec.required_upstream_tasks:
             state = tasks.get(task_id)
             if not isinstance(state, dict):
@@ -186,12 +201,16 @@ class CommandTaskAdapter(TaskAdapter):
                 not isinstance(handoff, dict)
                 or state.get("status") != "PASS"
                 or not isinstance(handoff.get("output_hash"), str)
+                or not isinstance(handoff.get("producer_receipt_hash"), str)
             ):
                 raise ValueError(f"required upstream handoff is not PASS: {task_id}")
-            result[task_id] = str(handoff["output_hash"])
+            result[task_id] = cast(dict[str, Any], handoff)
         return result
 
-    def _environment(self, upstream_hashes: Mapping[str, str]) -> dict[str, str]:
+    def _environment(self, upstream_handoffs: Mapping[str, Mapping[str, Any]]) -> dict[str, str]:
+        upstream_hashes = {
+            task_id: str(handoff["output_hash"]) for task_id, handoff in upstream_handoffs.items()
+        }
         return {
             **os.environ,
             "ERA_S2P13_TASK_ID": self.spec.task_id,
@@ -199,6 +218,9 @@ class CommandTaskAdapter(TaskAdapter):
             "ERA_S2P13_ADAPTER_PLAN_HASH": self.adapter_plan_hash,
             "ERA_S2P13_EXPECTED_UPSTREAM_HASHES": json.dumps(
                 upstream_hashes, sort_keys=True, separators=(",", ":")
+            ),
+            "ERA_S2P13_EXPECTED_UPSTREAM_HANDOFFS": json.dumps(
+                upstream_handoffs, sort_keys=True, separators=(",", ":")
             ),
             "ERA_S2P13_TASK_RECEIPT_PATH": str(self.spec.receipt_path),
             "ERA_S2P13_TASK_CHECKPOINT_PATH": str(self.spec.checkpoint_path),
@@ -209,12 +231,12 @@ class CommandTaskAdapter(TaskAdapter):
         command: Sequence[str],
         *,
         phase: str,
-        upstream_hashes: Mapping[str, str],
+        upstream_handoffs: Mapping[str, Mapping[str, Any]],
     ) -> None:
         completed = subprocess.run(
             tuple(command),
             cwd=self.repository_root,
-            env=self._environment(upstream_hashes),
+            env=self._environment(upstream_handoffs),
             text=True,
             capture_output=True,
             check=False,
@@ -228,42 +250,98 @@ class CommandTaskAdapter(TaskAdapter):
             )
         raise RuntimeError(f"{self.spec.task_id} {phase} failed ({completed.returncode}): {detail}")
 
-    def preflight(self) -> None:
+    def static_preflight(self) -> None:
         if self.spec.receipt_path.exists():
-            self._receipt(self._upstream_hashes())
+            self._receipt(self._upstream_handoffs())
             return
-        self._execute(self.spec.preflight_command, phase="preflight", upstream_hashes={})
+        self._execute(
+            self.spec.static_preflight_command,
+            phase="static-preflight",
+            upstream_handoffs={},
+        )
 
-    def _receipt(self, upstream_hashes: Mapping[str, str]) -> TaskHandoff:
+    def input_preflight(self) -> None:
+        upstream = self._upstream_handoffs()
+        if self.spec.receipt_path.exists():
+            self._receipt(upstream)
+            return
+        self._execute(
+            self.spec.input_preflight_command,
+            phase="input-preflight",
+            upstream_handoffs=upstream,
+        )
+
+    def _receipt(self, upstream_handoffs: Mapping[str, Mapping[str, Any]]) -> TaskHandoff:
         payload = _safe_json(self.spec.receipt_path)
         if not _self_hash_valid(payload, "receipt_hash"):
             raise ValueError(f"{self.spec.task_id} production receipt hash mismatch")
         if (
             payload.get("schema_name") != RECEIPT_SCHEMA
             or payload.get("status") != "PASS"
+            or payload.get("stage_plan_version") != "1.3"
+            or payload.get("execution_mode") != "FORMAL"
             or payload.get("task_id") != self.spec.task_id
             or payload.get("code_commit") != self.code_commit
             or payload.get("adapter_plan_hash") != self.adapter_plan_hash
-            or payload.get("upstream_output_hashes") != dict(upstream_hashes)
+            or payload.get("upstream_handoffs") != dict(upstream_handoffs)
             or payload.get("consumer_readback") != "PASS"
             or payload.get("reconciliation") != "PASS"
             or payload.get("verify_status") != "PASS"
+            or not isinstance(payload.get("chain_id"), str)
+            or not payload.get("chain_id")
             or not isinstance(payload.get("run_id"), str)
             or not payload.get("run_id")
+            or payload.get("evidence_id") != payload.get("run_id")
         ):
             raise ValueError(f"{self.spec.task_id} production receipt contract mismatch")
+        artifact_root = Path(str(payload.get("artifact_root", "")))
+        manifest_path = Path(str(payload.get("manifest_path", "")))
+        catalog_path = Path(str(payload.get("catalog_path", "")))
+        for path in (artifact_root, manifest_path, catalog_path):
+            if not path.is_absolute() or path.is_symlink():
+                raise ValueError(f"{self.spec.task_id} production artifact path is unsafe")
+        if not artifact_root.resolve().is_relative_to(self.spec.allowed_artifact_root.resolve()):
+            raise ValueError(f"{self.spec.task_id} production artifact root is not approved")
+        if not manifest_path.resolve().is_relative_to(artifact_root.resolve()) or not (
+            catalog_path.resolve().is_relative_to(artifact_root.resolve())
+        ):
+            raise ValueError(f"{self.spec.task_id} production artifact escapes its root")
+        manifest = _safe_json(manifest_path)
+        catalog = _safe_json(catalog_path)
+        if not _self_hash_valid(manifest, "manifest_hash") or manifest.get(
+            "manifest_hash"
+        ) != payload.get("manifest_hash"):
+            raise ValueError(f"{self.spec.task_id} Manifest binding mismatch")
+        if not _self_hash_valid(catalog, "catalog_hash") or catalog.get(
+            "catalog_hash"
+        ) != payload.get("catalog_hash"):
+            raise ValueError(f"{self.spec.task_id} Catalog binding mismatch")
+        scope = payload.get("execution_scope")
+        if not isinstance(scope, dict) or not _self_hash_valid(scope, "execution_scope_hash"):
+            raise ValueError(f"{self.spec.task_id} execution scope binding mismatch")
         return TaskHandoff(
             task_id=self.spec.task_id,
-            run_id=str(payload.get("run_id", "")),
+            execution_mode="FORMAL",
+            chain_id=str(payload["chain_id"]),
+            run_id=str(payload["run_id"]),
+            evidence_id=str(payload["evidence_id"]),
+            artifact_root=str(artifact_root),
+            snapshot_id=str(payload.get("snapshot_id", "")),
+            manifest_path=str(manifest_path),
+            manifest_hash=str(payload.get("manifest_hash", "")),
+            catalog_path=str(catalog_path),
+            catalog_hash=str(payload.get("catalog_hash", "")),
             output_hash=str(payload.get("output_hash", "")),
             row_count=int(payload.get("row_count", -1)),
+            execution_scope_hash=str(scope["execution_scope_hash"]),
+            producer_receipt_hash=str(payload["receipt_hash"]),
             consumer_readback=str(payload.get("consumer_readback")),
             reconciliation=str(payload.get("reconciliation")),
             verify_status=str(payload.get("verify_status")),
         )
 
     def run_or_resume(self) -> TaskHandoff:
-        upstream = self._upstream_hashes()
+        upstream = self._upstream_handoffs()
         if self.spec.receipt_path.exists():
             return self._receipt(upstream)
         command = (
@@ -272,7 +350,7 @@ class CommandTaskAdapter(TaskAdapter):
             else self.spec.run_command
         )
         phase = "resume" if command == self.spec.resume_command else "run"
-        self._execute(command, phase=phase, upstream_hashes=upstream)
+        self._execute(command, phase=phase, upstream_handoffs=upstream)
         return self._receipt(upstream)
 
 

@@ -24,7 +24,7 @@ from era100x.research.stage_2.baselines.conditional.successor_policy import (
 def _assert_blocked(error: pytest.ExceptionInfo[GovernanceBlockedError], operation: str) -> None:
     assert error.value.reason_code == "GOVERNANCE_OPERATION_NOT_AUTHORIZED"
     assert error.value.operation == operation
-    assert error.value.blocking_questions == ()
+    assert error.value.blocking_questions == ("OQ-S2-012",)
 
 
 def test_direct_authority_freeze_is_blocked_before_reading_an_audit() -> None:

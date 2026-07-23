@@ -106,9 +106,12 @@ class Adapter:
     failure: bool = False
     calls: int = 0
 
-    def preflight(self) -> None:
+    def static_preflight(self) -> None:
         if self.failure:
             raise ValueError("contract drift")
+
+    def input_preflight(self) -> None:
+        return None
 
     def run_or_resume(self) -> TaskHandoff:
         self.calls += 1
@@ -116,9 +119,20 @@ class Adapter:
             raise RetryableInterruption("process killed")
         return TaskHandoff(
             task_id=self.task,
+            execution_mode="FORMAL",
+            chain_id="formal-chain",
             run_id=f"run-{self.task.lower()}",
+            evidence_id=f"run-{self.task.lower()}",
+            artifact_root="/tmp/formal-chain",
+            snapshot_id="snapshot",
+            manifest_path="/tmp/formal-chain/manifest.json",
+            manifest_hash="a" * 64,
+            catalog_path="/tmp/formal-chain/catalog.json",
+            catalog_hash="a" * 64,
             output_hash="a" * 64,
             row_count=1,
+            execution_scope_hash="a" * 64,
+            producer_receipt_hash="a" * 64,
             consumer_readback="PASS",
             reconciliation="PASS",
             verify_status="PASS",
@@ -131,8 +145,8 @@ def test_current_repository_state_blocks_formal_approval(tmp_path: Path) -> None
     state = load_current_development_state()
     result = approval_readiness(state=state, rehearsal_path=None, repository_root=Path.cwd())
     assert result["status"] == "BLOCKED"
-    assert result["blocking_questions"] == []
-    assert result["reason_code"] == "S2_V13_WRITE_OPERATIONS_NOT_AUTHORIZED"
+    assert result["blocking_questions"] == ["OQ-S2-012"]
+    assert result["reason_code"] == "S2_V13_GOVERNANCE_BLOCKED"
 
 
 def test_chain_preflights_all_tasks_before_first_run(
@@ -143,8 +157,11 @@ def test_chain_preflights_all_tasks_before_first_run(
     events: list[str] = []
 
     class OrderedAdapter(Adapter):
-        def preflight(self) -> None:
+        def static_preflight(self) -> None:
             events.append(f"preflight:{self.task}")
+
+        def input_preflight(self) -> None:
+            events.append(f"input:{self.task}")
 
         def run_or_resume(self) -> TaskHandoff:
             events.append(f"run:{self.task}")
@@ -164,7 +181,9 @@ def test_chain_preflights_all_tasks_before_first_run(
     result = supervisor.run_or_resume()
     assert result["status"] == "COMPLETE"
     assert events[: len(TASKS)] == [f"preflight:{task}" for task in TASKS]
-    assert all(item.startswith("run:") for item in events[len(TASKS) :])
+    assert events[len(TASKS) :] == [
+        event for task in TASKS for event in (f"input:{task}", f"run:{task}")
+    ]
 
 
 def test_retryable_interruption_resumes_but_terminal_failure_does_not(

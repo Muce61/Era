@@ -15,7 +15,7 @@ _EXPECTED_STATE = {
     "current_plan": "stage_2_plan_v1.3",
     "current_task": "S2P13-T11",
     "current_task_version": "1.0",
-    "task_status": "IMPLEMENTATION_IN_PROGRESS",
+    "task_status": "IMPLEMENTATION_BLOCKED_BY_OQ_S2_012",
     "formal_successor_result_exists": False,
     "stage3_locked": True,
     "srp_execution_status": "FRAMEWORK_IMPLEMENTED_FORMAL_OUTPUT_FORBIDDEN",
@@ -27,9 +27,9 @@ _EXPECTED_ALLOWED = {
     "VERIFY_EXISTING_EVIDENCE",
     "READ_ONLY_UI",
     "BUILD_FUNDING_AUDIT_SUPPLEMENT",
-    "RUN_SEVEN_DAY_REHEARSAL",
 }
 _EXPECTED_BLOCKED = {
+    "RUN_SEVEN_DAY_REHEARSAL",
     "FREEZE_AUTHORITY",
     "FREEZE_BINS",
     "PREFLIGHT",
@@ -37,17 +37,17 @@ _EXPECTED_BLOCKED = {
     "RESUME",
     "PUBLISH",
 }
-_EXPECTED_QUESTIONS: set[str] = set()
+_EXPECTED_QUESTIONS = {"OQ-S2-012"}
 _EXPECTED_SEALED_TASKS = {"S2-T10", "S2-T11", "S2-T12", "S2-T13", "S2-T14"}
 
 _DOCUMENT_MARKERS: dict[str, tuple[str, ...]] = {
     "docs/development/CURRENT_STAGE.md": (
         "Current Task: S2P13-T11 v1.0",
-        "S2P13_T11_IMPLEMENTATION_IN_PROGRESS_FORMAL_SUCCESSOR_GATED",
+        "S2P13_T11_IMPLEMENTATION_BLOCKED_BY_OQ_S2_012",
         "no bound historical funding-rate dataset",
     ),
     "docs/development/STAGE_REGISTRY.md": (
-        "S2P13_T11_IMPLEMENTATION_IN_PROGRESS_FORMAL_SUCCESSOR_GATED",
+        "S2P13_T11_IMPLEMENTATION_BLOCKED_BY_OQ_S2_012",
         "Plan v1.2 S2-T19 and S2-T01～S2-T14 remain PASSED",
         "Stage 3 remains locked",
     ),
@@ -59,12 +59,14 @@ _DOCUMENT_MARKERS: dict[str, tuple[str, ...]] = {
     "docs/development/DEPENDENCY_GRAPH.md": (
         "Stage 2 Plan v1.3 successor DAG",
         "S2P13-T11 seven-day theoretical lifecycle",
+        "OQ-S2-012 currently",
         "S2P13-T17～T21 and Stage 3 remain locked",
     ),
     "docs/development/OPEN_QUESTIONS.md": (
         "OQ-S2-009",
         "OQ-S2-010",
         "OQ-S2-011",
+        "OQ-S2-012",
         "RESOLVED / FUNDING LOCAL HISTORY HUMAN ACCEPTED",
     ),
     "docs/development/tasks/stage_2/S2-T15-task.md": (
@@ -140,6 +142,10 @@ _DOCUMENT_MARKERS: dict[str, tuple[str, ...]] = {
         "FINAL_CODE_7_DAY_REHEARSAL",
         "RUN_SEVEN_DAY_REHEARSAL",
     ),
+    "docs/development/changes/CR-2026-041.md": (
+        "PRODUCER BLOCKED BY OQ-S2-012",
+        "S2P13-T12 binds S2P13-T11 PASS",
+    ),
     "docs/development/decisions/ADR-S2-014-stage2-conditional-h3-lifecycle.md": (
         "APPROVED",
         "Stage 3 keeps full ownership",
@@ -169,10 +175,30 @@ _DOCUMENT_MARKERS: dict[str, tuple[str, ...]] = {
         "task_id: S2P13-T11",
         "real seven-day end-to-end rehearsal",
     ),
+    "docs/development/tasks/stage_2/S2P13-T12-path-extraction.md": (
+        "task_id: S2P13-T12",
+        "Lifecycle rows",
+    ),
+    "docs/development/tasks/stage_2/S2P13-T13-path-metrics.md": (
+        "task_id: S2P13-T13",
+        "S2P13-T12 handoff",
+    ),
+    "docs/development/tasks/stage_2/S2P13-T14-first-passage.md": (
+        "task_id: S2P13-T14",
+        "sibling of S2P13-T13",
+    ),
+    "docs/development/tasks/stage_2/S2P13-T15-ambiguity.md": (
+        "task_id: S2P13-T15",
+        "S2P13-T14 handoff",
+    ),
+    "docs/development/tasks/stage_2/S2P13-T16-conditional-baseline.md": (
+        "task_id: S2P13-T16",
+        "S2P13-T20 preregistration",
+    ),
     "docs/development/validations/stage_2/S2P13-T11.md": (
-        "PRICE_AVAILABILITY_7_DAY_PASS",
-        "FUNDING_HISTORY_BOUND",
-        "cac3cf2c3f8aca8dd049c52925244daab88e8e1317cd1409aaa3ade2d5780b62",
+        "IMPLEMENTATION_BLOCKED_BY_OQ_S2_012",
+        "V2_HANDOFF_GATE_PASS",
+        "685 tests",
     ),
 }
 

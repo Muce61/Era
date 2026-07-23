@@ -81,13 +81,15 @@ Plan v1.2 sealed T10/T11/T13/T14 evidence
   → S2P13-T20 preregistration freeze
   → S2P13-T11 seven-day theoretical lifecycle
   → S2P13-T12 path extraction
-  → S2P13-T13 path metrics ─┐
-  → S2P13-T14 first passage ├→ S2P13-T15 ambiguity → S2P13-T16 conditional baseline
-                            ┘
+      ├→ S2P13-T13 path metrics ───────────────────────┐
+      └→ S2P13-T14 first passage → S2P13-T15 ambiguity ├→ S2P13-T16 conditional baseline
+S2P13-T11 + S2P13-T20 ─────────────────────────────────┘
 ```
 
 The approved execution ceiling is S2P13-T16. S2P13-T17～T21 and Stage 3 remain locked. Before any
 successor Authority or Run ID, the independent `FINAL_CODE_7_DAY_REHEARSAL` gate must pass producer
+serialization, strict next-consumer read-back, reconciliation, Verify and UI. OQ-S2-012 currently
+blocks that rehearsal; no producer may invent protection/structure facts or replay precedence.
 serialization, strict consumer readback, reconciliation, Verify and UI, and a commit-bound human
 run receipt must exist. OQ-S2-009/010/011 are resolved. A separate whole-history pre-audit is not
 required, but the formal full-data Run retains complete-range validation, reconciliation and

@@ -172,9 +172,20 @@ class RetryableInterruption(RuntimeError):
 @dataclass(frozen=True)
 class TaskHandoff:
     task_id: str
-    run_id: str
+    execution_mode: str
+    chain_id: str
+    run_id: str | None
+    evidence_id: str
+    artifact_root: str
+    snapshot_id: str
+    manifest_path: str
+    manifest_hash: str
+    catalog_path: str
+    catalog_hash: str
     output_hash: str
     row_count: int
+    execution_scope_hash: str
+    producer_receipt_hash: str
     consumer_readback: str
     reconciliation: str
     verify_status: str
@@ -182,8 +193,27 @@ class TaskHandoff:
     def __post_init__(self) -> None:
         if self.task_id not in TASKS:
             raise ValueError("handoff task is outside the approved chain")
-        if len(self.output_hash) != 64:
-            raise ValueError("handoff requires SHA-256 output binding")
+        if self.execution_mode not in {"REHEARSAL", "FORMAL"}:
+            raise ValueError("handoff execution mode is invalid")
+        if not self.chain_id or not self.evidence_id:
+            raise ValueError("handoff requires chain and evidence identity")
+        if self.execution_mode == "FORMAL" and not self.run_id:
+            raise ValueError("formal handoff requires a Run ID")
+        if self.execution_mode == "REHEARSAL" and self.run_id is not None:
+            raise ValueError("rehearsal evidence must not claim a formal Run ID")
+        if not self.artifact_root or not self.snapshot_id:
+            raise ValueError("handoff requires an artifact root and snapshot identity")
+        if not self.manifest_path or not self.catalog_path:
+            raise ValueError("handoff requires Manifest and Catalog paths")
+        hashes = (
+            self.manifest_hash,
+            self.catalog_hash,
+            self.output_hash,
+            self.execution_scope_hash,
+            self.producer_receipt_hash,
+        )
+        if any(len(value) != 64 for value in hashes):
+            raise ValueError("handoff requires complete SHA-256 bindings")
         if self.row_count < 0:
             raise ValueError("handoff row count cannot be negative")
         if (
@@ -196,9 +226,20 @@ class TaskHandoff:
     def payload(self) -> dict[str, object]:
         return {
             "task_id": self.task_id,
+            "execution_mode": self.execution_mode,
+            "chain_id": self.chain_id,
             "run_id": self.run_id,
+            "evidence_id": self.evidence_id,
+            "artifact_root": self.artifact_root,
+            "snapshot_id": self.snapshot_id,
+            "manifest_path": self.manifest_path,
+            "manifest_hash": self.manifest_hash,
+            "catalog_path": self.catalog_path,
+            "catalog_hash": self.catalog_hash,
             "output_hash": self.output_hash,
             "row_count": self.row_count,
+            "execution_scope_hash": self.execution_scope_hash,
+            "producer_receipt_hash": self.producer_receipt_hash,
             "consumer_readback": self.consumer_readback,
             "reconciliation": self.reconciliation,
             "verify_status": self.verify_status,
@@ -206,7 +247,9 @@ class TaskHandoff:
 
 
 class TaskAdapter(Protocol):
-    def preflight(self) -> None: ...
+    def static_preflight(self) -> None: ...
+
+    def input_preflight(self) -> None: ...
 
     def run_or_resume(self) -> TaskHandoff: ...
 
@@ -300,7 +343,7 @@ class SuccessorSupervisor:
                         }
                     )
                     _atomic_json(self.checkpoint_path, checkpoint)
-                    self.adapters[task].preflight()
+                    self.adapters[task].static_preflight()
                 checkpoint["status"] = "IN_PROGRESS"
                 for task in TASKS:
                     task_state = checkpoint["tasks"][task]
@@ -315,6 +358,7 @@ class SuccessorSupervisor:
                     )
                     task_state.update({"status": "IN_PROGRESS", "reason_code": f"{task}_RUNNING"})
                     _atomic_json(self.checkpoint_path, checkpoint)
+                    self.adapters[task].input_preflight()
                     handoff = self.adapters[task].run_or_resume()
                     if handoff.task_id != task:
                         raise ValueError("adapter returned another task handoff")

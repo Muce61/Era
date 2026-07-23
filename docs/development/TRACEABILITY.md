@@ -9,10 +9,17 @@ The current identity is `stage_2_plan_v1.3/S2P13-T11`; implementation is authori
 S2P13-T16 only. The repository implements the SRP fail-closed framework, task namespace,
 price-only lifecycle core, typed availability audit, recoverable orchestrator contract and
 evidence-driven UI projection with directed tests. The production adapter layer now requires an
-approved, commit-bound six-task argv plan, exact upstream handoff hashes, self-hashed producer
-receipts, consumer read-back, reconciliation and Verify PASS before translating any task result
-into the successor checkpoint. It distinguishes retryable process interruption from terminal
-producer failure and never invokes commands through a shell.
+approved, commit-bound six-task argv plan, complete versioned upstream handoffs, self-hashed
+producer receipts, consumer read-back, reconciliation and Verify PASS before translating any task
+result into the successor checkpoint. CR-2026-041 freezes the successor source-binding scope and
+corrects the DAG so T13 and T14 both consume T12 while T12 binds T11 only as a PASS gate. The
+adapter distinguishes retryable process interruption from terminal producer failure and never
+invokes commands through a shell.
+
+OQ-S2-012 now blocks the real producer and final rehearsal because protection/structure exit facts,
+Contract Price/Trade crossing precedence, funding notional and single-position collision handling
+are not fully specified. No implementation may silently substitute `false`, invent an execution
+fact or import a Stage 3 rule.
 
 No V1.3 Authority, bins, Run ID, publication or formal H3 result exists. CR-2026-038 resolves
 OQ-S2-010 by binding the accepted BTC/ETH historical funding source. CR-2026-039 resolves
@@ -294,7 +301,7 @@ run is immutable; its sealed objects require a new-run adoption Manifest and ful
 | Conditional random baseline | S2-T15 v1.4 | causal RMS/activity/distance; rolling F0-F3; sealed T10 trigger Context for Episodes; outcome-blind 5 controls shared by 30 H2 cells; no PnL/return | STOPPED / OQ-S2-009 RESOLVED / FINAL-CODE 7-DAY EXECUTION GATE PENDING / NO FORMAL RESULT |
 | Seven-day theoretical lifecycle | Plan v1.3 S2P13-T11 | `stage_2/lifecycle`; Contract Price H3 proxy; 20bp auxiliary; dynamic net ticket-doubling; historical Primary and adverse Stress funding; -8U margin depletion | IMPLEMENTED CORE / DIRECTED TESTS PASS / CR-2026-038 FUNDING ACCEPTANCE REHEARSAL AUTHORIZED |
 | Historical funding acceptance | Plan v1.3 S2P13-T11 | `stage_2/funding`; complete local BTC/ETH history plus seven-day official sample; checksum, append-only acceptance, Manifest/Catalog/Verify, strict read-back | HUMAN ACCEPTED / 7,128+7,128 LOCAL ROWS HASH-BOUND / MONTHLY RECONCILIATION WAIVED / NO LIFECYCLE RUN |
-| Plan v1.3 successor orchestration | S2P13-T11～T16 | `stage_2/rerun`; preflight-all, exclusive lock, approved argv adapters, exact upstream Hash binding, checkpoint/readback/reconciliation/Verify handoff, retryable-vs-terminal failure, human receipt gate | PRODUCTION ADAPTER/CLI IMPLEMENTED / NO APPROVED ADAPTER PLAN OR FORMAL RUN |
+| Plan v1.3 successor orchestration | S2P13-T11～T16 | CR-2026-041; `stage_2/rerun`; static/input preflight, exclusive lock, approved argv adapters, complete source bindings, checkpoint/readback/reconciliation/Verify handoff, retryable-vs-terminal failure, human receipt gate | V2 HANDOFF IN PROGRESS / PRODUCER BLOCKED BY OQ-S2-012 / NO FORMAL RUN |
 | Special research point explicit exemptions | Plan v1.3 governance; SRP-S2-001 | default all-rules inheritance; explicit exact exemptions; non-waivable truth/safety/governance; unknown/wildcard/hash drift rejection; formal consumer rejection | FRAMEWORK IMPLEMENTED / FULL QUALITY PASS / OQ-S2-011 RESOLVED; SRP-S2-001 EXEMPTIONS EXPIRED |
 | Placebo | S2-T16 | preregistered placebo; separate future Task | DRAFT_NOT_APPROVED |
 | Cluster ownership and cluster bootstrap CI | S2-T17, S2-T18 | BTC/ETH-separated clustering and cluster-level resampling | DRAFT_NOT_APPROVED |

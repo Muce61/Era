@@ -87,7 +87,7 @@ def main() -> int:
     )
     if args.mode == "preflight":
         for task_id in TASKS:
-            adapters[task_id].preflight()
+            adapters[task_id].static_preflight()
         result = {
             "status": "PASS",
             "mode": "preflight",

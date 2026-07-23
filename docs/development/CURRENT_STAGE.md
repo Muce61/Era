@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.3
 Current Task: S2P13-T11 v1.0 — seven-day theoretical lifecycle
-Status: S2P13_T11_IMPLEMENTATION_IN_PROGRESS_FORMAL_SUCCESSOR_GATED
+Status: S2P13_T11_IMPLEMENTATION_BLOCKED_BY_OQ_S2_012
 ```
 
 Muce approved CR-2026-035, ADR-S2-014/015, V1.3.5 and Stage 2 Plan v1.3 on 2026-07-23.
@@ -12,6 +12,12 @@ Implementation, read-only audit, tests, read-only UI and the isolated final-code
 rehearsal are authorized. OQ-S2-009/010/011 are resolved. Formal Authority, bins, Run ID,
 publication and resume remain forbidden until the `FINAL_CODE_7_DAY_REHEARSAL` gate passes and a
 commit-bound human run receipt is recorded.
+
+CR-2026-041 producer wiring found OQ-S2-012: the repository has no approved historical source or
+formula for lifecycle `protection_exit` and `structure_exit`, and does not yet freeze the exact
+Contract Price/Trade trigger precedence, funding-notional basis or single-position event-conflict
+replay. Implementation may stabilize the fail-closed handoff interface and tests, but the final
+rehearsal and every formal write remain blocked until an approved CR/ADR resolves these values.
 
 Plan v1.2 and every old S2-T10～T15 artifact remain immutable historical evidence. Plan v1.3 uses
 the `(stage_plan_version, task_id)` identity and the namespaced public IDs `S2P13-T11` through

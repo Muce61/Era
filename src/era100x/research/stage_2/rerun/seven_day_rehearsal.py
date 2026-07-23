@@ -527,12 +527,64 @@ def _governance_binding() -> dict[str, str]:
     return {name: _file_hash(REPOSITORY_ROOT / name) for name in relative}
 
 
-def _handoff(task_id: str, run_id: str, payload: object, row_count: int) -> TaskHandoff:
+def _handoff(
+    task_id: str,
+    evidence_id: str,
+    payload: object,
+    row_count: int,
+    *,
+    root: Path,
+    execution_scope_hash: str,
+) -> TaskHandoff:
+    task_root = root / "task-handoffs" / task_id
+    task_root.mkdir(parents=True, exist_ok=False)
+    output_hash = _canonical_hash(payload)
+    manifest = {
+        "schema_name": "stage2-plan-v13-rehearsal-task-manifest-v2",
+        "stage_plan_version": "1.3",
+        "task_id": task_id,
+        "execution_mode": "REHEARSAL",
+        "evidence_id": evidence_id,
+        "output_hash": output_hash,
+        "row_count": row_count,
+        "execution_scope_hash": execution_scope_hash,
+    }
+    manifest["manifest_hash"] = _canonical_hash(manifest)
+    manifest_path = task_root / "manifest.json"
+    _write_exclusive(manifest_path, manifest)
+    catalog = {
+        "schema_name": "stage2-plan-v13-rehearsal-task-catalog-v2",
+        "stage_plan_version": "1.3",
+        "task_id": task_id,
+        "manifest_hash": manifest["manifest_hash"],
+        "files": [],
+    }
+    catalog["catalog_hash"] = _canonical_hash(catalog)
+    catalog_path = task_root / "catalog.json"
+    _write_exclusive(catalog_path, catalog)
+    producer_receipt_hash = _canonical_hash(
+        {
+            "manifest_hash": manifest["manifest_hash"],
+            "catalog_hash": catalog["catalog_hash"],
+            "output_hash": output_hash,
+        }
+    )
     return TaskHandoff(
         task_id=task_id,
-        run_id=run_id,
-        output_hash=_canonical_hash(payload),
+        execution_mode="REHEARSAL",
+        chain_id=evidence_id,
+        run_id=None,
+        evidence_id=evidence_id,
+        artifact_root=str(task_root),
+        snapshot_id=f"{task_id.lower()}-{output_hash}",
+        manifest_path=str(manifest_path),
+        manifest_hash=str(manifest["manifest_hash"]),
+        catalog_path=str(catalog_path),
+        catalog_hash=str(catalog["catalog_hash"]),
+        output_hash=output_hash,
         row_count=row_count,
+        execution_scope_hash=execution_scope_hash,
+        producer_receipt_hash=producer_receipt_hash,
         consumer_readback="PASS",
         reconciliation="PASS",
         verify_status="PASS",
@@ -575,34 +627,63 @@ def run_final_code_rehearsal(*, output_root: Path) -> tuple[dict[str, Any], Path
     t16 = [_t16_probe(reader=reader, row=t13_rows[item]) for item in ("BTCUSDT", "ETHUSDT")]
     raw = cast(dict[str, Any], source_audit["raw_path_non_pollution"])
     feature = cast(dict[str, Any], source_audit["feature_availability"])
-    run_id = f"rehearsal-7d-{commit[:12]}"
+    evidence_id = f"rehearsal-7d-{commit[:12]}"
+    execution_scope_hash = _canonical_hash(
+        {
+            "mode": "REHEARSAL",
+            "start_date": START_DATE.isoformat(),
+            "end_date_exclusive": END_DATE.isoformat(),
+        }
+    )
     handoffs = (
-        _handoff("S2P13-T11", run_id, lifecycle, len(lifecycle) * len(FundingTrack)),
+        _handoff(
+            "S2P13-T11",
+            evidence_id,
+            lifecycle,
+            len(lifecycle) * len(FundingTrack),
+            root=root,
+            execution_scope_hash=execution_scope_hash,
+        ),
         _handoff(
             "S2P13-T12",
-            run_id,
+            evidence_id,
             {"raw": raw["reports"], "source": "accepted T11"},
             int(raw["total_raw_path_row_count"]),
+            root=root,
+            execution_scope_hash=execution_scope_hash,
         ),
         _handoff(
             "S2P13-T13",
-            run_id,
+            evidence_id,
             {"feature": feature, "source": "accepted T12"},
             int(feature["total_valid_market_anchor_count"]),
+            root=root,
+            execution_scope_hash=execution_scope_hash,
         ),
         _handoff(
             "S2P13-T14",
-            run_id,
+            evidence_id,
             {"t13": raw["reports"], "source": "accepted T13"},
             sum(int(item["t13_derived_row_count"]) for item in raw["reports"]),
+            root=root,
+            execution_scope_hash=execution_scope_hash,
         ),
         _handoff(
             "S2P13-T15",
-            run_id,
+            evidence_id,
             {"ambiguity_policy": "AMBIGUOUS_AS_FAILURE", "t13": raw["reports"]},
             sum(int(item["t13_derived_row_count"]) for item in raw["reports"]),
+            root=root,
+            execution_scope_hash=execution_scope_hash,
         ),
-        _handoff("S2P13-T16", run_id, t16, len(t16)),
+        _handoff(
+            "S2P13-T16",
+            evidence_id,
+            t16,
+            len(t16),
+            root=root,
+            execution_scope_hash=execution_scope_hash,
+        ),
     )
     report: dict[str, Any] = {
         "schema_name": "stage2-plan-v13-seven-day-rehearsal-report-v1",

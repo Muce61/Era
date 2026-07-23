@@ -1,5 +1,19 @@
 # Open Questions
 
+## OQ-S2-012 — Lifecycle producer exit-source and occupancy contract
+
+- status: OPEN / BLOCKS FINAL-CODE REHEARSAL AND FORMAL SUCCESSOR
+- task: S2P13-T11 v1.0
+- discovered_by: CR-2026-041 production-producer wiring
+- evidence: The approved lifecycle engine accepts `protection_exit` and `structure_exit`, but no
+  sealed input, formula or deterministic producer contract supplies either value. The repository
+  also does not freeze Contract Price versus Trade crossing precedence, the funding-notional
+  basis at each settlement, or the exact single-position event-conflict replay.
+- decision_needed: freeze the minimum price-only producer rules for those four items without
+  importing Stage 3 execution facts.
+- boundary: no default-false exit flags, no invented structure/protection facts, no formal
+  Authority/bin/Run, no final-code rehearsal, no S2P13-T17+ and Stage 3 remains locked.
+
 ## OQ-S2-008 — S2-T15 strict Decimal receiver and final successor recovery
 
 - status: RESOLVED BY CR-2026-029 / IMPLEMENTATION GATES REMAIN
@@ -66,8 +80,30 @@ These questions are inherited from V1.3.4 Appendix N. They do not block planning
 | OQ-S2-009 | T15已准备BTC/P1/B0的210,240个grid anchors中，首61个因61-bar回看越过历史起点而`PRICE_FEATURE_UNAVAILABLE`；BTC/ETH全范围是否还有边界warmup、声明gap或未绑定分区，分别怎样处理？ | RESOLVED / MIGRATED TO EXECUTION GATE | S2P13-T11～T16 final-code rehearsal | NONE | 缺失分类和失败动作已经明确。CR-2026-040确认“最终代码7天端到端短跑”是执行规范而非待决问题，并迁移为`FINAL_CODE_7_DAY_REHEARSAL`门。短跑未通过前正式Authority/bin/Run仍禁止；正式全量Run继续对未知缺失、未绑定和Hash漂移硬失败。 |
 | OQ-S2-010 | “存活较长、尚未激活、净可退出PnL接近零”各自精确定义什么，理论策略从何时入场、怎样运行到完全平仓、何时右删失，以及如何避免幸存者偏差？ | RESOLVED / FUNDING LOCAL HISTORY HUMAN ACCEPTED | S2P13-T11 lifecycle | NONE | 生命周期定义由CR-2026-036/037冻结。CR-2026-038短跑完成官方抽样并识别毫秒取整；Muce随后明确免除逐月全历史官方核对和独立preflight绑定。BTC/ETH各7,128条完整本地历史经Hash、唯一性、连续性验证后接收；不声称逐月官方一致。 |
 | OQ-S2-011 | “特异研究点”能否局部豁免FROZEN研究规则；哪些规则可豁免、哪些事实/安全/治理规则永不可豁免，探索输出怎样与正式证据隔离？ | RESOLVED | Plan v1.3 research governance | NONE | CR-2026-033/ADR-S2-012框架已实现默认继承、显式豁免、未知/通配符/Hash漂移拒绝和正式消费者隔离；仓库级Ruff、strict mypy、strict Traceability、strict governance及678项测试通过。CR-2026-039关闭本OQ并将其从正式生命周期门禁移除。框架继续供未来自由研究使用；SRP、CR、ADR历史全部保留。 |
+| OQ-S2-012 | S2P13-T11全量生产器应从哪里得到保护退出、结构退出，Contract Price与Trade同刻如何排序，资金费按什么名义金额结算，单仓冲突如何跳过事件？ | OPEN | S2P13-T11 lifecycle producer | FINAL_CODE_7_DAY_REHEARSAL, FORMAL_SUCCESSOR | 必须由人工批准的CR/ADR冻结最小price-only代理；不得由实现代码默认false或借用Stage 3真实执行规则。 |
 
 New questions must record discovery/source, affected rules/contracts/baselines, evidence required, owner, status, and linked ADR/CR. No unresolved question may be answered by assumption.
+
+## OQ-S2-012 audit record
+
+- Discovery/source: CR-2026-041 changed the orchestration handoff from an output-only Hash to a
+  complete upstream artifact contract. While designing the real S2P13-T11 producer, the only
+  lifecycle observation model was found to require `protection_exit` and `structure_exit`
+  booleans. Repository-wide search found no historical source or approved deterministic formula
+  for those values.
+- Affected rules/contracts/baselines: `EVENT-CONSUME-MARKET-EPISODE`,
+  `STRATEGY-V1-PRICE-ONLY-HISTORICAL`, `DATA-HISTORICAL-NO-FAKE-EXECUTION`,
+  `EXEC-EXIT-COORDINATOR-ONLY`, V1.3.5 §12.1/§14.2 and S2P13-T11. Plan v1.2 evidence and all
+  sealed files remain unchanged.
+- Additional unresolved producer choices: exact Contract Price/Trade trigger precedence; whether
+  funding amount uses fixed entry notional or time-varying proxy notional; and deterministic
+  single-position conflict handling for the immediate-exit and continue-holding timelines.
+- Evidence required: approved CR/ADR and directed fixtures proving deterministic exits, funding,
+  collision handling, BTC/ETH separation, no future facts and no Stage 3/live claim.
+- Owner/status: Muce / `OPEN`. It blocks the final-code rehearsal and every formal successor write.
+- Linked governance: [CR-2026-041](changes/CR-2026-041.md),
+  [ADR-S2-014](decisions/ADR-S2-014-stage2-conditional-h3-lifecycle.md) and
+  [S2P13-T11](tasks/stage_2/S2P13-T11-lifecycle.md).
 
 ## OQ-S2-009 audit record
 
