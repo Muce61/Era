@@ -156,7 +156,10 @@ def test_declared_incomplete_sources_have_distinct_censor_reasons(
         instrument="BTCUSDT",
         entry_ts_ns=ENTRY_NS,
         entry_price=ENTRY,
-        observations=(),
+        observations=(
+            _observation(PRIMARY_LANDMARK_SECONDS, "100.10", trade_id=1),
+            _observation(PRIMARY_LANDMARK_SECONDS + 1, "99.00", trade_id=2),
+        ),
         source_coverage=coverage,
         scenario=SCENARIO,
         funding_track=FundingTrack.PRIMARY_HISTORICAL_ACTUAL,
@@ -164,6 +167,10 @@ def test_declared_incomplete_sources_have_distinct_censor_reasons(
         stop_bps=Decimal("25"),
     )
     assert result.continue_holding.censor_reason == reason
+    assert result.continue_holding.exit_reason is None
+    assert result.immediate_exit.censor_reason == reason
+    assert result.eligible_at_primary_landmark is False
+    assert result.landmark_net_exitable_pnl is None
 
 
 @pytest.mark.parametrize("coverage", [SourceCoverage.UNBOUND, SourceCoverage.HASH_DRIFT])

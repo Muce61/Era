@@ -137,6 +137,31 @@ def evaluate_lifecycle_pair(
     )
     if keys != tuple(sorted(keys)) or len(keys) != len(set(keys)):
         raise ValueError("lifecycle observations must use unique frozen H2 stable order")
+    incomplete_reason = _source_censor_reason(source_coverage)
+    if incomplete_reason is not None:
+        incomplete = LifecyclePairResult(
+            market_episode_id=market_episode_id,
+            instrument=instrument,
+            eligible_at_primary_landmark=False,
+            activated_before_landmark=False,
+            landmark_net_exitable_pnl=None,
+            immediate_exit=_censored(
+                policy_id="EXIT_AT_PRIMARY_LANDMARK",
+                reason=incomplete_reason,
+                ts_ns=None,
+            ),
+            continue_holding=_censored(
+                policy_id="CONTINUE_TO_THEORETICAL_CLOSE",
+                reason=incomplete_reason,
+                ts_ns=None,
+            ),
+            source_coverage=source_coverage,
+            funding_track=funding_track,
+            price_proxy_source="CONTRACT_PRICE_H3_PROXY",
+            historical_mark_price_claim=False,
+            output_hash="",
+        )
+        return replace(incomplete, output_hash=incomplete.computed_hash())
     max_end_ns = entry_ts_ns + MAX_HORIZON_SECONDS * 1_000_000_000
     landmark_ns = entry_ts_ns + PRIMARY_LANDMARK_SECONDS * 1_000_000_000
     notional = USABLE_MARGIN * Decimal("100")
