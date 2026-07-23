@@ -39,6 +39,7 @@ Manifest、人工批准和隔离输出，且不能用通配符或事后追加豁
 ## First classified point
 
 `SRP-S2-001` classifies CR-2026-031/032 and ADR-S2-010/011 under this proposed decision. Its
-missingness/raw-evidence layer has no exemption. Its lifecycle layer declares three bounded,
-currently inactive exemptions. This demonstrates the intended behavior: classification records
-the research boundary, while exact exemption approval and implementation remain separate gates.
+missingness/raw-evidence layer has no exemption. Muce approved its three bounded lifecycle
+exemptions at `2026-07-23T01:04:16Z`; they remain not executable. This demonstrates the intended
+behavior: classification and exact exemption approval record the research boundary, while
+framework implementation and OQ/Task gates remain separate.

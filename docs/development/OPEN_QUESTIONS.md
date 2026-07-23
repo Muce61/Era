@@ -65,7 +65,7 @@ These questions are inherited from V1.3.4 Appendix N. They do not block planning
 | OQ-S2-006 | 固定T10的14,256个Group-1关键位/MarketEpisode分区收据未携带其DatasetSpec要求的`field.*`分布摘要，当前权威`CatalogReaderV2`因此拒绝读取。T15应如何获得可验证且不改写密封T10的只读输入？ | RESOLVED | S2-T15 upstream binding | NONE | 2026-07-22T03:24:18Z Muce批准独立CR-2026-027；只读补证已验证14,256/14,256，T10修改为0，新audit PASS。正式Authority仍需最终干净提交和最终治理Hash重审计。 |
 | OQ-S2-009 | T15已准备BTC/P1/B0的210,240个grid anchors中，首61个因61-bar回看越过历史起点而`PRICE_FEATURE_UNAVAILABLE`；BTC/ETH全范围是否还有边界warmup、声明gap或未绑定分区，分别怎样处理？ | OPEN / 7-DAY PASS / FULL AUDIT PENDING | S2-T15 availability audit | S2-T15 Authority/bin/Run | `[2020-01-01,2020-01-08)`短跑确认BTC/ETH各10,080=10,019可用+61边界warmup，activity/context缺失为0，严格Verify PASS；仍须完成全范围只读审计并冻结逐类预期数量后才能关闭。见[validation](validations/stage_2/CR-2026-031-032-seven-day-audit.md)。 |
 | OQ-S2-010 | “存活较长、尚未激活、净可退出PnL接近零”各自精确定义什么，理论策略从何时入场、怎样运行到完全平仓、何时右删失，以及如何避免幸存者偏差？ | OPEN / 7-DAY LIFECYCLE BLOCKED | future Stage 2/Stage 3 lifecycle preregistration | lifecycle implementation/Authority/Run | 7天审计确认原始路径不污染PASS，但当前最长T4=600秒且52条H2 T4中19条Primary仍EXPIRED；须批准独立variable-length source、landmark、激活、H3近零带、比较组、成本/成交、最大horizon与删失合同。见[validation](validations/stage_2/CR-2026-031-032-seven-day-audit.md)。 |
-| OQ-S2-011 | “特异研究点”能否局部豁免FROZEN研究规则；哪些规则可豁免、哪些事实/安全/治理规则永不可豁免，探索输出怎样与正式证据隔离？ | OPEN / SRP-S2-001 CLASSIFIED / EXEMPTIONS PENDING | S2-T19 v1.4 research governance | special-point implementation/manifest/run | Muce已将CR-2026-031/032和ADR-S2-010/011分类为[SRP-S2-001](special_research_points/SRP-S2-001.md)；其三项精确豁免仍待逐项批准，CR-2026-033/ADR-S2-012框架仍未实现。默认继承全部规则，不可豁免底线继续执行。 |
+| OQ-S2-011 | “特异研究点”能否局部豁免FROZEN研究规则；哪些规则可豁免、哪些事实/安全/治理规则永不可豁免，探索输出怎样与正式证据隔离？ | OPEN / SRP-S2-001 EXEMPTIONS APPROVED / FRAMEWORK NOT IMPLEMENTED | S2-T19 v1.4 research governance | special-point implementation/manifest/run | Muce已批准[SRP-S2-001](special_research_points/SRP-S2-001.md)的EX-001/002/003；CR-2026-033/ADR-S2-012框架仍未实现，故豁免不可执行。默认继承全部未声明规则，不可豁免底线继续执行。 |
 
 New questions must record discovery/source, affected rules/contracts/baselines, evidence required, owner, status, and linked ADR/CR. No unresolved question may be answered by assumption.
 
@@ -114,9 +114,9 @@ New questions must record discovery/source, affected rules/contracts/baselines, 
 - Evidence required: an approved exemption schema, explicit non-waivable set, per-point human
   approval, default-inheritance tests, unknown/wildcard/hash-drift rejection, isolated exploratory
   outputs and formal-pipeline rejection tests.
-- Owner/status: Muce / `OPEN`; `SRP-S2-001` classification is recorded. Its declared exemptions
-  remain inactive pending explicit approval, and CR-2026-033 / ADR-S2-012 remain unimplemented.
-  No Authority, Run or exploratory result is authorized.
+- Owner/status: Muce / `OPEN`; `SRP-S2-001` EX-001/002/003 approved at
+  `2026-07-23T01:04:16Z` but not executable. CR-2026-033 / ADR-S2-012 remain unimplemented. No
+  Authority, Run or exploratory result is authorized.
 - Linked governance: [CR-2026-033](changes/CR-2026-033.md) and
   [ADR-S2-012](decisions/ADR-S2-012-special-research-point.md); first classified point:
   [SRP-S2-001](special_research_points/SRP-S2-001.md).

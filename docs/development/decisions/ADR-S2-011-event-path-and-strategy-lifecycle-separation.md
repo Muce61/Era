@@ -49,6 +49,10 @@ variable-length source and cannot mutate or stretch the accepted T1-T4 event evi
 ## Append-only SRP role
 
 本ADR属于[SRP-S2-001](../special_research_points/SRP-S2-001.md)。A层原始路径无豁免；B层
-仅声明对锁定回放一次、T1～T4固定600秒边界和U-011统一时间退出基线的局部豁免。三项
-豁免尚未逐项获批，当前不生效。数据真实性、H3条件解释、理论完整平仓、右删失、阶段门和
-全部未声明规则继续适用。
+仅声明对锁定回放一次、T1～T4固定600秒边界和U-011统一时间退出基线的局部豁免。在首次
+分类时三项尚未逐项获批，后续批准记录见下段。数据真实性、H3条件解释、理论完整平仓、
+右删失、阶段门和全部未声明规则继续适用。
+
+Muce于`2026-07-23T01:04:16Z`批准上述三项豁免。它们仍因OQ-S2-010和框架/Task门而不可
+执行。本ADR保留为`INCORPORATED_SOURCE_AUTHORITY`，不得删除或覆盖，但未来不得从本ADR
+单独创建Authority或Run；唯一入口是SRP-S2-001及后续获批Task。

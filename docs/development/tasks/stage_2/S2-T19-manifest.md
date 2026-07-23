@@ -193,15 +193,17 @@ source and the full landmark/H3/censor contract.
 
 ## 27. First classified special research point
 
-Status: **CLASSIFIED / EXEMPTIONS PENDING / NOT EXECUTABLE**.
+Status: **CLASSIFIED / EXEMPTIONS APPROVED / NOT EXECUTABLE**.
 
 Muce classified CR-2026-031/032 and ADR-S2-010/011 as
 [SRP-S2-001](../../special_research_points/SRP-S2-001.md). The A-layer availability and immutable
-raw-path work has an empty exemption set. The B-layer lifecycle exploration declares three
-inactive exemptions: `RESEARCH-LOCKED-REPLAY-ONCE`, the fixed T1-T4/600-second source boundary and
-the U-011 universal 5/8/15/25-minute time-exit baselines.
+raw-path work has an empty exemption set. Muce approved the B-layer lifecycle EX-001/002/003 at
+`2026-07-23T01:04:16Z`: `RESEARCH-LOCKED-REPLAY-ONCE`, the fixed T1-T4/600-second source boundary
+and the U-011 universal 5/8/15/25-minute time-exit baselines.
 
 Every other rule remains effective, including data truth, MarketEpisode binding, H3 conditional
 interpretation, execution/closure constraints, sealed evidence, Stage gates and seven-day
-rehearsal. Classification creates no Manifest, Authority, Run or result. Activation remains
-blocked by explicit exemption approval, CR-2026-033/ADR-S2-012 implementation and OQ-S2-009/010.
+rehearsal. Classification and exemption approval create no Manifest, Authority, Run or result.
+Activation remains blocked by CR-2026-033/ADR-S2-012 implementation and OQ-S2-009/010. The four
+source CR/ADR records remain retained; only SRP-S2-001 plus a later approved Task may become an
+execution entry.

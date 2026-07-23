@@ -44,3 +44,7 @@ proof of all periods.
 
 本ADR属于[SRP-S2-001](../special_research_points/SRP-S2-001.md)的A层安全前置，豁免为空集。
 特异研究点不得用“自由研究”把缺失当作0、缩短窗口、跳过Hash漂移或绕过完整对账。
+
+Muce于`2026-07-23T01:04:16Z`批准SRP的B层豁免后，本ADR仍为
+`INCORPORATED_ACTIVE_SAFETY_CONTRACT`。它必须保留到全历史可用性审计、证据保留和
+OQ-S2-009处置全部完成；不得释放或删除。
