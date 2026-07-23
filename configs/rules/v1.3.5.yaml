@@ -1,0 +1,433 @@
+rules:
+- rule_id: RESEARCH-S2-CONDITIONAL-LIFECYCLE
+  status: RESEARCH
+  source: V1.3.5 section 14.2
+  owner: research
+  tests:
+  - T-S2-LIFECYCLE-001
+  effective_version: V1.3.5
+  live_override: false
+  inputs:
+  - lifecycle_authority
+  - sealed_market_episode
+  - h3_cost_scenario
+  check_timing:
+  - before_lifecycle_authority
+  - before_lifecycle_run
+  failure_action: block lifecycle Authority or mark result INCONCLUSIVE
+- rule_id: EXEC-NATIVE-STOP-IMMUTABLE
+  status: FROZEN
+  source: Binance B01-B05 + ADR-V13-001
+  owner: execution
+  tests:
+  - T-ALG-001, FI-02, FI-03
+  effective_version: V1.3
+  live_override: false
+  inputs:
+  - defined_by:Binance B01-B05 + ADR-V13-001
+  check_timing:
+  - defined_in_source_rule
+  failure_action: RECONCILING/EMERGENCY_EXIT
+- rule_id: EXEC-EXIT-COORDINATOR-ONLY
+  status: FROZEN
+  source: 审计A002/A030
+  owner: state_machine
+  tests:
+  - UT-EXIT-001, FI-04
+  effective_version: V1.3
+  live_override: false
+  inputs:
+  - defined_by:审计A002/A030
+  check_timing:
+  - defined_in_source_rule
+  failure_action: 拒绝直接退出并LOCKED
+- rule_id: EXEC-UNKNOWN-NO-BLIND-RETRY
+  status: FROZEN
+  source: Binance B06
+  owner: execution
+  tests:
+  - FI-03, FI-18
+  effective_version: V1.3
+  live_override: false
+  inputs:
+  - defined_by:Binance B06
+  check_timing:
+  - defined_in_source_rule
+  failure_action: RECONCILING
+- rule_id: RISK-PROTECTION-SUFFICIENT
+  status: FROZEN
+  source: Binance B05 + ADR-V13-002
+  owner: risk
+  tests:
+  - T-ALG-002, FI-06
+  effective_version: V1.3
+  live_override: false
+  inputs:
+  - defined_by:Binance B05 + ADR-V13-002
+  check_timing:
+  - defined_in_source_rule
+  failure_action: EMERGENCY_EXIT
+- rule_id: RISK-LIQUIDATION-BUFFER
+  status: FROZEN
+  source: Binance B09 + 审计A010
+  owner: risk
+  tests:
+  - T-LIQ-001, FI-16
+  effective_version: V1.3
+  live_override: false
+  inputs:
+  - defined_by:Binance B09 + 审计A010
+  check_timing:
+  - defined_in_source_rule
+  failure_action: 拒绝开仓或EXIT_PENDING
+- rule_id: ACCOUNT-DEDICATED-SUBACCOUNT
+  status: FROZEN
+  source: 审计A027/A028
+  owner: risk
+  tests:
+  - T-ACC-001, T-ACC-002
+  effective_version: V1.3
+  live_override: false
+  inputs:
+  - defined_by:审计A027/A028
+  check_timing:
+  - defined_in_source_rule
+  failure_action: BLOCKED
+- rule_id: ROUND-ONE-NONZERO-FILL
+  status: FROZEN
+  source: 审计A006
+  owner: round
+  tests:
+  - T-RND-001
+  effective_version: V1.3
+  live_override: false
+  inputs:
+  - defined_by:审计A006
+  check_timing:
+  - defined_in_source_rule
+  failure_action: ROUND_FAILED/LOCKED
+- rule_id: ROUND-SUCCESS-FLAT-EQUITY
+  status: FROZEN
+  source: 审计A020
+  owner: round
+  tests:
+  - FI-11, INV-012
+  effective_version: V1.3
+  live_override: false
+  inputs:
+  - defined_by:审计A020
+  check_timing:
+  - defined_in_source_rule
+  failure_action: ROUND_FAILED/LOCKED
+- rule_id: EVENT-CONSUME-MARKET-EPISODE
+  status: FROZEN
+  source: 审计A014
+  owner: research
+  tests:
+  - UT-EVT-011, FI-14
+  effective_version: V1.3
+  live_override: false
+  inputs:
+  - defined_by:审计A014
+  check_timing:
+  - defined_in_source_rule
+  failure_action: 拒绝EntryIntent
+- rule_id: FILL-FIRST-NONZERO-PROTECT
+  status: FROZEN
+  source: 审计A015
+  owner: execution
+  tests:
+  - FI-01, FI-02
+  effective_version: V1.3
+  live_override: false
+  inputs:
+  - defined_by:审计A015
+  check_timing:
+  - defined_in_source_rule
+  failure_action: PROTECTING/EMERGENCY_EXIT
+- rule_id: FILL-CONTINUE-BY-REACHABILITY
+  status: FROZEN
+  source: 审计A007
+  owner: risk
+  tests:
+  - T-FILL-001, FI-10
+  effective_version: V1.3
+  live_override: false
+  inputs:
+  - defined_by:审计A007
+  check_timing:
+  - defined_in_source_rule
+  failure_action: EXIT_PENDING
+- rule_id: PNL-NO-DOUBLE-SLIPPAGE
+  status: FROZEN
+  source: 审计A004
+  owner: accounting
+  tests:
+  - UT-PNL-015
+  effective_version: V1.3
+  live_override: false
+  inputs:
+  - defined_by:审计A004
+  check_timing:
+  - defined_in_source_rule
+  failure_action: 阻止报告/发布
+- rule_id: DATA-HISTORICAL-NO-FAKE-EXECUTION
+  status: FROZEN
+  source: 数据能力边界
+  owner: data
+  tests:
+  - UT-DATA-013
+  effective_version: V1.3
+  live_override: false
+  inputs:
+  - defined_by:数据能力边界
+  check_timing:
+  - defined_in_source_rule
+  failure_action: 数据构建失败
+- rule_id: RESEARCH-LOCKED-REPLAY-ONCE
+  status: FROZEN
+  source: 审计A008
+  owner: research
+  tests:
+  - T-RES-001
+  effective_version: V1.3
+  live_override: false
+  inputs:
+  - defined_by:审计A008
+  check_timing:
+  - defined_in_source_rule
+  failure_action: 结果降级为探索性
+- rule_id: STATE-BREAKER-PERSIST
+  status: FROZEN
+  source: 审计A005/A046
+  owner: state_machine
+  tests:
+  - FI-15
+  effective_version: V1.3
+  live_override: false
+  inputs:
+  - defined_by:审计A005/A046
+  check_timing:
+  - defined_in_source_rule
+  failure_action: LOCKED
+- rule_id: STRATEGY-V1-PRICE-ONLY-HISTORICAL
+  status: FROZEN
+  source: 数据能力边界
+  owner: research
+  tests:
+  - T-EVT-002
+  effective_version: V1.3
+  live_override: false
+  inputs:
+  - defined_by:数据能力边界
+  check_timing:
+  - defined_in_source_rule
+  failure_action: 阻止混用V1_FLOW结论
+- rule_id: RESEARCH-H3-CONDITIONAL-ROUND-PROB
+  status: FROZEN
+  source: V1.3.1验收修复F1
+  owner: research
+  tests:
+  - T-PROB-001, T-PROB-002
+  effective_version: V1.3.1
+  live_override: false
+  inputs:
+  - defined_by:V1.3.1验收修复F1
+  check_timing:
+  - defined_in_source_rule
+  failure_action: 报告构建失败/结论降级
+- rule_id: STATE-POSITION-INSTANCE-REVISION
+  status: FROZEN
+  source: V1.3.1验收修复F2
+  owner: state_machine
+  tests:
+  - T-POS-001~003
+  effective_version: V1.3.1
+  live_override: false
+  inputs:
+  - defined_by:V1.3.1验收修复F2
+  check_timing:
+  - defined_in_source_rule
+  failure_action: RECONCILING
+- rule_id: STATE-FLAT-CONFIRMATION-PROTOCOL
+  status: FROZEN
+  source: V1.3.1验收修复F3
+  owner: state_machine
+  tests:
+  - T-FLAT-001~004
+  effective_version: V1.3.1
+  live_override: false
+  inputs:
+  - defined_by:V1.3.1验收修复F3
+  check_timing:
+  - defined_in_source_rule
+  failure_action: RECONCILING
+- rule_id: EXEC-EXIT-RACE-OWNERSHIP
+  status: FROZEN
+  source: V1.3.1验收修复F4
+  owner: execution
+  tests:
+  - T-EXIT-RACE-001~004
+  effective_version: V1.3.1
+  live_override: false
+  inputs:
+  - defined_by:V1.3.1验收修复F4
+  check_timing:
+  - defined_in_source_rule
+  failure_action: RECONCILING/INCIDENT_LOCK
+- rule_id: RISK-RESIZING-FULL-REVALIDATION
+  status: FROZEN
+  source: V1.3.1验收修复F5
+  owner: risk
+  tests:
+  - T-SIZE-001~004
+  effective_version: V1.3.1
+  live_override: false
+  inputs:
+  - defined_by:V1.3.1验收修复F5
+  check_timing:
+  - defined_in_source_rule
+  failure_action: REJECT_ENTRY
+- rule_id: CLOSE-THREE-STAGE
+  status: FROZEN
+  source: V1.3.2补丁P1
+  owner: execution
+  tests:
+  - T-CLOSE-001~005
+  effective_version: V1.3.2
+  live_override: false
+  inputs:
+  - defined_by:V1.3.2补丁P1
+  check_timing:
+  - defined_in_source_rule
+  failure_action: RECONCILING/INCIDENT_LOCK
+- rule_id: EXIT-EPOCH-ATOMIC-CREATE
+  status: FROZEN
+  source: V1.3.2补丁P2
+  owner: execution
+  tests:
+  - T-EPOCH-001~005
+  effective_version: V1.3.2
+  live_override: false
+  inputs:
+  - defined_by:V1.3.2补丁P2
+  check_timing:
+  - defined_in_source_rule
+  failure_action: 回滚且不得下单
+- rule_id: EXIT-LEG-SINGLE-ACTIVE-LOCAL
+  status: FROZEN
+  source: V1.3.2补丁P3
+  owner: execution
+  tests:
+  - T-LEG-001~008
+  effective_version: V1.3.2
+  live_override: false
+  inputs:
+  - defined_by:V1.3.2补丁P3
+  check_timing:
+  - defined_in_source_rule
+  failure_action: 拒绝新腿并RECONCILING
+- rule_id: CLOSE-FINAL-FLAT-BEFORE-ROUND
+  status: FROZEN
+  source: V1.3.3冻结F1/F2
+  owner: round
+  tests:
+  - T-FREEZE-001~004
+  effective_version: V1.3.3
+  live_override: false
+  inputs:
+  - defined_by:V1.3.3冻结F1/F2
+  check_timing:
+  - defined_in_source_rule
+  failure_action: 保持RECONCILING，禁止判轮
+- rule_id: EXIT-EPOCH-BOOTSTRAP-ATOMIC
+  status: FROZEN
+  source: V1.3.3冻结F3
+  owner: execution
+  tests:
+  - T-BOOTSTRAP-001~005
+  effective_version: V1.3.3
+  live_override: false
+  inputs:
+  - defined_by:V1.3.3冻结F3
+  check_timing:
+  - defined_in_source_rule
+  failure_action: 回滚且不得下单；数据损坏则INCIDENT_LOCK
+- rule_id: EXIT-LEG-CREATION-ATOMIC
+  status: FROZEN
+  source: V1.3.3冻结F4
+  owner: execution
+  tests:
+  - T-LEG-TX-001~007
+  effective_version: V1.3.3
+  live_override: false
+  inputs:
+  - defined_by:V1.3.3冻结F4
+  check_timing:
+  - defined_in_source_rule
+  failure_action: 拒绝新腿并RECONCILING
+- rule_id: EXIT-LEG-DB-UNIQUE-GUARD
+  status: FROZEN
+  source: V1.3.3冻结F4
+  owner: persistence
+  tests:
+  - T-LEG-TX-001, T-LEG-TX-003
+  effective_version: V1.3.3
+  live_override: false
+  inputs:
+  - defined_by:V1.3.3冻结F4
+  check_timing:
+  - defined_in_source_rule
+  failure_action: 事务失败且不得发送订单
+- rule_id: EXIT-BOOTSTRAP-MODE
+  status: FROZEN
+  source: V1.3.4定稿F1
+  owner: execution
+  tests:
+  - T-BOOT-MODE-001~005
+  effective_version: V1.3.4
+  live_override: false
+  inputs:
+  - defined_by:V1.3.4定稿F1
+  check_timing:
+  - defined_in_source_rule
+  failure_action: 模式不匹配则RECONCILING/INCIDENT_LOCK；不得发送重复订单
+- rule_id: EXIT-TRANSACTION-FIELD-COMPLETE
+  status: FROZEN
+  source: V1.3.4定稿F2
+  owner: persistence
+  tests:
+  - T-CONTRACT-001~005
+  effective_version: V1.3.4
+  live_override: false
+  inputs:
+  - defined_by:V1.3.4定稿F2
+  check_timing:
+  - defined_in_source_rule
+  failure_action: 回滚、不得发送订单、记录DATA_CONTRACT_INCOMPLETE
+- rule_id: INVARIANT-ID-GLOBAL-UNIQUE
+  status: FROZEN
+  source: V1.3.4定稿F3
+  owner: governance
+  tests:
+  - T-INV-ID-001~004
+  effective_version: V1.3.4
+  live_override: false
+  inputs:
+  - defined_by:V1.3.4定稿F3
+  check_timing:
+  - defined_in_source_rule
+  failure_action: 构建失败并阻止发布
+- rule_id: CLOSURE-STAGE-SINGLE-RESPONSIBILITY
+  status: FROZEN
+  source: V1.3.4定稿F4
+  owner: state_machine
+  tests:
+  - T-STAGE-001~005
+  effective_version: V1.3.4
+  live_override: false
+  inputs:
+  - defined_by:V1.3.4定稿F4
+  check_timing:
+  - defined_in_source_rule
+  failure_action: 保持RECONCILING；禁止POSITION_FLAT

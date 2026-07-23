@@ -14,24 +14,33 @@ from era100x.foundation.governance import (
 )
 
 
-def test_repository_current_state_is_stopped_and_hash_valid() -> None:
+def test_repository_current_state_is_v13_implementation_gated_and_hash_valid() -> None:
     state = load_current_development_state()
 
     assert state.current_stage == "S2"
-    assert state.current_task == "S2-T15"
-    assert state.current_task_version == "1.4"
-    assert state.task_status == "STOPPED"
-    assert state.formal_t15_result_exists is False
+    assert state.current_plan == "stage_2_plan_v1.3"
+    assert state.current_task == "S2P13-T11"
+    assert state.current_task_version == "1.0"
+    assert state.task_status == "IMPLEMENTATION_IN_PROGRESS"
+    assert state.formal_successor_result_exists is False
     assert state.stage3_locked is True
-    assert state.srp_execution_status == "NOT_EXECUTABLE"
+    assert state.srp_execution_status == "FRAMEWORK_IMPLEMENTED_FORMAL_OUTPUT_FORBIDDEN"
+    assert state.approved_execution_limit == "S2P13-T16"
+    assert state.formal_run_receipt_required is True
     assert state.state_hash == state.computed_hash()
 
 
 @pytest.mark.parametrize(
     "operation",
-    ["READ_ONLY_AUDIT", "VERIFY_EXISTING_EVIDENCE", "READ_ONLY_UI"],
+    [
+        "READ_ONLY_AUDIT",
+        "VERIFY_EXISTING_EVIDENCE",
+        "READ_ONLY_UI",
+        "BUILD_FUNDING_AUDIT_SUPPLEMENT",
+        "RUN_SEVEN_DAY_REHEARSAL",
+    ],
 )
-def test_current_state_allows_only_read_only_operations(operation: str) -> None:
+def test_current_state_allows_only_scoped_audit_operations(operation: str) -> None:
     state = require_operation_allowed(operation)
     assert operation in state.allowed_operations
 
@@ -52,9 +61,9 @@ def test_current_state_blocks_every_write_or_run_operation(operation: str) -> No
     with pytest.raises(GovernanceBlockedError) as error:
         require_operation_allowed(operation)
 
-    assert error.value.reason_code == "GOVERNANCE_CURRENT_TASK_STOPPED"
+    assert error.value.reason_code == "GOVERNANCE_OPERATION_NOT_AUTHORIZED"
     assert error.value.operation == operation
-    assert error.value.blocking_questions == ("OQ-S2-009", "OQ-S2-010", "OQ-S2-011")
+    assert error.value.blocking_questions == ()
 
 
 def test_state_hash_drift_fails_closed(tmp_path: Path) -> None:
@@ -78,7 +87,7 @@ def test_resealed_state_can_be_loaded_but_does_not_change_repository_authority(
 
     state = load_current_development_state(path)
     assert state.task_status == "IN_PROGRESS"
-    assert load_current_development_state().task_status == "STOPPED"
+    assert load_current_development_state().task_status == "IMPLEMENTATION_IN_PROGRESS"
 
 
 def test_unknown_operation_is_rejected() -> None:

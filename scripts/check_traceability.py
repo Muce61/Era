@@ -1,4 +1,4 @@
-"""Strict integrity checks for the V1.3.4 planning traceability catalogue."""
+"""Strict integrity checks for the V1.3.5 planning traceability catalogue."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ ALLOWED_STATUSES = {"FROZEN", "BASELINE", "RESEARCH", "DEPRECATED", "BLOCKED_BY_
 def _task_ids(root: Path) -> set[str]:
     ids: list[str] = []
     for path in (root / "docs/development/tasks").glob("stage_*/*.md"):
-        match = re.search(r"^- task_id: (S\d+-T\d+)$", path.read_text(), re.MULTILINE)
+        match = re.search(r"^- task_id: (S\d+(?:P\d+)?-T\d+)$", path.read_text(), re.MULTILINE)
         if not match:
             raise ValueError(f"missing task_id metadata: {path.relative_to(root)}")
         ids.append(match.group(1))
@@ -44,8 +44,8 @@ def validate_catalogue(
 ) -> list[str]:
     errors: list[str] = []
     raw: Any = yaml.safe_load(path.read_text())
-    if not isinstance(raw, dict) or raw.get("spec_version") != "V1.3.4":
-        return ["catalogue must declare spec_version V1.3.4"]
+    if not isinstance(raw, dict) or raw.get("spec_version") != "V1.3.5":
+        return ["catalogue must declare spec_version V1.3.5"]
     entries = raw.get("rules")
     if not isinstance(entries, list):
         return ["rules must be a list"]
@@ -63,7 +63,7 @@ def validate_catalogue(
     reasons = [item for item in entries if str(item.get("rule_id", "")).startswith("REASON-")]
     gates = [item for item in entries if str(item.get("rule_id", "")).startswith("GATE-STAGE-")]
     expected = {
-        "formal rules": (len(formal), 32),
+        "formal rules": (len(formal), 33),
         "invariants": (len(invariants), 41),
         "contracts": (len(contracts), 18),
         "reasons": (len(reasons), 52),
@@ -119,7 +119,7 @@ def main() -> int:
         for error in errors:
             print(f"- {error}", file=sys.stderr)
         return 1
-    print("Traceability coverage: 32 rules, 41 INV, 18 contracts, 52 reasons, 10 gates")
+    print("Traceability coverage: 33 rules, 41 INV, 18 contracts, 52 reasons, 10 gates")
     return 0
 
 

@@ -17,6 +17,7 @@ _stage2_path_metrics_projection = MODULE._stage2_path_metrics_projection
 _stage2_first_passage_projection = MODULE._stage2_first_passage_projection
 _stage2_ambiguity_bounds_projection = MODULE._stage2_ambiguity_bounds_projection
 _stage2_conditional_baseline_projection = MODULE._stage2_conditional_baseline_projection
+_stage2_v13_projection = MODULE._stage2_v13_projection
 _json_hash = MODULE._json_hash
 
 T12_RUN_ID = "stage2-s2t12-metrics-20260721T040435Z-abcdef123456"
@@ -810,6 +811,10 @@ def test_ui_derives_current_task_version_count_and_acceptance_without_hardcoded_
     assert "PASSED · HUMAN ACCEPTED" in page
     assert "等待 OQ-S2-006 的人工输入绑定决定" in page
     assert "missing receipt distributions" in page
+    assert 'fetch("/api/v13/status"' in page
+    assert "refreshV13();" in page
+    assert "setInterval(refreshV13, 5000)" in page
+    assert "legacyRefreshInFlight" in page
 
 
 def test_s2_t15_audit_projects_not_started_without_authority_or_run(tmp_path: Path) -> None:
@@ -1287,3 +1292,146 @@ def test_s2_t14_tampered_summary_output_and_symlink_fail_closed(tmp_path: Path) 
     run_link.symlink_to(target, target_is_directory=True)
     linked = _stage2_ambiguity_bounds_projection(linked_root, repository_root)
     assert linked["status"] == "EVIDENCE_INVALID"
+
+
+def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repository_root = tmp_path / "repository"
+    repository_root.mkdir()
+    monkeypatch.setattr(MODULE, "REPOSITORY_ROOT", repository_root)
+    monkeypatch.setattr(MODULE, "CANONICAL_REPOSITORY_ROOT", repository_root)
+    monkeypatch.setattr(MODULE, "_repository_commit", lambda: "abc123")
+    monkeypatch.setattr(
+        MODULE,
+        "_funding_evidence_projection",
+        lambda root: {
+            "status": "PASS",
+            "scope": "SEVEN_DAY_REHEARSAL",
+            "total_row_count": 42,
+            "difference_count": 0,
+            "verify_status": "PASS",
+            "full_history_accepted": False,
+        },
+    )
+    monkeypatch.setattr(
+        MODULE,
+        "load_current_development_state",
+        lambda: type(
+            "State",
+            (),
+            {
+                "task_status": "IMPLEMENTATION_IN_PROGRESS",
+                "current_task": "S2P13-T11",
+                "blocking_questions": ("OQ-S2-009",),
+                "srp_execution_status": "FRAMEWORK_IMPLEMENTED_FORMAL_OUTPUT_FORBIDDEN",
+                "formal_successor_result_exists": False,
+                "stage3_locked": True,
+                "approved_execution_limit": "S2P13-T16",
+            },
+        )(),
+    )
+
+    result = _stage2_v13_projection(tmp_path / "stage2")
+
+    assert result["status"] == "IN_PROGRESS"
+    assert result["repo_root"] == str(repository_root)
+    assert result["repo_commit"] == "abc123"
+    assert result["tasks"]["S2P13-T11"]["status"] == "IN_PROGRESS"
+    assert result["tasks"]["S2P13-T12"]["status"] == "BLOCKED"
+    assert result["blocking_questions"] == ["OQ-S2-009"]
+    assert result["pending_execution_gates"] == ["FINAL_CODE_7_DAY_REHEARSAL"]
+    assert result["execution_gates"]["FINAL_CODE_7_DAY_REHEARSAL"] == "PENDING"
+    assert result["stage3_locked"] is True
+    assert result["formal_successor_result_exists"] is False
+    assert result["price_proxy_source"] == "CONTRACT_PRICE_H3_PROXY"
+    assert result["historical_mark_price_claim"] is False
+    assert result["lifecycle_target_contract"] == "DYNAMIC_NET_TICKET_DOUBLE_APPROX_136BP"
+    assert result["auxiliary_first_passage_target_bps"] == 20
+    assert result["funding_tracks"] == [
+        "PRIMARY_HISTORICAL_ACTUAL",
+        "STRESS_ADVERSE_1_5X",
+        "STRESS_ADVERSE_2X",
+        "STRESS_NO_FUNDING_CREDIT",
+    ]
+    assert result["liquidation_contract"] == "CONTRACT_PRICE_NET_MARGIN_DEPLETION_MINUS_8U"
+    assert result["remaining_input_blockers"] == ["HISTORICAL_FUNDING"]
+    assert result["funding_evidence"]["status"] == "PASS"
+    assert result["funding_evidence"]["scope"] == "SEVEN_DAY_REHEARSAL"
+
+    monkeypatch.setattr(
+        MODULE,
+        "_funding_evidence_projection",
+        lambda root: {
+            "status": "PASS",
+            "scope": "SEVEN_DAY_REHEARSAL",
+            "acceptance_status": "PASS",
+            "historical_funding_bound": True,
+            "full_history_accepted": True,
+        },
+    )
+    accepted = _stage2_v13_projection(tmp_path / "stage2")
+    assert accepted["remaining_input_blockers"] == []
+
+    receipt = _sealed(
+        {
+            "schema_name": "stage2-plan-v13-seven-day-rehearsal-v1",
+            "status": "PASS",
+            "tasks": list(MODULE.V13_TASKS),
+            "code_commit": "abc123",
+            "day_count": 7,
+            "report_path": "/tmp/rehearsal-report.json",
+            "report_hash": "1" * 64,
+            "producer_serialization": "PASS",
+            "strict_consumer_readback": "PASS",
+            "reconciliation": "PASS",
+            "verify": "PASS",
+            "ui_projection": "PASS",
+        },
+        "receipt_hash",
+    )
+    _write(
+        tmp_path / "stage2/operations/stage2-plan-v1.3-successor/seven-day-rehearsal-receipt.json",
+        json.dumps(receipt),
+    )
+    rehearsed = _stage2_v13_projection(tmp_path / "stage2")
+    assert rehearsed["rehearsal_status"] == "PASS"
+    assert rehearsed["execution_gates"]["FINAL_CODE_7_DAY_REHEARSAL"] == "PASS"
+    assert rehearsed["pending_execution_gates"] == []
+    assert rehearsed["status"] == "REHEARSAL_PASS_AWAITING_FORMAL_APPROVAL"
+    assert all(
+        task["reason_code"] == "SEVEN_DAY_REHEARSAL_PASS_NOT_FORMAL"
+        for task in rehearsed["tasks"].values()
+    )
+
+    receipt["code_commit"] = "wrong"
+    receipt["receipt_hash"] = _json_hash(
+        {key: value for key, value in receipt.items() if key != "receipt_hash"}
+    )
+    _write(
+        tmp_path / "stage2/operations/stage2-plan-v1.3-successor/seven-day-rehearsal-receipt.json",
+        json.dumps(receipt),
+    )
+    drifted = _stage2_v13_projection(tmp_path / "stage2")
+    assert drifted["rehearsal_status"] == "NOT_STARTED"
+    assert drifted["execution_gates"]["FINAL_CODE_7_DAY_REHEARSAL"] == "PENDING"
+
+
+def test_stage2_v13_projection_rejects_stale_server(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    served_root = tmp_path / "old-worktree"
+    canonical_root = tmp_path / "canonical"
+    served_root.mkdir()
+    canonical_root.mkdir()
+    monkeypatch.setattr(MODULE, "REPOSITORY_ROOT", served_root)
+    monkeypatch.setattr(MODULE, "CANONICAL_REPOSITORY_ROOT", canonical_root)
+    monkeypatch.setattr(MODULE, "_repository_commit", lambda: "stale123")
+
+    result = _stage2_v13_projection(tmp_path / "stage2")
+
+    assert result["status"] == "STALE_SERVER"
+    assert result["reason_code"] == "S2_V13_STALE_SERVER"
+    assert result["server_stale"] is True

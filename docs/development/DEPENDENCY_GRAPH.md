@@ -1,4 +1,4 @@
-# V1.3.4 Dependency Graph
+# V1.3.5 Dependency Graph
 
 ```text
 Stage 0 → Stage 1 → Stage 2 → Stage 3 → Stage 4
@@ -42,7 +42,7 @@ S2-T01～T19 PASS → T20
 
 S2-T19 is the first preregistration capability and has no dependency on another Stage 2 Task. S2-T01～T09 own fixture capability only; S2-T10 exclusively owns full candidate generation. The graph must remain acyclic and all Stage 2 Task references must resolve before approval.
 
-Current approval state: Plan v1.2 remains APPROVED. S2-T19 and S2-T01～S2-T14 are PASSED. S2-T15 is STOPPED with no formal published research result; only its approved read-only audit/verification scope may continue while OQ-S2-009/010/011 remain open. S2-T16～S2-T18 and S2-T20 remain DRAFT_NOT_APPROVED, Groups 2～4 remain unexecuted, and Stage 3 remains locked. SRP-S2-001 and the proposed variable-length lifecycle study add no executable edge to this DAG.
+Current approval state: Plan v1.2 remains APPROVED. S2-T19 and S2-T01～S2-T14 are PASSED. S2-T15 is STOPPED with no formal published research result; only its approved read-only audit/verification scope may continue. OQ-S2-009/010/011 are resolved. The independent final-code seven-day execution gate remains pending. S2-T16～S2-T18 and S2-T20 remain DRAFT_NOT_APPROVED, Groups 2～4 remain unexecuted, and Stage 3 remains locked. SRP-S2-001 and the proposed variable-length lifecycle study add no executable edge to this DAG.
 
 CR-2026-014 advances only the internal S2-T10 execution version to v1.12. Its bounded sequence is
 `processing-day cache → deterministic month workers → Foundation/Group-1 publication → exact Run-A
@@ -70,3 +70,26 @@ published and verified 80,784 partitions, then matched all 61,776 Group-1 partit
 with zero differences. The `S2-T10 → T11` dependency is factually satisfied. S2-T11～S2-T14 were
 subsequently approved, executed, verified and accepted; those later facts do not authorize T15 writes,
 S2-T16+ or Stage 3.
+
+## Stage 2 Plan v1.3 successor DAG
+
+Plan v1.2 identities and artifacts stay immutable. Plan v1.3 tasks use the full
+`(stage_plan_version, task_id)` identity:
+
+```text
+Plan v1.2 sealed T10/T11/T13/T14 evidence
+  → S2P13-T20 preregistration freeze
+  → S2P13-T11 seven-day theoretical lifecycle
+  → S2P13-T12 path extraction
+  → S2P13-T13 path metrics ─┐
+  → S2P13-T14 first passage ├→ S2P13-T15 ambiguity → S2P13-T16 conditional baseline
+                            ┘
+```
+
+The approved execution ceiling is S2P13-T16. S2P13-T17～T21 and Stage 3 remain locked. Before any
+successor Authority or Run ID, the independent `FINAL_CODE_7_DAY_REHEARSAL` gate must pass producer
+serialization, strict consumer readback, reconciliation, Verify and UI, and a commit-bound human
+run receipt must exist. OQ-S2-009/010/011 are resolved. A separate whole-history pre-audit is not
+required, but the formal full-data Run retains complete-range validation, reconciliation and
+fail-closed missingness/drift handling. Contract Price/Trades are the approved Stage 2 H3 price
+proxy, and CR-2026-038 binds the accepted historical funding source.

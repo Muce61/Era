@@ -1,7 +1,24 @@
-spec_version: V1.3.4
-created_from_commit: 28bfb764f8286d2b4f23568a81f1233bb2b57b15
+spec_version: V1.3.5
+created_from_commit: 6ad4309edcbb882f17c8f07a1a297323c7fd36ac
 state: PLANNED
 rules:
+- rule_id: RESEARCH-S2-CONDITIONAL-LIFECYCLE
+  rule_status: RESEARCH
+  source_section: §14.2; Appendix L; CR-2026-035; ADR-S2-014; CR-2026-038
+  planned_stage: S2
+  planned_tasks:
+  - S2P13-T11
+  implementation_paths:
+  - src/era100x/research/stage_2/lifecycle/ (IMPLEMENTED deterministic price-only core; formal H3 inputs blocked)
+  - src/era100x/research/stage_2/rerun/ (IMPLEMENTED preflight/checkpoint contract)
+  - src/era100x/research/stage_2/funding/ (IMPLEMENTED read-only acceptance contract)
+  test_paths:
+  - tests/research/stage_2/lifecycle/ (TESTED)
+  - tests/research/stage_2/rerun/ (TESTED)
+  - tests/research/stage_2/funding/ (TESTED)
+  validation_paths:
+  - docs/development/validations/stage_2/S2P13-T11.md (PLANNED; no formal result)
+  state: PLANNED
 - rule_id: EXEC-NATIVE-STOP-IMMUTABLE
   rule_status: FROZEN
   source_section: Appendix A; Binance B01-B05 + ADR-V13-001

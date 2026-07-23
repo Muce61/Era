@@ -7,6 +7,12 @@ from .models import (
     Stage2ReleaseSupplementManifest,
 )
 from .repository import AppendOnlyManifestRepository
+from .special_research import (
+    DeclaredResearchExemption,
+    ExemptionKind,
+    SpecialResearchPointManifest,
+    build_special_research_manifest,
+)
 
 __all__ = [
     "AppendOnlyManifestRepository",
@@ -14,4 +20,8 @@ __all__ = [
     "Stage2ExecutionManifest",
     "Stage2PreregistrationManifest",
     "Stage2ReleaseSupplementManifest",
+    "DeclaredResearchExemption",
+    "ExemptionKind",
+    "SpecialResearchPointManifest",
+    "build_special_research_manifest",
 ]

@@ -2,6 +2,23 @@
 
 Model: formal rule → Stage → Task → implementation → tests → validation → current validity. The machine-readable complete catalogue is [`traceability/rules.yaml`](traceability/rules.yaml); every implementation/test path is explicitly PLANNED, not implemented.
 
+## Stage 2 Plan v1.3 lifecycle successor status
+
+CR-2026-035 and ADR-S2-014/015 establish V1.3.5 and Plan v1.3 without mutating Plan v1.2 evidence.
+The current identity is `stage_2_plan_v1.3/S2P13-T11`; implementation is authorized through
+S2P13-T16 only. The repository implements the SRP fail-closed framework, task namespace,
+price-only lifecycle core, typed availability audit, recoverable orchestrator contract and
+evidence-driven UI projection with directed tests.
+
+No V1.3 Authority, bins, Run ID, publication or formal H3 result exists. CR-2026-038 resolves
+OQ-S2-010 by binding the accepted BTC/ETH historical funding source. CR-2026-039 resolves
+OQ-S2-011 after the SRP framework passed repository-wide quality and traceability; the framework
+and all historical SRP/CR/ADR records remain. CR-2026-040 resolves OQ-S2-009 and moves the already
+defined seven-day requirement to the independent `FINAL_CODE_7_DAY_REHEARSAL` execution gate. A
+clean commit and commit-bound human run receipt remain mandatory before a unique successor chain.
+The formal full-data Run still validates and reconciles the complete range and fails closed on
+unknown missingness or drift. S2P13-T17～T21 are not authorized; Stage 3 remains locked.
+
 ## Stage 0 v1.0 Foundation Coverage
 
 Stage 0 uses S0-T04 to catalogue all 32 formal rules and S0-T10 to enforce uniqueness/status/test ownership. S0-T07 owns the PnL foundation; S0-T08 owns Appendix C-E schema completeness; S0-T09 owns states and Reason Codes. Execution behavior remains assigned to later Stages and is not marked implemented by Stage 0. INV-001～INV-041 all include S0-T10 for registry/test-reference validation while retaining their behavioral Stage owner.
@@ -167,9 +184,10 @@ final-clean-code seven-day rehearsal, full quality gate and fresh audit pass. Th
 simulation-only and does not change the formal research result.
 The replacement Authority `5a1a3faa…e7b56` then began TRAIN feature preparation, but Muce stopped
 it before a Binning Set or Run ID after the read-only view exposed 61 unavailable BTC/P1 boundary
-anchors. CR-2026-031/ADR-S2-010 and OQ-S2-009 now require a typed whole-range BTC/ETH availability
-audit; the prepared files remain unpublished and non-reusable. CR-2026-032/ADR-S2-011 and
-OQ-S2-010 separately propose immutable exit-rule-free event paths plus an H3 theoretical
+anchors. At that time, CR-2026-031/ADR-S2-010 and OQ-S2-009 required a typed whole-range BTC/ETH
+availability audit; the prepared files remain unpublished and non-reusable.
+CR-2026-032/ADR-S2-011 and OQ-S2-010 separately proposed immutable exit-rule-free event paths plus
+an H3 theoretical
 full-lifecycle study with landmark risk-set comparison. Muce approved both governance pairs at
 `2026-07-22T16:27:27Z`: the availability audit and two-layer direction are authorized, while both
 OQs remain OPEN. No code, Authority, Run, S2-T16+ or Stage 3 is authorized.
@@ -178,18 +196,23 @@ strict receipt read-back and byte-identical T1-T4 raw-path consumption over 1,21
 Its report/receipt Hashes are `a47b6488…b344` / `fed27311…a905`. The lifecycle consumer remains
 BLOCKED: T11 stops at 600 seconds and 19/52 H2 T4 rows remain Primary EXPIRED. The first audit
 attempt also exposed and fixed an audit-only daily-offset checker bug; a fresh full rerun passed.
-CR-2026-033 and ADR-S2-012 now propose an S2-T19 v1.4 `SPECIAL_RESEARCH_POINT` extension: all
+CR-2026-033 and ADR-S2-012 then proposed an S2-T19 v1.4 `SPECIAL_RESEARCH_POINT` extension: all
 rules apply by default, only explicitly named research-rule exemptions may be considered, and
-truth, safety and governance rules remain non-waivable. OQ-S2-011 is OPEN. This proposal is DRAFT;
-there is no framework implementation, Authority, Run or formal result. Point-specific exemption
+truth, safety and governance rules remain non-waivable. At that point OQ-S2-011 was OPEN and there
+was no framework implementation, Authority, Run or formal result. Point-specific exemption
 approval is recorded separately below.
 Muce subsequently classified CR-2026-031/032 and ADR-S2-010/011 as `SRP-S2-001`. Its A-layer
 availability and raw-path evidence has an empty exemption set. Muce approved its B-layer
 EX-001/002/003 at `2026-07-23T01:04:16Z`: `RESEARCH-LOCKED-REPLAY-ONCE`, the T1-T4/600-second
 source boundary and the U-011 universal time-exit baselines. All undeclared rules remain effective.
-OQ-S2-009/010 and framework/Task implementation still block execution. CR-2026-031/ADR-S2-010 are
+At that time OQ-S2-009/010 and framework/Task implementation still blocked execution.
+CR-2026-031/ADR-S2-010 are
 retained as an active safety contract; CR-2026-032/ADR-S2-011 are retained as source authority with
 no standalone Authority/Run entry.
+CR-2026-038 later resolved OQ-S2-010. CR-2026-039 resolved OQ-S2-011 after full repository quality
+and changed OQ-S2-009's release gate from a duplicate whole-range pre-audit to the final-code
+seven-day end-to-end rehearsal. Complete-range validation remains mandatory inside the formal
+full-data Run.
 S2-T16 through S2-T18 and S2-T20 remain `DRAFT_NOT_APPROVED`, and Stage 3 remains locked.
 [CR-2026-007](changes/CR-2026-007.md) and [CR-2026-008](changes/CR-2026-008.md)
 approve a bounded hybrid transition without changing Stage 1, preregistration, config, parameters,
@@ -264,9 +287,11 @@ run is immutable; its sealed objects require a new-run adoption Manifest and ful
 | Historical first-passage labels | S2-T13 v1.3 | strict H1/H2 TARGET_FIRST/STOP_FIRST/EXPIRED/AMBIGUOUS; 1,065,416 path rows; 31,962,480 classifications; full Verify/UI PASS; no PnL/ROUND_SUCCESS/bounds | PASSED / HUMAN ACCEPTED |
 | Historical AMBIGUOUS bounds | S2-T14 v1.3 | immutable raw labels; Primary failure treatment; conditional exclusion; theoretical upper; H1 adverse/optimistic bounds; 31,962,480 classifications; 2,280 compact distributions; full Verify/UI PASS; no PnL/ROUND_SUCCESS | PASSED / HUMAN ACCEPTED; CR-2026-024 |
 | Historical H1/H2 path extraction | S2-T11 v1.3 | `paths/extraction`; approved lossless source-slice CLI; BTC 220,201 + ETH 312,507 episodes; Manifest `d4d6a2f5…`; verify/UI/quality PASS; Muce accepted 2026-07-21; `validations/stage_2/S2-T11.md` | PASSED / HUMAN ACCEPTED |
-| Conditional random baseline | S2-T15 v1.4 | causal RMS/activity/distance; rolling F0-F3; sealed T10 trigger Context for Episodes; outcome-blind 5 controls shared by 30 H2 cells; no PnL/return | STOPPED / 7-DAY AVAILABILITY PASS / WHOLE-HISTORY OQ-S2-009 OPEN / NO FORMAL RESULT |
-| Raw event path vs theoretical full lifecycle | future Plan/Task amendment | immutable T1-T4 paths; separate H3 theoretical-entry-to-full-closure replay; landmark delayed-activation hypothesis; no real `POSITION_FLAT` | 7-DAY RAW PATH PASS / FULL LIFECYCLE BLOCKED AT 600S / OQ-S2-010 OPEN |
-| Special research point explicit exemptions | proposed S2-T19 v1.4; SRP-S2-001 | default all-rules inheritance; A-layer zero exemptions; B-layer three approved-not-executable exemptions; non-waivable truth/safety/governance; isolated `EXPLORATORY_NONCOMPLIANT` outputs | SRP-S2-001 EXEMPTIONS APPROVED / FRAMEWORK NOT IMPLEMENTED; OQ-S2-009/010/011 OPEN |
+| Conditional random baseline | S2-T15 v1.4 | causal RMS/activity/distance; rolling F0-F3; sealed T10 trigger Context for Episodes; outcome-blind 5 controls shared by 30 H2 cells; no PnL/return | STOPPED / OQ-S2-009 RESOLVED / FINAL-CODE 7-DAY EXECUTION GATE PENDING / NO FORMAL RESULT |
+| Seven-day theoretical lifecycle | Plan v1.3 S2P13-T11 | `stage_2/lifecycle`; Contract Price H3 proxy; 20bp auxiliary; dynamic net ticket-doubling; historical Primary and adverse Stress funding; -8U margin depletion | IMPLEMENTED CORE / DIRECTED TESTS PASS / CR-2026-038 FUNDING ACCEPTANCE REHEARSAL AUTHORIZED |
+| Historical funding acceptance | Plan v1.3 S2P13-T11 | `stage_2/funding`; complete local BTC/ETH history plus seven-day official sample; checksum, append-only acceptance, Manifest/Catalog/Verify, strict read-back | HUMAN ACCEPTED / 7,128+7,128 LOCAL ROWS HASH-BOUND / MONTHLY RECONCILIATION WAIVED / NO LIFECYCLE RUN |
+| Plan v1.3 successor orchestration | S2P13-T11～T16 | `stage_2/rerun`; preflight-all, exclusive lock, checkpoint/readback/reconciliation/Verify handoff, retryable-vs-terminal failure, human receipt gate | IMPLEMENTED CONTRACT / NO PRODUCTION ADAPTER OR RUN |
+| Special research point explicit exemptions | Plan v1.3 governance; SRP-S2-001 | default all-rules inheritance; explicit exact exemptions; non-waivable truth/safety/governance; unknown/wildcard/hash drift rejection; formal consumer rejection | FRAMEWORK IMPLEMENTED / FULL QUALITY PASS / OQ-S2-011 RESOLVED; SRP-S2-001 EXEMPTIONS EXPIRED |
 | Placebo | S2-T16 | preregistered placebo; separate future Task | DRAFT_NOT_APPROVED |
 | Cluster ownership and cluster bootstrap CI | S2-T17, S2-T18 | BTC/ETH-separated clustering and cluster-level resampling | DRAFT_NOT_APPROVED |
 | Stage 2 research gate and deterministic evidence-card reporting | S2-T20 | Stage validation and human Go/No-Go; no automatic Stage 3 | DRAFT_NOT_APPROVED |

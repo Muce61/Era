@@ -337,6 +337,12 @@
           <div id="ambiguityFlowGrid" class="flow-grid" aria-live="polite"></div>
         </section>
 
+        <section class="live-flow" aria-labelledby="v13FlowTitle">
+          <div class="live-flow-head"><strong id="v13FlowTitle">Plan v1.3 · 生命周期与 successor 流水线</strong><span id="v13FlowSummary">正在读取治理、短跑与 checkpoint…</span></div>
+          <div id="v13FlowGrid" class="flow-grid" aria-live="polite"></div>
+          <span id="v13Evidence" class="live-evidence">CHECKING · Stage 3 LOCKED</span>
+        </section>
+
         <section class="authority">
           <div class="subhead">CR-2026-018 / 019 最小恢复与比较授权链</div>
           <div class="authority-flow">
@@ -728,7 +734,64 @@
       return {task, passed, failed, blocked, running: raw === "IN_PROGRESS"};
     }
 
+    function renderV13Flow(status) {
+      const plan = status.stage2_plan_v13 || {};
+      const tasks = plan.tasks || {};
+      const labels = {
+        "S2P13-T11":"7天生命周期",
+        "S2P13-T12":"路径提取",
+        "S2P13-T13":"路径指标",
+        "S2P13-T14":"First Passage",
+        "S2P13-T15":"AMBIGUOUS",
+        "S2P13-T16":"条件基线"
+      };
+      const states = Object.entries(labels).map(([taskId, label]) => {
+        const task = tasks[taskId] || {status:"BLOCKED", reason_code:"WAITING_FOR_GOVERNANCE"};
+        const raw = String(task.status || "BLOCKED");
+        const state = raw === "PASS" ? "pass" : raw === "IN_PROGRESS" || raw === "PREFLIGHT" ? "running" : raw === "FAILED" || raw === "TERMINAL_FAILED" ? "failed" : "pending";
+        return {
+          name:`${taskId} · ${label}`,
+          icon:taskId === "S2P13-T11" ? "fa-hourglass-half" : "fa-diagram-project",
+          state,
+          detail:`${raw} · ${task.reason_code || "—"}`,
+          progress:state === "pass" ? 100 : state === "running" ? 35 : 0
+        };
+      });
+      byId("v13FlowGrid").innerHTML = states.map(flowCard).join("");
+      const blockers = (plan.blocking_questions || []).join(", ") || "NONE";
+      const pendingGates = (plan.pending_execution_gates || []).join(", ") || "NONE";
+      byId("v13FlowSummary").textContent = `${plan.status || "BLOCKED"} · 7天短跑 ${plan.rehearsal_status || "NOT_STARTED"} · 当前 ${plan.current_task || "—"} · open questions ${blockers} · gates ${pendingGates}`;
+      const inputBlockers = (plan.remaining_input_blockers || []).join(", ") || "NONE";
+      const fundingTracks = (plan.funding_tracks || []).join(" / ") || "—";
+      const fundingEvidence = plan.funding_evidence || {};
+      const fundingEvidenceText = `${fundingEvidence.status || "NOT_STARTED"}/${fundingEvidence.scope || "—"} · rows ${number(fundingEvidence.total_row_count)} · differences ${number(fundingEvidence.difference_count)} · Verify ${fundingEvidence.verify_status || "NOT_RUN"} · acceptance ${fundingEvidence.acceptance_status || "NOT_PRESENT"} · bound ${fundingEvidence.historical_funding_bound ? "YES" : "NO"}`;
+      const metrics = `7天短跑 ${plan.rehearsal_status || "NOT_STARTED"}（仅验收格式与接线，不是正式结果） · repo ${plan.repo_root || "—"} · commit ${plan.repo_commit || "—"} · price ${plan.price_proxy_source || "—"} · 20bp auxiliary · target ${plan.lifecycle_target_contract || "—"} · funding ${fundingTracks} · funding evidence ${fundingEvidenceText} · liquidation ${plan.liquidation_contract || "—"} · input blockers ${inputBlockers} · right-censored ${number(plan.right_censored_count)} · scenario liquidation ${number(plan.scenario_liquidation_count)} · ticket double Δ ${plan.ticket_double_probability_delta ?? "—"} · equity/day Δ ${plan.ticket_equity_per_day_delta ?? "—"} · Stage 3 ${plan.stage3_locked ? "LOCKED" : "UNEXPECTED_UNLOCK"}`;
+      byId("v13Evidence").textContent = metrics;
+      byId("v13Evidence").classList.toggle("bad", Boolean(plan.server_stale));
+      return plan;
+    }
+
+    let legacyRefreshInFlight = false;
+
+    async function refreshV13() {
+      try {
+        const response = await fetch("/api/v13/status", {cache:"no-store"});
+        if (!response.ok) throw new Error("v1.3 status unavailable");
+        const status = await response.json();
+        const plan = renderV13Flow(status);
+        byId("processNote").textContent = plan.server_stale
+          ? "STALE_SERVER · 请从当前 main 派生分支重启"
+          : `Plan v1.3 · ${escapeText(plan.status || "BLOCKED")} · ${escapeText(plan.current_task || "—")}`;
+      } catch (error) {
+        byId("v13FlowSummary").textContent = "BLOCKED · Plan v1.3 轻量状态接口不可用";
+        byId("v13Evidence").textContent = "状态读取失败；不得把 CHECKING 当作 PASS。";
+        byId("v13Evidence").classList.add("bad");
+      }
+    }
+
     async function refresh() {
+      if (legacyRefreshInFlight) return;
+      legacyRefreshInFlight = true;
       try {
         const response = await fetch("/api/status", {cache:"no-store"});
         if (!response.ok) throw new Error("status unavailable");
@@ -744,11 +807,12 @@
         const priorPassedCount = 10 + (taskPassed ? 1 : 0) + (pathTask.passed ? 1 : 0) + (metricsTask.passed ? 1 : 0) + (passageTask.passed ? 1 : 0);
         const ambiguityTask = renderAmbiguityTask(status, priorPassedCount);
         const conditionalTask = renderConditionalTask(status, priorPassedCount + (ambiguityTask.accepted ? 1 : 0));
+        const v13Plan = renderV13Flow(status);
         const liveSubflow = [...(status.pipeline_subflows || [])].reverse().find((item) => item.status === "RUNNING");
         byId("updatedAt").textContent = "数据更新：" + dateTime(status.updated_at);
         const activeLabel = status.active_task || (liveSubflow && liveSubflow.current_item);
         const failedFlow = flow.flows.find((item) => item.state === "failed");
-        byId("processNote").textContent = taskPassed ? "CR-2026-019 · 61,776 / 61,776 MATCH" : activeLabel ? "Release-only · " + escapeText(activeLabel) : "固定旧 Run · " + escapeText(status.status);
+        byId("processNote").textContent = v13Plan.server_stale ? "STALE_SERVER · 请从当前 main 重启" : taskPassed ? "CR-2026-019 · 61,776 / 61,776 MATCH" : activeLabel ? "Release-only · " + escapeText(activeLabel) : "固定旧 Run · " + escapeText(status.status);
         const resourceAnomalyCount = Number(observability.resource_anomaly_count) || 0;
         byId("liveEvidence").textContent = escapeText(status.status) + " · " + escapeText(status.phase) + " · health " + escapeText(status.health) + (resourceAnomalyCount ? " · 资源告警 " + number(resourceAnomalyCount) : "") + (taskPassed ? " · S2-T10 / Group 1 PASS" : "（等待自动验收）");
         byId("comparisonEvidence").textContent = observability.comparison_report_present ? `${escapeText(observability.comparison_status)} · Run A 61,776 × Run B 61,776 · matched ${number(observability.matched_partition_count)} · missing ${number(observability.missing_partition_count)} · extra ${number(observability.extra_partition_count)} · differences ${number(observability.difference_count)}` : "尚无 append-only 比较报告。";
@@ -925,10 +989,14 @@
         byId("updatedAt").textContent = "数据更新：不可用";
         byId("liveEvidence").textContent = "checkpoint 暂时不可用；治理状态保持 FINAL CODE GATE。";
         byId("liveFlowSummary").textContent = "实时证据暂时不可用";
+      } finally {
+        legacyRefreshInFlight = false;
       }
     }
+    refreshV13();
     refresh();
-    setInterval(refresh, 5000);
+    setInterval(refreshV13, 5000);
+    setInterval(refresh, 30000);
   </script>
 </body>
 </html>

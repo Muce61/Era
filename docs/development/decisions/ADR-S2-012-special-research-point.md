@@ -2,7 +2,7 @@
 
 ## Status
 
-PROPOSED — awaiting Muce approval and OQ-S2-011 resolution
+APPROVED — 2026-07-23 by Muce; implementation authorized by CR-2026-035
 
 ## Context
 

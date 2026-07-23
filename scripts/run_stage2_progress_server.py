@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import json
 import re
+import subprocess
 import threading
 import webbrowser
 from collections.abc import Sequence
@@ -20,9 +21,17 @@ from urllib.parse import urlsplit
 from era100x.research.stage_2.runtime_v2.checkpoint import SAFE_RUN_ID
 from era100x.research.stage_2.runtime_v2.progress import read_progress_status
 from era100x.research.stage_2.paths.extraction import read_path_extraction_receipts
+from era100x.foundation.governance import load_current_development_state
+from era100x.research.stage_2.funding import (
+    FundingEvidenceError,
+    verify_funding_acceptance,
+    verify_funding_evidence,
+)
+from era100x.research.stage_2.rerun.orchestrator import TASKS as V13_TASKS
 
 DEFAULT_ROOT = Path("/Volumes/FuckingLife/era100x_stage2")
 REPOSITORY_ROOT = Path(__file__).parents[1]
+CANONICAL_REPOSITORY_ROOT = Path("/Users/muce/PycharmProjects/20260710/Era")
 S2T12_RUN_PREFIX = "stage2-s2t12-metrics-"
 S2T12_RUN_ID = re.compile(r"^stage2-s2t12-metrics-\d{8}T\d{6}Z-[0-9a-f]{12}$")
 S2T12_SUMMARY_RELATIVE_PATH = Path("artifacts/manifests/stage_2/s2_t12_path_metrics_summary.json")
@@ -104,6 +113,286 @@ def _safe_text(path: Path) -> str:
         return path.read_text(encoding="utf-8")
     except (OSError, UnicodeError):
         return ""
+
+
+def _repository_commit() -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=REPOSITORY_ROOT,
+            text=True,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return "UNKNOWN"
+
+
+def _funding_evidence_projection(stage2_root: Path) -> dict[str, Any]:
+    evidence_root = stage2_root / "funding-evidence"
+    if not evidence_root.is_dir() or evidence_root.is_symlink():
+        return {
+            "status": "NOT_STARTED",
+            "reason_code": "FUNDING_EVIDENCE_MISSING",
+            "full_history_accepted": False,
+        }
+    candidates = sorted(
+        (
+            path
+            for path in evidence_root.iterdir()
+            if path.is_dir() and not path.is_symlink() and not path.name.startswith(".")
+        ),
+        key=lambda path: (path.stat().st_mtime_ns, path.name),
+    )
+    if not candidates:
+        return {
+            "status": "NOT_STARTED",
+            "reason_code": "FUNDING_EVIDENCE_MISSING",
+            "full_history_accepted": False,
+        }
+    selected = candidates[-1]
+    manifest = _safe_json_object(selected / "manifest.json")
+    catalog = _safe_json_object(selected / "catalog.json")
+    stored_verify = _safe_json_object(selected / "verify.json")
+    try:
+        verify = verify_funding_evidence(selected)
+    except (OSError, ValueError, FundingEvidenceError) as exc:
+        return {
+            "status": "EVIDENCE_INVALID",
+            "reason_code": "FUNDING_EVIDENCE_VERIFY_FAILED",
+            "reason": str(exc),
+            "evidence_id": selected.name,
+            "full_history_accepted": False,
+        }
+    stored_verify_valid = (
+        stored_verify.get("verify_hash")
+        == _json_hash({key: value for key, value in stored_verify.items() if key != "verify_hash"})
+        and stored_verify.get("status") == verify.get("status")
+        and stored_verify.get("manifest_hash") == verify.get("manifest_hash")
+        and stored_verify.get("catalog_hash") == verify.get("catalog_hash")
+    )
+    status = (
+        "PASS" if verify.get("status") == "PASS" and stored_verify_valid else "EVIDENCE_INVALID"
+    )
+    instruments = catalog.get("instruments", {})
+    difference_count = (
+        sum(
+            int(entry.get("difference_count", 0))
+            for entry in instruments.values()
+            if isinstance(entry, dict)
+        )
+        if isinstance(instruments, dict)
+        else 0
+    )
+    scope = manifest.get("scope")
+    acceptance_status = "NOT_PRESENT"
+    historical_funding_bound = False
+    if (selected / "acceptance.json").is_file() and not (selected / "acceptance.json").is_symlink():
+        try:
+            acceptance_verify = verify_funding_acceptance(selected)
+        except (OSError, ValueError, FundingEvidenceError):
+            acceptance_status = "FAIL"
+        else:
+            acceptance_status = str(acceptance_verify.get("status", "FAIL"))
+            historical_funding_bound = acceptance_verify.get("historical_funding_bound") is True
+    full_history_accepted = historical_funding_bound
+    return {
+        "status": status,
+        "reason_code": (
+            "FUNDING_LOCAL_HISTORY_HUMAN_ACCEPTED"
+            if full_history_accepted
+            else "FUNDING_SEVEN_DAY_REHEARSAL_PASS"
+            if status == "PASS"
+            else "FUNDING_EVIDENCE_INVALID"
+        ),
+        "evidence_id": manifest.get("evidence_id", selected.name),
+        "scope": scope,
+        "start_date": manifest.get("start_date"),
+        "end_date_exclusive": manifest.get("end_date_exclusive"),
+        "comparison_status": manifest.get("comparison_status"),
+        "total_row_count": catalog.get("total_row_count", 0),
+        "difference_count": difference_count,
+        "verify_status": verify.get("status"),
+        "acceptance_status": acceptance_status,
+        "historical_funding_bound": historical_funding_bound,
+        "manifest_hash": manifest.get("manifest_hash"),
+        "catalog_hash": catalog.get("catalog_hash"),
+        "full_history_accepted": full_history_accepted,
+        "legacy_sources_modified": manifest.get("legacy_sources_modified"),
+        "lifecycle_run_created": manifest.get("lifecycle_run_created"),
+        "stage3_locked": True,
+    }
+
+
+def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
+    """Project Plan v1.3 governance and append-only successor evidence."""
+
+    try:
+        state = load_current_development_state()
+    except (OSError, ValueError) as exc:
+        return {
+            "stage_plan_version": "1.3",
+            "status": "BLOCKED",
+            "reason_code": "S2_V13_GOVERNANCE_STATE_INVALID",
+            "reason": str(exc),
+            "stage3_locked": True,
+        }
+    repo_root = REPOSITORY_ROOT.resolve()
+    canonical_root = CANONICAL_REPOSITORY_ROOT.resolve()
+    stale_server = repo_root != canonical_root
+    repo_commit = _repository_commit()
+    operations_root = stage2_root / "operations/stage2-plan-v1.3-successor"
+    checkpoint = _safe_json_object(operations_root / "checkpoint.json")
+    rehearsal_receipt = _safe_json_object(operations_root / "seven-day-rehearsal-receipt.json")
+    pending_rehearsal = _safe_json_object(
+        operations_root / "seven-day-rehearsal-receipt.pending.json"
+    )
+    rehearsal_pass = (
+        rehearsal_receipt.get("schema_name") == "stage2-plan-v13-seven-day-rehearsal-v1"
+        and rehearsal_receipt.get("status") == "PASS"
+        and _self_hash_matches(rehearsal_receipt, "receipt_hash")
+        and rehearsal_receipt.get("day_count") == 7
+        and tuple(rehearsal_receipt.get("tasks", ())) == V13_TASKS
+        and rehearsal_receipt.get("code_commit") == repo_commit
+        and rehearsal_receipt.get("producer_serialization") == "PASS"
+        and rehearsal_receipt.get("strict_consumer_readback") == "PASS"
+        and rehearsal_receipt.get("reconciliation") == "PASS"
+        and rehearsal_receipt.get("verify") == "PASS"
+        and rehearsal_receipt.get("ui_projection") == "PASS"
+    )
+    rehearsal_pending = (
+        pending_rehearsal.get("schema_name") == "stage2-plan-v13-seven-day-rehearsal-v1"
+        and pending_rehearsal.get("status") == "PENDING_UI_CHECK"
+        and _self_hash_matches(pending_rehearsal, "receipt_hash")
+        and pending_rehearsal.get("day_count") == 7
+        and tuple(pending_rehearsal.get("tasks", ())) == V13_TASKS
+        and pending_rehearsal.get("code_commit") == repo_commit
+        and pending_rehearsal.get("producer_serialization") == "PASS"
+        and pending_rehearsal.get("strict_consumer_readback") == "PASS"
+        and pending_rehearsal.get("reconciliation") == "PASS"
+        and pending_rehearsal.get("verify") == "PASS"
+        and pending_rehearsal.get("ui_projection") == "PENDING"
+    )
+    pending_execution_gates = [] if rehearsal_pass else ["FINAL_CODE_7_DAY_REHEARSAL"]
+    checkpoint_valid = (
+        checkpoint.get("schema_name") == "stage2-plan-v13-successor-checkpoint-v1"
+        and checkpoint.get("stage_plan_version") == "1.3"
+    )
+    default_status = (
+        "IN_PROGRESS" if state.task_status == "IMPLEMENTATION_IN_PROGRESS" else "BLOCKED"
+    )
+    tasks: dict[str, Any] = {
+        task: {
+            "status": (
+                default_status
+                if task == state.current_task
+                else "BLOCKED"
+                if state.blocking_questions or pending_execution_gates
+                else "NOT_STARTED"
+            ),
+            "reason_code": (
+                "IMPLEMENTATION_IN_PROGRESS"
+                if task == state.current_task
+                else (
+                    "WAITING_FOR_GOVERNANCE"
+                    if state.blocking_questions
+                    else "WAITING_FOR_EXECUTION_GATE"
+                )
+            ),
+        }
+        for task in V13_TASKS
+    }
+    if checkpoint_valid:
+        for task, task_state in cast(dict[str, Any], checkpoint.get("tasks", {})).items():
+            if task in tasks and isinstance(task_state, dict):
+                tasks[task] = task_state
+    elif rehearsal_pass:
+        tasks = {
+            task: {
+                "status": "PASS",
+                "reason_code": "SEVEN_DAY_REHEARSAL_PASS_NOT_FORMAL",
+            }
+            for task in V13_TASKS
+        }
+    elif rehearsal_pending:
+        tasks = {
+            task: {
+                "status": "PASS",
+                "reason_code": "SEVEN_DAY_REHEARSAL_PASS_PENDING_UI_CHECK",
+            }
+            for task in V13_TASKS
+        }
+    status = (
+        str(checkpoint.get("status", default_status))
+        if checkpoint_valid
+        else "REHEARSAL_PASS_AWAITING_FORMAL_APPROVAL"
+        if rehearsal_pass
+        else "REHEARSAL_UI_CHECK"
+        if rehearsal_pending
+        else default_status
+    )
+    if stale_server:
+        status = "STALE_SERVER"
+    funding_evidence = _funding_evidence_projection(stage2_root)
+    funding_blockers = (
+        [] if funding_evidence.get("full_history_accepted") is True else ["HISTORICAL_FUNDING"]
+    )
+    return {
+        "stage_plan_version": "1.3",
+        "status": status,
+        "reason_code": (
+            "S2_V13_STALE_SERVER"
+            if stale_server
+            else str(checkpoint.get("reason_code", "S2_V13_IMPLEMENTATION_GATED"))
+        ),
+        "repo_root": str(repo_root),
+        "repo_commit": repo_commit,
+        "server_stale": stale_server,
+        "current_task": state.current_task,
+        "task_status": state.task_status,
+        "blocking_questions": list(state.blocking_questions),
+        "execution_gates": {"FINAL_CODE_7_DAY_REHEARSAL": "PASS" if rehearsal_pass else "PENDING"},
+        "rehearsal_status": (
+            "PASS" if rehearsal_pass else "PENDING_UI_CHECK" if rehearsal_pending else "NOT_STARTED"
+        ),
+        "rehearsal_report_path": (
+            rehearsal_receipt.get("report_path")
+            if rehearsal_pass
+            else pending_rehearsal.get("report_path")
+            if rehearsal_pending
+            else None
+        ),
+        "rehearsal_report_hash": (
+            rehearsal_receipt.get("report_hash")
+            if rehearsal_pass
+            else pending_rehearsal.get("report_hash")
+            if rehearsal_pending
+            else None
+        ),
+        "pending_execution_gates": pending_execution_gates,
+        "srp_execution_status": state.srp_execution_status,
+        "formal_successor_result_exists": state.formal_successor_result_exists,
+        "stage3_locked": state.stage3_locked,
+        "approved_execution_limit": state.approved_execution_limit,
+        "checkpoint_present": checkpoint_valid,
+        "tasks": tasks,
+        "right_censored_count": int(checkpoint.get("right_censored_count", 0)),
+        "scenario_liquidation_count": int(checkpoint.get("scenario_liquidation_count", 0)),
+        "ticket_double_probability_delta": checkpoint.get("ticket_double_probability_delta"),
+        "ticket_equity_per_day_delta": checkpoint.get("ticket_equity_per_day_delta"),
+        "price_proxy_source": "CONTRACT_PRICE_H3_PROXY",
+        "historical_mark_price_claim": False,
+        "lifecycle_target_contract": "DYNAMIC_NET_TICKET_DOUBLE_APPROX_136BP",
+        "auxiliary_first_passage_target_bps": 20,
+        "funding_tracks": [
+            "PRIMARY_HISTORICAL_ACTUAL",
+            "STRESS_ADVERSE_1_5X",
+            "STRESS_ADVERSE_2X",
+            "STRESS_NO_FUNDING_CREDIT",
+        ],
+        "funding_evidence": funding_evidence,
+        "liquidation_contract": "CONTRACT_PRICE_NET_MARGIN_DEPLETION_MINUS_8U",
+        "remaining_input_blockers": funding_blockers,
+        "updated_at": checkpoint.get("updated_at"),
+    }
 
 
 def _execution_observability(run_root: Path) -> dict[str, Any]:
@@ -1639,6 +1928,14 @@ class ProgressHandler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path == "/":
             self._reply(HTTPStatus.OK, "text/html; charset=utf-8", _PAGE_PATH.read_bytes())
+        elif path == "/api/v13/status":
+            try:
+                self._reply_json(
+                    HTTPStatus.OK,
+                    {"stage2_plan_v13": _stage2_v13_projection(self.server.stage2_root)},
+                )
+            except (OSError, ValueError) as exc:
+                self._reply_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})
         elif path == "/api/status":
             try:
                 payload = read_progress_status(self.server.run_root)
@@ -1652,6 +1949,7 @@ class ProgressHandler(BaseHTTPRequestHandler):
                     "S2-T15": _stage2_conditional_baseline_projection(self.server.stage2_root),
                 }
                 payload["execution_observability"] = observability
+                payload["stage2_plan_v13"] = _stage2_v13_projection(self.server.stage2_root)
                 self._reply_json(HTTPStatus.OK, payload)
             except (OSError, ValueError) as exc:
                 self._reply_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})
@@ -1680,13 +1978,19 @@ class ProgressHandler(BaseHTTPRequestHandler):
         )
 
     def _reply(self, status: HTTPStatus, content_type: str, body: bytes) -> None:
-        self.send_response(status)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("X-Content-Type-Options", "nosniff")
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            # A browser may abandon the legacy deep-scan request after the fast
+            # Plan v1.3 projection has already rendered.  This is not a server
+            # or evidence failure and must not trigger a second HTTP response.
+            return
 
 
 class ProgressHTTPServer(ThreadingHTTPServer):

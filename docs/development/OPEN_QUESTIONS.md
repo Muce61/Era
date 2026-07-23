@@ -63,9 +63,9 @@ These questions are inherited from V1.3.4 Appendix N. They do not block planning
 | OQ-S2-004 | 2026-07-16审批引用的T1/T3/T4精确时间组合、三个预注册时期、条件随机匹配bin/固定放宽层级和主失败线在仓库及全部本地历史中均无定义；其精确值是什么？ | RESOLVED | Stage 2 preregistration completion | NONE | 2026-07-16T14:51:38+08:00 Muce人工批准完整定义；见[ADR-S2-004](decisions/ADR-S2-004-primary-research-definition.md)。T2是唯一Primary；P1/P2/P3、L0～L5、5 controls、matching/bootstrap seed 20260716、AMBIGUOUS失败、F1～F10与ETH分类均已预注册。全部为BASELINE/RESEARCH，不是最优或FROZEN。 |
 | OQ-S2-005 | ADR-S2-004声称沿用已批准的1m波动率和Trades活跃度公式，但仓库及全部Git历史均无公式本体；正式条件基线也缺少split/fold边界、精确purge/embargo长度和非事件control锚点生成规则。精确定义是什么？ | RESOLVED | S2-T15 full conditional baseline | NONE | 2026-07-22T02:25:41Z Muce批准CR-2026-026、ADR-S2-009、S2-T15 v1.4及T19 append-only addendum；冻结三特征、关键位距离、F0-F3滚动折、3600/600秒、daily grid、三层control identity、T13/T14绑定和全量对账。未知结果不预先获批。 |
 | OQ-S2-006 | 固定T10的14,256个Group-1关键位/MarketEpisode分区收据未携带其DatasetSpec要求的`field.*`分布摘要，当前权威`CatalogReaderV2`因此拒绝读取。T15应如何获得可验证且不改写密封T10的只读输入？ | RESOLVED | S2-T15 upstream binding | NONE | 2026-07-22T03:24:18Z Muce批准独立CR-2026-027；只读补证已验证14,256/14,256，T10修改为0，新audit PASS。正式Authority仍需最终干净提交和最终治理Hash重审计。 |
-| OQ-S2-009 | T15已准备BTC/P1/B0的210,240个grid anchors中，首61个因61-bar回看越过历史起点而`PRICE_FEATURE_UNAVAILABLE`；BTC/ETH全范围是否还有边界warmup、声明gap或未绑定分区，分别怎样处理？ | OPEN / 7-DAY PASS / FULL AUDIT PENDING | S2-T15 availability audit | S2-T15 Authority/bin/Run | `[2020-01-01,2020-01-08)`短跑确认BTC/ETH各10,080=10,019可用+61边界warmup，activity/context缺失为0，严格Verify PASS；仍须完成全范围只读审计并冻结逐类预期数量后才能关闭。见[validation](validations/stage_2/CR-2026-031-032-seven-day-audit.md)。 |
-| OQ-S2-010 | “存活较长、尚未激活、净可退出PnL接近零”各自精确定义什么，理论策略从何时入场、怎样运行到完全平仓、何时右删失，以及如何避免幸存者偏差？ | OPEN / 7-DAY LIFECYCLE BLOCKED | future Stage 2/Stage 3 lifecycle preregistration | lifecycle implementation/Authority/Run | 7天审计确认原始路径不污染PASS，但当前最长T4=600秒且52条H2 T4中19条Primary仍EXPIRED；须批准独立variable-length source、landmark、激活、H3近零带、比较组、成本/成交、最大horizon与删失合同。见[validation](validations/stage_2/CR-2026-031-032-seven-day-audit.md)。 |
-| OQ-S2-011 | “特异研究点”能否局部豁免FROZEN研究规则；哪些规则可豁免、哪些事实/安全/治理规则永不可豁免，探索输出怎样与正式证据隔离？ | OPEN / SRP-S2-001 EXEMPTIONS APPROVED / FRAMEWORK NOT IMPLEMENTED | S2-T19 v1.4 research governance | special-point implementation/manifest/run | Muce已批准[SRP-S2-001](special_research_points/SRP-S2-001.md)的EX-001/002/003；CR-2026-033/ADR-S2-012框架仍未实现，故豁免不可执行。默认继承全部未声明规则，不可豁免底线继续执行。 |
+| OQ-S2-009 | T15已准备BTC/P1/B0的210,240个grid anchors中，首61个因61-bar回看越过历史起点而`PRICE_FEATURE_UNAVAILABLE`；BTC/ETH全范围是否还有边界warmup、声明gap或未绑定分区，分别怎样处理？ | RESOLVED / MIGRATED TO EXECUTION GATE | S2P13-T11～T16 final-code rehearsal | NONE | 缺失分类和失败动作已经明确。CR-2026-040确认“最终代码7天端到端短跑”是执行规范而非待决问题，并迁移为`FINAL_CODE_7_DAY_REHEARSAL`门。短跑未通过前正式Authority/bin/Run仍禁止；正式全量Run继续对未知缺失、未绑定和Hash漂移硬失败。 |
+| OQ-S2-010 | “存活较长、尚未激活、净可退出PnL接近零”各自精确定义什么，理论策略从何时入场、怎样运行到完全平仓、何时右删失，以及如何避免幸存者偏差？ | RESOLVED / FUNDING LOCAL HISTORY HUMAN ACCEPTED | S2P13-T11 lifecycle | NONE | 生命周期定义由CR-2026-036/037冻结。CR-2026-038短跑完成官方抽样并识别毫秒取整；Muce随后明确免除逐月全历史官方核对和独立preflight绑定。BTC/ETH各7,128条完整本地历史经Hash、唯一性、连续性验证后接收；不声称逐月官方一致。 |
+| OQ-S2-011 | “特异研究点”能否局部豁免FROZEN研究规则；哪些规则可豁免、哪些事实/安全/治理规则永不可豁免，探索输出怎样与正式证据隔离？ | RESOLVED | Plan v1.3 research governance | NONE | CR-2026-033/ADR-S2-012框架已实现默认继承、显式豁免、未知/通配符/Hash漂移拒绝和正式消费者隔离；仓库级Ruff、strict mypy、strict Traceability、strict governance及678项测试通过。CR-2026-039关闭本OQ并将其从正式生命周期门禁移除。框架继续供未来自由研究使用；SRP、CR、ADR历史全部保留。 |
 
 New questions must record discovery/source, affected rules/contracts/baselines, evidence required, owner, status, and linked ADR/CR. No unresolved question may be answered by assumption.
 
@@ -78,11 +78,13 @@ New questions must record discovery/source, affected rules/contracts/baselines, 
 - Affected rules/contracts/baselines: `EVENT-CONSUME-MARKET-EPISODE`,
   `STRATEGY-V1-PRICE-ONLY-HISTORICAL`, `DATA-HISTORICAL-NO-FAKE-EXECUTION`, S2-T15 v1.4 feature,
   split and reconciliation contracts. Stage 1 and sealed T10-T14 bytes remain unchanged.
-- Evidence required: whole-range read-only BTC/ETH availability inventory, exact boundary/gap/
-  unbound/invalid/zero-observation classification, per-group reconciliation and immutable Hashes.
-- Owner/status: Muce / `OPEN`; CR-2026-031 and ADR-S2-010 approved at
-  `2026-07-22T16:27:27Z`; seven-day boundary audit PASS for both instruments; whole-history audit
-  remains pending.
+- Evidence required: final-code seven-complete-UTC-day producer-to-UI rehearsal with exact
+  boundary/gap/unbound/invalid/zero-observation classification, consumer read-back,
+  reconciliation and immutable Hashes. The formal full-data Run retains the same fail-closed
+  checks over the complete range.
+- Owner/status: Muce / `RESOLVED`; CR-2026-040 classifies the final-code seven-day end-to-end
+  rehearsal as the independent `FINAL_CODE_7_DAY_REHEARSAL` execution gate rather than an open
+  question. The earlier boundary audit remains supporting evidence but cannot satisfy that gate.
 - Linked governance: [CR-2026-031](changes/CR-2026-031.md) and
   [ADR-S2-010](decisions/ADR-S2-010-historical-missingness.md).
 
@@ -94,12 +96,25 @@ New questions must record discovery/source, affected rules/contracts/baselines, 
   `STRATEGY-V1-PRICE-ONLY-HISTORICAL`, `DATA-HISTORICAL-NO-FAKE-EXECUTION`,
   `EXEC-EXIT-COORDINATOR-ONLY`, U-010, U-011 and U-012. Accepted T1-T4 raw evidence and the sole
   Primary T2 remain unchanged.
-- Evidence required: exact landmark, activation, H3 near-zero-PnL, theoretical entry/closure,
-  cost/fill, censor, subgroup, multiplicity and risk-set matching definitions before any code or
-  outcome is read.
-- Owner/status: Muce / `OPEN`; CR-2026-032 and ADR-S2-011 direction approved at
-  `2026-07-22T16:27:27Z`; seven-day raw-path audit PASS and lifecycle handoff BLOCKED because the
-  accepted source stops at 600 seconds while 19 Primary T4/H2 rows remain EXPIRED.
+- Evidence required: the V1.3.5 definitions are now frozen. Formal execution additionally requires
+  immutable signed historical funding rows with settlement timestamp, availability, Hash and gap
+  bindings for BTCUSDT and ETHUSDT. Contract Price/canonical Trades are the approved H3 proxy and
+  must not be relabeled as historical Mark Price.
+- Owner/status: Muce / `OPEN`; CR-2026-035 and ADR-S2-014/015 freeze the task contract. A
+  2026-07-23 read-only inventory found no funding dataset in the fixed T10 snapshot,
+  Stage 1/2 external roots or repository registry. Price-only implementation tests may continue;
+  Authority, formal rehearsal and Run remain blocked.
+- Resolved sub-decisions: CR-2026-036/ADR-S2-016 approve the Contract Price H3 proxy and make T2
+  20bp auxiliary only. Continuation exits at the first observation with net scenario PnL at least
+  10U, so the no-funding main-cost threshold is approximately 136bp and increases with accumulated
+  funding.
+- CR-2026-037/ADR-S2-017 freeze Primary signed historical funding, adverse 1.5x/2x and no-credit
+  Stress tracks. Theoretical liquidation is net margin depletion at `scenario_net_pnl <= -8U` on
+  the Contract Price proxy; historical Mark and exchange bracket inputs are no longer required.
+- CR-2026-038 found the existing local BTC/ETH funding candidates and authorizes a read-only
+  month-by-month comparison against Binance official archives. Official rows win discrepancies
+  without modifying legacy files. The isolated seven-day rehearsal precedes full-history
+  acceptance; no lifecycle Authority or Run is authorized by this CR.
 - Linked governance: [CR-2026-032](changes/CR-2026-032.md) and
   [ADR-S2-011](decisions/ADR-S2-011-event-path-and-strategy-lifecycle-separation.md).
 
@@ -111,12 +126,13 @@ New questions must record discovery/source, affected rules/contracts/baselines, 
 - Affected rules/contracts/baselines: all 32 formal v1.3.4 registry rules are currently `FROZEN`;
   S2-T19 v1.3 is already PASSED. The proposal therefore cannot be implemented by silently editing
   the registry, preregistration or a passed Manifest.
-- Evidence required: an approved exemption schema, explicit non-waivable set, per-point human
-  approval, default-inheritance tests, unknown/wildcard/hash-drift rejection, isolated exploratory
-  outputs and formal-pipeline rejection tests.
-- Owner/status: Muce / `OPEN`; `SRP-S2-001` EX-001/002/003 approved at
-  `2026-07-23T01:04:16Z` but not executable. CR-2026-033 / ADR-S2-012 remain unimplemented. No
-  Authority, Run or exploratory result is authorized.
+- Evidence required: completed implementation and repository-wide quality/traceability proof for
+  the approved exemption schema, non-waivable set, default inheritance, unknown/wildcard/hash-drift
+  rejection and formal-pipeline rejection.
+- Owner/status: Muce / `RESOLVED`; CR-2026-033 / ADR-S2-012 are approved, the isolated framework is
+  implemented, and repository-wide Ruff, strict mypy, strict Traceability, strict governance and
+  678 tests passed. CR-2026-039 removes this OQ from the formal lifecycle gate. SRP-S2-001
+  EX-001/002/003 remain expired for new Plan v1.3 runs; no exploratory output is promoted.
 - Linked governance: [CR-2026-033](changes/CR-2026-033.md) and
   [ADR-S2-012](decisions/ADR-S2-012-special-research-point.md); first classified point:
   [SRP-S2-001](special_research_points/SRP-S2-001.md).

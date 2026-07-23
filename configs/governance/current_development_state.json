@@ -1,21 +1,24 @@
 {
   "schema_name": "era-current-development-state",
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "current_stage": "S2",
-  "current_plan": "stage_2_plan_v1.2",
-  "current_task": "S2-T15",
-  "current_task_version": "1.4",
-  "task_status": "STOPPED",
-  "formal_t15_result_exists": false,
+  "current_plan": "stage_2_plan_v1.3",
+  "current_task": "S2P13-T11",
+  "current_task_version": "1.0",
+  "task_status": "IMPLEMENTATION_IN_PROGRESS",
+  "formal_successor_result_exists": false,
   "stage3_locked": true,
-  "srp_execution_status": "NOT_EXECUTABLE",
+  "srp_execution_status": "FRAMEWORK_IMPLEMENTED_FORMAL_OUTPUT_FORBIDDEN",
+  "approved_execution_limit": "S2P13-T16",
+  "formal_run_receipt_required": true,
   "allowed_operations": [
     "READ_ONLY_AUDIT",
     "VERIFY_EXISTING_EVIDENCE",
-    "READ_ONLY_UI"
+    "READ_ONLY_UI",
+    "BUILD_FUNDING_AUDIT_SUPPLEMENT",
+    "RUN_SEVEN_DAY_REHEARSAL"
   ],
   "blocked_operations": [
-    "BUILD_AUDIT_SUPPLEMENT",
     "FREEZE_AUTHORITY",
     "FREEZE_BINS",
     "PREFLIGHT",
@@ -23,11 +26,7 @@
     "RESUME",
     "PUBLISH"
   ],
-  "blocking_questions": [
-    "OQ-S2-009",
-    "OQ-S2-010",
-    "OQ-S2-011"
-  ],
+  "blocking_questions": [],
   "sealed_tasks": [
     "S2-T10",
     "S2-T11",
@@ -47,11 +46,25 @@
     "docs/development/changes/CR-2026-032.md",
     "docs/development/changes/CR-2026-033.md",
     "docs/development/changes/CR-2026-034.md",
+    "docs/development/changes/CR-2026-035.md",
+    "docs/development/changes/CR-2026-036.md",
+    "docs/development/changes/CR-2026-037.md",
+    "docs/development/changes/CR-2026-038.md",
+    "docs/development/changes/CR-2026-039.md",
+    "docs/development/changes/CR-2026-040.md",
     "docs/development/decisions/ADR-S2-010-historical-missingness.md",
     "docs/development/decisions/ADR-S2-011-event-path-and-strategy-lifecycle-separation.md",
     "docs/development/decisions/ADR-S2-012-special-research-point.md",
     "docs/development/decisions/ADR-S2-013-current-governance-state.md",
+    "docs/development/decisions/ADR-S2-014-stage2-conditional-h3-lifecycle.md",
+    "docs/development/decisions/ADR-S2-015-plan-namespaced-task-identity.md",
+    "docs/development/decisions/ADR-S2-016-contract-price-proxy-and-ticket-double-target.md",
+    "docs/development/decisions/ADR-S2-017-dual-funding-and-margin-depletion.md",
+    "docs/development/decisions/ADR-S2-018-seven-day-release-gate-full-run-fail-closed.md",
+    "docs/development/plans/stage_2_plan_v1.3.md",
+    "docs/development/tasks/stage_2/S2P13-T11-lifecycle.md",
+    "docs/development/validations/stage_2/S2P13-T11.md",
     "docs/development/special_research_points/SRP-S2-001.md"
   ],
-  "state_hash": "a7acfae9e9267fd9d8aeb5d6cac841eafb30a098f01a6a3c87162f9db7315075"
+  "state_hash": "970ac6216ba6f90f4f02d8e9ccfa4eb57551504ca5dfb33ee60a01ffe93a8d0e"
 }

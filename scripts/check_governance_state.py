@@ -12,21 +12,24 @@ ROOT = Path(__file__).resolve().parents[1]
 
 _EXPECTED_STATE = {
     "current_stage": "S2",
-    "current_plan": "stage_2_plan_v1.2",
-    "current_task": "S2-T15",
-    "current_task_version": "1.4",
-    "task_status": "STOPPED",
-    "formal_t15_result_exists": False,
+    "current_plan": "stage_2_plan_v1.3",
+    "current_task": "S2P13-T11",
+    "current_task_version": "1.0",
+    "task_status": "IMPLEMENTATION_IN_PROGRESS",
+    "formal_successor_result_exists": False,
     "stage3_locked": True,
-    "srp_execution_status": "NOT_EXECUTABLE",
+    "srp_execution_status": "FRAMEWORK_IMPLEMENTED_FORMAL_OUTPUT_FORBIDDEN",
+    "approved_execution_limit": "S2P13-T16",
+    "formal_run_receipt_required": True,
 }
 _EXPECTED_ALLOWED = {
     "READ_ONLY_AUDIT",
     "VERIFY_EXISTING_EVIDENCE",
     "READ_ONLY_UI",
+    "BUILD_FUNDING_AUDIT_SUPPLEMENT",
+    "RUN_SEVEN_DAY_REHEARSAL",
 }
 _EXPECTED_BLOCKED = {
-    "BUILD_AUDIT_SUPPLEMENT",
     "FREEZE_AUTHORITY",
     "FREEZE_BINS",
     "PREFLIGHT",
@@ -34,32 +37,35 @@ _EXPECTED_BLOCKED = {
     "RESUME",
     "PUBLISH",
 }
-_EXPECTED_QUESTIONS = {"OQ-S2-009", "OQ-S2-010", "OQ-S2-011"}
+_EXPECTED_QUESTIONS: set[str] = set()
 _EXPECTED_SEALED_TASKS = {"S2-T10", "S2-T11", "S2-T12", "S2-T13", "S2-T14"}
 
 _DOCUMENT_MARKERS: dict[str, tuple[str, ...]] = {
     "docs/development/CURRENT_STAGE.md": (
-        "Current Task: S2-T15 v1.4",
-        "S2_T15_STOPPED_SRP_S2_001_EXEMPTIONS_APPROVED_NOT_EXECUTABLE",
+        "Current Task: S2P13-T11 v1.0",
+        "S2P13_T11_IMPLEMENTATION_IN_PROGRESS_FORMAL_SUCCESSOR_GATED",
+        "no bound historical funding-rate dataset",
     ),
     "docs/development/STAGE_REGISTRY.md": (
-        "S2_T15_STOPPED",
-        "S2-T01～S2-T14 are PASSED",
+        "S2P13_T11_IMPLEMENTATION_IN_PROGRESS_FORMAL_SUCCESSOR_GATED",
+        "Plan v1.2 S2-T19 and S2-T01～S2-T14 remain PASSED",
         "Stage 3 remains locked",
     ),
     "docs/development/TRACEABILITY.md": (
-        "S2_T15_STOPPED_SRP_S2_001_EXEMPTIONS_APPROVED_NOT_EXECUTABLE",
-        "No code, Authority, Run, S2-T16+ or Stage 3 is authorized.",
+        "Stage 2 Plan v1.3 lifecycle successor status",
+        "No V1.3 Authority, bins, Run ID",
+        "Stage 3 remains locked",
     ),
     "docs/development/DEPENDENCY_GRAPH.md": (
-        "S2-T19 and S2-T01～S2-T14 are PASSED",
-        "S2-T15 is STOPPED",
-        "Stage 3 remains locked",
+        "Stage 2 Plan v1.3 successor DAG",
+        "S2P13-T11 seven-day theoretical lifecycle",
+        "S2P13-T17～T21 and Stage 3 remain locked",
     ),
     "docs/development/OPEN_QUESTIONS.md": (
         "OQ-S2-009",
         "OQ-S2-010",
         "OQ-S2-011",
+        "RESOLVED / FUNDING LOCAL HISTORY HUMAN ACCEPTED",
     ),
     "docs/development/tasks/stage_2/S2-T15-task.md": (
         "status: STOPPED / READ-ONLY AUDIT ONLY / NO AUTHORITY OR RUN",
@@ -80,8 +86,8 @@ _DOCUMENT_MARKERS: dict[str, tuple[str, ...]] = {
         "INCORPORATED_SOURCE_AUTHORITY",
     ),
     "docs/development/changes/CR-2026-033.md": (
-        "status: DRAFT / AWAITING HUMAN APPROVAL",
-        "implementation_authorized: false",
+        "status: APPROVED / IMPLEMENTATION AUTHORIZED / FORMAL OUTPUT FORBIDDEN",
+        "implementation_authorized: true",
     ),
     "docs/development/changes/CR-2026-034.md": (
         "status: APPROVED / IMPLEMENTATION AUTHORIZED / NO RESEARCH RUN",
@@ -96,7 +102,7 @@ _DOCUMENT_MARKERS: dict[str, tuple[str, ...]] = {
         "implementation blocked by OQ-S2-010",
     ),
     "docs/development/decisions/ADR-S2-012-special-research-point.md": (
-        "PROPOSED — awaiting Muce approval and OQ-S2-011 resolution",
+        "APPROVED — 2026-07-23 by Muce",
         "EXPLORATORY_NONCOMPLIANT",
     ),
     "docs/development/decisions/ADR-S2-013-current-governance-state.md": (
@@ -104,9 +110,69 @@ _DOCUMENT_MARKERS: dict[str, tuple[str, ...]] = {
         "configs/governance/current_development_state.json",
     ),
     "docs/development/special_research_points/SRP-S2-001.md": (
-        "execution_status: BLOCKED_BY_OQ-S2-009_AND_OQ-S2-010",
+        "execution_status: RETAINED_APPEND_ONLY / NEVER_PROMOTED",
         "evidence_class: `EXPLORATORY_NONCOMPLIANT`",
         "eligible_for_authority: false",
+    ),
+    "docs/development/changes/CR-2026-035.md": (
+        "status: APPROVED / IMPLEMENTATION AUTHORIZED / FORMAL RUN GATED",
+        "formal_run_authorized: false",
+    ),
+    "docs/development/changes/CR-2026-036.md": (
+        "APPROVED / IMPLEMENTATION AUTHORIZED / FORMAL RUN STILL GATED",
+        "approximately 136bp",
+    ),
+    "docs/development/changes/CR-2026-037.md": (
+        "APPROVED / IMPLEMENTATION AUTHORIZED / PRIMARY DATA STILL GATED",
+        "PRIMARY_HISTORICAL_ACTUAL",
+    ),
+    "docs/development/changes/CR-2026-038.md": (
+        "APPROVED / LOCAL HISTORY HUMAN ACCEPTED",
+        "formal_lifecycle_run_authorized: false",
+    ),
+    "docs/development/changes/CR-2026-039.md": (
+        "APPROVED / IMPLEMENTATION AUTHORIZED / FINAL-CODE 7-DAY REHEARSAL STILL REQUIRED",
+        "`OQ-S2-011` is resolved",
+        "`OQ-S2-009` remains the sole open-question blocker",
+    ),
+    "docs/development/changes/CR-2026-040.md": (
+        "APPROVED / OQ-S2-009 RESOLVED / SEVEN-DAY REHEARSAL AUTHORIZED",
+        "FINAL_CODE_7_DAY_REHEARSAL",
+        "RUN_SEVEN_DAY_REHEARSAL",
+    ),
+    "docs/development/decisions/ADR-S2-014-stage2-conditional-h3-lifecycle.md": (
+        "APPROVED",
+        "Stage 3 keeps full ownership",
+    ),
+    "docs/development/decisions/ADR-S2-015-plan-namespaced-task-identity.md": (
+        "APPROVED",
+        "(stage_plan_version, task_id)",
+    ),
+    "docs/development/decisions/ADR-S2-016-contract-price-proxy-and-ticket-double-target.md": (
+        "APPROVED",
+        "historical_mark_price_claim=false",
+    ),
+    "docs/development/decisions/ADR-S2-017-dual-funding-and-margin-depletion.md": (
+        "APPROVED",
+        "STRESS_NO_CREDIT",
+    ),
+    "docs/development/decisions/ADR-S2-018-seven-day-release-gate-full-run-fail-closed.md": (
+        "APPROVED — 2026-07-23 by Muce",
+        "formal full-data Run",
+        "fail the Run",
+    ),
+    "docs/development/plans/stage_2_plan_v1.3.md": (
+        "plan_version: 1.3",
+        "S2P13-T16",
+    ),
+    "docs/development/tasks/stage_2/S2P13-T11-lifecycle.md": (
+        "task_id: S2P13-T11",
+        "real seven-day end-to-end rehearsal",
+    ),
+    "docs/development/validations/stage_2/S2P13-T11.md": (
+        "PRICE_AVAILABILITY_7_DAY_PASS",
+        "FUNDING_HISTORY_BOUND",
+        "cac3cf2c3f8aca8dd049c52925244daab88e8e1317cd1409aaa3ade2d5780b62",
     ),
 }
 

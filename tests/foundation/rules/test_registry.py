@@ -6,20 +6,21 @@ from pydantic import ValidationError
 from era100x.foundation.rules import RuleMetadata, RuleRegistry
 
 
-REGISTRY = Path("configs/rules/v1.3.4.yaml")
+REGISTRY = Path("configs/rules/v1.3.5.yaml")
 
 
-def test_registry_contains_32_unique_formal_rules() -> None:
+def test_registry_contains_33_unique_formal_rules() -> None:
     registry = RuleRegistry.load(REGISTRY)
-    assert len(registry.rules) == 32
-    assert len({rule.rule_id for rule in registry.rules}) == 32
+    assert len(registry.rules) == 33
+    assert len({rule.rule_id for rule in registry.rules}) == 33
     assert all(rule.live_override is False for rule in registry.rules)
 
 
-def test_required_v134_rules_exist() -> None:
+def test_required_v135_rules_exist() -> None:
     registry = RuleRegistry.load(REGISTRY)
     assert registry.by_id("EXIT-BOOTSTRAP-MODE").effective_version == "V1.3.4"
     assert registry.by_id("INVARIANT-ID-GLOBAL-UNIQUE").status.value == "FROZEN"
+    assert registry.by_id("RESEARCH-S2-CONDITIONAL-LIFECYCLE").effective_version == "V1.3.5"
 
 
 def test_frozen_live_override_rejected() -> None:

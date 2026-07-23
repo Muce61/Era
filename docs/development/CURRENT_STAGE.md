@@ -2,50 +2,80 @@
 
 ```text
 Current Stage: Stage 2
-Current Plan: stage_2_plan_v1.2
-Current Task: S2-T15 v1.4 — conditional random baseline
-Status: S2_T15_STOPPED_SRP_S2_001_EXEMPTIONS_APPROVED_NOT_EXECUTABLE
+Current Plan: stage_2_plan_v1.3
+Current Task: S2P13-T11 v1.0 — seven-day theoretical lifecycle
+Status: S2P13_T11_IMPLEMENTATION_IN_PROGRESS_FORMAL_SUCCESSOR_GATED
 ```
 
-No T15 long-running process is active. Muce stopped the latest TRAIN-bin preparation before a
-Binning Set or Run ID existed. Six complete prepared blocks and one incomplete temporary block
-remain preserved and unpublished. The current prepared Authority is
-`5a1a3faa1f87f74ce5a0008cf6e6a6613b3097d5f96e9e9ab8047ef15b4e7b56`; the new missingness and
-lifecycle governance drafts change its bound repository/governance state, so it must not resume or
-be reused as a formal chain.
+Muce approved CR-2026-035, ADR-S2-014/015, V1.3.5 and Stage 2 Plan v1.3 on 2026-07-23.
+Implementation, read-only audit, tests, read-only UI and the isolated final-code seven-day
+rehearsal are authorized. OQ-S2-009/010/011 are resolved. Formal Authority, bins, Run ID,
+publication and resume remain forbidden until the `FINAL_CODE_7_DAY_REHEARSAL` gate passes and a
+commit-bound human run receipt is recorded.
 
-Muce approved CR-2026-031/ADR-S2-010 and CR-2026-032/ADR-S2-011 at
-`2026-07-22T16:27:27Z`. OQ-S2-009 records the observed 61-row BTC/P1 boundary availability issue;
-the complete BTC/ETH read-only availability audit is now authorized, but it must pass and freeze
-exact expected exclusions before the question can close. OQ-S2-010 records the approved separation
-between immutable raw event paths and a future theoretical full-lifecycle strategy study; exact
-landmark, activation, near-zero H3 PnL, comparison, closure and censor contracts remain undefined.
-Neither approval authorizes a new Authority, bins, Run, S2-T16+ or Stage 3.
+Plan v1.2 and every old S2-T10～T15 artifact remain immutable historical evidence. Plan v1.3 uses
+the `(stage_plan_version, task_id)` identity and the namespaced public IDs `S2P13-T11` through
+`S2P13-T21`. The current execution ceiling is `S2P13-T16`; S2P13-T17～T21 are not authorized and
+Stage 3 remains locked.
+
+The repository now contains the fail-closed SRP framework, namespaced task identity, deterministic
+S2P13-T11 lifecycle core, typed availability audit, recoverable orchestration checkpoint contract
+and evidence-driven Web UI projection. These are implementation facts only; no V1.3 Authority,
+Binning Snapshot, Run ID or formal research result exists.
+
+A read-only source inventory on 2026-07-23 confirmed that the fixed T10 snapshot exposes
+`contract_price_1s`, `causal_price_bars`, `trade_second_primitives`, Trades indexes and Group-1
+event datasets, but no bound historical funding-rate dataset or leverage-bracket schedule.
+CR-2026-036/ADR-S2-016 approve Contract Price/canonical Trades as the Stage 2 H3 price proxy, so
+historical Mark is no longer a Stage 2 input gate. CR-2026-037/ADR-S2-017 define theoretical
+liquidation as Contract-Price net margin depletion at -8U, so a historical bracket is also no
+longer required. Zero funding remains forbidden. CR-2026-038 authorizes read-only acceptance of
+the existing local BTC/ETH funding
+candidates, a Binance official seven-day archive comparison and isolated append-only funding
+evidence. Muce waived the full month-by-month reconciliation and separate preflight-binding gate
+after the rehearsal exposed the known millisecond rounding issue. The structurally complete,
+Hash-bound local history is now human accepted and `HISTORICAL_FUNDING` is satisfied.
+
+The CR-2026-038 funding rehearsal over `[2020-01-01, 2020-01-08)` passed serialization,
+strict read-back, reconciliation and independent Verify for 42 accepted rows. It found three
+legacy timestamps per instrument rounded down by 1-2 milliseconds; the set comparison therefore
+records six differences per instrument. The append-only accepted copy preserves the official
+timestamps and the legacy files remain unchanged. This is a successful official-override scenario,
+and is the official sample supporting the accepted local history. The limitation remains explicit:
+not every calendar month was reconciled row-by-row to the Binance archive.
+
+CR-2026-036/ADR-S2-016 also resolve the target conflict: T2 20bp is auxiliary First Passage only.
+The continuation policy exits at net ticket doubling; under the zero-funding 11bp main-cost example
+the threshold is approximately 136bp and must move upward with accumulated funding.
+Primary uses signed historical funding. Stress separately reports adverse 1.5x/2x payments and a
+no-credit case; Stress cannot replace a missing Primary funding row.
 
 The required clean seven-day audit has now run over `[2020-01-01, 2020-01-08)`. Feature
 availability and raw-path non-pollution pass: 20,160 anchors reconcile to 20,038 available plus
 122 typed boundary-warmup exclusions; 1,211 raw paths remain byte-identical after 2,422 T12 and
 2,422 T13 derived rows. Strict audit Verify passes with report Hash `a47b6488…b344`.
 
-The full-lifecycle handoff is BLOCKED, not PASS. The current accepted raw source ends at T4/600
-seconds, while 19 of 52 H2 T4 rows are still Primary EXPIRED in the audit week. OQ-S2-010 must add
-a separate variable-length source and exact lifecycle/censor/H3 contract. OQ-S2-009 also remains
-open until the whole historical range is audited. No long task may resume from this result.
+The earlier seven-day audit remains useful only as historical pre-contract evidence. It proved the
+old 600-second path chain did not mutate its inputs, but it is not the required final-code Plan
+v1.3 rehearsal and cannot authorize a long run. CR-2026-039/ADR-S2-018 remove the duplicate
+whole-history pre-audit requirement. CR-2026-040 resolves OQ-S2-009 because the answer is now a
+fixed execution specification, not an unknown question. The independent
+`FINAL_CODE_7_DAY_REHEARSAL` gate remains pending until final code runs seven complete UTC days
+through producer, serialization, next-consumer read-back, reconciliation, Verify and UI. The later
+formal full-data Run must still validate and reconcile the complete range and fail closed.
 
-Muce subsequently requested a framework-level `SPECIAL_RESEARCH_POINT`: a research point may
-declare exact rule exemptions, while every undeclared rule continues to apply. CR-2026-033,
-ADR-S2-012 and OQ-S2-011 now record the proposed fail-closed contract. The framework remains DRAFT
-and unimplemented. Point-specific exemption approval is recorded below, but no Authority, bins,
-Run, S2-T16+ or Stage 3 work is authorized.
+CR-2026-033 and ADR-S2-012 are approved. The implemented SRP framework defaults to all rules,
+rejects unknown IDs, wildcards and registry Hash drift, preserves a non-waivable safety set and
+forces `EXPLORATORY_NONCOMPLIANT` evidence out of formal consumers. Repository-wide Ruff, strict
+mypy, strict Traceability, strict governance and 678 tests passed. CR-2026-039 therefore resolves
+OQ-S2-011 and removes it from the formal lifecycle gate. The framework remains available for
+future genuinely exploratory research.
 
 Muce has now classified CR-2026-031/032 and ADR-S2-010/011 as the first point,
 `SRP-S2-001`. The availability/missingness layer declares no exemptions. The lifecycle layer
-declares three exemptions: locked-replay-once during exploratory contract formation, the fixed
-T1-T4/600-second source boundary, and the universal U-011 5/8/15/25-minute time-exit baselines.
-Muce approved all three at `2026-07-23T01:04:16Z`, but OQ-S2-009/010 and framework/Task gates keep
-them not executable. CR-2026-031/ADR-S2-010 remain an incorporated active safety contract;
-CR-2026-032/ADR-S2-011 remain incorporated source authority without a standalone execution entry.
-All four records remain append-only and retained.
+declared three temporary exemptions during contract formation. V1.3.5 now supplies the formal
+lifecycle contract, so EX-001/002/003 are expired for new runs and cannot authorize a V1.3
+successor. CR-2026-031/032, ADR-S2-010/011 and the exploratory record remain append-only history.
 
 The unique CR-2026-028 successor
 `stage2-s2t15-conditional-20260722T120658Z-023f47cffef2` passed the corrected sealed Episode

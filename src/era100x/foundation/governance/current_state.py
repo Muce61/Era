@@ -20,6 +20,8 @@ KNOWN_OPERATIONS: Final[frozenset[str]] = frozenset(
         "VERIFY_EXISTING_EVIDENCE",
         "READ_ONLY_UI",
         "BUILD_AUDIT_SUPPLEMENT",
+        "BUILD_FUNDING_AUDIT_SUPPLEMENT",
+        "RUN_SEVEN_DAY_REHEARSAL",
         "FREEZE_AUTHORITY",
         "FREEZE_BINS",
         "PREFLIGHT",
@@ -37,9 +39,11 @@ _REQUIRED_FIELDS: Final[frozenset[str]] = frozenset(
         "current_task",
         "current_task_version",
         "task_status",
-        "formal_t15_result_exists",
+        "formal_successor_result_exists",
         "stage3_locked",
         "srp_execution_status",
+        "approved_execution_limit",
+        "formal_run_receipt_required",
         "allowed_operations",
         "blocked_operations",
         "blocking_questions",
@@ -119,9 +123,11 @@ class CurrentDevelopmentState:
     current_task: str
     current_task_version: str
     task_status: str
-    formal_t15_result_exists: bool
+    formal_successor_result_exists: bool
     stage3_locked: bool
     srp_execution_status: str
+    approved_execution_limit: str
+    formal_run_receipt_required: bool
     allowed_operations: tuple[str, ...]
     blocked_operations: tuple[str, ...]
     blocking_questions: tuple[str, ...]
@@ -138,9 +144,11 @@ class CurrentDevelopmentState:
             "current_task": self.current_task,
             "current_task_version": self.current_task_version,
             "task_status": self.task_status,
-            "formal_t15_result_exists": self.formal_t15_result_exists,
+            "formal_successor_result_exists": self.formal_successor_result_exists,
             "stage3_locked": self.stage3_locked,
             "srp_execution_status": self.srp_execution_status,
+            "approved_execution_limit": self.approved_execution_limit,
+            "formal_run_receipt_required": self.formal_run_receipt_required,
             "allowed_operations": list(self.allowed_operations),
             "blocked_operations": list(self.blocked_operations),
             "blocking_questions": list(self.blocking_questions),
@@ -192,9 +200,11 @@ def load_current_development_state(
         current_task=_required_string(payload, "current_task"),
         current_task_version=_required_string(payload, "current_task_version"),
         task_status=_required_string(payload, "task_status"),
-        formal_t15_result_exists=_required_bool(payload, "formal_t15_result_exists"),
+        formal_successor_result_exists=_required_bool(payload, "formal_successor_result_exists"),
         stage3_locked=_required_bool(payload, "stage3_locked"),
         srp_execution_status=_required_string(payload, "srp_execution_status"),
+        approved_execution_limit=_required_string(payload, "approved_execution_limit"),
+        formal_run_receipt_required=_required_bool(payload, "formal_run_receipt_required"),
         allowed_operations=_string_tuple(payload, "allowed_operations"),
         blocked_operations=_string_tuple(payload, "blocked_operations"),
         blocking_questions=_string_tuple(payload, "blocking_questions"),
@@ -202,7 +212,7 @@ def load_current_development_state(
         source_records=_string_tuple(payload, "source_records"),
         state_hash=_required_string(payload, "state_hash"),
     )
-    if state.schema_name != "era-current-development-state" or state.schema_version != "1.0":
+    if state.schema_name != "era-current-development-state" or state.schema_version != "1.1":
         raise ValueError("unsupported current governance state schema")
     if set(state.allowed_operations).intersection(state.blocked_operations):
         raise ValueError("governance operations cannot be both allowed and blocked")
