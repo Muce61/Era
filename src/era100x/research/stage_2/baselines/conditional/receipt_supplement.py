@@ -15,6 +15,7 @@ from typing import Any, cast
 import pyarrow as pa  # type: ignore[import-untyped]
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
+from era100x.foundation.governance import require_operation_allowed
 from era100x.research.stage_2.runtime_v2.catalog import (
     CatalogReaderV2,
     _safe_relative,
@@ -336,6 +337,7 @@ def _validated_rows(reader: CatalogReaderV2) -> tuple[list[dict[str, Any]], dict
 def build_receipt_distribution_supplement() -> tuple[dict[str, Any], Path]:
     """Recompute only missing field digests while preserving every sealed T10 byte."""
 
+    require_operation_allowed("BUILD_AUDIT_SUPPLEMENT")
     _safe_file(CR_PATH)
     reader = CatalogReaderV2.open(T10_SNAPSHOT, expected_snapshot_id=T10_SNAPSHOT_ID)
     rows, validation = _validated_rows(reader)

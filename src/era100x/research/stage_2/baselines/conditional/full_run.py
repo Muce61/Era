@@ -12,6 +12,7 @@ from typing import Any, cast
 
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
+from era100x.foundation.governance import require_operation_allowed
 from era100x.research.stage_2.runtime_v2.models import Receipt
 
 from .context_receipt_supplement import latest_valid_context_receipt_supplement
@@ -573,6 +574,7 @@ def latest_audit() -> Path:
 
 
 def freeze_authority(*, audit_path: Path | None = None) -> tuple[S2T15ContractAuthority, Path]:
+    require_operation_allowed("FREEZE_AUTHORITY")
     if not repository_is_clean():
         raise ValueError("Authority requires a clean final-code commit")
     report = _read_json(audit_path or latest_audit())
@@ -607,6 +609,7 @@ def freeze_authority(*, audit_path: Path | None = None) -> tuple[S2T15ContractAu
 
 
 def preflight(*, authority_path: Path, binning_set_path: Path) -> dict[str, Any]:
+    require_operation_allowed("PREFLIGHT")
     authority = S2T15ContractAuthority.model_validate_json(
         json.dumps(_read_json(authority_path), ensure_ascii=False, sort_keys=True)
     )

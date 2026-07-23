@@ -14,6 +14,8 @@ from typing import Any, cast
 import pyarrow as pa  # type: ignore[import-untyped]
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
+from era100x.foundation.governance import require_operation_allowed
+
 from .features import NS, PERIOD_BLOCK_BOUNDARIES, ROLLING_FOLDS, freeze_tie_preserving_quintiles
 from .production_core import prepare_daily_features
 from .t10_access import FixedT10Reader, read_json_file
@@ -245,6 +247,7 @@ def freeze_binning_snapshots(
 ) -> tuple[dict[str, Any], Path]:
     """Prepare TRAIN blocks and freeze all 504 registered boundary objects."""
 
+    require_operation_allowed("FREEZE_BINS")
     authority = S2T15ContractAuthority.model_validate_json(
         json.dumps(read_json_file(authority_path), ensure_ascii=False, sort_keys=True)
     )

@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
+from era100x.foundation.governance import require_operation_allowed
+
 FAILED_PREDECESSOR_RUN_ID = "stage2-s2t15-conditional-20260722T071250Z-871c404c5f43"
 FAILED_PREDECESSOR_AUTHORITY_HASH = (
     "871c404c5f43c5c07539d7a373801756c150ad5f3e6724eee0b016699a5cfbd1"
@@ -99,6 +101,7 @@ def validate_failed_cr028_successor(runs_root: Path) -> Path:
 def require_final_successor_creation_state(runs_root: Path) -> Path:
     """Allow one final Run only when both exact failed Runs are the complete universe."""
 
+    require_operation_allowed("RUN")
     predecessor = validate_failed_predecessor(runs_root)
     failed_successor = validate_failed_cr028_successor(runs_root)
     if _t15_runs(runs_root) != tuple(sorted((predecessor, failed_successor))):
@@ -109,6 +112,7 @@ def require_final_successor_creation_state(runs_root: Path) -> Path:
 def require_final_successor_resume_state(runs_root: Path, successor_run_id: str) -> Path:
     """Allow resume only for the final Run created after both failed Runs."""
 
+    require_operation_allowed("RESUME")
     predecessor = validate_failed_predecessor(runs_root)
     failed_successor = validate_failed_cr028_successor(runs_root)
     successor = runs_root / successor_run_id

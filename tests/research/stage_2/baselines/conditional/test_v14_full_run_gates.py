@@ -8,6 +8,13 @@ import pytest
 from era100x.research.stage_2.baselines.conditional import full_run
 
 
+@pytest.fixture(autouse=True)
+def _isolate_legacy_full_run_gate_logic(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise the historical audit gate separately from the current-state stop gate."""
+
+    monkeypatch.setattr(full_run, "require_operation_allowed", lambda operation: None)
+
+
 def test_governance_binding_includes_approved_seven_day_rehearsal_cr() -> None:
     binding = full_run._governance_binding()
 

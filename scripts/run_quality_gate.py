@@ -12,6 +12,7 @@ COMMANDS = (
     ("ruff", "check", "."),
     ("mypy", "src", "scripts"),
     (sys.executable, "scripts/check_traceability.py", "--strict"),
+    (sys.executable, "scripts/check_governance_state.py", "--strict"),
     (sys.executable, "-m", "pytest", "-q"),
 )
 
