@@ -1,0 +1,57 @@
+{
+  "schema_name": "era-current-development-state",
+  "schema_version": "1.0",
+  "current_stage": "S2",
+  "current_plan": "stage_2_plan_v1.2",
+  "current_task": "S2-T15",
+  "current_task_version": "1.4",
+  "task_status": "STOPPED",
+  "formal_t15_result_exists": false,
+  "stage3_locked": true,
+  "srp_execution_status": "NOT_EXECUTABLE",
+  "allowed_operations": [
+    "READ_ONLY_AUDIT",
+    "VERIFY_EXISTING_EVIDENCE",
+    "READ_ONLY_UI"
+  ],
+  "blocked_operations": [
+    "BUILD_AUDIT_SUPPLEMENT",
+    "FREEZE_AUTHORITY",
+    "FREEZE_BINS",
+    "PREFLIGHT",
+    "RUN",
+    "RESUME",
+    "PUBLISH"
+  ],
+  "blocking_questions": [
+    "OQ-S2-009",
+    "OQ-S2-010",
+    "OQ-S2-011"
+  ],
+  "sealed_tasks": [
+    "S2-T10",
+    "S2-T11",
+    "S2-T12",
+    "S2-T13",
+    "S2-T14"
+  ],
+  "source_records": [
+    "docs/development/CURRENT_STAGE.md",
+    "docs/development/STAGE_REGISTRY.md",
+    "docs/development/TRACEABILITY.md",
+    "docs/development/DEPENDENCY_GRAPH.md",
+    "docs/development/OPEN_QUESTIONS.md",
+    "docs/development/tasks/stage_2/S2-T15-task.md",
+    "docs/development/validations/stage_2/S2-T15.md",
+    "docs/development/changes/CR-2026-031.md",
+    "docs/development/changes/CR-2026-032.md",
+    "docs/development/changes/CR-2026-033.md",
+    "docs/development/changes/CR-2026-034.md",
+    "docs/development/decisions/ADR-S2-010-historical-missingness.md",
+    "docs/development/decisions/ADR-S2-011-event-path-and-strategy-lifecycle-separation.md",
+    "docs/development/decisions/ADR-S2-012-special-research-point.md",
+    "docs/development/decisions/ADR-S2-013-current-governance-state.md",
+    "docs/development/special_research_points/SRP-S2-001.md"
+  ],
+  "state_hash": "a7acfae9e9267fd9d8aeb5d6cac841eafb30a098f01a6a3c87162f9db7315075"
+}
