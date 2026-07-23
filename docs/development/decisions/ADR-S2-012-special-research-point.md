@@ -35,3 +35,10 @@ Manifest、人工批准和隔离输出，且不能用通配符或事后追加豁
 - 只记录仍遵守的规则：漏写规则会变成隐式豁免，方向与默认安全相反。
 - 允许研究点直接修改FROZEN规则：会污染正式规则注册表和已通过证据。
 - 允许探索输出原地升级为正式证据：会绕过预注册、holdout和人工Stage Gate。
+
+## First classified point
+
+`SRP-S2-001` classifies CR-2026-031/032 and ADR-S2-010/011 under this proposed decision. Its
+missingness/raw-evidence layer has no exemption. Its lifecycle layer declares three bounded,
+currently inactive exemptions. This demonstrates the intended behavior: classification records
+the research boundary, while exact exemption approval and implementation remain separate gates.

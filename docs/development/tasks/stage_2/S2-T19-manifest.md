@@ -190,3 +190,18 @@ raw-path non-pollution, but correctly blocked the lifecycle handoff. Nineteen Pr
 remain EXPIRED at the accepted 600-second source boundary. No executable lifecycle values were
 added. This addendum remains not executable until OQ-S2-010 approves a separate variable-length
 source and the full landmark/H3/censor contract.
+
+## 27. First classified special research point
+
+Status: **CLASSIFIED / EXEMPTIONS PENDING / NOT EXECUTABLE**.
+
+Muce classified CR-2026-031/032 and ADR-S2-010/011 as
+[SRP-S2-001](../../special_research_points/SRP-S2-001.md). The A-layer availability and immutable
+raw-path work has an empty exemption set. The B-layer lifecycle exploration declares three
+inactive exemptions: `RESEARCH-LOCKED-REPLAY-ONCE`, the fixed T1-T4/600-second source boundary and
+the U-011 universal 5/8/15/25-minute time-exit baselines.
+
+Every other rule remains effective, including data truth, MarketEpisode binding, H3 conditional
+interpretation, execution/closure constraints, sealed evidence, Stage gates and seven-day
+rehearsal. Classification creates no Manifest, Authority, Run or result. Activation remains
+blocked by explicit exemption approval, CR-2026-033/ADR-S2-012 implementation and OQ-S2-009/010.

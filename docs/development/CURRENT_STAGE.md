@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.2
 Current Task: S2-T15 v1.4 — conditional random baseline
-Status: S2_T15_STOPPED_SPECIAL_RESEARCH_POINT_CR_2026_033_DRAFT
+Status: S2_T15_STOPPED_SRP_S2_001_CLASSIFIED_EXEMPTIONS_PENDING
 ```
 
 No T15 long-running process is active. Muce stopped the latest TRAIN-bin preparation before a
@@ -37,6 +37,13 @@ declare exact rule exemptions, while every undeclared rule continues to apply. C
 ADR-S2-012 and OQ-S2-011 now record the proposed fail-closed contract. They are DRAFT only: no
 exemption is approved, no implementation exists, and no Authority, bins, Run, S2-T16+ or Stage 3
 work is authorized.
+
+Muce has now classified CR-2026-031/032 and ADR-S2-010/011 as the first point,
+`SRP-S2-001`. The availability/missingness layer declares no exemptions. The lifecycle layer
+declares three inactive exemptions: locked-replay-once during exploratory contract formation, the
+fixed T1-T4/600-second source boundary, and the universal U-011 5/8/15/25-minute time-exit
+baselines. They require explicit item-by-item approval; OQ-S2-009/010 and the framework
+implementation gates remain, so no research execution is authorized.
 
 The unique CR-2026-028 successor
 `stage2-s2t15-conditional-20260722T120658Z-023f47cffef2` passed the corrected sealed Episode

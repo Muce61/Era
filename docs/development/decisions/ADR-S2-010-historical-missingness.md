@@ -39,3 +39,8 @@ The source-boundary week confirmed the decision for both instruments: each has e
 boundary-warmup exclusions and no activity/context unavailability in the window. Strict read-back
 passes. Whole-history validation remains required; the ADR does not treat a seven-day result as
 proof of all periods.
+
+## Append-only SRP role
+
+本ADR属于[SRP-S2-001](../special_research_points/SRP-S2-001.md)的A层安全前置，豁免为空集。
+特异研究点不得用“自由研究”把缺失当作0、缩短窗口、跳过Hash漂移或绕过完整对账。

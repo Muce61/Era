@@ -45,3 +45,10 @@ The raw-path separation passes over 1,211 real T1-T4 rows with byte-identical so
 T12/T13 consumption. The lifecycle side cannot execute: T11 stops at 600 seconds and 19 Primary
 T4/H2 rows are still `EXPIRED`. This confirms that the lifecycle must use a separate
 variable-length source and cannot mutate or stretch the accepted T1-T4 event evidence in place.
+
+## Append-only SRP role
+
+本ADR属于[SRP-S2-001](../special_research_points/SRP-S2-001.md)。A层原始路径无豁免；B层
+仅声明对锁定回放一次、T1～T4固定600秒边界和U-011统一时间退出基线的局部豁免。三项
+豁免尚未逐项获批，当前不生效。数据真实性、H3条件解释、理论完整平仓、右删失、阶段门和
+全部未声明规则继续适用。
