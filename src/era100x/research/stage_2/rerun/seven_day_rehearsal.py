@@ -653,7 +653,7 @@ def run_final_code_rehearsal(*, output_root: Path) -> tuple[dict[str, Any], Path
         "formal_run_id_created": False,
     }
     pending["receipt_hash"] = _canonical_hash(pending)
-    pending_path = OPERATIONS_ROOT / "seven-day-rehearsal-receipt.pending.json"
+    pending_path = OPERATIONS_ROOT / f"seven-day-rehearsal-receipt.{commit}.pending.json"
     _write_exclusive(pending_path, pending)
     verify_final_code_rehearsal(report_path)
     return report, report_path

@@ -243,8 +243,12 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
     checkpoint = _safe_json_object(operations_root / "checkpoint.json")
     rehearsal_receipt = _safe_json_object(operations_root / "seven-day-rehearsal-receipt.json")
     pending_rehearsal = _safe_json_object(
-        operations_root / "seven-day-rehearsal-receipt.pending.json"
+        operations_root / f"seven-day-rehearsal-receipt.{repo_commit}.pending.json"
     )
+    if not pending_rehearsal:
+        pending_rehearsal = _safe_json_object(
+            operations_root / "seven-day-rehearsal-receipt.pending.json"
+        )
     rehearsal_pass = (
         rehearsal_receipt.get("schema_name") == "stage2-plan-v13-seven-day-rehearsal-v1"
         and rehearsal_receipt.get("status") == "PASS"
