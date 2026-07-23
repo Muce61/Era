@@ -180,9 +180,10 @@ def _partition_paths(instrument: str, owner_date: date) -> tuple[Path, Path]:
 
 def _verified_trade_window(
     *, instrument: str, start_ns: int, end_ns: int
-) -> tuple[tuple[H2Trade, ...], tuple[str, ...]]:
+) -> tuple[tuple[H2Trade, ...], tuple[str, ...], tuple[dict[str, Any], ...]]:
     rows: list[H2Trade] = []
     partition_hashes: list[str] = []
+    declared_gaps: list[dict[str, Any]] = []
     cursor = _date_from_ns(start_ns)
     last_date = _date_from_ns(end_ns - 1)
     while cursor <= last_date:
@@ -194,11 +195,22 @@ def _verified_trade_window(
             or receipt.get("instrument") != instrument
             or receipt.get("date") != cursor.isoformat()
             or receipt.get("byte_sha256") != _file_hash(parquet_path)
-            or int(receipt.get("venue_trade_id_gap_count", -1)) != 0
             or int(receipt.get("venue_trade_id_reversal_count", -1)) != 0
             or int(receipt.get("duplicate_exact_count", -1)) != 0
         ):
             raise ValueError(f"Stage 1 Trade partition Verify failed: {instrument} {cursor}")
+        gap_count = int(receipt.get("venue_trade_id_gap_count", -1))
+        if gap_count < 0:
+            raise ValueError(f"Stage 1 Trade gap classification missing: {instrument} {cursor}")
+        if gap_count:
+            declared_gaps.append(
+                {
+                    "instrument": instrument,
+                    "date": cursor.isoformat(),
+                    "venue_trade_id_gap_count": gap_count,
+                    "venue_trade_id_gap_examples": receipt.get("venue_trade_id_gap_examples", []),
+                }
+            )
         table = pq.read_table(
             parquet_path,
             columns=["ts_event_ns", "venue_trade_id", "canonical_trade_id", "price"],
@@ -224,7 +236,7 @@ def _verified_trade_window(
     )
     if len(identities) != len(set(identities)):
         raise ValueError("Stage 1 Trade window contains duplicate stable identities")
-    return ordered, tuple(partition_hashes)
+    return ordered, tuple(partition_hashes), tuple(declared_gaps)
 
 
 def _funding_rows(
@@ -281,7 +293,7 @@ def _lifecycle_probe(*, row: dict[str, Any], acceptance: dict[str, Any]) -> dict
     instrument = str(row["instrument"])
     start_ns = int(row["window_start_ns"])
     end_ns = start_ns + 7 * DAY_NS
-    trades, partition_hashes = _verified_trade_window(
+    trades, partition_hashes, declared_gaps = _verified_trade_window(
         instrument=instrument, start_ns=start_ns, end_ns=end_ns
     )
     funding = _funding_rows(acceptance, instrument=instrument, start_ns=start_ns, end_ns=end_ns)
@@ -315,7 +327,9 @@ def _lifecycle_probe(*, row: dict[str, Any], acceptance: dict[str, Any]) -> dict
             entry_ts_ns=start_ns,
             entry_price=Decimal(row["reference_price"]),
             observations=tuple(observations),
-            source_coverage=SourceCoverage.COMPLETE,
+            source_coverage=(
+                SourceCoverage.DECLARED_GAP if declared_gaps else SourceCoverage.COMPLETE
+            ),
             scenario=scenario,
             funding_track=track,
             historical_funding_source_bound=True,
@@ -331,6 +345,8 @@ def _lifecycle_probe(*, row: dict[str, Any], acceptance: dict[str, Any]) -> dict
         "entry_reference_price": row["reference_price"],
         "trade_observation_count": len(observations),
         "stage1_partition_hashes": partition_hashes,
+        "declared_source_gaps": declared_gaps,
+        "source_coverage": "DECLARED_GAP" if declared_gaps else "COMPLETE",
         "funding_settlement_count": len(funding),
         "funding_acceptance_hash": acceptance["acceptance_hash"],
         "funding_tracks": results,
@@ -453,7 +469,7 @@ def _t16_probe(*, reader: FixedT10Reader, row: dict[str, Any]) -> dict[str, Any]
     matrices = []
     for candidate_id in selection.control_candidate_ids:
         candidate = by_id[candidate_id]
-        trades, partition_hashes = _verified_trade_window(
+        trades, partition_hashes, declared_gaps = _verified_trade_window(
             instrument=instrument,
             start_ns=candidate.candidate_timestamp_ns,
             end_ns=candidate.candidate_timestamp_ns + 180 * NS,
@@ -470,6 +486,7 @@ def _t16_probe(*, reader: FixedT10Reader, row: dict[str, Any]) -> dict[str, Any]
                 anchor_ns=candidate.candidate_timestamp_ns,
                 source_path_hash=source_hash,
                 source_partition_bound=True,
+                declared_source_gap=bool(declared_gaps),
             )
         )
     matrix = attach_outcome_matrices(
@@ -486,6 +503,9 @@ def _t16_probe(*, reader: FixedT10Reader, row: dict[str, Any]) -> dict[str, Any]
         + sum(len(item.outcomes) for item in matrices),
         "output_hash": matrix.output_hash,
         "selection_completed_before_outcome_read": True,
+        "declared_source_gap_control_count": sum(
+            item.outcomes[0].label_reason == "SOURCE_GAP_BEFORE_DECISION" for item in matrices
+        ),
         "binning_semantics": "REHEARSAL_ONLY_NOT_FORMAL_BINS",
         "formal_binning_snapshot_created": False,
         "historical_evidence_only": True,
