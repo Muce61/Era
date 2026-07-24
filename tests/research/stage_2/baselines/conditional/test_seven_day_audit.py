@@ -73,6 +73,7 @@ def test_trade_supplement_scope_is_explicit_and_does_not_relax_source_boundary()
 def test_trade_supplement_mid_history_allows_fully_warmed_feature_grid() -> None:
     assert _expected_typed_exclusions("TRADE_SUPPLEMENT_COVERAGE") == {}
     assert _expected_typed_exclusions("SEALED_RECEIPT_COVERAGE") == {}
+    assert _expected_typed_exclusions("ARCHIVE_LAYOUT_BOUNDARY_COVERAGE") == {}
     assert _expected_typed_exclusions("SOURCE_BOUNDARY") == {"BOUNDARY_WARMUP_UNAVAILABLE": 61}
 
 
@@ -85,6 +86,18 @@ def test_sealed_receipt_scope_must_cover_duplicate_input_partition() -> None:
         _validate_audit_scope(
             start_date=date(2022, 4, 16),
             audit_mode="SEALED_RECEIPT_COVERAGE",
+        )
+
+
+def test_archive_layout_boundary_audit_scope_is_frozen() -> None:
+    _validate_audit_scope(
+        start_date=date(2026, 6, 27),
+        audit_mode="ARCHIVE_LAYOUT_BOUNDARY_COVERAGE",
+    )
+    with pytest.raises(ValueError, match="must start on 2026-06-27"):
+        _validate_audit_scope(
+            start_date=date(2026, 6, 26),
+            audit_mode="ARCHIVE_LAYOUT_BOUNDARY_COVERAGE",
         )
 
 

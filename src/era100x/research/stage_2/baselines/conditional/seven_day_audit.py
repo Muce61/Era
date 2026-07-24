@@ -168,7 +168,11 @@ def _validate_daily_anchor_grid(*, anchors: list[int], start_date: date) -> None
 def _expected_typed_exclusions(audit_mode: str) -> Counter[str]:
     if audit_mode == "SOURCE_BOUNDARY":
         return Counter({"BOUNDARY_WARMUP_UNAVAILABLE": 61})
-    if audit_mode in {"TRADE_SUPPLEMENT_COVERAGE", "SEALED_RECEIPT_COVERAGE"}:
+    if audit_mode in {
+        "TRADE_SUPPLEMENT_COVERAGE",
+        "SEALED_RECEIPT_COVERAGE",
+        "ARCHIVE_LAYOUT_BOUNDARY_COVERAGE",
+    }:
         return Counter()
     raise ValueError("unsupported seven-day audit mode")
 
@@ -462,6 +466,10 @@ def _validate_audit_scope(*, start_date: date, audit_mode: str) -> None:
     if audit_mode == "SEALED_RECEIPT_COVERAGE":
         if not (start_date <= date(2022, 4, 15) < start_date + timedelta(days=AUDIT_DAY_COUNT)):
             raise ValueError("sealed receipt audit scope must contain 2022-04-15")
+        return
+    if audit_mode == "ARCHIVE_LAYOUT_BOUNDARY_COVERAGE":
+        if start_date != date(2026, 6, 27):
+            raise ValueError("archive-layout boundary audit must start on 2026-06-27")
         return
     raise ValueError("unsupported seven-day audit mode")
 
