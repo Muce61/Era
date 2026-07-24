@@ -23,6 +23,13 @@ def _policy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> subject.Stage2Ac
         target.write_text(name, encoding="utf-8")
         contracts.append(name)
     evidence = tmp_path / "evidence"
+    supplement = tmp_path / "supplement-acceptance.json"
+    supplement.write_text('{"fixture":true}\n', encoding="utf-8")
+    monkeypatch.setattr(
+        subject,
+        "verify_trade_supplement",
+        lambda _path: {"status": "PASS", "acceptance_hash": "d" * 64},
+    )
     payload = {
         "schema_name": subject.POLICY_SCHEMA,
         "schema_version": "2.0",
@@ -34,6 +41,7 @@ def _policy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> subject.Stage2Ac
         "contract_paths": contracts[:2],
         "preregistration_path": "t20.md",
         "evidence_root": str(evidence),
+        "trade_supplement_acceptance_path": str(supplement),
         "task_dag": {
             "S2P13-T11": [],
             "S2P13-T12": ["S2P13-T11"],
@@ -204,3 +212,36 @@ def test_adapter_plan_cannot_exist_before_chain_authority(
             policy=policy,
             repository_root=policy.path.parent,
         )
+
+
+class _FailingAdapter:
+    def static_preflight(self) -> None:
+        return None
+
+    def input_preflight(self) -> None:
+        return None
+
+    def run_or_resume(self) -> object:
+        raise ValueError("partition drift")
+
+
+def test_terminal_failure_updates_current_task_state(tmp_path: Path) -> None:
+    chain = {
+        "schema_name": subject.CHAIN_AUTHORITY_SCHEMA,
+        "authority_hash": "a" * 64,
+    }
+    chain_path = tmp_path / "chain.json"
+    _write(chain_path, chain)
+    adapters = {task: _FailingAdapter() for task in TASKS}
+    supervisor = subject.LightweightSupervisor(
+        root=tmp_path / "operations",
+        approval={"code_commit": "b" * 40, "approval_hash": "c" * 64},
+        chain_authority_path=chain_path,
+        adapters=adapters,  # type: ignore[arg-type]
+    )
+    with pytest.raises(ValueError, match="partition drift"):
+        supervisor.run_or_resume()
+    checkpoint = json.loads((tmp_path / "operations/checkpoint.json").read_text())
+    assert checkpoint["status"] == "TERMINAL_FAILED"
+    assert checkpoint["tasks"]["S2P13-T11"]["status"] == "TERMINAL_FAILED"
+    assert checkpoint["tasks"]["S2P13-T12"]["status"] == "NOT_STARTED"

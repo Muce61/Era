@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from era100x.research.stage_2.rerun.lightweight_governance import (
@@ -32,6 +33,8 @@ def main() -> int:
     parser.add_argument("--approval-source")
     args = parser.parse_args()
     policy = load_policy(args.policy, repository_root=ROOT)
+    os.environ["ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_PATH"] = str(policy.trade_supplement_path)
+    os.environ["ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_HASH"] = policy.trade_supplement_file_hash
     if args.mode == "status":
         result = {
             "status": "PASS",
@@ -40,6 +43,7 @@ def main() -> int:
             "stage_plan_version": "1.3",
             "stage3_locked": True,
             "evidence_root": str(policy.evidence_root),
+            "trade_supplement_acceptance_hash": policy.trade_supplement_acceptance_hash,
         }
     elif args.mode == "record-approval":
         if args.rehearsal is None or not args.approval_source:

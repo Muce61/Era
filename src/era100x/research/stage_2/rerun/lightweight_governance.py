@@ -27,6 +27,7 @@ from .production_adapters import (
     build_production_adapters,
     load_adapter_plan,
 )
+from .trade_supplement import verify_trade_supplement
 
 POLICY_SCHEMA: Final = "stage2-active-policy-v2"
 APPROVAL_SCHEMA: Final = "stage2-formal-approval-v2"
@@ -79,6 +80,9 @@ class Stage2ActivePolicy:
     preregistration_path: Path
     preregistration_hash: str
     evidence_root: Path
+    trade_supplement_path: Path
+    trade_supplement_file_hash: str
+    trade_supplement_acceptance_hash: str
 
     @property
     def operations_root(self) -> Path:
@@ -101,6 +105,7 @@ def load_policy(path: Path, *, repository_root: Path) -> Stage2ActivePolicy:
         "task_dag",
         "full_history_scope",
         "required_gates",
+        "trade_supplement_acceptance_path",
     }
     if set(payload) != required:
         raise ValueError("Stage 2 active policy fields drift")
@@ -136,10 +141,17 @@ def load_policy(path: Path, *, repository_root: Path) -> Stage2ActivePolicy:
     if not evidence_root.is_absolute() or evidence_root.is_symlink():
         raise ValueError("unsafe Stage 2 evidence root")
     preregistration_hash = _sha256_file(preregistration_path)
+    trade_supplement_path = Path(str(payload["trade_supplement_acceptance_path"]))
+    if not trade_supplement_path.is_absolute() or trade_supplement_path.is_symlink():
+        raise ValueError("unsafe Trade supplement acceptance path")
+    trade_supplement = verify_trade_supplement(trade_supplement_path)
+    trade_supplement_file_hash = _sha256_file(trade_supplement_path)
     resolved = {
         "policy": payload,
         "contract_hashes": contract_hashes,
         "preregistration_hash": preregistration_hash,
+        "trade_supplement_file_hash": trade_supplement_file_hash,
+        "trade_supplement_acceptance_hash": trade_supplement["acceptance_hash"],
     }
     return Stage2ActivePolicy(
         path=path,
@@ -149,6 +161,9 @@ def load_policy(path: Path, *, repository_root: Path) -> Stage2ActivePolicy:
         preregistration_path=preregistration_path,
         preregistration_hash=preregistration_hash,
         evidence_root=evidence_root,
+        trade_supplement_path=trade_supplement_path,
+        trade_supplement_file_hash=trade_supplement_file_hash,
+        trade_supplement_acceptance_hash=str(trade_supplement["acceptance_hash"]),
     )
 
 
@@ -208,6 +223,9 @@ def record_approval(
         "policy_hash": policy.policy_hash,
         "contract_hashes": policy.contract_hashes,
         "preregistration_hash": policy.preregistration_hash,
+        "trade_supplement_acceptance_path": str(policy.trade_supplement_path),
+        "trade_supplement_file_hash": policy.trade_supplement_file_hash,
+        "trade_supplement_acceptance_hash": policy.trade_supplement_acceptance_hash,
         "rehearsal_receipt_path": str(rehearsal_path),
         "rehearsal_receipt_hash": rehearsal["receipt_hash"],
         "full_history_scope": policy.payload["full_history_scope"],
@@ -237,6 +255,10 @@ def validate_approval(
         or payload.get("policy_hash") != policy.policy_hash
         or payload.get("contract_hashes") != policy.contract_hashes
         or payload.get("preregistration_hash") != policy.preregistration_hash
+        or payload.get("trade_supplement_acceptance_path") != str(policy.trade_supplement_path)
+        or payload.get("trade_supplement_file_hash") != policy.trade_supplement_file_hash
+        or payload.get("trade_supplement_acceptance_hash")
+        != policy.trade_supplement_acceptance_hash
         or payload.get("full_history_scope") != policy.payload["full_history_scope"]
         or payload.get("evidence_root") != str(policy.evidence_root)
         or tuple(payload.get("tasks", ())) != TASKS
@@ -262,6 +284,9 @@ def freeze_chain_authority(
         "approval_hash": approval["approval_hash"],
         "contract_hashes": policy.contract_hashes,
         "preregistration_hash": policy.preregistration_hash,
+        "trade_supplement_acceptance_path": str(policy.trade_supplement_path),
+        "trade_supplement_file_hash": policy.trade_supplement_file_hash,
+        "trade_supplement_acceptance_hash": policy.trade_supplement_acceptance_hash,
         "task_dag": policy.payload["task_dag"],
         "full_history_scope": policy.payload["full_history_scope"],
         "stage3_locked": True,
@@ -311,6 +336,9 @@ def freeze_t16_authority(
         "code_commit": chain["code_commit"],
         "policy_hash": policy.policy_hash,
         "preregistration_hash": policy.preregistration_hash,
+        "trade_supplement_acceptance_path": str(policy.trade_supplement_path),
+        "trade_supplement_file_hash": policy.trade_supplement_file_hash,
+        "trade_supplement_acceptance_hash": policy.trade_supplement_acceptance_hash,
         "upstream_handoffs": bindings,
         "bin_source_roles": ["TRAIN"],
         "outcome_fields_read_before_matching": [],
@@ -387,6 +415,9 @@ def prepare_adapter_plan(
         "evidence_root": str(evidence_root),
         "preregistration_path": str(policy.preregistration_path),
         "preregistration_hash": policy.preregistration_hash,
+        "trade_supplement_acceptance_path": str(policy.trade_supplement_path),
+        "trade_supplement_file_hash": policy.trade_supplement_file_hash,
+        "trade_supplement_acceptance_hash": policy.trade_supplement_acceptance_hash,
         "chain_authority_path": str(chain_authority_path),
         "chain_authority_hash": chain["authority_hash"],
         "tasks": tasks,
@@ -481,10 +512,16 @@ class LightweightSupervisor:
                     task_state.update({"status": "PASS", "handoff": handoff.payload()})
                     _write_checkpoint(self.checkpoint_path, checkpoint)
             except RetryableInterruption as exc:
+                current = str(checkpoint.get("current_task", ""))
+                if current in checkpoint["tasks"]:
+                    checkpoint["tasks"][current]["status"] = "RETRYABLE_INTERRUPTED"
                 checkpoint.update({"status": "RETRYABLE_INTERRUPTED", "reason": str(exc)})
                 _write_checkpoint(self.checkpoint_path, checkpoint)
                 return checkpoint
             except Exception as exc:
+                current = str(checkpoint.get("current_task", ""))
+                if current in checkpoint["tasks"]:
+                    checkpoint["tasks"][current]["status"] = "TERMINAL_FAILED"
                 checkpoint.update({"status": "TERMINAL_FAILED", "reason": str(exc)})
                 _write_checkpoint(self.checkpoint_path, checkpoint)
                 raise
@@ -542,9 +579,14 @@ def run_formal_chain(
         supervisor_root=operations_root,
         repository_root=repository_root,
     )
-    old_chain_path = os.environ.get("ERA_S2P13_CHAIN_AUTHORITY_PATH")
-    os.environ["ERA_S2P13_CHAIN_AUTHORITY_PATH"] = str(chain_path)
-    os.environ["ERA_S2P13_POLICY_PATH"] = str(policy.path)
+    bound_environment = {
+        "ERA_S2P13_CHAIN_AUTHORITY_PATH": str(chain_path),
+        "ERA_S2P13_POLICY_PATH": str(policy.path),
+        "ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_PATH": str(policy.trade_supplement_path),
+        "ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_HASH": policy.trade_supplement_file_hash,
+    }
+    old_environment = {name: os.environ.get(name) for name in bound_environment}
+    os.environ.update(bound_environment)
     try:
         return LightweightSupervisor(
             root=operations_root,
@@ -553,10 +595,11 @@ def run_formal_chain(
             adapters=adapters,
         ).run_or_resume()
     finally:
-        if old_chain_path is None:
-            os.environ.pop("ERA_S2P13_CHAIN_AUTHORITY_PATH", None)
-        else:
-            os.environ["ERA_S2P13_CHAIN_AUTHORITY_PATH"] = old_chain_path
+        for name, value in old_environment.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
 
 
 def verify_formal_chain(

@@ -245,12 +245,19 @@ def _require_formal_gate(context: ProducerContext, *, resume: bool) -> None:
 
     policy = load_policy(Path(policy_value), repository_root=context.repository_root)
     chain = read_governance_json(Path(chain_value))
+    supplement_path = os.environ.get("ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_PATH", "")
+    supplement_hash = os.environ.get("ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_HASH", "")
     if (
         not _self_hash_valid(chain, "authority_hash")
         or chain.get("schema_name") != "stage2-chain-authority-v2"
         or chain.get("code_commit") != context.code_commit
         or chain.get("policy_hash") != policy.policy_hash
         or chain.get("stage3_locked") is not True
+        or chain.get("trade_supplement_acceptance_path") != str(policy.trade_supplement_path)
+        or chain.get("trade_supplement_file_hash") != policy.trade_supplement_file_hash
+        or chain.get("trade_supplement_acceptance_hash") != policy.trade_supplement_acceptance_hash
+        or supplement_path != str(policy.trade_supplement_path)
+        or supplement_hash != policy.trade_supplement_file_hash
         or not repository_clean(context.repository_root)
     ):
         raise ValueError("lightweight formal gate binding drift")

@@ -11,6 +11,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -87,6 +88,7 @@ from .scoped_producers import (
     produce_scoped_metrics,
     produce_scoped_paths,
 )
+from .trade_supplement import partition_override
 
 NS = 1_000_000_000
 DAY_NS = 86_400 * NS
@@ -192,6 +194,28 @@ def _date_from_ns(value: int) -> date:
 
 
 def _partition_paths(instrument: str, owner_date: date) -> tuple[Path, Path]:
+    supplement_value = os.environ.get("ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_PATH")
+    supplement_hash = os.environ.get("ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_HASH")
+    if supplement_value:
+        acceptance_path = Path(supplement_value)
+        if (
+            not acceptance_path.is_absolute()
+            or acceptance_path.is_symlink()
+            or not acceptance_path.is_file()
+            or not supplement_hash
+            or _file_hash(acceptance_path) != supplement_hash
+        ):
+            raise ValueError("Trade supplement acceptance binding drift")
+        override = partition_override(
+            acceptance_path=acceptance_path,
+            instrument=instrument,
+            owner_date=owner_date,
+        )
+        if override is not None:
+            parquet_path, receipt_path, acceptance_hash = override
+            if acceptance_hash != json.loads(acceptance_path.read_bytes()).get("acceptance_hash"):
+                raise ValueError("Trade supplement acceptance self-hash drift")
+            return parquet_path, receipt_path
     root = (
         STAGE1_ROOT / instrument / f"archive={owner_date:%Y-%m}" / f"date={owner_date.isoformat()}"
     )
@@ -700,6 +724,9 @@ def produce_scoped_lifecycle(
         "single_position_admission": admission,
         "funding_source": "HISTORICAL_ACTUAL_PLUS_PREREGISTERED_STRESS",
         "source_t10_snapshot_id": T10_SNAPSHOT_ID,
+        "trade_supplement_acceptance_hash": os.environ.get(
+            "ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_HASH"
+        ),
         "row_count": len(lifecycle) * len(FundingTrack),
     }
 
@@ -806,9 +833,19 @@ def _handoff(
     )
 
 
-def run_final_code_rehearsal(*, output_root: Path) -> tuple[dict[str, Any], Path]:
+def run_final_code_rehearsal(
+    *,
+    output_root: Path,
+    start_date: date = START_DATE,
+    purpose: str = "FINAL_CODE_RELEASE_GATE",
+) -> tuple[dict[str, Any], Path]:
     """Run the isolated real-input rehearsal and leave UI finalization pending."""
 
+    if purpose not in {"FINAL_CODE_RELEASE_GATE", "TRADE_SUPPLEMENT_COVERAGE"}:
+        raise ValueError("unsupported seven-day rehearsal purpose")
+    if purpose == "FINAL_CODE_RELEASE_GATE" and start_date != START_DATE:
+        raise ValueError("release-gate seven-day scope drift")
+    end_date_exclusive = start_date + timedelta(days=7)
     if not _git_clean():
         raise ValueError("final-code rehearsal requires a clean committed repository")
     root = _safe_new_root(output_root)
@@ -820,7 +857,7 @@ def run_final_code_rehearsal(*, output_root: Path) -> tuple[dict[str, Any], Path
         temporary_audit_root = Path(temp) / "source-audit"
         source_audit, source_report_path = run_seven_day_audit(
             output_root=temporary_audit_root,
-            start_date=START_DATE,
+            start_date=start_date,
         )
         verify_seven_day_audit(report_path=source_report_path)
         durable_audit_root = root / "source-audit"
@@ -834,15 +871,15 @@ def run_final_code_rehearsal(*, output_root: Path) -> tuple[dict[str, Any], Path
     ):
         raise ValueError("real seven-day source audit did not pass executable scopes")
     lifecycle_payload = produce_scoped_lifecycle(
-        start_date=START_DATE,
-        end_date_exclusive=END_DATE,
+        start_date=start_date,
+        end_date_exclusive=end_date_exclusive,
     )
     lifecycle = cast(list[dict[str, Any]], lifecycle_payload["lifecycle"])
     evidence_id = f"rehearsal-7d-{commit[:12]}"
     execution_scope_hash = ExecutionScope.seal(
         mode="SEVEN_DAY",
-        start_date=START_DATE.isoformat(),
-        end_date_exclusive=END_DATE.isoformat(),
+        start_date=start_date.isoformat(),
+        end_date_exclusive=end_date_exclusive.isoformat(),
     ).execution_scope_hash
     handoffs: list[TaskHandoff] = []
     t11_payload = lifecycle_payload
@@ -859,8 +896,8 @@ def run_final_code_rehearsal(*, output_root: Path) -> tuple[dict[str, Any], Path
     t12_data = root / "task-handoffs/S2P13-T12/data"
     t12 = produce_scoped_paths(
         output_root=t12_data,
-        start_date=START_DATE,
-        end_date_exclusive=END_DATE,
+        start_date=start_date,
+        end_date_exclusive=end_date_exclusive,
     )
     handoffs.append(
         _handoff(
@@ -950,8 +987,9 @@ def run_final_code_rehearsal(*, output_root: Path) -> tuple[dict[str, Any], Path
     report: dict[str, Any] = {
         "schema_name": "stage2-plan-v13-seven-day-rehearsal-report-v1",
         "status": "PASS",
-        "start_date": START_DATE.isoformat(),
-        "end_date_exclusive": END_DATE.isoformat(),
+        "purpose": purpose,
+        "start_date": start_date.isoformat(),
+        "end_date_exclusive": end_date_exclusive.isoformat(),
         "day_count": 7,
         "code_commit": commit,
         "governance_binding": _governance_binding(),
@@ -1007,8 +1045,28 @@ def run_final_code_rehearsal(*, output_root: Path) -> tuple[dict[str, Any], Path
         "formal_run_id_created": False,
     }
     pending["receipt_hash"] = _canonical_hash(pending)
-    pending_path = OPERATIONS_ROOT / f"seven-day-rehearsal-receipt.{commit}.pending.json"
-    _write_exclusive(pending_path, pending)
+    if purpose == "FINAL_CODE_RELEASE_GATE":
+        pending_path = OPERATIONS_ROOT / f"seven-day-rehearsal-receipt.{commit}.pending.json"
+        _write_exclusive(pending_path, pending)
+    else:
+        supplement_receipt = {
+            **pending,
+            "schema_name": "stage2-trade-supplement-rehearsal-v1",
+            "status": "PASS",
+            "ui_projection": "NOT_REQUIRED_READ_ONLY_PROJECTION",
+            "purpose": purpose,
+            "start_date": start_date.isoformat(),
+            "end_date_exclusive": end_date_exclusive.isoformat(),
+            "trade_supplement_acceptance_hash": os.environ.get(
+                "ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_HASH"
+            ),
+        }
+        supplement_receipt.pop("receipt_hash", None)
+        supplement_receipt["receipt_hash"] = _canonical_hash(supplement_receipt)
+        _write_exclusive(
+            OPERATIONS_ROOT / f"trade-supplement-rehearsal-receipt.{commit}.json",
+            supplement_receipt,
+        )
     verify_final_code_rehearsal(report_path)
     return report, report_path
 

@@ -10,7 +10,7 @@ rules:
   - S2P13-T11
   implementation_paths:
   - src/era100x/research/stage_2/lifecycle/ (IMPLEMENTED deterministic price-only core; formal H3 inputs blocked)
-  - src/era100x/research/stage_2/rerun/ (IMPLEMENTED preflight/checkpoint contract)
+  - src/era100x/research/stage_2/rerun/ (IMPLEMENTED preflight/checkpoint contract; CR-2026-043 exact-key append-only Trade supplement overlay)
   - src/era100x/research/stage_2/funding/ (IMPLEMENTED read-only acceptance contract)
   test_paths:
   - tests/research/stage_2/lifecycle/ (TESTED)

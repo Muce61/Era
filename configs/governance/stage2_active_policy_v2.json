@@ -10,6 +10,8 @@
     "docs/spec/system_manual_v1.3.5_final.md",
     "docs/development/plans/stage_2_plan_v1.3.md",
     "docs/development/STAGE2_OPERATIONS.md",
+    "docs/development/changes/CR-2026-043.md",
+    "docs/development/decisions/ADR-S2-020-trade-partition-supplement-overlay.md",
     "docs/development/tasks/stage_2/S2P13-T11-lifecycle.md",
     "docs/development/tasks/stage_2/S2P13-T12-path-extraction.md",
     "docs/development/tasks/stage_2/S2P13-T13-path-metrics.md",
@@ -19,6 +21,7 @@
   ],
   "preregistration_path": "docs/development/tasks/stage_2/S2-T19-manifest.md",
   "evidence_root": "/Volumes/FuckingLife/era100x_stage2/formal/stage2-plan-v1.3",
+  "trade_supplement_acceptance_path": "/Volumes/FuckingLife/era100x_stage2/trade-supplements/cr-2026-043-btcusdt-2022-03-01-v1/acceptance.json",
   "task_dag": {
     "S2P13-T11": [],
     "S2P13-T12": ["S2P13-T11"],

@@ -257,6 +257,20 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         pending_rehearsal = _safe_json_object(
             operations_root / "seven-day-rehearsal-receipt.pending.json"
         )
+    trade_supplement_rehearsal = _safe_json_object(
+        operations_root / f"trade-supplement-rehearsal-receipt.{repo_commit}.json"
+    )
+    trade_supplement_rehearsal_pass = (
+        trade_supplement_rehearsal.get("schema_name") == "stage2-trade-supplement-rehearsal-v1"
+        and trade_supplement_rehearsal.get("status") == "PASS"
+        and _self_hash_matches(trade_supplement_rehearsal, "receipt_hash")
+        and trade_supplement_rehearsal.get("code_commit") == repo_commit
+        and trade_supplement_rehearsal.get("purpose") == "TRADE_SUPPLEMENT_COVERAGE"
+        and trade_supplement_rehearsal.get("producer_serialization") == "PASS"
+        and trade_supplement_rehearsal.get("strict_consumer_readback") == "PASS"
+        and trade_supplement_rehearsal.get("reconciliation") == "PASS"
+        and trade_supplement_rehearsal.get("verify") == "PASS"
+    )
     rehearsal_pass = (
         rehearsal_receipt.get("schema_name") == "stage2-plan-v13-seven-day-rehearsal-v1"
         and rehearsal_receipt.get("status") == "PASS"
@@ -402,28 +416,47 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
     lightweight_approval = {}
     lightweight_authority_count = 0
     lightweight_chain_checkpoint = {}
+    lightweight_historical_chain_checkpoint = {}
+    lightweight_trade_supplement_hash = None
     try:
         lightweight_policy = load_policy(lightweight_policy_path, repository_root=repo_root)
         lightweight_policy_hash = lightweight_policy.policy_hash
+        lightweight_trade_supplement_hash = lightweight_policy.trade_supplement_acceptance_hash
+        valid_approvals: list[dict[str, Any]] = []
         for approval_path in sorted(
             lightweight_policy.operations_root.glob("approvals/approval-*.json")
         ):
             try:
-                lightweight_approval = validate_approval(
+                candidate_approval = validate_approval(
                     approval_path,
                     policy=lightweight_policy,
                     repository_root=repo_root,
                 )
+                valid_approvals.append(candidate_approval)
+                lightweight_approval = candidate_approval
             except (OSError, ValueError):
                 continue
-        lightweight_authority_count = len(
-            tuple(lightweight_policy.operations_root.glob("authorities/chain-authority-*.json"))
+        lightweight_authority_count = sum(
+            _safe_json_object(path).get("policy_hash") == lightweight_policy.policy_hash
+            and _safe_json_object(path).get("code_commit") == repo_commit
+            for path in lightweight_policy.operations_root.glob(
+                "authorities/chain-authority-*.json"
+            )
         )
         checkpoints = sorted(
             lightweight_policy.evidence_root.glob("chains/*/operations/checkpoint.json")
         )
         if checkpoints:
-            lightweight_chain_checkpoint = _safe_json_object(checkpoints[-1])
+            latest_checkpoint = max(checkpoints, key=lambda path: path.stat().st_mtime_ns)
+            lightweight_historical_chain_checkpoint = _safe_json_object(latest_checkpoint)
+        if valid_approvals:
+            current_checkpoint = (
+                lightweight_policy.evidence_root
+                / "chains"
+                / str(valid_approvals[-1]["approval_hash"])
+                / "operations/checkpoint.json"
+            )
+            lightweight_chain_checkpoint = _safe_json_object(current_checkpoint)
     except (OSError, ValueError):
         pass
     return {
@@ -489,6 +522,17 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         "external_approval_status": (lightweight_approval.get("status", "NOT_PRESENT")),
         "chain_authority_count": lightweight_authority_count,
         "formal_chain_status": lightweight_chain_checkpoint.get("status", "NOT_STARTED"),
+        "formal_chain_current_task": lightweight_chain_checkpoint.get("current_task"),
+        "formal_chain_reason": lightweight_chain_checkpoint.get("reason"),
+        "historical_formal_chain_status": lightweight_historical_chain_checkpoint.get(
+            "status", "NOT_PRESENT"
+        ),
+        "historical_formal_chain_reason": lightweight_historical_chain_checkpoint.get("reason"),
+        "trade_supplement_status": ("PASS" if lightweight_trade_supplement_hash else "NOT_PRESENT"),
+        "trade_supplement_acceptance_hash": lightweight_trade_supplement_hash,
+        "trade_supplement_rehearsal_status": (
+            "PASS" if trade_supplement_rehearsal_pass else "NOT_STARTED"
+        ),
         "updated_at": checkpoint.get("updated_at"),
     }
 
