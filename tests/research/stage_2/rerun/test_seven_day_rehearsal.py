@@ -73,12 +73,18 @@ def _write_stage1_catalog_fixture(
     instrument: str,
     owner_date: date,
     parquet_hash: str,
+    gap_count: int = 0,
+    reversal_count: int = 0,
+    conflict_count: int = 0,
 ) -> None:
     entry = {
         "instrument": instrument,
         "date": owner_date.isoformat(),
         "relative_path": f"date={owner_date.isoformat()}/part-000.parquet",
         "byte_sha256": parquet_hash,
+        "venue_trade_id_gap_count": gap_count,
+        "venue_trade_id_reversal_count": reversal_count,
+        "venue_trade_id_conflict_count": conflict_count,
     }
     catalog = {"logical_data_hash": "fixture-logical-hash", "entries": [entry]}
     catalog_root.mkdir(parents=True, exist_ok=True)
@@ -105,6 +111,8 @@ def _write_trade_partition(
     rows: list[dict[str, object]],
     input_rows: int | None = None,
     duplicate_exact_count: int = 0,
+    gap_count: int = 0,
+    reversal_count: int = 0,
 ) -> tuple[Path, dict[str, object]]:
     partition_root = root / instrument / f"archive={archive}" / f"date={owner_date.isoformat()}"
     partition_root.mkdir(parents=True)
@@ -117,8 +125,8 @@ def _write_trade_partition(
         "input_rows": len(rows) if input_rows is None else input_rows,
         "rows": len(rows),
         "duplicate_exact_count": duplicate_exact_count,
-        "venue_trade_id_gap_count": 0,
-        "venue_trade_id_reversal_count": 0,
+        "venue_trade_id_gap_count": gap_count,
+        "venue_trade_id_reversal_count": reversal_count,
     }
     (partition_root / "partition.json").write_text(json.dumps(receipt), encoding="utf-8")
     return parquet_path, receipt
@@ -315,6 +323,76 @@ def test_trade_receipt_rejects_unreconciled_duplicate_count(
 
     with pytest.raises(ValueError, match="Stage 1 Trade partition Verify failed"):
         subject._verified_trade_receipt_day("BTCUSDT", owner_date)
+
+
+def test_trade_receipt_retains_catalog_bound_reversal_and_conflict_facts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    owner_date = date(2025, 8, 29)
+    root = tmp_path / "stage1-run"
+    parquet_path, receipt = _write_trade_partition(
+        root=root,
+        instrument="ETHUSDT",
+        owner_date=owner_date,
+        archive="2025-08",
+        rows=[{"value": 1}],
+        gap_count=3,
+        reversal_count=1,
+    )
+    catalog_root = tmp_path / "catalog"
+    _write_stage1_catalog_fixture(
+        root=root,
+        catalog_root=catalog_root,
+        instrument="ETHUSDT",
+        owner_date=owner_date,
+        parquet_hash=str(receipt["byte_sha256"]),
+        gap_count=3,
+        reversal_count=1,
+        conflict_count=3,
+    )
+    monkeypatch.setattr(subject, "STAGE1_ROOT", root)
+    monkeypatch.setattr(subject, "STAGE1_CATALOG_ROOT", catalog_root)
+    subject._sealed_trade_catalog_entries.cache_clear()
+    subject._verified_trade_receipt_day.cache_clear()
+
+    resolved_path, _, quality = subject._verified_trade_receipt_day("ETHUSDT", owner_date)
+
+    assert resolved_path == parquet_path
+    assert quality is not None
+    assert quality["venue_trade_id_gap_count"] == 3
+    assert quality["venue_trade_id_reversal_count"] == 1
+    assert quality["venue_trade_id_conflict_count"] == 3
+
+
+def test_trade_receipt_rejects_reversal_count_drift_from_sealed_catalog(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    owner_date = date(2025, 8, 29)
+    root = tmp_path / "stage1-run"
+    _, receipt = _write_trade_partition(
+        root=root,
+        instrument="ETHUSDT",
+        owner_date=owner_date,
+        archive="2025-08",
+        rows=[{"value": 1}],
+        reversal_count=1,
+    )
+    catalog_root = tmp_path / "catalog"
+    _write_stage1_catalog_fixture(
+        root=root,
+        catalog_root=catalog_root,
+        instrument="ETHUSDT",
+        owner_date=owner_date,
+        parquet_hash=str(receipt["byte_sha256"]),
+        reversal_count=0,
+    )
+    monkeypatch.setattr(subject, "STAGE1_ROOT", root)
+    monkeypatch.setattr(subject, "STAGE1_CATALOG_ROOT", catalog_root)
+    subject._sealed_trade_catalog_entries.cache_clear()
+    subject._verified_trade_receipt_day.cache_clear()
+
+    with pytest.raises(ValueError, match="Stage 1 Trade partition Verify failed"):
+        subject._verified_trade_receipt_day("ETHUSDT", owner_date)
 
 
 @pytest.mark.parametrize(

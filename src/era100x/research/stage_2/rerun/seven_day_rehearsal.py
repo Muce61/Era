@@ -376,9 +376,12 @@ def _verified_trade_receipt_day(
 ) -> tuple[Path, str, dict[str, Any] | None]:
     parquet_path, receipt_path = _partition_paths(instrument, owner_date)
     receipt = _read_json(receipt_path)
+    catalog_entry = _sealed_trade_catalog_entries(instrument)[owner_date.isoformat()]
     input_rows = int(receipt.get("input_rows", -1))
     published_rows = int(receipt.get("rows", -1))
     duplicate_exact_count = int(receipt.get("duplicate_exact_count", -1))
+    gap_count = int(receipt.get("venue_trade_id_gap_count", -1))
+    reversal_count = int(receipt.get("venue_trade_id_reversal_count", -1))
     receipt_counts_are_valid = (
         input_rows >= 0
         and published_rows >= 0
@@ -394,20 +397,28 @@ def _verified_trade_receipt_day(
         or receipt.get("instrument") != instrument
         or receipt.get("date") != owner_date.isoformat()
         or receipt.get("byte_sha256") != _file_hash(parquet_path)
-        or int(receipt.get("venue_trade_id_reversal_count", -1)) != 0
+        or gap_count < 0
+        or reversal_count < 0
+        or gap_count != int(catalog_entry.get("venue_trade_id_gap_count", -1))
+        or reversal_count != int(catalog_entry.get("venue_trade_id_reversal_count", -1))
         or not receipt_counts_are_valid
         or not parquet_rows_are_valid
     ):
         raise ValueError(f"Stage 1 Trade partition Verify failed: {instrument} {owner_date}")
-    gap_count = int(receipt.get("venue_trade_id_gap_count", -1))
-    if gap_count < 0:
-        raise ValueError(f"Stage 1 Trade gap classification missing: {instrument} {owner_date}")
     gap = (
         {
             "instrument": instrument,
             "date": owner_date.isoformat(),
             "venue_trade_id_gap_count": gap_count,
             "venue_trade_id_gap_examples": receipt.get("venue_trade_id_gap_examples", []),
+            "venue_trade_id_reversal_count": reversal_count,
+            "venue_trade_id_reversal_examples": receipt.get("venue_trade_id_reversal_examples", []),
+            "venue_trade_id_conflict_count": int(
+                catalog_entry.get("venue_trade_id_conflict_count", 0)
+            ),
+            "venue_trade_id_conflict_groups": catalog_entry.get(
+                "venue_trade_id_conflict_groups", []
+            ),
         }
         if gap_count
         else None
