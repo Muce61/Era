@@ -197,6 +197,13 @@ def test_archive_layout_boundary_rehearsal_scope_is_frozen(
     assert not (tmp_path / "not-created").exists()
 
 
+def test_archive_layout_boundary_receipt_has_distinct_schema() -> None:
+    assert (
+        subject._rehearsal_receipt_schema("ARCHIVE_LAYOUT_BOUNDARY_COVERAGE")
+        == "stage2-archive-layout-boundary-rehearsal-v1"
+    )
+
+
 def test_t16_supplement_coverage_excludes_declared_gaps_without_controls(
     tmp_path: Path,
 ) -> None:

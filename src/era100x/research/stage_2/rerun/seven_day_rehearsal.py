@@ -938,6 +938,14 @@ def _governance_binding() -> dict[str, str]:
     return {name: _file_hash(REPOSITORY_ROOT / name) for name in relative}
 
 
+def _rehearsal_receipt_schema(purpose: str) -> str:
+    return {
+        "TRADE_SUPPLEMENT_COVERAGE": "stage2-trade-supplement-rehearsal-v1",
+        "SEALED_RECEIPT_COVERAGE": "stage2-sealed-receipt-rehearsal-v1",
+        "ARCHIVE_LAYOUT_BOUNDARY_COVERAGE": "stage2-archive-layout-boundary-rehearsal-v1",
+    }[purpose]
+
+
 def _handoff(
     task_id: str,
     evidence_id: str,
@@ -1246,7 +1254,7 @@ def run_final_code_rehearsal(
     else:
         supplement_receipt = {
             **pending,
-            "schema_name": "stage2-trade-supplement-rehearsal-v1",
+            "schema_name": _rehearsal_receipt_schema(purpose),
             "status": "PASS",
             "ui_projection": "NOT_REQUIRED_READ_ONLY_PROJECTION",
             "purpose": purpose,
