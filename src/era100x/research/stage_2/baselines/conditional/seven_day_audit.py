@@ -165,8 +165,16 @@ def _validate_daily_anchor_grid(*, anchors: list[int], start_date: date) -> None
             raise ValueError(f"feature anchors are not a one-minute daily grid: {owner_date}")
 
 
+def _expected_typed_exclusions(audit_mode: str) -> Counter[str]:
+    if audit_mode == "SOURCE_BOUNDARY":
+        return Counter({"BOUNDARY_WARMUP_UNAVAILABLE": 61})
+    if audit_mode == "TRADE_SUPPLEMENT_COVERAGE":
+        return Counter()
+    raise ValueError("unsupported seven-day audit mode")
+
+
 def _audit_features(
-    *, output_root: Path, start_date: date
+    *, output_root: Path, start_date: date, audit_mode: str = "SOURCE_BOUNDARY"
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     reader = FixedT10Reader(T10_SNAPSHOT, expected_snapshot_id=T10_SNAPSHOT_ID)
     parameter_set_ids = tuple(dict.fromkeys(pair[0] for pair in REGISTERED_PARAMETER_TIMING_PAIRS))
@@ -214,9 +222,10 @@ def _audit_features(
         _validate_daily_anchor_grid(anchors=anchors, start_date=start_date)
         if valid_count + len(excluded_anchors) != expected_rows:
             raise ValueError("feature availability reconciliation failed")
+        expected_typed_exclusions = _expected_typed_exclusions(audit_mode)
         status = (
             "PASS"
-            if typed_exclusions == Counter({"BOUNDARY_WARMUP_UNAVAILABLE": 61})
+            if typed_exclusions == expected_typed_exclusions
             and raw_exclusions["ACTIVITY_FEATURE_UNAVAILABLE"] == 0
             and raw_exclusions["CONTEXT_UNAVAILABLE"] == 0
             else "FAIL"
@@ -228,8 +237,11 @@ def _audit_features(
             "valid_market_anchor_count": valid_count,
             "raw_exclusion_counts": dict(sorted(raw_exclusions.items())),
             "typed_exclusion_counts": dict(sorted(typed_exclusions.items())),
-            "first_excluded_anchor": _iso_ns(min(excluded_anchors)),
-            "last_excluded_anchor": _iso_ns(max(excluded_anchors)),
+            "warmup_state": (
+                "BOUNDARY_WARMUP" if audit_mode == "SOURCE_BOUNDARY" else "FULLY_WARMED"
+            ),
+            "first_excluded_anchor": (_iso_ns(min(excluded_anchors)) if excluded_anchors else None),
+            "last_excluded_anchor": (_iso_ns(max(excluded_anchors)) if excluded_anchors else None),
             "schema_roundtrip": "PASS",
             "decimal_roundtrip": "PASS",
             "parquet_sha256": _sha256_file(path),
@@ -463,7 +475,11 @@ def run_seven_day_audit(
     start_ns = _ns_start(start_date)
     end_date = start_date + timedelta(days=AUDIT_DAY_COUNT)
     end_ns = _ns_start(end_date)
-    feature, receipts = _audit_features(output_root=root, start_date=start_date)
+    feature, receipts = _audit_features(
+        output_root=root,
+        start_date=start_date,
+        audit_mode=audit_mode,
+    )
     raw, raw_receipts = _audit_raw_paths(output_root=root, start_ns=start_ns, end_ns=end_ns)
     receipts.extend(raw_receipts)
     lifecycle = lifecycle_assessment(
@@ -485,7 +501,9 @@ def run_seven_day_audit(
             "real_input": True,
             "btc_eth_separate": True,
             "expected_grid_anchors_per_instrument": 10_080,
-            "expected_boundary_warmup_unavailable_per_instrument": 61,
+            "expected_boundary_warmup_unavailable_per_instrument": (
+                61 if audit_mode == "SOURCE_BOUNDARY" else 0
+            ),
             "raw_timings_required": ["T1", "T2", "T3", "T4"],
             "raw_source_must_remain_byte_identical": True,
             "full_lifecycle_must_not_invent_open_oq_values": True,

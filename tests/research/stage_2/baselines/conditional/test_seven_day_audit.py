@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from era100x.research.stage_2.baselines.conditional.seven_day_audit import (
+    _expected_typed_exclusions,
     _safe_new_output_root,
     _validate_audit_scope,
     _validate_daily_anchor_grid,
@@ -67,6 +68,11 @@ def test_trade_supplement_scope_is_explicit_and_does_not_relax_source_boundary()
             start_date=date(2022, 3, 2),
             audit_mode="TRADE_SUPPLEMENT_COVERAGE",
         )
+
+
+def test_trade_supplement_mid_history_allows_fully_warmed_feature_grid() -> None:
+    assert _expected_typed_exclusions("TRADE_SUPPLEMENT_COVERAGE") == {}
+    assert _expected_typed_exclusions("SOURCE_BOUNDARY") == {"BOUNDARY_WARMUP_UNAVAILABLE": 61}
 
 
 def test_verify_rejects_tampered_report(tmp_path: Path) -> None:
