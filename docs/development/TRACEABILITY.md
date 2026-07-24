@@ -1,5 +1,10 @@
 # Specification Traceability
 
+> Stage 2 Plan v1.3 operations use
+> `configs/governance/stage2_active_policy_v2.json` plus append-only runtime receipts as the
+> machine gate. Historical prose records below remain traceability evidence and are not runtime
+> authorization inputs. See `docs/development/STAGE2_OPERATIONS.md`.
+
 Model: formal rule → Stage → Task → implementation → tests → validation → current validity. The machine-readable complete catalogue is [`traceability/rules.yaml`](traceability/rules.yaml); every implementation/test path is explicitly PLANNED, not implemented.
 
 ## Stage 2 Plan v1.3 lifecycle successor status

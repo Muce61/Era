@@ -28,6 +28,10 @@ from era100x.research.stage_2.funding import (
     verify_funding_evidence,
 )
 from era100x.research.stage_2.rerun.orchestrator import TASKS as V13_TASKS
+from era100x.research.stage_2.rerun.lightweight_governance import (
+    load_policy,
+    validate_approval,
+)
 
 DEFAULT_ROOT = Path("/Volumes/FuckingLife/era100x_stage2")
 REPOSITORY_ROOT = Path(__file__).parents[1]
@@ -393,6 +397,35 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
     funding_blockers = (
         [] if funding_evidence.get("full_history_accepted") is True else ["HISTORICAL_FUNDING"]
     )
+    lightweight_policy_path = repo_root / "configs/governance/stage2_active_policy_v2.json"
+    lightweight_policy_hash = None
+    lightweight_approval = {}
+    lightweight_authority_count = 0
+    lightweight_chain_checkpoint = {}
+    try:
+        lightweight_policy = load_policy(lightweight_policy_path, repository_root=repo_root)
+        lightweight_policy_hash = lightweight_policy.policy_hash
+        for approval_path in sorted(
+            lightweight_policy.operations_root.glob("approvals/approval-*.json")
+        ):
+            try:
+                lightweight_approval = validate_approval(
+                    approval_path,
+                    policy=lightweight_policy,
+                    repository_root=repo_root,
+                )
+            except (OSError, ValueError):
+                continue
+        lightweight_authority_count = len(
+            tuple(lightweight_policy.operations_root.glob("authorities/chain-authority-*.json"))
+        )
+        checkpoints = sorted(
+            lightweight_policy.evidence_root.glob("chains/*/operations/checkpoint.json")
+        )
+        if checkpoints:
+            lightweight_chain_checkpoint = _safe_json_object(checkpoints[-1])
+    except (OSError, ValueError):
+        pass
     return {
         "stage_plan_version": "1.3",
         "status": status,
@@ -451,6 +484,11 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         "funding_evidence": funding_evidence,
         "liquidation_contract": "CONTRACT_PRICE_NET_MARGIN_DEPLETION_MINUS_8U",
         "remaining_input_blockers": funding_blockers,
+        "governance_model": "STAGE2_ACTIVE_POLICY_V2",
+        "policy_hash": lightweight_policy_hash,
+        "external_approval_status": (lightweight_approval.get("status", "NOT_PRESENT")),
+        "chain_authority_count": lightweight_authority_count,
+        "formal_chain_status": lightweight_chain_checkpoint.get("status", "NOT_STARTED"),
         "updated_at": checkpoint.get("updated_at"),
     }
 

@@ -19,6 +19,7 @@ from era100x.research.stage_2.baselines.conditional.v14_contracts import (
     COMBINATION_ORDER,
     ControlAnchor,
     OutcomeCell,
+    S2P13T16ContractAuthority,
     S2T15ContractAuthority,
     V14ControlCandidate,
     V14PrimaryEpisode,
@@ -121,6 +122,27 @@ def test_authority_is_hash_bound_and_contains_no_run_id() -> None:
         S2T15ContractAuthority.model_validate(
             authority.model_copy(update={"upstream_binding_hash": "9" * 64}).model_dump()
         )
+
+
+def test_plan_v13_authority_uses_current_task_identity_and_dynamic_handoffs() -> None:
+    authority = S2P13T16ContractAuthority.seal(
+        {
+            "code_commit": "1" * 40,
+            "chain_authority_hash": "2" * 64,
+            "policy_hash": "3" * 64,
+            "source_t10_binding_hash": "4" * 64,
+            "source_s2p13_t11_binding_hash": "5" * 64,
+            "source_s2p13_t13_binding_hash": "6" * 64,
+            "source_s2p13_t15_binding_hash": "7" * 64,
+            "context_binding_hash": "8" * 64,
+            "label_contract_hash": "9" * 64,
+            "preregistration_hash": "a" * 64,
+        }
+    )
+    assert authority.task_id == "S2P13-T16"
+    assert authority.manual_version == "V1.3.5"
+    assert authority.authority_hash == authority.computed_hash()
+    assert "run_id" not in type(authority).model_fields
 
 
 def test_three_control_identity_layers_are_result_and_run_independent() -> None:

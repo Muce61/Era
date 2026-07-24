@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,7 @@ from era100x.research.stage_2.rerun.producer_contracts import (
     ProducerContext,
 )
 from era100x.research.stage_2.rerun.producer_execution import (
+    _require_formal_gate,
     execute_producer,
     verify_producer,
 )
@@ -35,6 +37,7 @@ def _context(tmp_path: Path) -> ProducerContext:
         upstream={},
         preregistration_path=preregistration,
         preregistration_hash="c" * 64,
+        repository_root=tmp_path,
     )
 
 
@@ -65,3 +68,13 @@ def test_verify_rejects_output_tamper(tmp_path: Path, monkeypatch: pytest.Monkey
     output.write_text('{"row_count":4}\n', encoding="utf-8")
     with pytest.raises(ValueError, match="read-back"):
         verify_producer(context)
+
+
+def test_lightweight_formal_gate_rejects_partial_binding(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    context = replace(_context(tmp_path), execution_mode="FORMAL")
+    monkeypatch.setenv("ERA_S2P13_POLICY_PATH", str(tmp_path / "policy.json"))
+    monkeypatch.delenv("ERA_S2P13_CHAIN_AUTHORITY_PATH", raising=False)
+    with pytest.raises(ValueError, match="partially bound"):
+        _require_formal_gate(context, resume=False)

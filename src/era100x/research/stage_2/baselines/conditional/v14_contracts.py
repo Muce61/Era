@@ -198,6 +198,80 @@ class S2T15ContractAuthority(StrictEventModel):
         return provisional.model_copy(update={"authority_hash": provisional.computed_hash()})
 
 
+class S2P13T16ContractAuthority(StrictEventModel):
+    """Plan v1.3 successor authority with explicit current handoff bindings."""
+
+    schema_name: Literal["stage2-s2p13-t16-contract-authority"] = (
+        "stage2-s2p13-t16-contract-authority"
+    )
+    schema_version: Literal["2.0"] = "2.0"
+    task_id: Literal["S2P13-T16"] = "S2P13-T16"
+    task_version: Literal["1.0"] = "1.0"
+    manual_version: Literal["V1.3.5"] = "V1.3.5"
+    code_commit: str = Field(pattern=GIT_COMMIT_PATTERN)
+    chain_authority_hash: str = Field(pattern=SHA256_PATTERN)
+    policy_hash: str = Field(pattern=SHA256_PATTERN)
+    source_t10_binding_hash: str = Field(pattern=SHA256_PATTERN)
+    source_s2p13_t11_binding_hash: str = Field(pattern=SHA256_PATTERN)
+    source_s2p13_t13_binding_hash: str = Field(pattern=SHA256_PATTERN)
+    source_s2p13_t15_binding_hash: str = Field(pattern=SHA256_PATTERN)
+    context_binding_hash: str = Field(pattern=SHA256_PATTERN)
+    label_contract_hash: str = Field(pattern=SHA256_PATTERN)
+    preregistration_hash: str = Field(pattern=SHA256_PATTERN)
+    setup_id: Literal["KEY_LOW_SWEEP_RECLAIM_HOLD_V1@1.0"] = "KEY_LOW_SWEEP_RECLAIM_HOLD_V1@1.0"
+    context_model_id: Literal["CAUSAL_EMA20_1H@1.0"] = "CAUSAL_EMA20_1H@1.0"
+    feature_formula_ids: tuple[str, str, str] = (
+        VOLATILITY_FORMULA_ID,
+        ACTIVITY_FORMULA_ID,
+        DISTANCE_FORMULA_ID,
+    )
+    quintile_algorithm_id: Literal["TIE_PRESERVING_NEAREST_CUMULATIVE_V1"] = (
+        "TIE_PRESERVING_NEAREST_CUMULATIVE_V1"
+    )
+    distance_to_key_level_matching_enabled: Literal[True] = True
+    backward_feature_purge_seconds: Literal[3600] = 3600
+    forward_outcome_embargo_seconds: Literal[600] = 600
+    control_grid_version: Literal["CONTROL_GRID_1M_DAILY_OFFSET_V1"] = (
+        "CONTROL_GRID_1M_DAILY_OFFSET_V1"
+    )
+    matching_seed: Literal[20260716] = 20260716
+    controls_per_episode: Literal[5] = 5
+    exact_match_fields: tuple[str, ...] = EXACT_MATCH_FIELDS
+    relaxation_order: tuple[MatchLevel, ...] = RELAXATION_ORDER
+    combination_order: tuple[str, ...] = COMBINATION_ORDER
+    reference_price_source: Literal["CONTRACT_PRICE_1S_CLOSE"] = "CONTRACT_PRICE_1S_CLOSE"
+    path_evidence_level: Literal["H2"] = "H2"
+    expected_h2_path_count: Literal[532708] = 532708
+    expected_h2_outcome_cell_count: Literal[15981240] = 15981240
+    registered_parameter_timing_pairs: tuple[tuple[str, str], ...] = (
+        REGISTERED_PARAMETER_TIMING_PAIRS
+    )
+    historical_evidence_only: Literal[True] = True
+    prohibited_interpretations: tuple[str, ...] = PROHIBITED_INTERPRETATIONS
+    authority_hash: str = Field(pattern=SHA256_PATTERN)
+
+    def computed_hash(self) -> str:
+        return canonical_hash(self.model_dump(mode="python", exclude={"authority_hash"}))
+
+    @model_validator(mode="after")
+    def validate_frozen_contract(self) -> Self:
+        if (
+            self.exact_match_fields != EXACT_MATCH_FIELDS
+            or self.relaxation_order != RELAXATION_ORDER
+            or self.combination_order != COMBINATION_ORDER
+            or self.registered_parameter_timing_pairs != REGISTERED_PARAMETER_TIMING_PAIRS
+        ):
+            raise ValueError("S2P13-T16 frozen matching contract changed")
+        if self.authority_hash != "0" * 64 and self.authority_hash != self.computed_hash():
+            raise ValueError("S2P13-T16 Authority hash mismatch")
+        return self
+
+    @classmethod
+    def seal(cls, payload: dict[str, object]) -> Self:
+        provisional = cls.model_validate({**payload, "authority_hash": "0" * 64})
+        return provisional.model_copy(update={"authority_hash": provisional.computed_hash()})
+
+
 class FrozenQuintileBoundaries(StrictEventModel):
     schema_name: Literal["stage2-s2t15-frozen-quintile-boundaries"] = (
         "stage2-s2t15-frozen-quintile-boundaries"

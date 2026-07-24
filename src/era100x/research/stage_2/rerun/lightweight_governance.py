@@ -1,0 +1,622 @@
+"""Small, receipt-driven Stage 2 governance for a single-developer workflow."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import fcntl
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any, Final, cast
+
+from .orchestrator import (
+    TASKS,
+    RetryableInterruption,
+    TaskAdapter,
+    canonical_hash,
+    current_commit,
+    repository_clean,
+)
+from .production_adapters import (
+    PLAN_SCHEMA,
+    UPSTREAM_TASKS,
+    build_production_adapters,
+    load_adapter_plan,
+)
+
+POLICY_SCHEMA: Final = "stage2-active-policy-v2"
+APPROVAL_SCHEMA: Final = "stage2-formal-approval-v2"
+CHAIN_AUTHORITY_SCHEMA: Final = "stage2-chain-authority-v2"
+T16_AUTHORITY_SCHEMA: Final = "stage2-s2p13-t16-binning-authority-v2"
+REHEARSAL_SCHEMA: Final = "stage2-plan-v13-seven-day-rehearsal-v1"
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    if path.is_symlink() or not path.is_file() or path.parent.is_symlink():
+        raise ValueError(f"unsafe or missing Stage 2 evidence: {path}")
+    value = json.loads(path.read_bytes())
+    if not isinstance(value, dict):
+        raise ValueError("Stage 2 evidence root must be an object")
+    return cast(dict[str, Any], value)
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _self_hash_valid(payload: dict[str, Any], field: str) -> bool:
+    claimed = payload.get(field)
+    body = {key: value for key, value in payload.items() if key != field}
+    return isinstance(claimed, str) and claimed == canonical_hash(body)
+
+
+def _write_exclusive(path: Path, payload: dict[str, Any]) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    encoded = (
+        json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+    ).encode()
+    with path.open("xb") as handle:
+        handle.write(encoded)
+        handle.flush()
+        os.fsync(handle.fileno())
+    return path
+
+
+@dataclass(frozen=True, slots=True)
+class Stage2ActivePolicy:
+    path: Path
+    payload: dict[str, Any]
+    policy_hash: str
+    contract_hashes: dict[str, str]
+    preregistration_path: Path
+    preregistration_hash: str
+    evidence_root: Path
+
+    @property
+    def operations_root(self) -> Path:
+        return self.evidence_root / "operations"
+
+
+def load_policy(path: Path, *, repository_root: Path) -> Stage2ActivePolicy:
+    payload = _read_json(path)
+    required = {
+        "schema_name",
+        "schema_version",
+        "stage",
+        "stage_plan_version",
+        "execution_limit",
+        "stage3_locked",
+        "code_commit_mode",
+        "contract_paths",
+        "preregistration_path",
+        "evidence_root",
+        "task_dag",
+        "full_history_scope",
+        "required_gates",
+    }
+    if set(payload) != required:
+        raise ValueError("Stage 2 active policy fields drift")
+    if (
+        payload["schema_name"] != POLICY_SCHEMA
+        or payload["schema_version"] != "2.0"
+        or payload["stage"] != "S2"
+        or payload["stage_plan_version"] != "1.3"
+        or payload["execution_limit"] != "S2P13-T16"
+        or payload["stage3_locked"] is not True
+        or payload["code_commit_mode"] != "CURRENT_CLEAN_HEAD"
+        or payload["task_dag"] != {task: list(UPSTREAM_TASKS[task]) for task in TASKS}
+        or payload["full_history_scope"]
+        != {"start_date": "2020-01-01", "end_date_exclusive": "2026-07-04"}
+    ):
+        raise ValueError("Stage 2 active policy contract drift")
+    contract_hashes: dict[str, str] = {}
+    for relative_value in cast(list[object], payload["contract_paths"]):
+        relative = Path(str(relative_value))
+        if relative.is_absolute() or ".." in relative.parts:
+            raise ValueError("unsafe Stage 2 contract path")
+        target = repository_root / relative
+        if target.is_symlink() or not target.is_file():
+            raise ValueError(f"missing Stage 2 contract: {relative}")
+        contract_hashes[str(relative)] = _sha256_file(target)
+    preregistration_relative = Path(str(payload["preregistration_path"]))
+    if preregistration_relative.is_absolute() or ".." in preregistration_relative.parts:
+        raise ValueError("unsafe Stage 2 preregistration path")
+    preregistration_path = repository_root / preregistration_relative
+    if preregistration_path.is_symlink() or not preregistration_path.is_file():
+        raise ValueError("missing Stage 2 preregistration")
+    evidence_root = Path(str(payload["evidence_root"]))
+    if not evidence_root.is_absolute() or evidence_root.is_symlink():
+        raise ValueError("unsafe Stage 2 evidence root")
+    preregistration_hash = _sha256_file(preregistration_path)
+    resolved = {
+        "policy": payload,
+        "contract_hashes": contract_hashes,
+        "preregistration_hash": preregistration_hash,
+    }
+    return Stage2ActivePolicy(
+        path=path,
+        payload=payload,
+        policy_hash=canonical_hash(resolved),
+        contract_hashes=contract_hashes,
+        preregistration_path=preregistration_path,
+        preregistration_hash=preregistration_hash,
+        evidence_root=evidence_root,
+    )
+
+
+def validate_rehearsal(path: Path, *, commit: str) -> dict[str, Any]:
+    payload = _read_json(path)
+    if (
+        not _self_hash_valid(payload, "receipt_hash")
+        or payload.get("schema_name") != REHEARSAL_SCHEMA
+        or payload.get("status") != "PASS"
+        or payload.get("code_commit") != commit
+        or tuple(payload.get("tasks", ())) != TASKS
+        or payload.get("ui_projection") != "PASS"
+        or payload.get("verify") != "PASS"
+        or payload.get("authority_created") is not False
+        or payload.get("formal_binning_snapshot_created") is not False
+        or payload.get("formal_run_id_created") is not False
+    ):
+        raise ValueError("final-code seven-day rehearsal is not valid for this commit")
+    return payload
+
+
+def record_approval(
+    *,
+    policy: Stage2ActivePolicy,
+    repository_root: Path,
+    rehearsal_path: Path,
+    approved_by: str,
+    approval_source: str,
+    approved_at: str | None = None,
+) -> Path:
+    """Write one append-only approval without changing the repository."""
+
+    if not repository_clean(repository_root):
+        raise ValueError("formal approval requires a clean repository")
+    commit = current_commit(repository_root)
+    rehearsal = validate_rehearsal(rehearsal_path, commit=commit)
+    existing = [
+        path
+        for path in policy.operations_root.glob("approvals/approval-*.json")
+        if (
+            (_read_json(path).get("code_commit"), _read_json(path).get("policy_hash"))
+            == (commit, policy.policy_hash)
+        )
+    ]
+    if existing:
+        if len(existing) == 1:
+            return existing[0]
+        raise ValueError("multiple formal approvals already bind this commit and Policy")
+    payload: dict[str, Any] = {
+        "schema_name": APPROVAL_SCHEMA,
+        "schema_version": "2.0",
+        "status": "APPROVED",
+        "stage_plan_version": "1.3",
+        "tasks": list(TASKS),
+        "code_commit": commit,
+        "policy_path": str(policy.path),
+        "policy_hash": policy.policy_hash,
+        "contract_hashes": policy.contract_hashes,
+        "preregistration_hash": policy.preregistration_hash,
+        "rehearsal_receipt_path": str(rehearsal_path),
+        "rehearsal_receipt_hash": rehearsal["receipt_hash"],
+        "full_history_scope": policy.payload["full_history_scope"],
+        "evidence_root": str(policy.evidence_root),
+        "approved_by": approved_by,
+        "approved_at": approved_at or datetime.now(UTC).isoformat(),
+        "approval_source": approval_source,
+        "stage3_locked": True,
+    }
+    payload["approval_hash"] = canonical_hash(payload)
+    return _write_exclusive(
+        policy.operations_root / "approvals" / f"approval-{payload['approval_hash']}.json",
+        payload,
+    )
+
+
+def validate_approval(
+    path: Path, *, policy: Stage2ActivePolicy, repository_root: Path
+) -> dict[str, Any]:
+    payload = _read_json(path)
+    commit = current_commit(repository_root)
+    if (
+        not _self_hash_valid(payload, "approval_hash")
+        or payload.get("schema_name") != APPROVAL_SCHEMA
+        or payload.get("status") != "APPROVED"
+        or payload.get("code_commit") != commit
+        or payload.get("policy_hash") != policy.policy_hash
+        or payload.get("contract_hashes") != policy.contract_hashes
+        or payload.get("preregistration_hash") != policy.preregistration_hash
+        or payload.get("full_history_scope") != policy.payload["full_history_scope"]
+        or payload.get("evidence_root") != str(policy.evidence_root)
+        or tuple(payload.get("tasks", ())) != TASKS
+        or payload.get("stage3_locked") is not True
+    ):
+        raise ValueError("formal approval binding drift")
+    validate_rehearsal(Path(str(payload["rehearsal_receipt_path"])), commit=commit)
+    if not repository_clean(repository_root):
+        raise ValueError("formal approval cannot authorize a dirty repository")
+    return payload
+
+
+def freeze_chain_authority(
+    *, approval_path: Path, policy: Stage2ActivePolicy, repository_root: Path
+) -> Path:
+    approval = validate_approval(approval_path, policy=policy, repository_root=repository_root)
+    payload: dict[str, Any] = {
+        "schema_name": CHAIN_AUTHORITY_SCHEMA,
+        "schema_version": "2.0",
+        "status": "SEALED",
+        "code_commit": approval["code_commit"],
+        "policy_hash": policy.policy_hash,
+        "approval_hash": approval["approval_hash"],
+        "contract_hashes": policy.contract_hashes,
+        "preregistration_hash": policy.preregistration_hash,
+        "task_dag": policy.payload["task_dag"],
+        "full_history_scope": policy.payload["full_history_scope"],
+        "stage3_locked": True,
+    }
+    payload["authority_hash"] = canonical_hash(payload)
+    return _write_exclusive(
+        policy.operations_root
+        / "authorities"
+        / f"chain-authority-{payload['authority_hash']}.json",
+        payload,
+    )
+
+
+def freeze_t16_authority(
+    *,
+    chain_authority_path: Path,
+    handoffs: dict[str, dict[str, Any]],
+    policy: Stage2ActivePolicy,
+) -> Path:
+    chain = _read_json(chain_authority_path)
+    if (
+        not _self_hash_valid(chain, "authority_hash")
+        or chain.get("schema_name") != CHAIN_AUTHORITY_SCHEMA
+        or chain.get("policy_hash") != policy.policy_hash
+        or chain.get("stage3_locked") is not True
+    ):
+        raise ValueError("ChainAuthority drift before T16")
+    required = ("S2P13-T11", "S2P13-T13", "S2P13-T15")
+    if set(handoffs) != set(required):
+        raise ValueError("T16 Authority requires exact dynamic upstream handoffs")
+    bindings: dict[str, Any] = {}
+    for task in required:
+        handoff = handoffs[task]
+        if (
+            handoff.get("task_id") != task
+            or handoff.get("execution_mode") != "FORMAL"
+            or handoff.get("verify_status") != "PASS"
+            or not handoff.get("run_id")
+        ):
+            raise ValueError(f"T16 upstream is not a formal PASS handoff: {task}")
+        bindings[task] = handoff
+    payload: dict[str, Any] = {
+        "schema_name": T16_AUTHORITY_SCHEMA,
+        "schema_version": "2.0",
+        "status": "SEALED",
+        "chain_authority_hash": chain["authority_hash"],
+        "code_commit": chain["code_commit"],
+        "policy_hash": policy.policy_hash,
+        "preregistration_hash": policy.preregistration_hash,
+        "upstream_handoffs": bindings,
+        "bin_source_roles": ["TRAIN"],
+        "outcome_fields_read_before_matching": [],
+        "stage3_locked": True,
+    }
+    payload["authority_hash"] = canonical_hash(payload)
+    return _write_exclusive(
+        policy.operations_root / "authorities" / f"t16-authority-{payload['authority_hash']}.json",
+        payload,
+    )
+
+
+def prepare_adapter_plan(
+    *,
+    approval_path: Path,
+    chain_authority_path: Path,
+    policy: Stage2ActivePolicy,
+    repository_root: Path,
+) -> tuple[Path, Path]:
+    """Create one immutable argv plan underneath the approved evidence root."""
+
+    approval = validate_approval(approval_path, policy=policy, repository_root=repository_root)
+    chain = _read_json(chain_authority_path)
+    if (
+        not _self_hash_valid(chain, "authority_hash")
+        or chain.get("approval_hash") != approval["approval_hash"]
+    ):
+        raise ValueError("adapter plan ChainAuthority binding drift")
+    chain_root = policy.evidence_root / "chains" / str(approval["approval_hash"])
+    operations_root = chain_root / "operations"
+    evidence_root = chain_root / "tasks"
+    evidence_root.mkdir(parents=True, exist_ok=False)
+    producer = repository_root / "scripts/run_stage2_v13_producer.py"
+    scope = cast(dict[str, str], policy.payload["full_history_scope"])
+    tasks: dict[str, Any] = {}
+    for task in TASKS:
+        task_root = evidence_root / task
+        artifact_root = task_root / "artifacts"
+        artifact_root.mkdir(parents=True)
+
+        def command(mode: str, *, task_id: str = task) -> list[str]:
+            return [
+                sys.executable,
+                str(producer),
+                task_id,
+                mode,
+                "--execution-mode",
+                "FORMAL",
+                "--scope-mode",
+                "FULL_HISTORY",
+                "--start-date",
+                scope["start_date"],
+                "--end-date-exclusive",
+                scope["end_date_exclusive"],
+                "--repository-root",
+                str(repository_root),
+            ]
+
+        tasks[task] = {
+            "required_upstream_tasks": list(UPSTREAM_TASKS[task]),
+            "static_preflight_command": command("static-preflight"),
+            "input_preflight_command": command("input-preflight"),
+            "run_command": command("run"),
+            "resume_command": command("resume"),
+            "allowed_artifact_root": str(artifact_root),
+            "checkpoint_path": str(task_root / "checkpoint.json"),
+            "receipt_path": str(task_root / "receipt.json"),
+        }
+    payload: dict[str, Any] = {
+        "schema_name": PLAN_SCHEMA,
+        "status": "APPROVED",
+        "stage_plan_version": "1.3",
+        "code_commit": approval["code_commit"],
+        "evidence_root": str(evidence_root),
+        "preregistration_path": str(policy.preregistration_path),
+        "preregistration_hash": policy.preregistration_hash,
+        "chain_authority_path": str(chain_authority_path),
+        "chain_authority_hash": chain["authority_hash"],
+        "tasks": tasks,
+        "formal_run_created": False,
+    }
+    payload["adapter_plan_hash"] = canonical_hash(payload)
+    plan_path = chain_root / f"adapter-plan-{payload['adapter_plan_hash']}.json"
+    _write_exclusive(plan_path, payload)
+    return plan_path, operations_root
+
+
+def _write_checkpoint(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    temporary.write_text(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    os.replace(temporary, path)
+
+
+class LightweightSupervisor:
+    """One lock and one checkpoint; task state comes only from receipts."""
+
+    def __init__(
+        self,
+        *,
+        root: Path,
+        approval: dict[str, Any],
+        chain_authority_path: Path,
+        adapters: dict[str, TaskAdapter],
+    ) -> None:
+        if set(adapters) != set(TASKS):
+            raise ValueError("lightweight supervisor requires the exact Stage 2 DAG")
+        self.root = root
+        self.approval = approval
+        self.chain_authority_path = chain_authority_path
+        self.adapters = adapters
+        self.checkpoint_path = root / "checkpoint.json"
+        self.lock_path = root / "chain.lock"
+
+    def _initial(self) -> dict[str, Any]:
+        chain = _read_json(self.chain_authority_path)
+        return {
+            "schema_name": "stage2-lightweight-chain-checkpoint-v2",
+            "status": "NOT_STARTED",
+            "code_commit": self.approval["code_commit"],
+            "approval_hash": self.approval["approval_hash"],
+            "chain_authority_hash": chain["authority_hash"],
+            "current_task": TASKS[0],
+            "tasks": {task: {"status": "NOT_STARTED", "handoff": None} for task in TASKS},
+            "stage3_locked": True,
+        }
+
+    def run_or_resume(self) -> dict[str, Any]:
+        self.root.mkdir(parents=True, exist_ok=True)
+        with self.lock_path.open("a+", encoding="utf-8") as lock:
+            try:
+                fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError as exc:
+                raise RuntimeError("STAGE2_CHAIN_ALREADY_RUNNING") from exc
+            checkpoint = (
+                _read_json(self.checkpoint_path)
+                if self.checkpoint_path.exists()
+                else self._initial()
+            )
+            if checkpoint.get("approval_hash") != self.approval["approval_hash"]:
+                raise ValueError("lightweight checkpoint approval drift")
+            if checkpoint["status"] == "COMPLETE":
+                return checkpoint
+            if checkpoint["status"] == "TERMINAL_FAILED":
+                raise RuntimeError("terminal chain requires a separately approved successor")
+            try:
+                for task in TASKS:
+                    if checkpoint["tasks"][task]["status"] == "PASS":
+                        continue
+                    checkpoint.update({"status": "PREFLIGHT", "current_task": task})
+                    _write_checkpoint(self.checkpoint_path, checkpoint)
+                    self.adapters[task].static_preflight()
+                checkpoint["status"] = "IN_PROGRESS"
+                for task in TASKS:
+                    task_state = checkpoint["tasks"][task]
+                    if task_state["status"] == "PASS":
+                        continue
+                    checkpoint["current_task"] = task
+                    task_state["status"] = "IN_PROGRESS"
+                    _write_checkpoint(self.checkpoint_path, checkpoint)
+                    self.adapters[task].input_preflight()
+                    handoff = self.adapters[task].run_or_resume()
+                    if handoff.task_id != task:
+                        raise ValueError("adapter returned another task")
+                    task_state.update({"status": "PASS", "handoff": handoff.payload()})
+                    _write_checkpoint(self.checkpoint_path, checkpoint)
+            except RetryableInterruption as exc:
+                checkpoint.update({"status": "RETRYABLE_INTERRUPTED", "reason": str(exc)})
+                _write_checkpoint(self.checkpoint_path, checkpoint)
+                return checkpoint
+            except Exception as exc:
+                checkpoint.update({"status": "TERMINAL_FAILED", "reason": str(exc)})
+                _write_checkpoint(self.checkpoint_path, checkpoint)
+                raise
+            checkpoint.update({"status": "COMPLETE", "current_task": TASKS[-1]})
+            _write_checkpoint(self.checkpoint_path, checkpoint)
+            return checkpoint
+
+
+def run_formal_chain(
+    *,
+    approval_path: Path,
+    policy: Stage2ActivePolicy,
+    repository_root: Path,
+) -> dict[str, Any]:
+    approval = validate_approval(approval_path, policy=policy, repository_root=repository_root)
+    authorities = sorted(policy.operations_root.glob("authorities/chain-authority-*.json"))
+    matching = [
+        path
+        for path in authorities
+        if _read_json(path).get("approval_hash") == approval["approval_hash"]
+    ]
+    chain_path = (
+        matching[0]
+        if len(matching) == 1
+        else freeze_chain_authority(
+            approval_path=approval_path,
+            policy=policy,
+            repository_root=repository_root,
+        )
+        if not matching
+        else None
+    )
+    if chain_path is None:
+        raise ValueError("multiple ChainAuthority objects bind one approval")
+    plans = sorted(
+        (policy.evidence_root / "chains" / str(approval["approval_hash"])).glob(
+            "adapter-plan-*.json"
+        )
+    )
+    if plans:
+        if len(plans) != 1:
+            raise ValueError("multiple adapter plans bind one approval")
+        plan_path = plans[0]
+        operations_root = plan_path.parent / "operations"
+    else:
+        plan_path, operations_root = prepare_adapter_plan(
+            approval_path=approval_path,
+            chain_authority_path=chain_path,
+            policy=policy,
+            repository_root=repository_root,
+        )
+    plan = load_adapter_plan(plan_path, code_commit=str(approval["code_commit"]))
+    adapters = build_production_adapters(
+        plan,
+        supervisor_root=operations_root,
+        repository_root=repository_root,
+    )
+    old_chain_path = os.environ.get("ERA_S2P13_CHAIN_AUTHORITY_PATH")
+    os.environ["ERA_S2P13_CHAIN_AUTHORITY_PATH"] = str(chain_path)
+    os.environ["ERA_S2P13_POLICY_PATH"] = str(policy.path)
+    try:
+        return LightweightSupervisor(
+            root=operations_root,
+            approval=approval,
+            chain_authority_path=chain_path,
+            adapters=adapters,
+        ).run_or_resume()
+    finally:
+        if old_chain_path is None:
+            os.environ.pop("ERA_S2P13_CHAIN_AUTHORITY_PATH", None)
+        else:
+            os.environ["ERA_S2P13_CHAIN_AUTHORITY_PATH"] = old_chain_path
+
+
+def verify_formal_chain(
+    *,
+    approval_path: Path,
+    policy: Stage2ActivePolicy,
+    repository_root: Path,
+) -> dict[str, Any]:
+    """Strictly read every final receipt without starting missing work."""
+
+    approval = validate_approval(approval_path, policy=policy, repository_root=repository_root)
+    chain_root = policy.evidence_root / "chains" / str(approval["approval_hash"])
+    plans = sorted(chain_root.glob("adapter-plan-*.json"))
+    if len(plans) != 1:
+        raise ValueError("formal Verify requires one exact adapter plan")
+    operations_root = chain_root / "operations"
+    checkpoint = _read_json(operations_root / "checkpoint.json")
+    if (
+        checkpoint.get("status") != "COMPLETE"
+        or checkpoint.get("approval_hash") != approval["approval_hash"]
+        or checkpoint.get("stage3_locked") is not True
+    ):
+        raise ValueError("formal chain is not complete")
+    plan = load_adapter_plan(plans[0], code_commit=str(approval["code_commit"]))
+    adapters = build_production_adapters(
+        plan,
+        supervisor_root=operations_root,
+        repository_root=repository_root,
+    )
+    verified: dict[str, Any] = {}
+    for task in TASKS:
+        if not plan.tasks[task].receipt_path.is_file():
+            raise ValueError(f"formal Verify is missing receipt: {task}")
+        handoff = adapters[task].run_or_resume()
+        recorded = cast(dict[str, Any], checkpoint["tasks"])[task]["handoff"]
+        if handoff.payload() != recorded:
+            raise ValueError(f"formal Verify checkpoint drift: {task}")
+        verified[task] = {
+            "run_id": handoff.run_id,
+            "row_count": handoff.row_count,
+            "output_hash": handoff.output_hash,
+            "verify_status": handoff.verify_status,
+        }
+    result: dict[str, Any] = {
+        "schema_name": "stage2-lightweight-chain-verify-v2",
+        "status": "PASS",
+        "approval_hash": approval["approval_hash"],
+        "code_commit": approval["code_commit"],
+        "tasks": verified,
+        "stage3_locked": True,
+    }
+    result["verify_hash"] = canonical_hash(result)
+    return result
+
+
+def repository_head(repository_root: Path) -> dict[str, Any]:
+    return {
+        "commit": current_commit(repository_root),
+        "clean": repository_clean(repository_root),
+        "branch": subprocess.check_output(
+            ["git", "branch", "--show-current"], cwd=repository_root, text=True
+        ).strip(),
+    }

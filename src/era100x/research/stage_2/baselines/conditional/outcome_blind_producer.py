@@ -31,6 +31,7 @@ from .v14_contracts import (
     FrozenQuintileBoundaries,
     MatchLevel,
     OutcomeCell,
+    S2P13T16ContractAuthority,
     S2T15ContractAuthority,
     V14ControlCandidate,
     V14PrimaryEpisode,
@@ -253,7 +254,7 @@ def _event_outcomes(row: dict[str, Any]) -> tuple[OutcomeCell, ...]:
 
 def match_group(
     *,
-    authority: S2T15ContractAuthority,
+    authority: S2T15ContractAuthority | S2P13T16ContractAuthority,
     bins: BinningIndex,
     same_family: SameFamilyIntervals,
     episode_rows: list[dict[str, Any]],

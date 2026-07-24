@@ -1,0 +1,40 @@
+{
+  "schema_name": "stage2-active-policy-v2",
+  "schema_version": "2.0",
+  "stage": "S2",
+  "stage_plan_version": "1.3",
+  "execution_limit": "S2P13-T16",
+  "stage3_locked": true,
+  "code_commit_mode": "CURRENT_CLEAN_HEAD",
+  "contract_paths": [
+    "docs/spec/system_manual_v1.3.5_final.md",
+    "docs/development/plans/stage_2_plan_v1.3.md",
+    "docs/development/STAGE2_OPERATIONS.md",
+    "docs/development/tasks/stage_2/S2P13-T11-lifecycle.md",
+    "docs/development/tasks/stage_2/S2P13-T12-path-extraction.md",
+    "docs/development/tasks/stage_2/S2P13-T13-path-metrics.md",
+    "docs/development/tasks/stage_2/S2P13-T14-first-passage.md",
+    "docs/development/tasks/stage_2/S2P13-T15-ambiguity.md",
+    "docs/development/tasks/stage_2/S2P13-T16-conditional-baseline.md"
+  ],
+  "preregistration_path": "docs/development/tasks/stage_2/S2-T19-manifest.md",
+  "evidence_root": "/Volumes/FuckingLife/era100x_stage2/formal/stage2-plan-v1.3",
+  "task_dag": {
+    "S2P13-T11": [],
+    "S2P13-T12": ["S2P13-T11"],
+    "S2P13-T13": ["S2P13-T12"],
+    "S2P13-T14": ["S2P13-T12"],
+    "S2P13-T15": ["S2P13-T14"],
+    "S2P13-T16": ["S2P13-T11", "S2P13-T13", "S2P13-T15"]
+  },
+  "full_history_scope": {
+    "start_date": "2020-01-01",
+    "end_date_exclusive": "2026-07-04"
+  },
+  "required_gates": [
+    "FINAL_CODE_7_DAY_REHEARSAL",
+    "COMMIT_BOUND_HUMAN_APPROVAL",
+    "CHAIN_AUTHORITY",
+    "FULL_VERIFY"
+  ]
+}

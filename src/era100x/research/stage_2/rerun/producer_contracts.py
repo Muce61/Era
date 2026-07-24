@@ -213,6 +213,7 @@ class ProducerContext:
     upstream: dict[str, UpstreamArtifact]
     preregistration_path: Path
     preregistration_hash: str
+    repository_root: Path
 
     @classmethod
     def from_environment(
@@ -278,6 +279,7 @@ class ProducerContext:
             upstream=upstream,
             preregistration_path=preregistration_path,
             preregistration_hash=preregistration_hash,
+            repository_root=repository_root,
         )
 
     def static_preflight(self) -> dict[str, object]:

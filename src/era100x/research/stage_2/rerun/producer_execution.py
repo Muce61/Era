@@ -7,10 +7,11 @@ import os
 from datetime import date
 from pathlib import Path
 from typing import Any, cast
+import hashlib
 
 from era100x.foundation.governance import require_operation_allowed
 
-from .orchestrator import canonical_hash
+from .orchestrator import canonical_hash, repository_clean
 from .producer_contracts import ProducerContext
 from .production_adapters import RECEIPT_SCHEMA
 from .scoped_producers import (
@@ -102,18 +103,16 @@ def _producer_payload(context: ProducerContext, data_root: Path) -> dict[str, An
         )
     if context.task_id == "S2P13-T15":
         source = context.upstream["S2P13-T14"]
+        source_first_passage_root = _bound_data_root(source.artifact_root)
         result = produce_scoped_ambiguity(
             output_root=data_root,
-            source_first_passage_root=_bound_data_root(source.artifact_root),
+            source_first_passage_root=source_first_passage_root,
         )
-        result["source_first_passage_root"] = str(source.artifact_root / "data")
+        result["source_first_passage_root"] = str(source_first_passage_root)
         return result
     if context.task_id == "S2P13-T16":
         if context.execution_mode == "FORMAL":
-            raise ValueError(
-                "formal T16 requires a frozen successor binning handoff; "
-                "rehearsal bins cannot authorize a formal Run"
-            )
+            return _produce_formal_t16(context, data_root)
         from .seven_day_rehearsal import produce_scoped_conditional_baseline
 
         t15_output = _read(context.upstream["S2P13-T15"].artifact_root / "output.json")
@@ -124,12 +123,145 @@ def _producer_payload(context: ProducerContext, data_root: Path) -> dict[str, An
     raise ValueError(f"unsupported successor producer: {context.task_id}")
 
 
+def _produce_formal_t16(context: ProducerContext, data_root: Path) -> dict[str, Any]:
+    """Freeze dynamic successor Authority/TRAIN bins, then run the real T16 engine."""
+
+    from era100x.research.stage_2.baselines.conditional.binning_run import (
+        freeze_binning_snapshots,
+    )
+    from era100x.research.stage_2.baselines.conditional.execution_run import (
+        run_full_execution,
+        verify_published_run,
+    )
+    from era100x.research.stage_2.baselines.conditional.full_run import (
+        T10_SNAPSHOT,
+        T10_SNAPSHOT_ID,
+    )
+    from era100x.research.stage_2.baselines.conditional.v14_contracts import (
+        S2P13T16ContractAuthority,
+    )
+
+    from .lightweight_governance import (
+        _read_json as read_governance_json,
+        _self_hash_valid,
+        load_policy,
+    )
+    from .seven_day_rehearsal import LABEL_CONTRACT_HASH
+
+    chain_path = Path(os.environ.get("ERA_S2P13_CHAIN_AUTHORITY_PATH", ""))
+    policy_path = Path(os.environ.get("ERA_S2P13_POLICY_PATH", ""))
+    if not chain_path.is_absolute() or not policy_path.is_absolute():
+        raise ValueError("formal T16 requires ChainAuthority and Policy bindings")
+    chain = read_governance_json(chain_path)
+    if (
+        not _self_hash_valid(chain, "authority_hash")
+        or chain.get("schema_name") != "stage2-chain-authority-v2"
+        or chain.get("code_commit") != context.code_commit
+    ):
+        raise ValueError("formal T16 ChainAuthority drift")
+    policy = load_policy(policy_path, repository_root=context.repository_root)
+    if chain.get("policy_hash") != policy.policy_hash:
+        raise ValueError("formal T16 Policy drift")
+    source_t15 = _read(context.upstream["S2P13-T15"].artifact_root / "output.json")
+    first_passage_root = Path(str(source_t15.get("source_first_passage_root", "")))
+    if (
+        not first_passage_root.is_absolute()
+        or first_passage_root.is_symlink()
+        or not first_passage_root.is_dir()
+    ):
+        raise ValueError("formal T16 cannot resolve the current T14 row evidence")
+    gate_path = context.repository_root / "src/era100x/research/stage_2/gates/price/gate.py"
+    context_hash = hashlib.sha256(gate_path.read_bytes()).hexdigest()
+    authority = S2P13T16ContractAuthority.seal(
+        {
+            "code_commit": context.code_commit,
+            "chain_authority_hash": chain["authority_hash"],
+            "policy_hash": policy.policy_hash,
+            "source_t10_binding_hash": T10_SNAPSHOT_ID,
+            "source_s2p13_t11_binding_hash": context.upstream["S2P13-T11"].producer_receipt_hash,
+            "source_s2p13_t13_binding_hash": context.upstream["S2P13-T13"].producer_receipt_hash,
+            "source_s2p13_t15_binding_hash": context.upstream["S2P13-T15"].producer_receipt_hash,
+            "context_binding_hash": context_hash,
+            "label_contract_hash": LABEL_CONTRACT_HASH,
+            "preregistration_hash": context.preregistration_hash,
+        }
+    )
+    authority_path = data_root / f"authority-{authority.authority_hash}.json"
+    _write_exclusive(authority_path, authority.model_dump(mode="json"))
+    bins, bins_path = freeze_binning_snapshots(
+        authority_path=authority_path,
+        bin_root=data_root / "train-bins",
+        t10_snapshot=T10_SNAPSHOT,
+        t10_snapshot_id=T10_SNAPSHOT_ID,
+        current_commit=context.code_commit,
+        repository_clean=repository_clean(context.repository_root),
+        lightweight_policy_authorized=True,
+    )
+    runs_root = data_root / "runs"
+    runs_root.mkdir()
+    manifest, published = run_full_execution(
+        authority_path=authority_path,
+        binning_set_path=bins_path,
+        runs_root=runs_root,
+        t10_snapshot=T10_SNAPSHOT,
+        t10_snapshot_id=T10_SNAPSHOT_ID,
+        t13_snapshot=first_passage_root,
+        current_commit=context.code_commit,
+        repository_clean=repository_clean(context.repository_root),
+        lightweight_policy_authorized=True,
+    )
+    verify, _ = verify_published_run(run_root=published.parents[2])
+    if verify.get("status") != "PASS":
+        raise ValueError("formal T16 independent Verify did not PASS")
+    return {
+        "task_id": "S2P13-T16",
+        "authority_hash": authority.authority_hash,
+        "binning_set_hash": bins["binning_set_hash"],
+        "bin_source_roles": ["TRAIN"],
+        "outcome_fields_read_before_matching": [],
+        "published_snapshot": str(published),
+        "manifest_hash": manifest["manifest_hash"],
+        "verify_hash": verify["verify_hash"],
+        "row_count": int(verify["source_h2_path_count"]),
+        "historical_evidence_only": True,
+        "research_result": "DESCRIPTIVE_ONLY_PRIMARY_PENDING_T18",
+        "stage3_locked": True,
+    }
+
+
+def _require_formal_gate(context: ProducerContext, *, resume: bool) -> None:
+    policy_value = os.environ.get("ERA_S2P13_POLICY_PATH")
+    chain_value = os.environ.get("ERA_S2P13_CHAIN_AUTHORITY_PATH")
+    if not policy_value and not chain_value:
+        require_operation_allowed("RESUME" if resume else "RUN")
+        return
+    if not policy_value or not chain_value:
+        raise ValueError("lightweight formal gate is only partially bound")
+    from .lightweight_governance import (
+        _read_json as read_governance_json,
+        _self_hash_valid,
+        load_policy,
+    )
+
+    policy = load_policy(Path(policy_value), repository_root=context.repository_root)
+    chain = read_governance_json(Path(chain_value))
+    if (
+        not _self_hash_valid(chain, "authority_hash")
+        or chain.get("schema_name") != "stage2-chain-authority-v2"
+        or chain.get("code_commit") != context.code_commit
+        or chain.get("policy_hash") != policy.policy_hash
+        or chain.get("stage3_locked") is not True
+        or not repository_clean(context.repository_root)
+    ):
+        raise ValueError("lightweight formal gate binding drift")
+
+
 def execute_producer(context: ProducerContext, *, resume: bool = False) -> dict[str, Any]:
     """Execute once and publish a strict v2 receipt."""
 
     context.input_preflight()
     if context.execution_mode == "FORMAL":
-        require_operation_allowed("RESUME" if resume else "RUN")
+        _require_formal_gate(context, resume=resume)
     if context.receipt_path.exists():
         return verify_producer(context)
     artifact_root = _artifact_data_root(context)

@@ -35,11 +35,12 @@ from .v14_contracts import (
     EXPECTED_H2_OUTCOME_CELLS,
     EXPECTED_H2_PATHS,
     REGISTERED_PARAMETER_TIMING_PAIRS,
+    S2P13T16ContractAuthority,
     S2T15ContractAuthority,
     canonical_hash,
 )
 
-RUN_PATTERN = re.compile(r"^stage2-s2t15-conditional-\d{8}T\d{6}Z-[0-9a-f]{12}$")
+RUN_PATTERN = re.compile(r"^stage2-(?:s2t15-conditional|s2p13-t16)-\d{8}T\d{6}Z-[0-9a-f]{12}$")
 
 
 def _sha256_file(path: Path) -> str:
@@ -66,9 +67,10 @@ def _write_checkpoint(path: Path, payload: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
-def _new_run_id(authority_hash: str) -> str:
+def _new_run_id(authority_hash: str, *, plan_v13: bool = False) -> str:
     timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    value = f"stage2-s2t15-conditional-{timestamp}-{authority_hash[:12]}"
+    namespace = "s2p13-t16" if plan_v13 else "s2t15-conditional"
+    value = f"stage2-{namespace}-{timestamp}-{authority_hash[:12]}"
     if not RUN_PATTERN.fullmatch(value):
         raise AssertionError("internally generated unsafe T15 Run ID")
     return value
@@ -204,23 +206,33 @@ def run_full_execution(
     current_commit: str,
     repository_clean: bool,
     resume_run_id: str | None = None,
+    lightweight_policy_authorized: bool = False,
 ) -> tuple[dict[str, Any], Path]:
-    authority = S2T15ContractAuthority.model_validate_json(
-        json.dumps(read_json_file(authority_path), ensure_ascii=False, sort_keys=True)
+    raw_authority = read_json_file(authority_path)
+    authority = (
+        S2P13T16ContractAuthority.model_validate(raw_authority)
+        if raw_authority.get("schema_name") == "stage2-s2p13-t16-contract-authority"
+        else S2T15ContractAuthority.model_validate(raw_authority)
     )
     bins = read_binning_set(binning_set_path, authority_hash=authority.authority_hash)
+    plan_v13 = isinstance(authority, S2P13T16ContractAuthority)
+    schema_prefix = "stage2-s2p13-t16" if plan_v13 else "stage2-s2t15"
     if authority.code_commit != current_commit or not repository_clean:
         raise ValueError("T15 run requires the clean Authority commit")
     if bins.get("code_commit") != current_commit:
         raise ValueError("T15 binning set was not frozen by the Authority commit")
     if resume_run_id is None:
-        predecessor = require_final_successor_creation_state(runs_root)
-        run_id = _new_run_id(authority.authority_hash)
+        predecessor = (
+            Path(f"stage2-plan-v13-chain-{authority.authority_hash[:12]}")
+            if lightweight_policy_authorized
+            else require_final_successor_creation_state(runs_root)
+        )
+        run_id = _new_run_id(authority.authority_hash, plan_v13=plan_v13)
         run_root = runs_root / run_id
         run_root.mkdir(parents=False, exist_ok=False)
         checkpoint_path = run_root / "checkpoint.json"
         checkpoint: dict[str, Any] = {
-            "schema_name": "stage2-s2t15-checkpoint",
+            "schema_name": f"{schema_prefix}-checkpoint",
             "schema_version": "1.0",
             "run_id": run_id,
             "status": "IN_PROGRESS",
@@ -243,7 +255,11 @@ def run_full_execution(
             raise ValueError("unsafe T15 resume Run ID")
         run_id = resume_run_id
         run_root = runs_root / run_id
-        predecessor = require_final_successor_resume_state(runs_root, run_id)
+        predecessor = (
+            Path(f"stage2-plan-v13-chain-{authority.authority_hash[:12]}")
+            if lightweight_policy_authorized
+            else require_final_successor_resume_state(runs_root, run_id)
+        )
         checkpoint_path = run_root / "checkpoint.json"
         checkpoint = read_json_file(checkpoint_path)
         if (
@@ -254,18 +270,17 @@ def run_full_execution(
             not in {"IN_PROGRESS", "COMPLETE_PENDING_VERIFY", "VERIFIED_PASS"}
         ):
             raise ValueError("T15 resume checkpoint binding or status drift")
-        stored_authority = S2T15ContractAuthority.model_validate_json(
-            json.dumps(
-                read_json_file(run_root / "manifests" / "authority.json"),
-                ensure_ascii=False,
-                sort_keys=True,
-            )
+        stored_raw_authority = read_json_file(run_root / "manifests" / "authority.json")
+        stored_authority = (
+            S2P13T16ContractAuthority.model_validate(stored_raw_authority)
+            if stored_raw_authority.get("schema_name") == "stage2-s2p13-t16-contract-authority"
+            else S2T15ContractAuthority.model_validate(stored_raw_authority)
         )
         stored_bins = read_json_file(run_root / "manifests" / "binning-set.json")
         if stored_authority != authority or stored_bins != bins:
             raise ValueError("T15 resume Authority or binning evidence drift")
     execution_manifest: dict[str, Any] = {
-        "schema_name": "stage2-s2t15-execution-manifest",
+        "schema_name": f"{schema_prefix}-execution-manifest",
         "schema_version": "1.0",
         "run_id": run_id,
         "authority_hash": authority.authority_hash,
@@ -424,7 +439,7 @@ def run_full_execution(
         post_report=post_report,
     )
     reconciliation: dict[str, Any] = {
-        "schema_name": "stage2-s2t15-reconciliation",
+        "schema_name": f"{schema_prefix}-reconciliation",
         "schema_version": "1.0",
         "status": "PASS",
         "episode": episode_reconciliation.model_dump(mode="json"),
@@ -453,7 +468,7 @@ def run_full_execution(
     _write_json_exclusive(staging / "reports" / "reconciliation.json", reconciliation)
     entries = _publication_entries(staging)
     catalog: dict[str, Any] = {
-        "schema_name": "stage2-s2t15-catalog",
+        "schema_name": f"{schema_prefix}-catalog",
         "schema_version": "1.0",
         "run_id": run_id,
         "authority_hash": authority.authority_hash,
@@ -464,7 +479,7 @@ def run_full_execution(
     catalog["catalog_hash"] = canonical_hash(catalog)
     snapshot_id = str(catalog["catalog_hash"])
     manifest: dict[str, Any] = {
-        "schema_name": "stage2-s2t15-manifest",
+        "schema_name": f"{schema_prefix}-manifest",
         "schema_version": "1.0",
         "run_id": run_id,
         "snapshot_id": snapshot_id,
@@ -672,7 +687,11 @@ def verify_published_run(*, run_root: Path) -> tuple[dict[str, Any], Path]:
     ):
         raise ValueError("reconciliation disagrees with rescanned published evidence")
     verify: dict[str, Any] = {
-        "schema_name": "stage2-s2t15-verify-record",
+        "schema_name": (
+            "stage2-s2p13-t16-verify-record"
+            if run_root.name.startswith("stage2-s2p13-t16-")
+            else "stage2-s2t15-verify-record"
+        ),
         "schema_version": "1.0",
         "status": "PASS",
         "run_id": run_root.name,

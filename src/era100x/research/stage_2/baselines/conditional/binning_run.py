@@ -21,6 +21,7 @@ from .production_core import prepare_daily_features
 from .t10_access import FixedT10Reader, read_json_file
 from .v14_contracts import (
     REGISTERED_PARAMETER_TIMING_PAIRS,
+    S2P13T16ContractAuthority,
     S2T15ContractAuthority,
     canonical_hash,
 )
@@ -244,12 +245,17 @@ def freeze_binning_snapshots(
     t10_snapshot_id: str,
     current_commit: str,
     repository_clean: bool,
+    lightweight_policy_authorized: bool = False,
 ) -> tuple[dict[str, Any], Path]:
     """Prepare TRAIN blocks and freeze all 504 registered boundary objects."""
 
-    require_operation_allowed("FREEZE_BINS")
-    authority = S2T15ContractAuthority.model_validate_json(
-        json.dumps(read_json_file(authority_path), ensure_ascii=False, sort_keys=True)
+    if not lightweight_policy_authorized:
+        require_operation_allowed("FREEZE_BINS")
+    raw_authority = read_json_file(authority_path)
+    authority = (
+        S2P13T16ContractAuthority.model_validate(raw_authority)
+        if raw_authority.get("schema_name") == "stage2-s2p13-t16-contract-authority"
+        else S2T15ContractAuthority.model_validate(raw_authority)
     )
     if authority.authority_hash != authority.computed_hash():
         raise ValueError("Authority changed before TRAIN binning")
