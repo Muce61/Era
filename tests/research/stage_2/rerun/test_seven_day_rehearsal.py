@@ -175,6 +175,21 @@ def test_canonical_hash_accepts_strict_result_objects() -> None:
     )
 
 
+def test_archive_layout_boundary_rehearsal_scope_is_frozen(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(subject, "_git_clean", lambda: True)
+
+    with pytest.raises(ValueError, match="archive-layout boundary"):
+        subject.run_final_code_rehearsal(
+            output_root=tmp_path / "not-created",
+            start_date=date(2026, 6, 26),
+            purpose="ARCHIVE_LAYOUT_BOUNDARY_COVERAGE",
+        )
+
+    assert not (tmp_path / "not-created").exists()
+
+
 def test_t16_supplement_coverage_excludes_declared_gaps_without_controls(
     tmp_path: Path,
 ) -> None:

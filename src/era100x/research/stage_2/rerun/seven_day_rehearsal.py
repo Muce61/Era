@@ -999,12 +999,15 @@ def run_final_code_rehearsal(
         "FINAL_CODE_RELEASE_GATE",
         "TRADE_SUPPLEMENT_COVERAGE",
         "SEALED_RECEIPT_COVERAGE",
+        "ARCHIVE_LAYOUT_BOUNDARY_COVERAGE",
     }:
         raise ValueError("unsupported seven-day rehearsal purpose")
     if purpose == "FINAL_CODE_RELEASE_GATE" and start_date != START_DATE:
         raise ValueError("release-gate seven-day scope drift")
     if purpose == "SEALED_RECEIPT_COVERAGE" and start_date != date(2022, 4, 12):
         raise ValueError("sealed receipt seven-day scope drift")
+    if purpose == "ARCHIVE_LAYOUT_BOUNDARY_COVERAGE" and start_date != date(2026, 6, 27):
+        raise ValueError("archive-layout boundary seven-day scope drift")
     end_date_exclusive = start_date + timedelta(days=7)
     if not _git_clean():
         raise ValueError("final-code rehearsal requires a clean committed repository")
@@ -1229,9 +1232,11 @@ def run_final_code_rehearsal(
         }
         supplement_receipt.pop("receipt_hash", None)
         supplement_receipt["receipt_hash"] = _canonical_hash(supplement_receipt)
-        receipt_prefix = (
-            "trade-supplement" if purpose == "TRADE_SUPPLEMENT_COVERAGE" else "sealed-receipt"
-        )
+        receipt_prefix = {
+            "TRADE_SUPPLEMENT_COVERAGE": "trade-supplement",
+            "SEALED_RECEIPT_COVERAGE": "sealed-receipt",
+            "ARCHIVE_LAYOUT_BOUNDARY_COVERAGE": "archive-boundary",
+        }[purpose]
         _write_exclusive(
             OPERATIONS_ROOT / f"{receipt_prefix}-rehearsal-receipt.{commit}.json",
             supplement_receipt,
