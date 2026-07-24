@@ -8,6 +8,7 @@ import pytest
 
 from era100x.research.stage_2.baselines.conditional.seven_day_audit import (
     _safe_new_output_root,
+    _validate_audit_scope,
     _validate_daily_anchor_grid,
     lifecycle_assessment,
     verify_seven_day_audit,
@@ -49,6 +50,23 @@ def test_daily_anchor_grid_allows_deterministic_offset_change_at_midnight() -> N
 def test_output_root_must_be_new_named_private_tmp_child(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="named child of /private/tmp"):
         _safe_new_output_root(Path("/var/tmp/not-authorized"))
+
+
+def test_trade_supplement_scope_is_explicit_and_does_not_relax_source_boundary() -> None:
+    _validate_audit_scope(
+        start_date=date(2022, 2, 27),
+        audit_mode="TRADE_SUPPLEMENT_COVERAGE",
+    )
+    with pytest.raises(ValueError, match="2020-01-01"):
+        _validate_audit_scope(
+            start_date=date(2022, 2, 27),
+            audit_mode="SOURCE_BOUNDARY",
+        )
+    with pytest.raises(ValueError, match="must contain"):
+        _validate_audit_scope(
+            start_date=date(2022, 3, 2),
+            audit_mode="TRADE_SUPPLEMENT_COVERAGE",
+        )
 
 
 def test_verify_rejects_tampered_report(tmp_path: Path) -> None:

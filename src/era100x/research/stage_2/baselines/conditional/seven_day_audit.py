@@ -438,11 +438,24 @@ def lifecycle_assessment(*, t4_primary_expired_count: int) -> dict[str, Any]:
     }
 
 
-def run_seven_day_audit(*, output_root: Path, start_date: date) -> tuple[dict[str, Any], Path]:
+def _validate_audit_scope(*, start_date: date, audit_mode: str) -> None:
+    if audit_mode == "SOURCE_BOUNDARY":
+        if start_date != SOURCE_START_DATE:
+            raise ValueError("CR-2026-031/032 audit must exercise the 2020-01-01 source boundary")
+        return
+    if audit_mode == "TRADE_SUPPLEMENT_COVERAGE":
+        if not (start_date <= date(2022, 3, 1) < start_date + timedelta(days=AUDIT_DAY_COUNT)):
+            raise ValueError("Trade supplement audit scope must contain 2022-03-01")
+        return
+    raise ValueError("unsupported seven-day audit mode")
+
+
+def run_seven_day_audit(
+    *, output_root: Path, start_date: date, audit_mode: str = "SOURCE_BOUNDARY"
+) -> tuple[dict[str, Any], Path]:
     """Run one isolated seven-day audit and write append-only local evidence."""
 
-    if start_date != SOURCE_START_DATE:
-        raise ValueError("CR-2026-031/032 audit must exercise the 2020-01-01 source boundary")
+    _validate_audit_scope(start_date=start_date, audit_mode=audit_mode)
     if not _repository_clean():
         raise ValueError("seven-day audit requires a clean committed repository")
     root = _safe_new_output_root(output_root)
@@ -461,6 +474,7 @@ def run_seven_day_audit(*, output_root: Path, start_date: date) -> tuple[dict[st
         "schema_version": "1.0",
         "status": "BLOCKED" if lifecycle["status"] == "BLOCKED" else "PASS",
         "reason": "FULL_LIFECYCLE_HANDOFF_NOT_EXECUTABLE",
+        "audit_mode": audit_mode,
         "start_utc": f"{start_date.isoformat()}T00:00:00Z",
         "end_utc": f"{end_date.isoformat()}T00:00:00Z",
         "day_count": AUDIT_DAY_COUNT,

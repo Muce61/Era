@@ -858,6 +858,11 @@ def run_final_code_rehearsal(
         source_audit, source_report_path = run_seven_day_audit(
             output_root=temporary_audit_root,
             start_date=start_date,
+            audit_mode=(
+                "SOURCE_BOUNDARY"
+                if purpose == "FINAL_CODE_RELEASE_GATE"
+                else "TRADE_SUPPLEMENT_COVERAGE"
+            ),
         )
         verify_seven_day_audit(report_path=source_report_path)
         durable_audit_root = root / "source-audit"
