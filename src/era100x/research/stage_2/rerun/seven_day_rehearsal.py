@@ -288,6 +288,26 @@ def _catalog_partition_paths(instrument: str, owner_date: date) -> tuple[Path, P
     return resolved[0][0], resolved[0][1]
 
 
+@lru_cache(maxsize=2)
+def _sealed_trade_data_end_ns(instrument: str) -> int:
+    entries = _sealed_trade_catalog_entries(instrument)
+    if not entries:
+        raise ValueError(f"Stage 1 sealed Trade Catalog is empty: {instrument}")
+    last_owner_date = max(date.fromisoformat(raw_date) for raw_date in entries)
+    end_date_exclusive = last_owner_date + timedelta(days=1)
+    return int(datetime.combine(end_date_exclusive, datetime.min.time(), UTC).timestamp()) * NS
+
+
+def _bounded_lifecycle_source_end(*, instrument: str, start_ns: int) -> tuple[int, SourceCoverage]:
+    requested_end_ns = start_ns + 7 * DAY_NS
+    data_end_ns = _sealed_trade_data_end_ns(instrument)
+    if start_ns >= data_end_ns:
+        raise ValueError(f"lifecycle entry is outside sealed Trade coverage: {instrument}")
+    if data_end_ns < requested_end_ns:
+        return data_end_ns, SourceCoverage.DATA_END
+    return requested_end_ns, SourceCoverage.COMPLETE
+
+
 def _partition_paths(instrument: str, owner_date: date) -> tuple[Path, Path]:
     supplement_value = os.environ.get("ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_PATH")
     supplement_hash = os.environ.get("ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_HASH")
@@ -550,7 +570,11 @@ def _lifecycle_probe(
 ) -> tuple[dict[str, Any], tuple[LifecyclePairResult, ...]]:
     instrument = str(row["instrument"])
     start_ns = int(row["window_start_ns"])
-    end_ns = start_ns + 7 * DAY_NS
+    requested_end_ns = start_ns + 7 * DAY_NS
+    end_ns, source_coverage = _bounded_lifecycle_source_end(
+        instrument=instrument,
+        start_ns=start_ns,
+    )
     partition_hashes, declared_gaps = _verified_trade_metadata(
         instrument=instrument,
         start_ns=start_ns,
@@ -558,6 +582,8 @@ def _lifecycle_probe(
     )
     funding = _funding_rows(acceptance, instrument=instrument, start_ns=start_ns, end_ns=end_ns)
     if declared_gaps:
+        source_coverage = SourceCoverage.DECLARED_GAP
+    if source_coverage is not SourceCoverage.COMPLETE:
         trades: tuple[H2Trade, ...] = ()
         prices: tuple[ContractPricePoint, ...] = ()
         observations: tuple[LifecycleObservation, ...] = ()
@@ -599,9 +625,7 @@ def _lifecycle_probe(
             entry_ts_ns=start_ns,
             entry_price=Decimal(row["reference_price"]),
             observations=observations,
-            source_coverage=(
-                SourceCoverage.DECLARED_GAP if declared_gaps else SourceCoverage.COMPLETE
-            ),
+            source_coverage=source_coverage,
             scenario=scenario,
             funding_track=track,
             historical_funding_source_bound=True,
@@ -614,13 +638,15 @@ def _lifecycle_probe(
         "market_episode_id": row["market_episode_id"],
         "source_t10_snapshot_id": row["source_t10_snapshot_id"],
         "entry_ts_ns": start_ns,
+        "requested_observation_end_ns": requested_end_ns,
+        "available_observation_end_ns": end_ns,
         "entry_reference_price": row["reference_price"],
         "contract_price_observation_count": len(prices),
         "trade_observation_count": len(trades),
         "merged_observation_count": len(observations),
         "stage1_partition_hashes": partition_hashes,
         "declared_source_gaps": declared_gaps,
-        "source_coverage": "DECLARED_GAP" if declared_gaps else "COMPLETE",
+        "source_coverage": source_coverage.value,
         "funding_settlement_count": len(funding),
         "funding_acceptance_hash": acceptance["acceptance_hash"],
         "funding_tracks": results,

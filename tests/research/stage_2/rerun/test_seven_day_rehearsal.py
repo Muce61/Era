@@ -374,3 +374,38 @@ def test_trade_partition_resolver_rejects_conflicting_monthly_and_daily_archives
 
     with pytest.raises(ValueError, match="conflicting Stage 1 Trade partition binding"):
         subject._partition_paths("BTCUSDT", owner_date)
+
+
+def test_lifecycle_source_end_is_right_censored_at_sealed_catalog_end(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    start_ns = 1_783_036_800_000_000_000  # 2026-07-03T00:00:00Z
+    data_end_ns = 1_783_123_200_000_000_000  # 2026-07-04T00:00:00Z
+    monkeypatch.setattr(subject, "_sealed_trade_data_end_ns", lambda _: data_end_ns)
+
+    end_ns, coverage = subject._bounded_lifecycle_source_end(
+        instrument="BTCUSDT",
+        start_ns=start_ns,
+    )
+
+    assert end_ns == data_end_ns
+    assert coverage is subject.SourceCoverage.DATA_END
+
+
+def test_lifecycle_source_end_keeps_complete_seven_day_window(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    start_ns = 1_577_836_800_000_000_000
+    monkeypatch.setattr(
+        subject,
+        "_sealed_trade_data_end_ns",
+        lambda _: start_ns + 8 * subject.DAY_NS,
+    )
+
+    end_ns, coverage = subject._bounded_lifecycle_source_end(
+        instrument="ETHUSDT",
+        start_ns=start_ns,
+    )
+
+    assert end_ns == start_ns + 7 * subject.DAY_NS
+    assert coverage is subject.SourceCoverage.COMPLETE
