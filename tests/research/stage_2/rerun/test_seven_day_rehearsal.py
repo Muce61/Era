@@ -175,6 +175,13 @@ def test_canonical_hash_accepts_strict_result_objects() -> None:
     )
 
 
+def test_nanosecond_before_midnight_stays_on_previous_utc_date() -> None:
+    midnight_ns = 1_783_123_200_000_000_000
+
+    assert subject._date_from_ns(midnight_ns - 1) == date(2026, 7, 3)
+    assert subject._date_from_ns(midnight_ns) == date(2026, 7, 4)
+
+
 def test_archive_layout_boundary_rehearsal_scope_is_frozen(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

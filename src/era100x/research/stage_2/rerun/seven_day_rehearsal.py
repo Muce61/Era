@@ -194,7 +194,7 @@ def _safe_new_root(path: Path) -> Path:
 
 
 def _date_from_ns(value: int) -> date:
-    return datetime.fromtimestamp(value / NS, UTC).date()
+    return datetime.fromtimestamp(value // NS, UTC).date()
 
 
 @lru_cache(maxsize=2)
