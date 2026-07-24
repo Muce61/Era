@@ -731,18 +731,67 @@ def produce_scoped_lifecycle(
     }
 
 
-def produce_scoped_conditional_baseline(*, source_first_passage_root: Path) -> dict[str, Any]:
+def _declared_gap_t16_probes(source_first_passage_root: Path) -> list[dict[str, Any]]:
+    probes: list[dict[str, Any]] = []
+    for instrument in ("BTCUSDT", "ETHUSDT"):
+        rows = pq.read_table(
+            source_first_passage_root / instrument / "first_passage.parquet"
+        ).to_pylist()
+        primary = [
+            row
+            for row in rows
+            if row["evidence_level"] == "H2"
+            and row["parameter_set_id"] == PRIMARY_PARAMETER_SET
+            and row["timing_id"] == PRIMARY_TIMING
+            and bool(row["primary_eligible"])
+            and row["variant_id"] == "V1_PRICE"
+        ]
+        complete = [row for row in primary if row["source_quality_status"] == "COMPLETE"]
+        gap_rows = [
+            row
+            for row in primary
+            if row["source_quality_status"] == "WITH_GAPS" and row["source_gap_codes"]
+        ]
+        if complete or not gap_rows:
+            raise ValueError(
+                f"supplement coverage must exercise only declared-gap exclusion: {instrument}"
+            )
+        probes.append(
+            {
+                "instrument": instrument,
+                "match_level": "EXCLUDED_SOURCE_GAP",
+                "eligible_episode_count": 0,
+                "excluded_episode_count": len({str(row["market_episode_id"]) for row in gap_rows}),
+                "selected_control_ids": [],
+                "outcome_fields_read_before_matching": [],
+                "historical_evidence_only": True,
+            }
+        )
+    return probes
+
+
+def produce_scoped_conditional_baseline(
+    *,
+    source_first_passage_root: Path,
+    coverage_mode: str = "MATCH_COMPLETE",
+) -> dict[str, Any]:
     """Run the outcome-blind T16 rehearsal consumer on the current T14 handoff."""
 
-    reader = FixedT10Reader(T10_SNAPSHOT, expected_snapshot_id=T10_SNAPSHOT_ID)
-    rows = _selected_first_passage_rows(source_first_passage_root)
-    probes = [_t16_probe(reader=reader, row=rows[item]) for item in ("BTCUSDT", "ETHUSDT")]
+    if coverage_mode == "MATCH_COMPLETE":
+        reader = FixedT10Reader(T10_SNAPSHOT, expected_snapshot_id=T10_SNAPSHOT_ID)
+        rows = _selected_first_passage_rows(source_first_passage_root)
+        probes = [_t16_probe(reader=reader, row=rows[item]) for item in ("BTCUSDT", "ETHUSDT")]
+    elif coverage_mode == "EXCLUDE_DECLARED_GAP":
+        probes = _declared_gap_t16_probes(source_first_passage_root)
+    else:
+        raise ValueError("unsupported T16 rehearsal coverage mode")
     return {
         "task_id": "S2P13-T16",
         "probes": probes,
         "row_count": len(probes),
         "formal_binning_snapshot_created": False,
         "binning_semantics": "REHEARSAL_ONLY_NOT_FORMAL_BINS",
+        "coverage_mode": coverage_mode,
     }
 
 
@@ -969,7 +1018,12 @@ def run_final_code_rehearsal(
             upstream_handoffs={"S2P13-T14": handoffs[3].payload()},
         )
     )
-    t16_payload = produce_scoped_conditional_baseline(source_first_passage_root=t14_data)
+    t16_payload = produce_scoped_conditional_baseline(
+        source_first_passage_root=t14_data,
+        coverage_mode=(
+            "MATCH_COMPLETE" if purpose == "FINAL_CODE_RELEASE_GATE" else "EXCLUDE_DECLARED_GAP"
+        ),
+    )
     t16 = cast(list[dict[str, Any]], t16_payload["probes"])
     handoffs.append(
         _handoff(

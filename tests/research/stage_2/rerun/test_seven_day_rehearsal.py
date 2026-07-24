@@ -6,6 +6,8 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
+import pyarrow as pa  # type: ignore[import-untyped]
+import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
 from era100x.research.stage_2.rerun import seven_day_rehearsal as subject
 from era100x.research.stage_2.rerun.orchestrator import TASKS
@@ -111,3 +113,37 @@ def test_canonical_hash_accepts_strict_result_objects() -> None:
     assert subject._canonical_hash(_ResultFixture(Decimal("1.230"))) == subject._canonical_hash(
         {"value": "1.230"}
     )
+
+
+def test_t16_supplement_coverage_excludes_declared_gaps_without_controls(
+    tmp_path: Path,
+) -> None:
+    for instrument in ("BTCUSDT", "ETHUSDT"):
+        target = tmp_path / instrument / "first_passage.parquet"
+        target.parent.mkdir()
+        pq.write_table(
+            pa.Table.from_pylist(
+                [
+                    {
+                        "instrument": instrument,
+                        "market_episode_id": f"episode-{instrument}",
+                        "evidence_level": "H2",
+                        "parameter_set_id": subject.PRIMARY_PARAMETER_SET,
+                        "timing_id": subject.PRIMARY_TIMING,
+                        "primary_eligible": True,
+                        "variant_id": "V1_PRICE",
+                        "source_quality_status": "WITH_GAPS",
+                        "source_gap_codes": ["H2_VENUE_TRADE_ID_GAP"],
+                    }
+                ]
+            ),
+            target,
+        )
+    payload = subject.produce_scoped_conditional_baseline(
+        source_first_passage_root=tmp_path,
+        coverage_mode="EXCLUDE_DECLARED_GAP",
+    )
+    assert payload["row_count"] == 2
+    assert payload["coverage_mode"] == "EXCLUDE_DECLARED_GAP"
+    assert all(item["match_level"] == "EXCLUDED_SOURCE_GAP" for item in payload["probes"])
+    assert all(item["selected_control_ids"] == [] for item in payload["probes"])
