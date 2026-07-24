@@ -98,6 +98,10 @@ STAGE1_ROOT = Path(
     "/Volumes/FuckingLife/era100x_stage1/published/stage1-trades-v2/"
     "stage1-v1.0-20260714T090941Z-9676d50ae686-c70e5682"
 )
+STAGE1_CATALOG_ROOT = Path(
+    "/Volumes/FuckingLife/era100x_stage1/catalog/runs/"
+    "stage1-v1.0-20260714T090941Z-9676d50ae686-c70e5682"
+)
 FUNDING_ACCEPTANCE = Path(
     "/Volumes/FuckingLife/era100x_stage2/funding-evidence/"
     "s2p13-t11-funding-7d-cr-2026-038-v1/acceptance.json"
@@ -193,6 +197,97 @@ def _date_from_ns(value: int) -> date:
     return datetime.fromtimestamp(value / NS, UTC).date()
 
 
+@lru_cache(maxsize=2)
+def _sealed_trade_catalog_entries(instrument: str) -> dict[str, dict[str, Any]]:
+    manifest = _read_json(STAGE1_CATALOG_ROOT / "manifest.json")
+    claimed_manifest_hash = manifest.get("manifest_sha256")
+    manifest_payload = dict(manifest)
+    manifest_payload.pop("manifest_sha256", None)
+    if (
+        claimed_manifest_hash != _canonical_hash(manifest_payload)
+        or manifest.get("run_id") != STAGE1_ROOT.name
+    ):
+        raise ValueError("Stage 1 sealed Trade Manifest binding drift")
+
+    catalog = _read_json(STAGE1_CATALOG_ROOT / f"{instrument}.catalog.json")
+    manifest_symbol = manifest.get("symbols", {}).get(instrument)
+    entries = catalog.get("entries")
+    if (
+        not isinstance(manifest_symbol, dict)
+        or not isinstance(entries, list)
+        or entries != manifest_symbol.get("entries")
+        or catalog.get("logical_data_hash") != manifest_symbol.get("logical_data_hash")
+    ):
+        raise ValueError(f"Stage 1 sealed Trade Catalog binding drift: {instrument}")
+
+    by_date: dict[str, dict[str, Any]] = {}
+    for entry in entries:
+        if not isinstance(entry, dict) or entry.get("instrument") != instrument:
+            raise ValueError(f"Stage 1 sealed Trade Catalog entry invalid: {instrument}")
+        owner_date = str(entry.get("date"))
+        if owner_date in by_date and by_date[owner_date] != entry:
+            raise ValueError(
+                f"conflicting Stage 1 sealed Trade Catalog entries: {instrument} {owner_date}"
+            )
+        by_date[owner_date] = entry
+    return by_date
+
+
+def _catalog_partition_paths(instrument: str, owner_date: date) -> tuple[Path, Path]:
+    raw_date = owner_date.isoformat()
+    entry = _sealed_trade_catalog_entries(instrument).get(raw_date)
+    if entry is None:
+        raise ValueError(f"Stage 1 sealed Trade Catalog coverage missing: {instrument} {raw_date}")
+    expected_relative = f"date={raw_date}/part-000.parquet"
+    if entry.get("relative_path") != expected_relative or not isinstance(
+        entry.get("byte_sha256"), str
+    ):
+        raise ValueError(f"Stage 1 sealed Trade Catalog path invalid: {instrument} {raw_date}")
+
+    instrument_root = STAGE1_ROOT / instrument
+    candidates = (
+        instrument_root / f"archive={owner_date:%Y-%m}" / f"date={raw_date}",
+        instrument_root / f"archive={raw_date}" / f"date={raw_date}",
+    )
+    present = [root for root in candidates if root.exists()]
+    if not present:
+        raise ValueError(
+            f"unsafe or missing Catalog-registered Stage 1 Trade partition: {instrument} {raw_date}"
+        )
+
+    resolved: list[tuple[Path, Path, str]] = []
+    for root in present:
+        parquet_path = root / "part-000.parquet"
+        receipt_path = root / "partition.json"
+        if (
+            root.is_symlink()
+            or parquet_path.is_symlink()
+            or receipt_path.is_symlink()
+            or not parquet_path.is_file()
+            or not receipt_path.is_file()
+        ):
+            raise ValueError(
+                f"unsafe Catalog-registered Stage 1 Trade partition: {instrument} {raw_date}"
+            )
+        receipt = _read_json(receipt_path)
+        receipt_hash = receipt.get("byte_sha256")
+        if (
+            receipt.get("instrument") != instrument
+            or receipt.get("date") != raw_date
+            or receipt_hash != entry["byte_sha256"]
+        ):
+            raise ValueError(
+                f"conflicting Stage 1 Trade partition binding: {instrument} {raw_date}"
+            )
+        if len(present) > 1 and _file_hash(parquet_path) != receipt_hash:
+            raise ValueError(f"conflicting Stage 1 Trade partitions: {instrument} {raw_date}")
+        resolved.append((parquet_path, receipt_path, str(receipt_hash)))
+
+    if len({item[2] for item in resolved}) != 1:
+        raise ValueError(f"conflicting Stage 1 Trade partitions: {instrument} {raw_date}")
+    return resolved[0][0], resolved[0][1]
+
+
 def _partition_paths(instrument: str, owner_date: date) -> tuple[Path, Path]:
     supplement_value = os.environ.get("ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_PATH")
     supplement_hash = os.environ.get("ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_HASH")
@@ -216,10 +311,7 @@ def _partition_paths(instrument: str, owner_date: date) -> tuple[Path, Path]:
             if acceptance_hash != json.loads(acceptance_path.read_bytes()).get("acceptance_hash"):
                 raise ValueError("Trade supplement acceptance self-hash drift")
             return parquet_path, receipt_path
-    root = (
-        STAGE1_ROOT / instrument / f"archive={owner_date:%Y-%m}" / f"date={owner_date.isoformat()}"
-    )
-    return root / "part-000.parquet", root / "partition.json"
+    return _catalog_partition_paths(instrument, owner_date)
 
 
 def _verified_trade_window(

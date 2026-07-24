@@ -66,6 +66,64 @@ def _report(path: Path) -> dict[str, object]:
     return payload
 
 
+def _write_stage1_catalog_fixture(
+    *,
+    root: Path,
+    catalog_root: Path,
+    instrument: str,
+    owner_date: date,
+    parquet_hash: str,
+) -> None:
+    entry = {
+        "instrument": instrument,
+        "date": owner_date.isoformat(),
+        "relative_path": f"date={owner_date.isoformat()}/part-000.parquet",
+        "byte_sha256": parquet_hash,
+    }
+    catalog = {"logical_data_hash": "fixture-logical-hash", "entries": [entry]}
+    catalog_root.mkdir(parents=True, exist_ok=True)
+    (catalog_root / f"{instrument}.catalog.json").write_text(json.dumps(catalog), encoding="utf-8")
+    manifest = {
+        "run_id": root.name,
+        "symbols": {
+            instrument: {
+                "logical_data_hash": "fixture-logical-hash",
+                "entries": [entry],
+            }
+        },
+    }
+    manifest["manifest_sha256"] = subject._canonical_hash(manifest)
+    (catalog_root / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+
+def _write_trade_partition(
+    *,
+    root: Path,
+    instrument: str,
+    owner_date: date,
+    archive: str,
+    rows: list[dict[str, object]],
+    input_rows: int | None = None,
+    duplicate_exact_count: int = 0,
+) -> tuple[Path, dict[str, object]]:
+    partition_root = root / instrument / f"archive={archive}" / f"date={owner_date.isoformat()}"
+    partition_root.mkdir(parents=True)
+    parquet_path = partition_root / "part-000.parquet"
+    pq.write_table(pa.Table.from_pylist(rows), parquet_path)
+    receipt: dict[str, object] = {
+        "instrument": instrument,
+        "date": owner_date.isoformat(),
+        "byte_sha256": hashlib.sha256(parquet_path.read_bytes()).hexdigest(),
+        "input_rows": len(rows) if input_rows is None else input_rows,
+        "rows": len(rows),
+        "duplicate_exact_count": duplicate_exact_count,
+        "venue_trade_id_gap_count": 0,
+        "venue_trade_id_reversal_count": 0,
+    }
+    (partition_root / "partition.json").write_text(json.dumps(receipt), encoding="utf-8")
+    return parquet_path, receipt
+
+
 def test_verify_and_finalize_are_append_only(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -155,41 +213,41 @@ def test_trade_receipt_accepts_accounted_input_duplicates(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     owner_date = date(2022, 4, 15)
-    root = tmp_path / "stage1"
-    partition_root = root / "BTCUSDT" / "archive=2022-04" / "date=2022-04-15"
-    partition_root.mkdir(parents=True)
-    parquet_path = partition_root / "part-000.parquet"
-    pq.write_table(
-        pa.Table.from_pylist(
-            [
-                {
-                    "ts_event_ns": 1,
-                    "venue_trade_id": 1,
-                    "canonical_trade_id": "a",
-                    "price": "1",
-                },
-                {
-                    "ts_event_ns": 2,
-                    "venue_trade_id": 2,
-                    "canonical_trade_id": "b",
-                    "price": "2",
-                },
-            ]
-        ),
-        parquet_path,
+    root = tmp_path / "stage1-run"
+    rows = [
+        {
+            "ts_event_ns": 1,
+            "venue_trade_id": 1,
+            "canonical_trade_id": "a",
+            "price": "1",
+        },
+        {
+            "ts_event_ns": 2,
+            "venue_trade_id": 2,
+            "canonical_trade_id": "b",
+            "price": "2",
+        },
+    ]
+    parquet_path, receipt = _write_trade_partition(
+        root=root,
+        instrument="BTCUSDT",
+        owner_date=owner_date,
+        archive="2022-04",
+        rows=rows,
+        input_rows=5,
+        duplicate_exact_count=3,
     )
-    receipt = {
-        "instrument": "BTCUSDT",
-        "date": owner_date.isoformat(),
-        "byte_sha256": hashlib.sha256(parquet_path.read_bytes()).hexdigest(),
-        "input_rows": 5,
-        "rows": 2,
-        "duplicate_exact_count": 3,
-        "venue_trade_id_gap_count": 0,
-        "venue_trade_id_reversal_count": 0,
-    }
-    (partition_root / "partition.json").write_text(json.dumps(receipt), encoding="utf-8")
+    catalog_root = tmp_path / "catalog"
+    _write_stage1_catalog_fixture(
+        root=root,
+        catalog_root=catalog_root,
+        instrument="BTCUSDT",
+        owner_date=owner_date,
+        parquet_hash=str(receipt["byte_sha256"]),
+    )
     monkeypatch.setattr(subject, "STAGE1_ROOT", root)
+    monkeypatch.setattr(subject, "STAGE1_CATALOG_ROOT", catalog_root)
+    subject._sealed_trade_catalog_entries.cache_clear()
     subject._verified_trade_receipt_day.cache_clear()
 
     resolved_path, partition_hash, gap = subject._verified_trade_receipt_day("BTCUSDT", owner_date)
@@ -203,24 +261,101 @@ def test_trade_receipt_rejects_unreconciled_duplicate_count(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     owner_date = date(2022, 4, 15)
-    root = tmp_path / "stage1"
-    partition_root = root / "BTCUSDT" / "archive=2022-04" / "date=2022-04-15"
-    partition_root.mkdir(parents=True)
-    parquet_path = partition_root / "part-000.parquet"
-    pq.write_table(pa.Table.from_pylist([{"value": 1}, {"value": 2}]), parquet_path)
-    receipt = {
-        "instrument": "BTCUSDT",
-        "date": owner_date.isoformat(),
-        "byte_sha256": hashlib.sha256(parquet_path.read_bytes()).hexdigest(),
-        "input_rows": 6,
-        "rows": 2,
-        "duplicate_exact_count": 3,
-        "venue_trade_id_gap_count": 0,
-        "venue_trade_id_reversal_count": 0,
-    }
-    (partition_root / "partition.json").write_text(json.dumps(receipt), encoding="utf-8")
+    root = tmp_path / "stage1-run"
+    _, receipt = _write_trade_partition(
+        root=root,
+        instrument="BTCUSDT",
+        owner_date=owner_date,
+        archive="2022-04",
+        rows=[{"value": 1}, {"value": 2}],
+        input_rows=6,
+        duplicate_exact_count=3,
+    )
+    catalog_root = tmp_path / "catalog"
+    _write_stage1_catalog_fixture(
+        root=root,
+        catalog_root=catalog_root,
+        instrument="BTCUSDT",
+        owner_date=owner_date,
+        parquet_hash=str(receipt["byte_sha256"]),
+    )
     monkeypatch.setattr(subject, "STAGE1_ROOT", root)
+    monkeypatch.setattr(subject, "STAGE1_CATALOG_ROOT", catalog_root)
+    subject._sealed_trade_catalog_entries.cache_clear()
     subject._verified_trade_receipt_day.cache_clear()
 
     with pytest.raises(ValueError, match="Stage 1 Trade partition Verify failed"):
         subject._verified_trade_receipt_day("BTCUSDT", owner_date)
+
+
+@pytest.mark.parametrize(
+    ("archive", "owner_date"),
+    [
+        ("2026-06", date(2026, 6, 30)),
+        ("2026-07-01", date(2026, 7, 1)),
+    ],
+)
+def test_trade_partition_resolver_accepts_catalog_bound_monthly_or_daily_archive(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    archive: str,
+    owner_date: date,
+) -> None:
+    root = tmp_path / "stage1-run"
+    parquet_path, receipt = _write_trade_partition(
+        root=root,
+        instrument="BTCUSDT",
+        owner_date=owner_date,
+        archive=archive,
+        rows=[{"value": 1}],
+    )
+    catalog_root = tmp_path / "catalog"
+    _write_stage1_catalog_fixture(
+        root=root,
+        catalog_root=catalog_root,
+        instrument="BTCUSDT",
+        owner_date=owner_date,
+        parquet_hash=str(receipt["byte_sha256"]),
+    )
+    monkeypatch.setattr(subject, "STAGE1_ROOT", root)
+    monkeypatch.setattr(subject, "STAGE1_CATALOG_ROOT", catalog_root)
+    subject._sealed_trade_catalog_entries.cache_clear()
+
+    resolved, _ = subject._partition_paths("BTCUSDT", owner_date)
+
+    assert resolved == parquet_path
+
+
+def test_trade_partition_resolver_rejects_conflicting_monthly_and_daily_archives(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    owner_date = date(2026, 7, 1)
+    root = tmp_path / "stage1-run"
+    _, monthly_receipt = _write_trade_partition(
+        root=root,
+        instrument="BTCUSDT",
+        owner_date=owner_date,
+        archive="2026-07",
+        rows=[{"value": 1}],
+    )
+    _write_trade_partition(
+        root=root,
+        instrument="BTCUSDT",
+        owner_date=owner_date,
+        archive="2026-07-01",
+        rows=[{"value": 2}],
+    )
+    catalog_root = tmp_path / "catalog"
+    _write_stage1_catalog_fixture(
+        root=root,
+        catalog_root=catalog_root,
+        instrument="BTCUSDT",
+        owner_date=owner_date,
+        parquet_hash=str(monthly_receipt["byte_sha256"]),
+    )
+    monkeypatch.setattr(subject, "STAGE1_ROOT", root)
+    monkeypatch.setattr(subject, "STAGE1_CATALOG_ROOT", catalog_root)
+    subject._sealed_trade_catalog_entries.cache_clear()
+
+    with pytest.raises(ValueError, match="conflicting Stage 1 Trade partition binding"):
+        subject._partition_paths("BTCUSDT", owner_date)
