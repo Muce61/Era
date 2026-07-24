@@ -39,3 +39,14 @@ After each task: run required validation commands; report actual modified files;
 ## Change Handling
 
 Stop expanding implementation if the manual conflicts with official Binance facts, a `FROZEN` rule is not implementable, an upstream data contract must change, the Task scope is insufficient, research refutes an assumption, risk behavior must change, a real API is needed, or the next Stage is required. Record the matter in `docs/development/OPEN_QUESTIONS.md` or create a Change Request under `docs/development/changes/`.
+
+## Code Exploration
+
+- Prefer jCodeMunch MCP for repository code discovery: call `resolve_repo` first, index the
+  repository when needed, inspect outlines before source, and retrieve only the relevant symbols.
+- When the compact counter surface is active, use `jcodemunch_guide`, `menu`, `route`, or `order`
+  to select and expose the needed repository tools before calling them.
+- Prefer `search_symbols` or `search_text` over broad file reads during code exploration.
+- Native file and shell tools remain allowed for edits, validation, non-code artifacts, exact
+  line-oriented checks, or when jCodeMunch is unavailable or returns insufficient context.
+- Re-index changed files before relying on stale symbol results.

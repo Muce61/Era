@@ -72,7 +72,20 @@ def test_trade_supplement_scope_is_explicit_and_does_not_relax_source_boundary()
 
 def test_trade_supplement_mid_history_allows_fully_warmed_feature_grid() -> None:
     assert _expected_typed_exclusions("TRADE_SUPPLEMENT_COVERAGE") == {}
+    assert _expected_typed_exclusions("SEALED_RECEIPT_COVERAGE") == {}
     assert _expected_typed_exclusions("SOURCE_BOUNDARY") == {"BOUNDARY_WARMUP_UNAVAILABLE": 61}
+
+
+def test_sealed_receipt_scope_must_cover_duplicate_input_partition() -> None:
+    _validate_audit_scope(
+        start_date=date(2022, 4, 12),
+        audit_mode="SEALED_RECEIPT_COVERAGE",
+    )
+    with pytest.raises(ValueError, match="must contain"):
+        _validate_audit_scope(
+            start_date=date(2022, 4, 16),
+            audit_mode="SEALED_RECEIPT_COVERAGE",
+        )
 
 
 def test_verify_rejects_tampered_report(tmp_path: Path) -> None:

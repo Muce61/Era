@@ -264,6 +264,18 @@ def _verified_trade_receipt_day(
 ) -> tuple[Path, str, dict[str, Any] | None]:
     parquet_path, receipt_path = _partition_paths(instrument, owner_date)
     receipt = _read_json(receipt_path)
+    input_rows = int(receipt.get("input_rows", -1))
+    published_rows = int(receipt.get("rows", -1))
+    duplicate_exact_count = int(receipt.get("duplicate_exact_count", -1))
+    receipt_counts_are_valid = (
+        input_rows >= 0
+        and published_rows >= 0
+        and duplicate_exact_count >= 0
+        and input_rows == published_rows + duplicate_exact_count
+    )
+    parquet_rows_are_valid = (
+        parquet_path.is_file() and pq.ParquetFile(parquet_path).metadata.num_rows == published_rows
+    )
     if (
         parquet_path.is_symlink()
         or not parquet_path.is_file()
@@ -271,7 +283,8 @@ def _verified_trade_receipt_day(
         or receipt.get("date") != owner_date.isoformat()
         or receipt.get("byte_sha256") != _file_hash(parquet_path)
         or int(receipt.get("venue_trade_id_reversal_count", -1)) != 0
-        or int(receipt.get("duplicate_exact_count", -1)) != 0
+        or not receipt_counts_are_valid
+        or not parquet_rows_are_valid
     ):
         raise ValueError(f"Stage 1 Trade partition Verify failed: {instrument} {owner_date}")
     gap_count = int(receipt.get("venue_trade_id_gap_count", -1))
@@ -890,10 +903,16 @@ def run_final_code_rehearsal(
 ) -> tuple[dict[str, Any], Path]:
     """Run the isolated real-input rehearsal and leave UI finalization pending."""
 
-    if purpose not in {"FINAL_CODE_RELEASE_GATE", "TRADE_SUPPLEMENT_COVERAGE"}:
+    if purpose not in {
+        "FINAL_CODE_RELEASE_GATE",
+        "TRADE_SUPPLEMENT_COVERAGE",
+        "SEALED_RECEIPT_COVERAGE",
+    }:
         raise ValueError("unsupported seven-day rehearsal purpose")
     if purpose == "FINAL_CODE_RELEASE_GATE" and start_date != START_DATE:
         raise ValueError("release-gate seven-day scope drift")
+    if purpose == "SEALED_RECEIPT_COVERAGE" and start_date != date(2022, 4, 12):
+        raise ValueError("sealed receipt seven-day scope drift")
     end_date_exclusive = start_date + timedelta(days=7)
     if not _git_clean():
         raise ValueError("final-code rehearsal requires a clean committed repository")
@@ -907,11 +926,7 @@ def run_final_code_rehearsal(
         source_audit, source_report_path = run_seven_day_audit(
             output_root=temporary_audit_root,
             start_date=start_date,
-            audit_mode=(
-                "SOURCE_BOUNDARY"
-                if purpose == "FINAL_CODE_RELEASE_GATE"
-                else "TRADE_SUPPLEMENT_COVERAGE"
-            ),
+            audit_mode=("SOURCE_BOUNDARY" if purpose == "FINAL_CODE_RELEASE_GATE" else purpose),
         )
         verify_seven_day_audit(report_path=source_report_path)
         durable_audit_root = root / "source-audit"
@@ -1122,8 +1137,11 @@ def run_final_code_rehearsal(
         }
         supplement_receipt.pop("receipt_hash", None)
         supplement_receipt["receipt_hash"] = _canonical_hash(supplement_receipt)
+        receipt_prefix = (
+            "trade-supplement" if purpose == "TRADE_SUPPLEMENT_COVERAGE" else "sealed-receipt"
+        )
         _write_exclusive(
-            OPERATIONS_ROOT / f"trade-supplement-rehearsal-receipt.{commit}.json",
+            OPERATIONS_ROOT / f"{receipt_prefix}-rehearsal-receipt.{commit}.json",
             supplement_receipt,
         )
     verify_final_code_rehearsal(report_path)

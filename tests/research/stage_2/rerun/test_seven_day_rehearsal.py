@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import json
+from datetime import date
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
@@ -147,3 +149,78 @@ def test_t16_supplement_coverage_excludes_declared_gaps_without_controls(
     assert payload["coverage_mode"] == "EXCLUDE_DECLARED_GAP"
     assert all(item["match_level"] == "EXCLUDED_SOURCE_GAP" for item in payload["probes"])
     assert all(item["selected_control_ids"] == [] for item in payload["probes"])
+
+
+def test_trade_receipt_accepts_accounted_input_duplicates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    owner_date = date(2022, 4, 15)
+    root = tmp_path / "stage1"
+    partition_root = root / "BTCUSDT" / "archive=2022-04" / "date=2022-04-15"
+    partition_root.mkdir(parents=True)
+    parquet_path = partition_root / "part-000.parquet"
+    pq.write_table(
+        pa.Table.from_pylist(
+            [
+                {
+                    "ts_event_ns": 1,
+                    "venue_trade_id": 1,
+                    "canonical_trade_id": "a",
+                    "price": "1",
+                },
+                {
+                    "ts_event_ns": 2,
+                    "venue_trade_id": 2,
+                    "canonical_trade_id": "b",
+                    "price": "2",
+                },
+            ]
+        ),
+        parquet_path,
+    )
+    receipt = {
+        "instrument": "BTCUSDT",
+        "date": owner_date.isoformat(),
+        "byte_sha256": hashlib.sha256(parquet_path.read_bytes()).hexdigest(),
+        "input_rows": 5,
+        "rows": 2,
+        "duplicate_exact_count": 3,
+        "venue_trade_id_gap_count": 0,
+        "venue_trade_id_reversal_count": 0,
+    }
+    (partition_root / "partition.json").write_text(json.dumps(receipt), encoding="utf-8")
+    monkeypatch.setattr(subject, "STAGE1_ROOT", root)
+    subject._verified_trade_receipt_day.cache_clear()
+
+    resolved_path, partition_hash, gap = subject._verified_trade_receipt_day("BTCUSDT", owner_date)
+
+    assert resolved_path == parquet_path
+    assert partition_hash == receipt["byte_sha256"]
+    assert gap is None
+
+
+def test_trade_receipt_rejects_unreconciled_duplicate_count(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    owner_date = date(2022, 4, 15)
+    root = tmp_path / "stage1"
+    partition_root = root / "BTCUSDT" / "archive=2022-04" / "date=2022-04-15"
+    partition_root.mkdir(parents=True)
+    parquet_path = partition_root / "part-000.parquet"
+    pq.write_table(pa.Table.from_pylist([{"value": 1}, {"value": 2}]), parquet_path)
+    receipt = {
+        "instrument": "BTCUSDT",
+        "date": owner_date.isoformat(),
+        "byte_sha256": hashlib.sha256(parquet_path.read_bytes()).hexdigest(),
+        "input_rows": 6,
+        "rows": 2,
+        "duplicate_exact_count": 3,
+        "venue_trade_id_gap_count": 0,
+        "venue_trade_id_reversal_count": 0,
+    }
+    (partition_root / "partition.json").write_text(json.dumps(receipt), encoding="utf-8")
+    monkeypatch.setattr(subject, "STAGE1_ROOT", root)
+    subject._verified_trade_receipt_day.cache_clear()
+
+    with pytest.raises(ValueError, match="Stage 1 Trade partition Verify failed"):
+        subject._verified_trade_receipt_day("BTCUSDT", owner_date)
