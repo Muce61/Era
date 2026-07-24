@@ -44,9 +44,11 @@ T13 + T15 + T20 + T11 → T16
 
 This approval permits implementation and validation through T16 only. T17-T21 and Stage 3 remain
 locked. OQ-S2-009/010/011 are resolved. Formal execution additionally requires the independent
-`FINAL_CODE_7_DAY_REHEARSAL` gate to PASS, a clean commit, exact governance hashes and a human run
-receipt. No separate whole-history pre-audit is required, but the formal full-data Run must
-validate and reconcile the complete range and fail closed on unknown missingness or drift.
+seven-day gate to PASS by default, a clean commit, exact governance hashes and a human run receipt.
+CR-2026-044 permits that exact commit-bound receipt to carry an explicit unattended-background
+waiver instead of a rehearsal PASS. No separate whole-history pre-audit is required, but the formal
+full-data Run must validate and reconcile the complete range and fail closed on unknown missingness
+or drift.
 
 ## Lifecycle Primary
 
@@ -63,6 +65,9 @@ at `scenario_net_pnl <= -8U`, not historical Binance liquidation.
 
 ## Long-run rule
 
-Before every full-data action, run seven complete UTC days through producer, serialization,
-checkpoint/receipt, strict consumer read-back, reconciliation, Verify and UI. Any failure invalidates
-the rehearsal and requires a full restart after repair.
+By default, before every full-data action, run seven complete UTC days through producer,
+serialization, checkpoint/receipt, strict consumer read-back, reconciliation, Verify and UI. An
+explicit human approval may waive only this rehearsal receipt for one commit-bound unattended
+non-research-hours background runtime. The waiver remains fail-closed on every other gate and is
+recorded outside Git with the formal approval. Without that exact waiver, rehearsal is required.
+Any failure in an executed rehearsal invalidates it and requires a full restart after repair.

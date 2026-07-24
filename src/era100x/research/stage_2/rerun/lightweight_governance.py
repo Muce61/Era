@@ -34,6 +34,9 @@ APPROVAL_SCHEMA: Final = "stage2-formal-approval-v2"
 CHAIN_AUTHORITY_SCHEMA: Final = "stage2-chain-authority-v2"
 T16_AUTHORITY_SCHEMA: Final = "stage2-s2p13-t16-binning-authority-v2"
 REHEARSAL_SCHEMA: Final = "stage2-plan-v13-seven-day-rehearsal-v1"
+REHEARSAL_PASS_MODE: Final = "FINAL_CODE_7_DAY_REHEARSAL_PASS"
+BACKGROUND_WAIVER_MODE: Final = "EXPLICIT_BACKGROUND_RUNTIME_WAIVER"
+BACKGROUND_WAIVER_SCOPE: Final = "UNATTENDED_NON_RESEARCH_HOURS"
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -105,6 +108,7 @@ def load_policy(path: Path, *, repository_root: Path) -> Stage2ActivePolicy:
         "task_dag",
         "full_history_scope",
         "required_gates",
+        "rehearsal_gate_policy",
         "trade_supplement_acceptance_path",
     }
     if set(payload) != required:
@@ -120,6 +124,13 @@ def load_policy(path: Path, *, repository_root: Path) -> Stage2ActivePolicy:
         or payload["task_dag"] != {task: list(UPSTREAM_TASKS[task]) for task in TASKS}
         or payload["full_history_scope"]
         != {"start_date": "2020-01-01", "end_date_exclusive": "2026-07-04"}
+        or payload["rehearsal_gate_policy"]
+        != {
+            "default_required": True,
+            "explicit_background_waiver_allowed": True,
+            "waiver_scope": BACKGROUND_WAIVER_SCOPE,
+            "waiver_must_bind_current_commit": True,
+        }
     ):
         raise ValueError("Stage 2 active policy contract drift")
     contract_hashes: dict[str, str] = {}
@@ -189,17 +200,48 @@ def record_approval(
     *,
     policy: Stage2ActivePolicy,
     repository_root: Path,
-    rehearsal_path: Path,
+    rehearsal_path: Path | None,
     approved_by: str,
     approval_source: str,
     approved_at: str | None = None,
+    background_runtime_waiver: bool = False,
+    waiver_reason: str | None = None,
 ) -> Path:
     """Write one append-only approval without changing the repository."""
 
     if not repository_clean(repository_root):
         raise ValueError("formal approval requires a clean repository")
     commit = current_commit(repository_root)
-    rehearsal = validate_rehearsal(rehearsal_path, commit=commit)
+    if background_runtime_waiver:
+        if rehearsal_path is not None:
+            raise ValueError("background waiver and rehearsal receipt are mutually exclusive")
+        normalized_reason = (waiver_reason or "").strip()
+        if not normalized_reason:
+            raise ValueError("background waiver requires an explicit reason")
+        rehearsal = None
+        rehearsal_gate_mode = BACKGROUND_WAIVER_MODE
+        waiver = {
+            "scope": BACKGROUND_WAIVER_SCOPE,
+            "reason": normalized_reason,
+            "explicitly_approved": True,
+            "does_not_waive": [
+                "COMMIT_BOUND_HUMAN_APPROVAL",
+                "CHAIN_AUTHORITY",
+                "INPUT_HASH_VALIDATION",
+                "UNIQUE_RUN_LOCK",
+                "FULL_RECONCILIATION",
+                "FULL_VERIFY",
+                "STAGE3_LOCK",
+            ],
+        }
+    else:
+        if rehearsal_path is None:
+            raise ValueError("formal approval requires rehearsal by default")
+        if waiver_reason is not None:
+            raise ValueError("waiver reason is forbidden without background waiver")
+        rehearsal = validate_rehearsal(rehearsal_path, commit=commit)
+        rehearsal_gate_mode = REHEARSAL_PASS_MODE
+        waiver = None
     existing = [
         path
         for path in policy.operations_root.glob("approvals/approval-*.json")
@@ -226,8 +268,10 @@ def record_approval(
         "trade_supplement_acceptance_path": str(policy.trade_supplement_path),
         "trade_supplement_file_hash": policy.trade_supplement_file_hash,
         "trade_supplement_acceptance_hash": policy.trade_supplement_acceptance_hash,
-        "rehearsal_receipt_path": str(rehearsal_path),
-        "rehearsal_receipt_hash": rehearsal["receipt_hash"],
+        "rehearsal_gate_mode": rehearsal_gate_mode,
+        "rehearsal_receipt_path": str(rehearsal_path) if rehearsal_path is not None else None,
+        "rehearsal_receipt_hash": rehearsal["receipt_hash"] if rehearsal is not None else None,
+        "background_runtime_waiver": waiver,
         "full_history_scope": policy.payload["full_history_scope"],
         "evidence_root": str(policy.evidence_root),
         "approved_by": approved_by,
@@ -265,7 +309,39 @@ def validate_approval(
         or payload.get("stage3_locked") is not True
     ):
         raise ValueError("formal approval binding drift")
-    validate_rehearsal(Path(str(payload["rehearsal_receipt_path"])), commit=commit)
+    rehearsal_gate_mode = payload.get("rehearsal_gate_mode")
+    if rehearsal_gate_mode == REHEARSAL_PASS_MODE:
+        if payload.get("background_runtime_waiver") is not None:
+            raise ValueError("formal approval rehearsal gate drift")
+        rehearsal = validate_rehearsal(
+            Path(str(payload["rehearsal_receipt_path"])),
+            commit=commit,
+        )
+        if payload.get("rehearsal_receipt_hash") != rehearsal["receipt_hash"]:
+            raise ValueError("formal approval rehearsal receipt drift")
+    elif rehearsal_gate_mode == BACKGROUND_WAIVER_MODE:
+        waiver = payload.get("background_runtime_waiver")
+        if (
+            payload.get("rehearsal_receipt_path") is not None
+            or payload.get("rehearsal_receipt_hash") is not None
+            or not isinstance(waiver, dict)
+            or waiver.get("scope") != BACKGROUND_WAIVER_SCOPE
+            or waiver.get("explicitly_approved") is not True
+            or not str(waiver.get("reason", "")).strip()
+            or waiver.get("does_not_waive")
+            != [
+                "COMMIT_BOUND_HUMAN_APPROVAL",
+                "CHAIN_AUTHORITY",
+                "INPUT_HASH_VALIDATION",
+                "UNIQUE_RUN_LOCK",
+                "FULL_RECONCILIATION",
+                "FULL_VERIFY",
+                "STAGE3_LOCK",
+            ]
+        ):
+            raise ValueError("formal approval background waiver drift")
+    else:
+        raise ValueError("formal approval rehearsal gate drift")
     if not repository_clean(repository_root):
         raise ValueError("formal approval cannot authorize a dirty repository")
     return payload
@@ -282,6 +358,8 @@ def freeze_chain_authority(
         "code_commit": approval["code_commit"],
         "policy_hash": policy.policy_hash,
         "approval_hash": approval["approval_hash"],
+        "rehearsal_gate_mode": approval["rehearsal_gate_mode"],
+        "background_runtime_waiver": approval["background_runtime_waiver"],
         "contract_hashes": policy.contract_hashes,
         "preregistration_hash": policy.preregistration_hash,
         "trade_supplement_acceptance_path": str(policy.trade_supplement_path),

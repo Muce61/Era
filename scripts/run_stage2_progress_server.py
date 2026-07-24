@@ -582,6 +582,13 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         "governance_model": "STAGE2_ACTIVE_POLICY_V2",
         "policy_hash": lightweight_policy_hash,
         "external_approval_status": (lightweight_approval.get("status", "NOT_PRESENT")),
+        "formal_rehearsal_gate_mode": lightweight_approval.get(
+            "rehearsal_gate_mode", "DEFAULT_REHEARSAL_REQUIRED"
+        ),
+        "background_runtime_waiver_reason": cast(
+            dict[str, Any],
+            lightweight_approval.get("background_runtime_waiver") or {},
+        ).get("reason"),
         "chain_authority_count": lightweight_authority_count,
         "formal_chain_status": lightweight_chain_checkpoint.get("status", "NOT_STARTED"),
         "formal_chain_current_task": lightweight_chain_checkpoint.get("current_task"),

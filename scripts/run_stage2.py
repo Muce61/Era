@@ -31,6 +31,8 @@ def main() -> int:
     parser.add_argument("--approval", type=Path)
     parser.add_argument("--approved-by", default="Muce")
     parser.add_argument("--approval-source")
+    parser.add_argument("--waive-rehearsal-for-background-runtime", action="store_true")
+    parser.add_argument("--waiver-reason")
     args = parser.parse_args()
     policy = load_policy(args.policy, repository_root=ROOT)
     os.environ["ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_PATH"] = str(policy.trade_supplement_path)
@@ -46,14 +48,24 @@ def main() -> int:
             "trade_supplement_acceptance_hash": policy.trade_supplement_acceptance_hash,
         }
     elif args.mode == "record-approval":
-        if args.rehearsal is None or not args.approval_source:
-            parser.error("record-approval requires --rehearsal and --approval-source")
+        if not args.approval_source:
+            parser.error("record-approval requires --approval-source")
+        if args.waive_rehearsal_for_background_runtime:
+            if args.rehearsal is not None or not args.waiver_reason:
+                parser.error("background waiver requires --waiver-reason and forbids --rehearsal")
+        elif args.rehearsal is None or args.waiver_reason is not None:
+            parser.error(
+                "record-approval requires --rehearsal by default; "
+                "use the explicit background waiver flag to omit it"
+            )
         path = record_approval(
             policy=policy,
             repository_root=ROOT,
             rehearsal_path=args.rehearsal,
             approved_by=args.approved_by,
             approval_source=args.approval_source,
+            background_runtime_waiver=args.waive_rehearsal_for_background_runtime,
+            waiver_reason=args.waiver_reason,
         )
         result = {"status": "APPROVED", "approval_path": str(path)}
     elif args.mode in {"run", "resume"}:

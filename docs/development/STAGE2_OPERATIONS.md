@@ -7,8 +7,20 @@ remain readable evidence but cannot authorize a new run.
 
 The single operator entrypoint is `scripts/run_stage2.py` with `status`, `rehearse`,
 `record-approval`, `run`, `resume` and `verify`. A formal approval is stored outside Git and binds
-the exact clean commit, Policy Hash and final-code rehearsal receipt. Recording approval does not
-change the repository.
+the exact clean commit and Policy Hash. It binds a final-code rehearsal receipt by default.
+Only an explicit human request for one unattended non-research-hours background runtime may replace
+that receipt with a commit-bound waiver inside the append-only approval. The waiver never bypasses
+Authority ordering, input Hash checks, the unique lock, reconciliation, full Verify or the Stage 3
+lock. Recording approval does not change the repository.
+
+The default approval command requires `--rehearsal`. The only no-rehearsal form is explicit:
+
+```bash
+uv run python scripts/run_stage2.py record-approval \
+  --approval-source "<human approval source>" \
+  --waive-rehearsal-for-background-runtime \
+  --waiver-reason "<why this unattended run may skip rehearsal>"
+```
 
 CR or ADR is required only for research semantics, frozen rules, data/source authority, risk
 behavior, Stage boundaries or real-execution scope. Code fixes, UI fixes, adapter wiring,

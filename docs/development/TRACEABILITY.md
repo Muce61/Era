@@ -38,10 +38,12 @@ No V1.3 Authority, bins, Run ID, publication or formal H3 result exists. CR-2026
 OQ-S2-010 by binding the accepted BTC/ETH historical funding source. CR-2026-039 resolves
 OQ-S2-011 after the SRP framework passed repository-wide quality and traceability; the framework
 and all historical SRP/CR/ADR records remain. CR-2026-040 resolves OQ-S2-009 and moves the already
-defined seven-day requirement to the independent `FINAL_CODE_7_DAY_REHEARSAL` execution gate. A
-clean commit and commit-bound human run receipt remain mandatory before a unique successor chain.
-The formal full-data Run still validates and reconciles the complete range and fails closed on
-unknown missingness or drift. S2P13-T17～T21 are not authorized; Stage 3 remains locked.
+defined seven-day requirement to the independent `FINAL_CODE_7_DAY_REHEARSAL` execution gate.
+CR-2026-044 keeps that gate as the default and permits only a commit-bound, explicitly approved
+unattended-background waiver. A clean commit and commit-bound human run receipt remain mandatory
+before a unique successor chain. The formal full-data Run still validates and reconciles the
+complete range and fails closed on unknown missingness or drift. S2P13-T17～T21 are not authorized;
+Stage 3 remains locked.
 
 ## Stage 0 v1.0 Foundation Coverage
 

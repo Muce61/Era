@@ -10,8 +10,8 @@ Status: S2P13_T11_IMPLEMENTATION_IN_PROGRESS_FINAL_REHEARSAL_PENDING
 Muce approved CR-2026-035, ADR-S2-014/015, V1.3.5 and Stage 2 Plan v1.3 on 2026-07-23.
 Implementation, read-only audit, tests, read-only UI and the isolated final-code seven-day
 rehearsal are authorized. OQ-S2-009/010/011 are resolved. Formal Authority, bins, Run ID,
-publication and resume remain forbidden until the `FINAL_CODE_7_DAY_REHEARSAL` gate passes and a
-commit-bound human run receipt is recorded.
+publication and resume remain forbidden until a commit-bound human run receipt records either the
+default `FINAL_CODE_7_DAY_REHEARSAL` PASS or the CR-2026-044 explicit unattended-background waiver.
 
 CR-2026-041 producer wiring found OQ-S2-012. Muce approved CR-2026-042/ADR-S2-019: protection and
 structure are explicitly not modeled in Stage 2, Contract Price owns scenario valuation and

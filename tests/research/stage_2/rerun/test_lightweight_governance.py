@@ -55,11 +55,17 @@ def _policy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> subject.Stage2Ac
             "end_date_exclusive": "2026-07-04",
         },
         "required_gates": [
-            "FINAL_CODE_7_DAY_REHEARSAL",
+            "FINAL_CODE_7_DAY_REHEARSAL_DEFAULT_OR_EXPLICIT_BACKGROUND_WAIVER",
             "COMMIT_BOUND_HUMAN_APPROVAL",
             "CHAIN_AUTHORITY",
             "FULL_VERIFY",
         ],
+        "rehearsal_gate_policy": {
+            "default_required": True,
+            "explicit_background_waiver_allowed": True,
+            "waiver_scope": subject.BACKGROUND_WAIVER_SCOPE,
+            "waiver_must_bind_current_commit": True,
+        },
     }
     path = repository / "policy.json"
     _write(path, payload)
@@ -131,6 +137,89 @@ def test_approval_rejects_commit_or_policy_drift(
     monkeypatch.setattr(subject, "current_commit", lambda _root: "b" * 40)
     with pytest.raises(ValueError, match="binding drift"):
         subject.validate_approval(approval, policy=policy, repository_root=policy.path.parent)
+
+
+def test_rehearsal_is_default_but_explicit_background_waiver_is_valid(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    policy = _policy(tmp_path, monkeypatch)
+    with pytest.raises(ValueError, match="requires rehearsal by default"):
+        subject.record_approval(
+            policy=policy,
+            repository_root=policy.path.parent,
+            rehearsal_path=None,
+            approved_by="Muce",
+            approval_source="generic approval",
+        )
+
+    approval_path = subject.record_approval(
+        policy=policy,
+        repository_root=policy.path.parent,
+        rehearsal_path=None,
+        approved_by="Muce",
+        approval_source="explicit unattended background approval",
+        approved_at="2026-07-25T00:00:00+00:00",
+        background_runtime_waiver=True,
+        waiver_reason="operator requested no rehearsal for this overnight runtime",
+    )
+    approval = subject.validate_approval(
+        approval_path,
+        policy=policy,
+        repository_root=policy.path.parent,
+    )
+    assert approval["rehearsal_gate_mode"] == subject.BACKGROUND_WAIVER_MODE
+    assert approval["rehearsal_receipt_path"] is None
+    assert approval["background_runtime_waiver"]["scope"] == subject.BACKGROUND_WAIVER_SCOPE
+    assert "FULL_VERIFY" in approval["background_runtime_waiver"]["does_not_waive"]
+
+    chain_path = subject.freeze_chain_authority(
+        approval_path=approval_path,
+        policy=policy,
+        repository_root=policy.path.parent,
+    )
+    chain = json.loads(chain_path.read_text())
+    assert chain["rehearsal_gate_mode"] == subject.BACKGROUND_WAIVER_MODE
+    assert chain["background_runtime_waiver"]["explicitly_approved"] is True
+
+
+def test_background_waiver_rejects_receipt_or_tampering(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    policy = _policy(tmp_path, monkeypatch)
+    rehearsal = tmp_path / "rehearsal.json"
+    _rehearsal(rehearsal)
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        subject.record_approval(
+            policy=policy,
+            repository_root=policy.path.parent,
+            rehearsal_path=rehearsal,
+            approved_by="Muce",
+            approval_source="explicit approval",
+            background_runtime_waiver=True,
+            waiver_reason="not allowed with receipt",
+        )
+
+    approval_path = subject.record_approval(
+        policy=policy,
+        repository_root=policy.path.parent,
+        rehearsal_path=None,
+        approved_by="Muce",
+        approval_source="explicit approval",
+        background_runtime_waiver=True,
+        waiver_reason="overnight runtime",
+    )
+    payload = json.loads(approval_path.read_text())
+    payload["background_runtime_waiver"]["reason"] = ""
+    payload["approval_hash"] = canonical_hash(
+        {key: value for key, value in payload.items() if key != "approval_hash"}
+    )
+    _write(approval_path, payload)
+    with pytest.raises(ValueError, match="background waiver drift"):
+        subject.validate_approval(
+            approval_path,
+            policy=policy,
+            repository_root=policy.path.parent,
+        )
 
 
 def test_two_layer_authority_requires_formal_dynamic_handoffs(
