@@ -212,6 +212,39 @@ def test_archive_layout_boundary_receipt_has_distinct_schema() -> None:
     )
 
 
+def test_rehearsal_progress_checkpoint_is_atomic_hashed_and_live(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    operations = tmp_path / "operations"
+    monkeypatch.setattr(subject, "OPERATIONS_ROOT", operations)
+    progress = subject._RehearsalProgress(
+        code_commit="a" * 40,
+        output_root=tmp_path / "rehearsal",
+        start_date=date(2020, 1, 1),
+        end_date_exclusive=date(2020, 1, 8),
+        purpose="FINAL_CODE_RELEASE_GATE",
+    )
+
+    progress.update_task(
+        "S2P13-T11",
+        completed_units=3,
+        total_units=12,
+        row_count=12,
+        current_instrument="ETHUSDT",
+        current_date="2020-01-03",
+    )
+    payload = json.loads(progress.path.read_text())
+    claimed_hash = payload.pop("checkpoint_hash")
+
+    assert claimed_hash == subject._canonical_hash(payload)
+    assert payload["status"] == "IN_PROGRESS"
+    assert payload["overall_progress_percent"] == "4.17"
+    assert payload["tasks"]["S2P13-T11"]["progress_percent"] == "25.00"
+    assert payload["tasks"]["S2P13-T11"]["current_instrument"] == "ETHUSDT"
+    assert payload["tasks"]["S2P13-T11"]["current_date"] == "2020-01-03"
+    assert not list(operations.glob(".*.tmp"))
+
+
 def test_t16_supplement_coverage_excludes_declared_gaps_without_controls(
     tmp_path: Path,
 ) -> None:

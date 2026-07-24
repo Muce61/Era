@@ -12,6 +12,7 @@ import subprocess
 import threading
 import webbrowser
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -245,6 +246,28 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
     repo_commit = _repository_commit()
     operations_root = stage2_root / "operations/stage2-plan-v1.3-successor"
     checkpoint = _safe_json_object(operations_root / "checkpoint.json")
+    rehearsal_progress = _safe_json_object(
+        operations_root / f"seven-day-rehearsal-progress.{repo_commit}.json"
+    )
+    rehearsal_progress_valid = (
+        rehearsal_progress.get("schema_name") == "stage2-plan-v13-rehearsal-progress-v1"
+        and rehearsal_progress.get("code_commit") == repo_commit
+        and rehearsal_progress.get("stage3_locked") is True
+        and _self_hash_matches(rehearsal_progress, "checkpoint_hash")
+        and rehearsal_progress.get("status")
+        in {"IN_PROGRESS", "VERIFYING", "PENDING_UI_CHECK", "FAILED"}
+    )
+    if rehearsal_progress_valid and rehearsal_progress.get("status") in {
+        "IN_PROGRESS",
+        "VERIFYING",
+    }:
+        try:
+            heartbeat = datetime.fromisoformat(str(rehearsal_progress["heartbeat_at"]))
+            heartbeat_age = (datetime.now(UTC) - heartbeat).total_seconds()
+        except (KeyError, TypeError, ValueError):
+            heartbeat_age = float("inf")
+        if heartbeat_age > 300:
+            rehearsal_progress = {**rehearsal_progress, "status": "STALLED"}
     rehearsal_receipt = _safe_json_object(
         operations_root / f"seven-day-rehearsal-receipt.{repo_commit}.json"
     )
@@ -396,6 +419,20 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
             }
             for task in V13_TASKS
         }
+    elif rehearsal_progress_valid:
+        live_tasks = cast(dict[str, Any], rehearsal_progress.get("tasks", {}))
+        tasks = {
+            task: (
+                cast(dict[str, Any], live_tasks[task])
+                if isinstance(live_tasks.get(task), dict)
+                else {
+                    "status": "NOT_STARTED",
+                    "reason_code": "WAITING_FOR_REHEARSAL",
+                    "progress_percent": 0,
+                }
+            )
+            for task in V13_TASKS
+        }
     status = (
         str(checkpoint.get("status", default_status))
         if checkpoint_valid
@@ -403,6 +440,8 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         if rehearsal_pass
         else "REHEARSAL_UI_CHECK"
         if rehearsal_pending
+        else str(rehearsal_progress.get("status"))
+        if rehearsal_progress_valid
         else default_status
     )
     if stale_server:
@@ -470,12 +509,35 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         "repo_root": str(repo_root),
         "repo_commit": repo_commit,
         "server_stale": stale_server,
-        "current_task": state.current_task,
+        "current_task": (
+            rehearsal_progress.get("current_task")
+            if rehearsal_progress_valid
+            else state.current_task
+        ),
         "task_status": state.task_status,
         "blocking_questions": list(state.blocking_questions),
         "execution_gates": {"FINAL_CODE_7_DAY_REHEARSAL": "PASS" if rehearsal_pass else "PENDING"},
         "rehearsal_status": (
-            "PASS" if rehearsal_pass else "PENDING_UI_CHECK" if rehearsal_pending else "NOT_STARTED"
+            "PASS"
+            if rehearsal_pass
+            else "PENDING_UI_CHECK"
+            if rehearsal_pending
+            else str(rehearsal_progress.get("status"))
+            if rehearsal_progress_valid
+            else "NOT_STARTED"
+        ),
+        "rehearsal_progress_percent": (
+            rehearsal_progress.get("overall_progress_percent")
+            if rehearsal_progress_valid
+            else 100
+            if rehearsal_pass or rehearsal_pending
+            else 0
+        ),
+        "rehearsal_heartbeat_at": (
+            rehearsal_progress.get("heartbeat_at") if rehearsal_progress_valid else None
+        ),
+        "rehearsal_progress_failure_reason": (
+            rehearsal_progress.get("failure_reason") if rehearsal_progress_valid else None
         ),
         "rehearsal_report_path": active_rehearsal_receipt.get("report_path"),
         "rehearsal_report_hash": (
@@ -533,7 +595,11 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         "trade_supplement_rehearsal_status": (
             "PASS" if trade_supplement_rehearsal_pass else "NOT_STARTED"
         ),
-        "updated_at": checkpoint.get("updated_at"),
+        "updated_at": (
+            rehearsal_progress.get("heartbeat_at")
+            if rehearsal_progress_valid
+            else checkpoint.get("updated_at")
+        ),
     }
 
 

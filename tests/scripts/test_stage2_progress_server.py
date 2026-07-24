@@ -815,6 +815,12 @@ def test_ui_derives_current_task_version_count_and_acceptance_without_hardcoded_
     assert "refreshV13();" in page
     assert "setInterval(refreshV13, 5000)" in page
     assert "legacyRefreshInFlight" in page
+    assert "task.progress_percent" in page
+    assert "task.current_instrument" in page
+    assert "task.current_date" in page
+    assert "rehearsal_progress_percent" in page
+    assert "rehearsal_heartbeat_at" in page
+    assert 'state === "running" ? 35' not in page
 
 
 def test_s2_t15_audit_projects_not_started_without_authority_or_run(tmp_path: Path) -> None:
@@ -1374,6 +1380,54 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
     accepted = _stage2_v13_projection(tmp_path / "stage2")
     assert accepted["remaining_input_blockers"] == []
 
+    live_progress = _sealed(
+        {
+            "schema_name": "stage2-plan-v13-rehearsal-progress-v1",
+            "schema_version": "1.0",
+            "status": "IN_PROGRESS",
+            "code_commit": "abc123",
+            "purpose": "FINAL_CODE_RELEASE_GATE",
+            "output_root": str(tmp_path / "stage2/rehearsals/final-code/abc123"),
+            "start_date": "2020-01-01",
+            "end_date_exclusive": "2020-01-08",
+            "current_task": "S2P13-T11",
+            "completed_task_count": 0,
+            "task_count": len(MODULE.V13_TASKS),
+            "overall_progress_percent": "4.17",
+            "tasks": {
+                task: {
+                    "status": "IN_PROGRESS" if task == "S2P13-T11" else "NOT_STARTED",
+                    "reason_code": ("RUNNING" if task == "S2P13-T11" else "WAITING_FOR_REHEARSAL"),
+                    "completed_units": 3 if task == "S2P13-T11" else 0,
+                    "total_units": 12 if task == "S2P13-T11" else 0,
+                    "progress_percent": "25.00" if task == "S2P13-T11" else "0.00",
+                    "row_count": 12 if task == "S2P13-T11" else 0,
+                    "verify_status": "NOT_STARTED",
+                    "current_instrument": "ETHUSDT" if task == "S2P13-T11" else None,
+                    "current_date": "2020-01-03" if task == "S2P13-T11" else None,
+                }
+                for task in MODULE.V13_TASKS
+            },
+            "heartbeat_at": "2999-01-01T00:00:00+00:00",
+            "stage3_locked": True,
+        },
+        "checkpoint_hash",
+    )
+    _write(
+        tmp_path
+        / "stage2/operations/stage2-plan-v1.3-successor"
+        / "seven-day-rehearsal-progress.abc123.json",
+        json.dumps(live_progress),
+    )
+    live = _stage2_v13_projection(tmp_path / "stage2")
+    assert live["status"] == "IN_PROGRESS"
+    assert live["rehearsal_status"] == "IN_PROGRESS"
+    assert live["rehearsal_progress_percent"] == "4.17"
+    assert live["current_task"] == "S2P13-T11"
+    assert live["tasks"]["S2P13-T11"]["progress_percent"] == "25.00"
+    assert live["tasks"]["S2P13-T11"]["current_instrument"] == "ETHUSDT"
+    assert live["tasks"]["S2P13-T11"]["current_date"] == "2020-01-03"
+
     rehearsal_report_path = (
         tmp_path / "stage2/rehearsals/final-code/seven-day-rehearsal-report.json"
     )
@@ -1456,6 +1510,11 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
         / "seven-day-rehearsal-receipt.abc123.json",
         json.dumps(receipt),
     )
+    (
+        tmp_path
+        / "stage2/operations/stage2-plan-v1.3-successor"
+        / "seven-day-rehearsal-progress.abc123.json"
+    ).unlink()
     drifted = _stage2_v13_projection(tmp_path / "stage2")
     assert drifted["rehearsal_status"] == "NOT_STARTED"
     assert drifted["execution_gates"]["FINAL_CODE_7_DAY_REHEARSAL"] == "PENDING"

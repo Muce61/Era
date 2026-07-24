@@ -749,24 +749,31 @@
         const task = tasks[taskId] || {status:"BLOCKED", reason_code:"WAITING_FOR_GOVERNANCE"};
         const raw = String(task.status || "BLOCKED");
         const state = raw === "PASS" ? "pass" : raw === "IN_PROGRESS" || raw === "PREFLIGHT" ? "running" : raw === "FAILED" || raw === "TERMINAL_FAILED" ? "failed" : "pending";
+        const completed = Number(task.completed_units) || 0;
+        const total = Number(task.total_units) || 0;
+        const taskProgress = state === "pass" ? 100 : Math.max(0, Math.min(100, Number(task.progress_percent) || 0));
+        const position = [task.current_instrument, task.current_date].filter(Boolean).join(" · ");
+        const unitDetail = total ? `${number(completed)} / ${number(total)}` : "等待计数";
         return {
           name:`${taskId} · ${label}`,
           icon:taskId === "S2P13-T11" ? "fa-hourglass-half" : "fa-diagram-project",
           state,
-          detail:`${raw} · ${task.reason_code || "—"} · rows ${number(task.row_count)} · Verify ${task.verify_status || "—"}`,
-          progress:state === "pass" ? 100 : state === "running" ? 35 : 0
+          detail:`${raw} · ${task.reason_code || "—"} · ${position || unitDetail} · ${unitDetail} · rows ${number(task.row_count)} · Verify ${task.verify_status || "—"}`,
+          progress:taskProgress
         };
       });
       byId("v13FlowGrid").innerHTML = states.map(flowCard).join("");
       const blockers = (plan.blocking_questions || []).join(", ") || "NONE";
       const pendingGates = (plan.pending_execution_gates || []).join(", ") || "NONE";
-      byId("v13FlowSummary").textContent = `${plan.status || "BLOCKED"} · 7天短跑 ${plan.rehearsal_status || "NOT_STARTED"} · 当前 ${plan.current_task || "—"} · open questions ${blockers} · gates ${pendingGates}`;
+      const liveProgress = Math.max(0, Math.min(100, Number(plan.rehearsal_progress_percent) || 0));
+      const heartbeat = plan.rehearsal_heartbeat_at ? dateTime(plan.rehearsal_heartbeat_at) : "—";
+      byId("v13FlowSummary").textContent = `${plan.status || "BLOCKED"} · 7天短跑 ${plan.rehearsal_status || "NOT_STARTED"} · ${liveProgress.toFixed(2)}% · 当前 ${plan.current_task || "—"} · 心跳 ${heartbeat} · open questions ${blockers} · gates ${pendingGates}`;
       const inputBlockers = (plan.remaining_input_blockers || []).join(", ") || "NONE";
       const fundingTracks = (plan.funding_tracks || []).join(" / ") || "—";
       const fundingEvidence = plan.funding_evidence || {};
       const fundingEvidenceText = `${fundingEvidence.status || "NOT_STARTED"}/${fundingEvidence.scope || "—"} · rows ${number(fundingEvidence.total_row_count)} · differences ${number(fundingEvidence.difference_count)} · Verify ${fundingEvidence.verify_status || "NOT_RUN"} · acceptance ${fundingEvidence.acceptance_status || "NOT_PRESENT"} · bound ${fundingEvidence.historical_funding_bound ? "YES" : "NO"}`;
       const rehearsalMatches = Object.entries(plan.rehearsal_t16_match_levels || {}).map(([instrument, level]) => `${instrument} ${level}`).join(" / ") || "—";
-      const metrics = `governance ${plan.governance_model || "LEGACY"} · policy ${plan.policy_hash || "—"} · external approval ${plan.external_approval_status || "NOT_PRESENT"} · ChainAuthority ${number(plan.chain_authority_count)} · formal chain ${plan.formal_chain_status || "NOT_STARTED"} · formal task ${plan.formal_chain_current_task || "—"} · formal reason ${plan.formal_chain_reason || "—"} · historical chain ${plan.historical_formal_chain_status || "NOT_PRESENT"} · historical reason ${plan.historical_formal_chain_reason || "—"} · Trade supplement ${plan.trade_supplement_status || "NOT_PRESENT"} ${plan.trade_supplement_acceptance_hash || "—"} · supplement 7-day ${plan.trade_supplement_rehearsal_status || "NOT_STARTED"} · 7天短跑 ${plan.rehearsal_status || "NOT_STARTED"}（仅验收格式与接线，不是正式结果） · report Verify ${plan.rehearsal_report_valid ? "PASS" : "NOT_PRESENT"} · T16 ${rehearsalMatches} · repo ${plan.repo_root || "—"} · commit ${plan.repo_commit || "—"} · price ${plan.price_proxy_source || "—"} · 20bp auxiliary · target ${plan.lifecycle_target_contract || "—"} · funding ${fundingTracks} · funding evidence ${fundingEvidenceText} · liquidation ${plan.liquidation_contract || "—"} · input blockers ${inputBlockers} · right-censored ${number(plan.right_censored_count)} · scenario liquidation ${number(plan.scenario_liquidation_count)} · ticket double Δ ${plan.ticket_double_probability_delta ?? "—"} · equity/day Δ ${plan.ticket_equity_per_day_delta ?? "—"} · Stage 3 ${plan.stage3_locked ? "LOCKED" : "UNEXPECTED_UNLOCK"}`;
+      const metrics = `governance ${plan.governance_model || "LEGACY"} · policy ${plan.policy_hash || "—"} · external approval ${plan.external_approval_status || "NOT_PRESENT"} · ChainAuthority ${number(plan.chain_authority_count)} · formal chain ${plan.formal_chain_status || "NOT_STARTED"} · formal task ${plan.formal_chain_current_task || "—"} · formal reason ${plan.formal_chain_reason || "—"} · historical chain ${plan.historical_formal_chain_status || "NOT_PRESENT"} · historical reason ${plan.historical_formal_chain_reason || "—"} · Trade supplement ${plan.trade_supplement_status || "NOT_PRESENT"} ${plan.trade_supplement_acceptance_hash || "—"} · supplement 7-day ${plan.trade_supplement_rehearsal_status || "NOT_STARTED"} · 7天短跑 ${plan.rehearsal_status || "NOT_STARTED"} ${liveProgress.toFixed(2)}%（仅验收格式与接线，不是正式结果） · heartbeat ${heartbeat} · failure ${plan.rehearsal_progress_failure_reason || "—"} · report Verify ${plan.rehearsal_report_valid ? "PASS" : "NOT_PRESENT"} · T16 ${rehearsalMatches} · repo ${plan.repo_root || "—"} · commit ${plan.repo_commit || "—"} · price ${plan.price_proxy_source || "—"} · 20bp auxiliary · target ${plan.lifecycle_target_contract || "—"} · funding ${fundingTracks} · funding evidence ${fundingEvidenceText} · liquidation ${plan.liquidation_contract || "—"} · input blockers ${inputBlockers} · right-censored ${number(plan.right_censored_count)} · scenario liquidation ${number(plan.scenario_liquidation_count)} · ticket double Δ ${plan.ticket_double_probability_delta ?? "—"} · equity/day Δ ${plan.ticket_equity_per_day_delta ?? "—"} · Stage 3 ${plan.stage3_locked ? "LOCKED" : "UNEXPECTED_UNLOCK"}`;
       byId("v13Evidence").textContent = metrics;
       byId("v13Evidence").classList.toggle("bad", Boolean(plan.server_stale));
       return plan;

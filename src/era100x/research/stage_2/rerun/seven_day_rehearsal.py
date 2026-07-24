@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import tempfile
 from collections import Counter
+from collections.abc import Callable
 from functools import lru_cache
 from dataclasses import asdict, is_dataclass
 from datetime import UTC, date, datetime, timedelta
@@ -158,6 +159,171 @@ def _write_exclusive(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("xb") as handle:
         handle.write(_encoded(value))
+
+
+def _write_atomic_checkpoint(path: Path, value: object) -> None:
+    """Replace one mutable operations checkpoint without exposing partial JSON."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    temporary.write_bytes(_encoded(value))
+    os.replace(temporary, path)
+
+
+class _RehearsalProgress:
+    """Hash-bound, read-only UI projection for one final-code rehearsal."""
+
+    def __init__(
+        self,
+        *,
+        code_commit: str,
+        output_root: Path,
+        start_date: date,
+        end_date_exclusive: date,
+        purpose: str,
+    ) -> None:
+        self.path = OPERATIONS_ROOT / f"seven-day-rehearsal-progress.{code_commit}.json"
+        self.payload: dict[str, Any] = {
+            "schema_name": "stage2-plan-v13-rehearsal-progress-v1",
+            "schema_version": "1.0",
+            "status": "IN_PROGRESS",
+            "code_commit": code_commit,
+            "purpose": purpose,
+            "output_root": str(output_root),
+            "start_date": start_date.isoformat(),
+            "end_date_exclusive": end_date_exclusive.isoformat(),
+            "current_task": TASKS[0],
+            "completed_task_count": 0,
+            "task_count": len(TASKS),
+            "overall_progress_percent": "0.00",
+            "tasks": {
+                task: {
+                    "status": "NOT_STARTED",
+                    "reason_code": "WAITING_FOR_REHEARSAL",
+                    "completed_units": 0,
+                    "total_units": 0,
+                    "progress_percent": "0.00",
+                    "row_count": 0,
+                    "verify_status": "NOT_STARTED",
+                }
+                for task in TASKS
+            },
+            "stage3_locked": True,
+        }
+        self.start_task(TASKS[0], reason_code="SOURCE_AUDIT")
+
+    def _publish(self) -> None:
+        self.payload["heartbeat_at"] = datetime.now(UTC).isoformat()
+        self.payload.pop("checkpoint_hash", None)
+        self.payload["checkpoint_hash"] = _canonical_hash(self.payload)
+        _write_atomic_checkpoint(self.path, self.payload)
+
+    def start_task(self, task_id: str, *, reason_code: str = "RUNNING") -> None:
+        task = cast(dict[str, Any], self.payload["tasks"][task_id])
+        task.update({"status": "IN_PROGRESS", "reason_code": reason_code})
+        self.payload.update({"status": "IN_PROGRESS", "current_task": task_id})
+        self._recalculate(task_id)
+
+    def update_task(
+        self,
+        task_id: str,
+        *,
+        completed_units: int,
+        total_units: int,
+        row_count: int,
+        current_instrument: str | None = None,
+        current_date: str | None = None,
+        reason_code: str = "RUNNING",
+    ) -> None:
+        task = cast(dict[str, Any], self.payload["tasks"][task_id])
+        task.update(
+            {
+                "status": "IN_PROGRESS",
+                "reason_code": reason_code,
+                "completed_units": completed_units,
+                "total_units": total_units,
+                "progress_percent": (
+                    format(
+                        (Decimal(100) * Decimal(completed_units) / Decimal(total_units)).quantize(
+                            Decimal("0.01")
+                        ),
+                        "f",
+                    )
+                    if total_units
+                    else "0.00"
+                ),
+                "row_count": row_count,
+                "current_instrument": current_instrument,
+                "current_date": current_date,
+            }
+        )
+        self.payload.update({"status": "IN_PROGRESS", "current_task": task_id})
+        self._recalculate(task_id)
+
+    def pass_task(self, task_id: str, *, row_count: int) -> None:
+        task = cast(dict[str, Any], self.payload["tasks"][task_id])
+        total_units = max(int(task.get("total_units", 0)), int(task.get("completed_units", 0)), 1)
+        task.update(
+            {
+                "status": "PASS",
+                "reason_code": "REHEARSAL_TASK_PASS",
+                "completed_units": total_units,
+                "total_units": total_units,
+                "progress_percent": "100.00",
+                "row_count": row_count,
+                "verify_status": "PASS",
+            }
+        )
+        self.payload["completed_task_count"] = sum(
+            cast(dict[str, Any], item).get("status") == "PASS"
+            for item in cast(dict[str, Any], self.payload["tasks"]).values()
+        )
+        self._recalculate(task_id)
+
+    def verifying(self) -> None:
+        self.payload.update(
+            {
+                "status": "VERIFYING",
+                "current_task": TASKS[-1],
+                "overall_progress_percent": "100.00",
+            }
+        )
+        self._publish()
+
+    def pending_ui(self) -> None:
+        self.payload.update(
+            {
+                "status": "PENDING_UI_CHECK",
+                "current_task": TASKS[-1],
+                "overall_progress_percent": "100.00",
+            }
+        )
+        self._publish()
+
+    def failed(self, error: Exception) -> None:
+        current = str(self.payload.get("current_task", TASKS[0]))
+        task = cast(dict[str, Any], self.payload["tasks"][current])
+        task.update({"status": "FAILED", "reason_code": "REHEARSAL_TASK_FAILED"})
+        self.payload.update(
+            {
+                "status": "FAILED",
+                "failure_type": type(error).__name__,
+                "failure_reason": str(error),
+            }
+        )
+        self._publish()
+
+    def _recalculate(self, task_id: str) -> None:
+        task_index = TASKS.index(task_id)
+        task = cast(dict[str, Any], self.payload["tasks"][task_id])
+        fraction = Decimal(str(task.get("progress_percent", "0.00"))) / Decimal(100)
+        self.payload["overall_progress_percent"] = format(
+            (Decimal(100) * (Decimal(task_index) + fraction) / Decimal(len(TASKS))).quantize(
+                Decimal("0.01")
+            ),
+            "f",
+        )
+        self._publish()
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -826,6 +992,7 @@ def produce_scoped_lifecycle(
     *,
     start_date: date,
     end_date_exclusive: date,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """Execute the explicit-input lifecycle core for all Primary episodes in scope."""
 
@@ -837,6 +1004,8 @@ def produce_scoped_lifecycle(
     acceptance = _read_json(FUNDING_ACCEPTANCE)
     lifecycle: list[dict[str, Any]] = []
     admission: list[Any] = []
+    total_units = sum(len(rows[instrument]) for instrument in ("BTCUSDT", "ETHUSDT"))
+    completed_units = 0
     for instrument in ("BTCUSDT", "ETHUSDT"):
         instrument_results: list[LifecyclePairResult] = []
         entry_by_episode: dict[str, int] = {}
@@ -854,6 +1023,17 @@ def produce_scoped_lifecycle(
             )
             instrument_results.append(primary)
             entry_by_episode[primary.market_episode_id] = int(row["window_start_ns"])
+            completed_units += 1
+            if progress_callback is not None:
+                progress_callback(
+                    {
+                        "completed_units": completed_units,
+                        "total_units": total_units,
+                        "row_count": completed_units * len(FundingTrack),
+                        "current_instrument": instrument,
+                        "current_date": _date_from_ns(int(row["window_start_ns"])).isoformat(),
+                    }
+                )
         admission.extend(
             replay_single_position_admission(
                 tuple(instrument_results),
@@ -1032,11 +1212,12 @@ def _handoff(
     )
 
 
-def run_final_code_rehearsal(
+def _run_final_code_rehearsal(
     *,
     output_root: Path,
     start_date: date = START_DATE,
     purpose: str = "FINAL_CODE_RELEASE_GATE",
+    progress: _RehearsalProgress,
 ) -> tuple[dict[str, Any], Path]:
     """Run the isolated real-input rehearsal and leave UI finalization pending."""
 
@@ -1079,9 +1260,11 @@ def run_final_code_rehearsal(
         or source_verify["status"] != "PASS"
     ):
         raise ValueError("real seven-day source audit did not pass executable scopes")
+    progress.start_task("S2P13-T11", reason_code="LIFECYCLE")
     lifecycle_payload = produce_scoped_lifecycle(
         start_date=start_date,
         end_date_exclusive=end_date_exclusive,
+        progress_callback=lambda update: progress.update_task("S2P13-T11", **update),
     )
     lifecycle = cast(list[dict[str, Any]], lifecycle_payload["lifecycle"])
     evidence_id = f"rehearsal-7d-{commit[:12]}"
@@ -1102,6 +1285,8 @@ def run_final_code_rehearsal(
             execution_scope_hash=execution_scope_hash,
         )
     )
+    progress.pass_task("S2P13-T11", row_count=int(lifecycle_payload["row_count"]))
+    progress.start_task("S2P13-T12")
     t12_data = root / "task-handoffs/S2P13-T12/data"
     t12 = produce_scoped_paths(
         output_root=t12_data,
@@ -1119,6 +1304,8 @@ def run_final_code_rehearsal(
             upstream_handoffs={"S2P13-T11": handoffs[0].payload()},
         )
     )
+    progress.pass_task("S2P13-T12", row_count=int(t12["row_count"]))
+    progress.start_task("S2P13-T13")
     t13_data = root / "task-handoffs/S2P13-T13/data"
     t13 = produce_scoped_metrics(
         output_root=t13_data,
@@ -1138,6 +1325,8 @@ def run_final_code_rehearsal(
             upstream_handoffs={"S2P13-T12": handoffs[1].payload()},
         )
     )
+    progress.pass_task("S2P13-T13", row_count=int(t13["row_count"]))
+    progress.start_task("S2P13-T14")
     t14_data = root / "task-handoffs/S2P13-T14/data"
     t14 = produce_scoped_first_passage(
         output_root=t14_data,
@@ -1157,6 +1346,8 @@ def run_final_code_rehearsal(
             upstream_handoffs={"S2P13-T12": handoffs[1].payload()},
         )
     )
+    progress.pass_task("S2P13-T14", row_count=int(t14["row_count"]))
+    progress.start_task("S2P13-T15")
     t15_data = root / "task-handoffs/S2P13-T15/data"
     t15 = produce_scoped_ambiguity(
         output_root=t15_data,
@@ -1173,6 +1364,8 @@ def run_final_code_rehearsal(
             upstream_handoffs={"S2P13-T14": handoffs[3].payload()},
         )
     )
+    progress.pass_task("S2P13-T15", row_count=int(t15["row_count"]))
+    progress.start_task("S2P13-T16")
     t16_payload = produce_scoped_conditional_baseline(
         source_first_passage_root=t14_data,
         coverage_mode=(
@@ -1198,6 +1391,7 @@ def run_final_code_rehearsal(
             },
         )
     )
+    progress.pass_task("S2P13-T16", row_count=int(t16_payload["row_count"]))
     report: dict[str, Any] = {
         "schema_name": "stage2-plan-v13-seven-day-rehearsal-report-v1",
         "status": "PASS",
@@ -1286,8 +1480,51 @@ def run_final_code_rehearsal(
             OPERATIONS_ROOT / f"{receipt_prefix}-rehearsal-receipt.{commit}.json",
             supplement_receipt,
         )
+    progress.verifying()
     verify_final_code_rehearsal(report_path)
+    progress.pending_ui()
     return report, report_path
+
+
+def run_final_code_rehearsal(
+    *,
+    output_root: Path,
+    start_date: date = START_DATE,
+    purpose: str = "FINAL_CODE_RELEASE_GATE",
+) -> tuple[dict[str, Any], Path]:
+    """Run the isolated rehearsal while publishing a live, hash-bound checkpoint."""
+
+    allowed_purposes = {
+        "FINAL_CODE_RELEASE_GATE",
+        "TRADE_SUPPLEMENT_COVERAGE",
+        "SEALED_RECEIPT_COVERAGE",
+        "ARCHIVE_LAYOUT_BOUNDARY_COVERAGE",
+    }
+    if purpose not in allowed_purposes:
+        raise ValueError("unsupported seven-day rehearsal purpose")
+    if purpose == "FINAL_CODE_RELEASE_GATE" and start_date != START_DATE:
+        raise ValueError("release-gate seven-day scope drift")
+    if purpose == "SEALED_RECEIPT_COVERAGE" and start_date != date(2022, 4, 12):
+        raise ValueError("sealed receipt seven-day scope drift")
+    if purpose == "ARCHIVE_LAYOUT_BOUNDARY_COVERAGE" and start_date != date(2026, 6, 27):
+        raise ValueError("archive-layout boundary seven-day scope drift")
+    progress = _RehearsalProgress(
+        code_commit=current_commit(REPOSITORY_ROOT),
+        output_root=output_root,
+        start_date=start_date,
+        end_date_exclusive=start_date + timedelta(days=7),
+        purpose=purpose,
+    )
+    try:
+        return _run_final_code_rehearsal(
+            output_root=output_root,
+            start_date=start_date,
+            purpose=purpose,
+            progress=progress,
+        )
+    except Exception as exc:
+        progress.failed(exc)
+        raise
 
 
 def finalize_ui_projection(
