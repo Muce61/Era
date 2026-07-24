@@ -457,6 +457,8 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
     lightweight_chain_checkpoint = {}
     lightweight_historical_chain_checkpoint = {}
     lightweight_trade_supplement_hash = None
+    formal_progress_percent = 0.0
+    formal_heartbeat_at = None
     try:
         lightweight_policy = load_policy(lightweight_policy_path, repository_root=repo_root)
         lightweight_policy_hash = lightweight_policy.policy_hash
@@ -489,13 +491,63 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
             latest_checkpoint = max(checkpoints, key=lambda path: path.stat().st_mtime_ns)
             lightweight_historical_chain_checkpoint = _safe_json_object(latest_checkpoint)
         if valid_approvals:
-            current_checkpoint = (
+            current_chain_root = (
                 lightweight_policy.evidence_root
                 / "chains"
                 / str(valid_approvals[-1]["approval_hash"])
-                / "operations/checkpoint.json"
             )
+            current_checkpoint = current_chain_root / "operations/checkpoint.json"
             lightweight_chain_checkpoint = _safe_json_object(current_checkpoint)
+            chain_tasks = cast(dict[str, Any], lightweight_chain_checkpoint.get("tasks") or {})
+            formal_fractions: list[float] = []
+            for task in V13_TASKS:
+                chain_task = cast(dict[str, Any], chain_tasks.get(task) or {})
+                task_checkpoint = _safe_json_object(
+                    current_chain_root / "tasks" / task / "checkpoint.json"
+                )
+                checkpoint_valid_for_task = (
+                    task_checkpoint.get("schema_name") == "stage2-plan-v13-producer-checkpoint-v2"
+                    and task_checkpoint.get("task_id") == task
+                    and task_checkpoint.get("code_commit") == valid_approvals[-1].get("code_commit")
+                    and _self_hash_matches(task_checkpoint, "checkpoint_hash")
+                )
+                projected = dict(tasks.get(task) or {})
+                if checkpoint_valid_for_task:
+                    projected.update(task_checkpoint)
+                    formal_heartbeat_value = task_checkpoint.get("heartbeat_at")
+                    if isinstance(formal_heartbeat_value, str):
+                        formal_heartbeat_at = formal_heartbeat_value
+                if chain_task:
+                    chain_status = str(chain_task.get("status", "NOT_STARTED"))
+                    if chain_status in {
+                        "PASS",
+                        "TERMINAL_FAILED",
+                        "RETRYABLE_INTERRUPTED",
+                    }:
+                        projected["status"] = chain_status
+                    handoff = chain_task.get("handoff")
+                    if isinstance(handoff, dict):
+                        projected.update(
+                            {
+                                "row_count": handoff.get("row_count"),
+                                "output_hash": handoff.get("output_hash"),
+                                "verify_status": handoff.get("verify_status"),
+                            }
+                        )
+                tasks[task] = projected
+                if projected.get("status") == "PASS":
+                    formal_fractions.append(1.0)
+                else:
+                    formal_fractions.append(
+                        max(
+                            0.0,
+                            min(
+                                1.0,
+                                float(projected.get("progress_percent", 0) or 0) / 100,
+                            ),
+                        )
+                    )
+            formal_progress_percent = round(sum(formal_fractions) * 100 / len(V13_TASKS), 2)
     except (OSError, ValueError):
         pass
     return {
@@ -593,6 +645,8 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         "formal_chain_status": lightweight_chain_checkpoint.get("status", "NOT_STARTED"),
         "formal_chain_current_task": lightweight_chain_checkpoint.get("current_task"),
         "formal_chain_reason": lightweight_chain_checkpoint.get("reason"),
+        "formal_progress_percent": formal_progress_percent,
+        "formal_heartbeat_at": formal_heartbeat_at,
         "historical_formal_chain_status": lightweight_historical_chain_checkpoint.get(
             "status", "NOT_PRESENT"
         ),

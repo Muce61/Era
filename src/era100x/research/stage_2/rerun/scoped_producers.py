@@ -8,6 +8,7 @@ from collections import Counter, defaultdict
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any, cast
 
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
@@ -94,6 +95,7 @@ def produce_scoped_paths(
     output_root: Path,
     start_date: date,
     end_date_exclusive: date,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """Run the real path extractor over scoped T10 episodes."""
 
@@ -122,6 +124,16 @@ def produce_scoped_paths(
                 stage1_data_run_id=STAGE1_RUN_ID,
             )
         )
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "completed_units": len(reports),
+                    "total_units": len(INSTRUMENTS),
+                    "row_count": sum(int(item["episode_count"]) for item in reports),
+                    "current_instrument": instrument,
+                    "phase": "PATH_EXTRACTION",
+                }
+            )
     tree = _tree_summary(output_root)
     return {
         "task_id": "S2P13-T12",
@@ -155,6 +167,7 @@ def produce_scoped_metrics(
     source_snapshot_id: str,
     source_manifest_hash: str,
     source_catalog_hash: str,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """Run the real metric core against the current T12 handoff."""
 
@@ -168,19 +181,30 @@ def produce_scoped_metrics(
         manifest_hash=source_manifest_hash,
         catalog_hash=source_catalog_hash,
     )
-    reports = [
-        build_path_metrics(
-            cast(Any, instrument),
-            output_root / instrument / "path_metrics.parquet",
-            thresholds=ACTIVATION_THRESHOLDS,
-            source=source,
-            references=references,
-            source_s2t11_snapshot_root=source_paths_root,
-            source_s2t10_snapshot_root=FIXED_SNAPSHOT_ROOT,
-            source_s2t10_snapshot_id=FIXED_SNAPSHOT_ID,
+    reports = []
+    for instrument in INSTRUMENTS:
+        reports.append(
+            build_path_metrics(
+                cast(Any, instrument),
+                output_root / instrument / "path_metrics.parquet",
+                thresholds=ACTIVATION_THRESHOLDS,
+                source=source,
+                references=references,
+                source_s2t11_snapshot_root=source_paths_root,
+                source_s2t10_snapshot_root=FIXED_SNAPSHOT_ROOT,
+                source_s2t10_snapshot_id=FIXED_SNAPSHOT_ID,
+            )
         )
-        for instrument in INSTRUMENTS
-    ]
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "completed_units": len(reports),
+                    "total_units": len(INSTRUMENTS),
+                    "row_count": sum(int(item.get("row_count", 0)) for item in reports),
+                    "current_instrument": instrument,
+                    "phase": "PATH_METRICS",
+                }
+            )
     return {"task_id": "S2P13-T13", "reports": reports, **_tree_summary(output_root)}
 
 
@@ -191,6 +215,7 @@ def produce_scoped_first_passage(
     source_snapshot_id: str,
     source_manifest_hash: str,
     source_catalog_hash: str,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """Run the real First Passage core independently from T13 metrics."""
 
@@ -204,17 +229,28 @@ def produce_scoped_first_passage(
         manifest_hash=source_manifest_hash,
         catalog_hash=source_catalog_hash,
     )
-    reports = [
-        build_first_passage(
-            cast(Any, instrument),
-            output_root / instrument / "first_passage.parquet",
-            source=source,
-            references=references,
-            source_s2t11_snapshot_root=source_paths_root,
-            source_s2t10_snapshot_root=FIXED_SNAPSHOT_ROOT,
+    reports = []
+    for instrument in INSTRUMENTS:
+        reports.append(
+            build_first_passage(
+                cast(Any, instrument),
+                output_root / instrument / "first_passage.parquet",
+                source=source,
+                references=references,
+                source_s2t11_snapshot_root=source_paths_root,
+                source_s2t10_snapshot_root=FIXED_SNAPSHOT_ROOT,
+            )
         )
-        for instrument in INSTRUMENTS
-    ]
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "completed_units": len(reports),
+                    "total_units": len(INSTRUMENTS),
+                    "row_count": sum(int(item.get("row_count", 0)) for item in reports),
+                    "current_instrument": instrument,
+                    "phase": "FIRST_PASSAGE",
+                }
+            )
     return {"task_id": "S2P13-T14", "reports": reports, **_tree_summary(output_root)}
 
 
@@ -222,11 +258,21 @@ def produce_scoped_ambiguity(
     *,
     output_root: Path,
     source_first_passage_root: Path,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """Aggregate the current T14 matrices without joining any old T13 Run."""
 
     output_root.mkdir(parents=True, exist_ok=False)
     reports: list[dict[str, Any]] = []
+    total_rows = sum(
+        int(
+            pq.ParquetFile(
+                source_first_passage_root / instrument / "first_passage.parquet"
+            ).metadata.num_rows
+        )
+        for instrument in INSTRUMENTS
+    )
+    completed_rows = 0
     for instrument in INSTRUMENTS:
         path = source_first_passage_root / instrument / "first_passage.parquet"
         labels: Counter[str] = Counter()
@@ -253,6 +299,17 @@ def produce_scoped_ambiguity(
                         )
                     ][str(label)] += 1
                     classification_count += 1
+            completed_rows += batch.num_rows
+            if progress_callback is not None:
+                progress_callback(
+                    {
+                        "completed_units": completed_rows,
+                        "total_units": total_rows,
+                        "row_count": completed_rows,
+                        "current_instrument": instrument,
+                        "phase": "AMBIGUITY_AGGREGATION",
+                    }
+                )
         report = {
             "instrument": instrument,
             "path_rows": row_count,

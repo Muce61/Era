@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import date
+import time
+from collections.abc import Callable
+from datetime import UTC, date, datetime
+from decimal import Decimal, ROUND_HALF_EVEN
 from pathlib import Path
 from typing import Any, cast
 import hashlib
@@ -67,7 +70,150 @@ def _bound_data_root(source_root: Path) -> Path:
     return data_root
 
 
-def _producer_payload(context: ProducerContext, data_root: Path) -> dict[str, Any]:
+ProgressCallback = Callable[[dict[str, Any]], None]
+
+
+class _FormalProgressReporter:
+    """Persist truthful task progress and append one durable record per completed day/unit."""
+
+    def __init__(self, context: ProducerContext, *, attempt: int) -> None:
+        self.context = context
+        self.attempt = attempt
+        self.log_path = context.checkpoint_path.with_name("daily-progress.jsonl")
+        self.sequence = 0
+        self.last_checkpoint_write = 0.0
+        self.last_update: dict[str, Any] = {}
+        self.open_day: tuple[str, str] | None = None
+        self.open_day_update: dict[str, Any] | None = None
+
+    def _checkpoint(self, update: dict[str, Any], *, status: str) -> None:
+        completed = max(0, int(update.get("completed_units", 0)))
+        total = max(0, int(update.get("total_units", 0)))
+        percent = (
+            (Decimal(completed) * Decimal(100) / Decimal(total)).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_EVEN
+            )
+            if total
+            else Decimal("0.00")
+        )
+        payload = _seal(
+            {
+                "schema_name": "stage2-plan-v13-producer-checkpoint-v2",
+                "status": status,
+                "reason_code": (
+                    "PRODUCER_PROGRESS" if status == "IN_PROGRESS" else f"PRODUCER_{status}"
+                ),
+                "task_id": self.context.task_id,
+                "execution_mode": self.context.execution_mode,
+                "attempt": self.attempt,
+                "code_commit": self.context.code_commit,
+                "adapter_plan_hash": self.context.adapter_plan_hash,
+                "execution_scope_hash": self.context.scope.execution_scope_hash,
+                "completed_units": completed,
+                "total_units": total,
+                "progress_percent": format(percent, "f"),
+                "row_count": int(update.get("row_count", completed)),
+                "current_instrument": update.get("current_instrument"),
+                "current_date": update.get("current_date"),
+                "phase": update.get("phase"),
+                "heartbeat_at": datetime.now(UTC).isoformat(),
+                "progress_log_path": str(self.log_path),
+                "progress_sequence": self.sequence,
+                **(
+                    {"failure_reason": update["failure_reason"]}
+                    if update.get("failure_reason")
+                    else {}
+                ),
+                **({"receipt_hash": update["receipt_hash"]} if update.get("receipt_hash") else {}),
+            },
+            "checkpoint_hash",
+        )
+        temporary = self.context.checkpoint_path.with_suffix(".tmp")
+        temporary.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+        os.replace(temporary, self.context.checkpoint_path)
+        self.last_checkpoint_write = time.monotonic()
+
+    def _append(self, update: dict[str, Any], *, event_type: str) -> None:
+        self.sequence += 1
+        event = _seal(
+            {
+                "schema_name": "stage2-plan-v13-progress-event-v1",
+                "sequence": self.sequence,
+                "event_type": event_type,
+                "task_id": self.context.task_id,
+                "execution_mode": self.context.execution_mode,
+                "attempt": self.attempt,
+                "code_commit": self.context.code_commit,
+                "adapter_plan_hash": self.context.adapter_plan_hash,
+                "execution_scope_hash": self.context.scope.execution_scope_hash,
+                "recorded_at": datetime.now(UTC).isoformat(),
+                **update,
+            },
+            "event_hash",
+        )
+        self.log_path.parent.mkdir(parents=True, exist_ok=True)
+        with self.log_path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+
+    def start(self) -> None:
+        update = {
+            "completed_units": 0,
+            "total_units": 0,
+            "row_count": 0,
+            "phase": "STARTING",
+        }
+        self._append(update, event_type="TASK_STARTED")
+        self._checkpoint(update, status="IN_PROGRESS")
+
+    def update(self, update: dict[str, Any]) -> None:
+        normalized = dict(update)
+        current_date = normalized.get("current_date")
+        instrument = str(normalized.get("current_instrument") or "")
+        day_changed = False
+        if current_date:
+            day_key = (instrument, str(current_date))
+            if self.open_day is not None and day_key != self.open_day:
+                assert self.open_day_update is not None
+                self._append(self.open_day_update, event_type="UTC_DAY_COMPLETED")
+                day_changed = True
+            self.open_day = day_key
+            self.open_day_update = normalized
+        else:
+            self._append(normalized, event_type="UNIT_COMPLETED")
+        self.last_update = normalized
+        if day_changed or time.monotonic() - self.last_checkpoint_write >= 2:
+            self._checkpoint(normalized, status="IN_PROGRESS")
+
+    def finish(self, *, row_count: int, receipt_hash: str | None = None) -> None:
+        if self.open_day_update is not None:
+            self._append(self.open_day_update, event_type="UTC_DAY_COMPLETED")
+            self.open_day_update = None
+        update = {
+            **self.last_update,
+            "completed_units": int(self.last_update.get("total_units", 1)),
+            "total_units": int(self.last_update.get("total_units", 1)),
+            "row_count": row_count,
+            "phase": "COMPLETE",
+        }
+        if receipt_hash is not None:
+            update["receipt_hash"] = receipt_hash
+        self._append(update, event_type="TASK_COMPLETED")
+        self._checkpoint(update, status="PASS")
+
+    def fail(self, reason: str) -> None:
+        update = {**self.last_update, "failure_reason": reason, "phase": "FAILED"}
+        self._append(update, event_type="TASK_FAILED")
+        self._checkpoint(update, status="FAILED")
+
+
+def _producer_payload(
+    context: ProducerContext,
+    data_root: Path,
+    *,
+    progress_callback: ProgressCallback | None = None,
+) -> dict[str, Any]:
     start = date.fromisoformat(context.scope.start_date)
     end = date.fromisoformat(context.scope.end_date_exclusive)
     if context.task_id == "S2P13-T11":
@@ -76,12 +222,14 @@ def _producer_payload(context: ProducerContext, data_root: Path) -> dict[str, An
         return produce_scoped_lifecycle(
             start_date=start,
             end_date_exclusive=end,
+            progress_callback=progress_callback,
         )
     if context.task_id == "S2P13-T12":
         return produce_scoped_paths(
             output_root=data_root,
             start_date=start,
             end_date_exclusive=end,
+            progress_callback=progress_callback,
         )
     if context.task_id in {"S2P13-T13", "S2P13-T14"}:
         source = context.upstream["S2P13-T12"]
@@ -93,6 +241,7 @@ def _producer_payload(context: ProducerContext, data_root: Path) -> dict[str, An
                 source_snapshot_id=source.snapshot_id,
                 source_manifest_hash=source.manifest_hash,
                 source_catalog_hash=source.catalog_hash,
+                progress_callback=progress_callback,
             )
         return produce_scoped_first_passage(
             output_root=data_root,
@@ -100,6 +249,7 @@ def _producer_payload(context: ProducerContext, data_root: Path) -> dict[str, An
             source_snapshot_id=source.snapshot_id,
             source_manifest_hash=source.manifest_hash,
             source_catalog_hash=source.catalog_hash,
+            progress_callback=progress_callback,
         )
     if context.task_id == "S2P13-T15":
         source = context.upstream["S2P13-T14"]
@@ -107,12 +257,13 @@ def _producer_payload(context: ProducerContext, data_root: Path) -> dict[str, An
         result = produce_scoped_ambiguity(
             output_root=data_root,
             source_first_passage_root=source_first_passage_root,
+            progress_callback=progress_callback,
         )
         result["source_first_passage_root"] = str(source_first_passage_root)
         return result
     if context.task_id == "S2P13-T16":
         if context.execution_mode == "FORMAL":
-            return _produce_formal_t16(context, data_root)
+            return _produce_formal_t16(context, data_root, progress_callback=progress_callback)
         from .seven_day_rehearsal import produce_scoped_conditional_baseline
 
         t15_output = _read(context.upstream["S2P13-T15"].artifact_root / "output.json")
@@ -123,7 +274,12 @@ def _producer_payload(context: ProducerContext, data_root: Path) -> dict[str, An
     raise ValueError(f"unsupported successor producer: {context.task_id}")
 
 
-def _produce_formal_t16(context: ProducerContext, data_root: Path) -> dict[str, Any]:
+def _produce_formal_t16(
+    context: ProducerContext,
+    data_root: Path,
+    *,
+    progress_callback: ProgressCallback | None = None,
+) -> dict[str, Any]:
     """Freeze dynamic successor Authority/TRAIN bins, then run the real T16 engine."""
 
     from era100x.research.stage_2.baselines.conditional.binning_run import (
@@ -188,6 +344,10 @@ def _produce_formal_t16(context: ProducerContext, data_root: Path) -> dict[str, 
     )
     authority_path = data_root / f"authority-{authority.authority_hash}.json"
     _write_exclusive(authority_path, authority.model_dump(mode="json"))
+    if progress_callback is not None:
+        progress_callback(
+            {"completed_units": 1, "total_units": 4, "phase": "AUTHORITY", "row_count": 0}
+        )
     bins, bins_path = freeze_binning_snapshots(
         authority_path=authority_path,
         bin_root=data_root / "train-bins",
@@ -197,6 +357,10 @@ def _produce_formal_t16(context: ProducerContext, data_root: Path) -> dict[str, 
         repository_clean=repository_clean(context.repository_root),
         lightweight_policy_authorized=True,
     )
+    if progress_callback is not None:
+        progress_callback(
+            {"completed_units": 2, "total_units": 4, "phase": "TRAIN_BINS", "row_count": 0}
+        )
     runs_root = data_root / "runs"
     runs_root.mkdir()
     manifest, published = run_full_execution(
@@ -210,9 +374,27 @@ def _produce_formal_t16(context: ProducerContext, data_root: Path) -> dict[str, 
         repository_clean=repository_clean(context.repository_root),
         lightweight_policy_authorized=True,
     )
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "completed_units": 3,
+                "total_units": 4,
+                "phase": "CONDITIONAL_BASELINE",
+                "row_count": int(manifest.get("source_h2_path_count", 0)),
+            }
+        )
     verify, _ = verify_published_run(run_root=published.parents[2])
     if verify.get("status") != "PASS":
         raise ValueError("formal T16 independent Verify did not PASS")
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "completed_units": 4,
+                "total_units": 4,
+                "phase": "VERIFY",
+                "row_count": int(verify["source_h2_path_count"]),
+            }
+        )
     return {
         "task_id": "S2P13-T16",
         "authority_hash": authority.authority_hash,
@@ -281,26 +463,13 @@ def execute_producer(context: ProducerContext, *, resume: bool = False) -> dict[
     if data_root.parent.exists():
         raise ValueError("producer attempt identity already exists")
     data_root.parent.mkdir(parents=True)
-    checkpoint_payload = _seal(
-        {
-            "schema_name": "stage2-plan-v13-producer-checkpoint-v1",
-            "status": "IN_PROGRESS",
-            "task_id": context.task_id,
-            "execution_mode": context.execution_mode,
-            "attempt": attempt,
-            "code_commit": context.code_commit,
-            "adapter_plan_hash": context.adapter_plan_hash,
-            "execution_scope_hash": context.scope.execution_scope_hash,
-        },
-        "checkpoint_hash",
-    )
-    temporary_checkpoint = context.checkpoint_path.with_suffix(".tmp")
-    temporary_checkpoint.write_text(
-        json.dumps(checkpoint_payload, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    os.replace(temporary_checkpoint, context.checkpoint_path)
-    payload = _producer_payload(context, data_root)
+    reporter = _FormalProgressReporter(context, attempt=attempt)
+    reporter.start()
+    try:
+        payload = _producer_payload(context, data_root, progress_callback=reporter.update)
+    except BaseException as exc:
+        reporter.fail(f"{type(exc).__name__}: {exc}")
+        raise
     payload["artifact_data_root"] = str(data_root)
     output_path = artifact_root / "output.json"
     _write_exclusive(output_path, payload)
@@ -381,19 +550,7 @@ def execute_producer(context: ProducerContext, *, resume: bool = False) -> dict[
         "receipt_hash",
     )
     _write_exclusive(context.receipt_path, receipt)
-    completed_checkpoint = _seal(
-        {
-            **{key: value for key, value in checkpoint_payload.items() if key != "checkpoint_hash"},
-            "status": "PASS",
-            "receipt_hash": receipt["receipt_hash"],
-        },
-        "checkpoint_hash",
-    )
-    temporary_checkpoint.write_text(
-        json.dumps(completed_checkpoint, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    os.replace(temporary_checkpoint, context.checkpoint_path)
+    reporter.finish(row_count=row_count, receipt_hash=str(receipt["receipt_hash"]))
     return verify_producer(context)
 
 

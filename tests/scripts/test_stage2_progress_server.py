@@ -1430,6 +1430,86 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
     assert live["tasks"]["S2P13-T11"]["current_instrument"] == "ETHUSDT"
     assert live["tasks"]["S2P13-T11"]["current_date"] == "2020-01-03"
 
+    policy_operations = tmp_path / "stage2/formal-operations"
+    policy_evidence = tmp_path / "stage2/formal-evidence"
+    approval_hash = "d" * 64
+    _write(policy_operations / "approvals/approval-formal.json", "{}")
+    monkeypatch.setattr(
+        MODULE,
+        "load_policy",
+        lambda *_args, **_kwargs: type(
+            "Policy",
+            (),
+            {
+                "policy_hash": "e" * 64,
+                "trade_supplement_acceptance_hash": "f" * 64,
+                "operations_root": policy_operations,
+                "evidence_root": policy_evidence,
+            },
+        )(),
+    )
+    monkeypatch.setattr(
+        MODULE,
+        "validate_approval",
+        lambda *_args, **_kwargs: {
+            "approval_hash": approval_hash,
+            "status": "APPROVED",
+            "code_commit": "abc123",
+        },
+    )
+    chain_root = policy_evidence / "chains" / approval_hash
+    _write(
+        chain_root / "operations/checkpoint.json",
+        json.dumps(
+            {
+                "status": "IN_PROGRESS",
+                "current_task": "S2P13-T11",
+                "tasks": {
+                    task: {
+                        "status": "IN_PROGRESS" if task == "S2P13-T11" else "NOT_STARTED",
+                        "handoff": None,
+                    }
+                    for task in MODULE.V13_TASKS
+                },
+            }
+        ),
+    )
+    formal_task_checkpoint = _sealed(
+        {
+            "schema_name": "stage2-plan-v13-producer-checkpoint-v2",
+            "status": "IN_PROGRESS",
+            "reason_code": "PRODUCER_PROGRESS",
+            "task_id": "S2P13-T11",
+            "execution_mode": "FORMAL",
+            "attempt": 1,
+            "code_commit": "abc123",
+            "adapter_plan_hash": "1" * 64,
+            "execution_scope_hash": "2" * 64,
+            "completed_units": 20,
+            "total_units": 80,
+            "progress_percent": "25.00",
+            "row_count": 80,
+            "current_instrument": "BTCUSDT",
+            "current_date": "2020-01-05",
+            "phase": "LIFECYCLE",
+            "heartbeat_at": "2999-01-02T00:00:00+00:00",
+            "progress_log_path": str(chain_root / "tasks/S2P13-T11/daily-progress.jsonl"),
+            "progress_sequence": 5,
+        },
+        "checkpoint_hash",
+    )
+    _write(
+        chain_root / "tasks/S2P13-T11/checkpoint.json",
+        json.dumps(formal_task_checkpoint),
+    )
+    formal = _stage2_v13_projection(tmp_path / "stage2")
+    assert formal["formal_chain_status"] == "IN_PROGRESS"
+    assert formal["formal_progress_percent"] == 4.17
+    assert formal["formal_heartbeat_at"] == "2999-01-02T00:00:00+00:00"
+    assert formal["tasks"]["S2P13-T11"]["progress_percent"] == "25.00"
+    assert formal["tasks"]["S2P13-T11"]["phase"] == "LIFECYCLE"
+    (policy_operations / "approvals/approval-formal.json").unlink()
+
     rehearsal_report_path = (
         tmp_path / "stage2/rehearsals/final-code/seven-day-rehearsal-report.json"
     )

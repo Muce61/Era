@@ -752,7 +752,7 @@
         const completed = Number(task.completed_units) || 0;
         const total = Number(task.total_units) || 0;
         const taskProgress = state === "pass" ? 100 : Math.max(0, Math.min(100, Number(task.progress_percent) || 0));
-        const position = [task.current_instrument, task.current_date].filter(Boolean).join(" · ");
+        const position = [task.current_instrument, task.current_date, task.phase].filter(Boolean).join(" · ");
         const unitDetail = total ? `${number(completed)} / ${number(total)}` : "等待计数";
         return {
           name:`${taskId} · ${label}`,
@@ -765,9 +765,13 @@
       byId("v13FlowGrid").innerHTML = states.map(flowCard).join("");
       const blockers = (plan.blocking_questions || []).join(", ") || "NONE";
       const pendingGates = (plan.pending_execution_gates || []).join(", ") || "NONE";
-      const liveProgress = Math.max(0, Math.min(100, Number(plan.rehearsal_progress_percent) || 0));
-      const heartbeat = plan.rehearsal_heartbeat_at ? dateTime(plan.rehearsal_heartbeat_at) : "—";
-      byId("v13FlowSummary").textContent = `${plan.status || "BLOCKED"} · 7天短跑 ${plan.rehearsal_status || "NOT_STARTED"} · ${liveProgress.toFixed(2)}% · 当前 ${plan.current_task || "—"} · 心跳 ${heartbeat} · open questions ${blockers} · gates ${pendingGates}`;
+      const formalVisible = !["NOT_STARTED", "NOT_PRESENT"].includes(String(plan.formal_chain_status || "NOT_STARTED"));
+      const liveProgress = Math.max(0, Math.min(100, Number(formalVisible ? plan.formal_progress_percent : plan.rehearsal_progress_percent) || 0));
+      const activeHeartbeat = formalVisible ? plan.formal_heartbeat_at : plan.rehearsal_heartbeat_at;
+      const heartbeat = activeHeartbeat ? dateTime(activeHeartbeat) : "—";
+      const activeTask = formalVisible ? plan.formal_chain_current_task : plan.current_task;
+      const activeLabel = formalVisible ? "正式链" : "7天短跑";
+      byId("v13FlowSummary").textContent = `${plan.status || "BLOCKED"} · ${activeLabel} ${formalVisible ? (plan.formal_chain_status || "NOT_STARTED") : (plan.rehearsal_status || "NOT_STARTED")} · ${liveProgress.toFixed(2)}% · 当前 ${activeTask || "—"} · 心跳 ${heartbeat} · 5秒自动刷新 · open questions ${blockers} · gates ${pendingGates}`;
       const inputBlockers = (plan.remaining_input_blockers || []).join(", ") || "NONE";
       const fundingTracks = (plan.funding_tracks || []).join(" / ") || "—";
       const fundingEvidence = plan.funding_evidence || {};
