@@ -64,11 +64,8 @@ def main() -> int:
         if args.waive_rehearsal_for_background_runtime:
             if args.rehearsal is not None or not args.waiver_reason:
                 parser.error("background waiver requires --waiver-reason and forbids --rehearsal")
-        elif args.rehearsal is None or args.waiver_reason is not None:
-            parser.error(
-                "record-approval requires --rehearsal by default; "
-                "use the explicit background waiver flag to omit it"
-            )
+        elif args.waiver_reason is not None:
+            parser.error("waiver reason requires the explicit background waiver flag")
         path = record_approval(
             policy=policy,
             repository_root=ROOT,

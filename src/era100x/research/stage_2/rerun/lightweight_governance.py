@@ -38,6 +38,7 @@ CHAIN_AUTHORITY_SCHEMA: Final = "stage2-chain-authority-v2"
 T16_AUTHORITY_SCHEMA: Final = "stage2-s2p13-t16-binning-authority-v2"
 REHEARSAL_SCHEMA: Final = "stage2-plan-v13-seven-day-rehearsal-v1"
 REHEARSAL_PASS_MODE: Final = "FINAL_CODE_7_DAY_REHEARSAL_PASS"
+REHEARSAL_NOT_REQUIRED_MODE: Final = "REHEARSAL_NOT_REQUIRED"
 BACKGROUND_WAIVER_MODE: Final = "EXPLICIT_BACKGROUND_RUNTIME_WAIVER"
 BACKGROUND_WAIVER_SCOPE: Final = "UNATTENDED_NON_RESEARCH_HOURS"
 VERIFIED_PREFIX_SCHEMA: Final = "stage2-verified-prefix-adoption-v1"
@@ -129,12 +130,17 @@ def load_policy(path: Path, *, repository_root: Path) -> Stage2ActivePolicy:
         or payload["task_dag"] != {task: list(UPSTREAM_TASKS[task]) for task in TASKS}
         or payload["full_history_scope"]
         != {"start_date": "2020-01-01", "end_date_exclusive": "2026-07-04"}
+        or payload["required_gates"]
+        != [
+            "COMMIT_BOUND_HUMAN_APPROVAL",
+            "CHAIN_AUTHORITY",
+            "FULL_VERIFY",
+        ]
         or payload["rehearsal_gate_policy"]
         != {
-            "default_required": True,
-            "explicit_background_waiver_allowed": True,
-            "waiver_scope": BACKGROUND_WAIVER_SCOPE,
-            "waiver_must_bind_current_commit": True,
+            "default_required": False,
+            "explicit_task_or_user_requirement_only": True,
+            "completed_rehearsal_may_bind_current_commit": True,
         }
     ):
         raise ValueError("Stage 2 active policy contract drift")
@@ -240,12 +246,16 @@ def record_approval(
             ],
         }
     else:
-        if rehearsal_path is None:
-            raise ValueError("formal approval requires rehearsal by default")
         if waiver_reason is not None:
             raise ValueError("waiver reason is forbidden without background waiver")
-        rehearsal = validate_rehearsal(rehearsal_path, commit=commit)
-        rehearsal_gate_mode = REHEARSAL_PASS_MODE
+        rehearsal = (
+            validate_rehearsal(rehearsal_path, commit=commit)
+            if rehearsal_path is not None
+            else None
+        )
+        rehearsal_gate_mode = (
+            REHEARSAL_PASS_MODE if rehearsal is not None else REHEARSAL_NOT_REQUIRED_MODE
+        )
         waiver = None
     existing = [
         path
@@ -345,6 +355,13 @@ def validate_approval(
             ]
         ):
             raise ValueError("formal approval background waiver drift")
+    elif rehearsal_gate_mode == REHEARSAL_NOT_REQUIRED_MODE:
+        if (
+            payload.get("rehearsal_receipt_path") is not None
+            or payload.get("rehearsal_receipt_hash") is not None
+            or payload.get("background_runtime_waiver") is not None
+        ):
+            raise ValueError("formal approval optional rehearsal state drift")
     else:
         raise ValueError("formal approval rehearsal gate drift")
     if not repository_clean(repository_root):

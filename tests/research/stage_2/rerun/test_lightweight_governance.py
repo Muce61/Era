@@ -56,16 +56,14 @@ def _policy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> subject.Stage2Ac
             "end_date_exclusive": "2026-07-04",
         },
         "required_gates": [
-            "FINAL_CODE_7_DAY_REHEARSAL_DEFAULT_OR_EXPLICIT_BACKGROUND_WAIVER",
             "COMMIT_BOUND_HUMAN_APPROVAL",
             "CHAIN_AUTHORITY",
             "FULL_VERIFY",
         ],
         "rehearsal_gate_policy": {
-            "default_required": True,
-            "explicit_background_waiver_allowed": True,
-            "waiver_scope": subject.BACKGROUND_WAIVER_SCOPE,
-            "waiver_must_bind_current_commit": True,
+            "default_required": False,
+            "explicit_task_or_user_requirement_only": True,
+            "completed_rehearsal_may_bind_current_commit": True,
         },
     }
     path = repository / "policy.json"
@@ -140,19 +138,26 @@ def test_approval_rejects_commit_or_policy_drift(
         subject.validate_approval(approval, policy=policy, repository_root=policy.path.parent)
 
 
-def test_rehearsal_is_default_but_explicit_background_waiver_is_valid(
+def test_rehearsal_is_optional_and_legacy_background_waiver_is_valid(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     policy = _policy(tmp_path, monkeypatch)
-    with pytest.raises(ValueError, match="requires rehearsal by default"):
-        subject.record_approval(
-            policy=policy,
-            repository_root=policy.path.parent,
-            rehearsal_path=None,
-            approved_by="Muce",
-            approval_source="generic approval",
-        )
+    optional_approval_path = subject.record_approval(
+        policy=policy,
+        repository_root=policy.path.parent,
+        rehearsal_path=None,
+        approved_by="Muce",
+        approval_source="generic approval",
+    )
+    optional_approval = subject.validate_approval(
+        optional_approval_path,
+        policy=policy,
+        repository_root=policy.path.parent,
+    )
+    assert optional_approval["rehearsal_gate_mode"] == subject.REHEARSAL_NOT_REQUIRED_MODE
+    assert optional_approval["rehearsal_receipt_path"] is None
 
+    monkeypatch.setattr(subject, "current_commit", lambda _root: "b" * 40)
     approval_path = subject.record_approval(
         policy=policy,
         repository_root=policy.path.parent,

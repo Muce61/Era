@@ -36,15 +36,13 @@
     "end_date_exclusive": "2026-07-04"
   },
   "required_gates": [
-    "FINAL_CODE_7_DAY_REHEARSAL_DEFAULT_OR_EXPLICIT_BACKGROUND_WAIVER",
     "COMMIT_BOUND_HUMAN_APPROVAL",
     "CHAIN_AUTHORITY",
     "FULL_VERIFY"
   ],
   "rehearsal_gate_policy": {
-    "default_required": true,
-    "explicit_background_waiver_allowed": true,
-    "waiver_scope": "UNATTENDED_NON_RESEARCH_HOURS",
-    "waiver_must_bind_current_commit": true
+    "default_required": false,
+    "explicit_task_or_user_requirement_only": true,
+    "completed_rehearsal_may_bind_current_commit": true
   }
 }
