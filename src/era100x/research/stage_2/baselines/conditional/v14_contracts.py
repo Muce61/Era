@@ -8,6 +8,7 @@ or a live-return claim.
 from __future__ import annotations
 
 import hashlib
+import json
 from decimal import Decimal
 from typing import Literal, Self
 
@@ -270,6 +271,22 @@ class S2P13T16ContractAuthority(StrictEventModel):
     def seal(cls, payload: dict[str, object]) -> Self:
         provisional = cls.model_validate({**payload, "authority_hash": "0" * 64})
         return provisional.model_copy(update={"authority_hash": provisional.computed_hash()})
+
+
+def validate_contract_authority_json(
+    payload: str | bytes | bytearray,
+) -> S2T15ContractAuthority | S2P13T16ContractAuthority:
+    """Validate an Authority at the JSON boundary without losing tuple semantics."""
+
+    decoded = json.loads(payload)
+    if not isinstance(decoded, dict):
+        raise ValueError("conditional-baseline Authority JSON must be an object")
+    schema_name = decoded.get("schema_name")
+    if schema_name == "stage2-s2p13-t16-contract-authority":
+        return S2P13T16ContractAuthority.model_validate_json(payload)
+    if schema_name == "stage2-s2t15-contract-authority":
+        return S2T15ContractAuthority.model_validate_json(payload)
+    raise ValueError(f"unsupported conditional-baseline Authority schema: {schema_name!r}")
 
 
 class FrozenQuintileBoundaries(StrictEventModel):

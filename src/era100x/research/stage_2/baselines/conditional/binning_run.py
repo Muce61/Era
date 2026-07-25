@@ -21,9 +21,8 @@ from .production_core import prepare_daily_features
 from .t10_access import FixedT10Reader, read_json_file
 from .v14_contracts import (
     REGISTERED_PARAMETER_TIMING_PAIRS,
-    S2P13T16ContractAuthority,
-    S2T15ContractAuthority,
     canonical_hash,
+    validate_contract_authority_json,
 )
 
 DECIMAL_TYPE = pa.decimal128(38, 18)
@@ -251,12 +250,7 @@ def freeze_binning_snapshots(
 
     if not lightweight_policy_authorized:
         require_operation_allowed("FREEZE_BINS")
-    raw_authority = read_json_file(authority_path)
-    authority = (
-        S2P13T16ContractAuthority.model_validate(raw_authority)
-        if raw_authority.get("schema_name") == "stage2-s2p13-t16-contract-authority"
-        else S2T15ContractAuthority.model_validate(raw_authority)
-    )
+    authority = validate_contract_authority_json(authority_path.read_bytes())
     if authority.authority_hash != authority.computed_hash():
         raise ValueError("Authority changed before TRAIN binning")
     if authority.code_commit != current_commit or not repository_clean:

@@ -36,8 +36,8 @@ from .v14_contracts import (
     EXPECTED_H2_PATHS,
     REGISTERED_PARAMETER_TIMING_PAIRS,
     S2P13T16ContractAuthority,
-    S2T15ContractAuthority,
     canonical_hash,
+    validate_contract_authority_json,
 )
 
 RUN_PATTERN = re.compile(r"^stage2-(?:s2t15-conditional|s2p13-t16)-\d{8}T\d{6}Z-[0-9a-f]{12}$")
@@ -208,12 +208,7 @@ def run_full_execution(
     resume_run_id: str | None = None,
     lightweight_policy_authorized: bool = False,
 ) -> tuple[dict[str, Any], Path]:
-    raw_authority = read_json_file(authority_path)
-    authority = (
-        S2P13T16ContractAuthority.model_validate(raw_authority)
-        if raw_authority.get("schema_name") == "stage2-s2p13-t16-contract-authority"
-        else S2T15ContractAuthority.model_validate(raw_authority)
-    )
+    authority = validate_contract_authority_json(authority_path.read_bytes())
     bins = read_binning_set(binning_set_path, authority_hash=authority.authority_hash)
     plan_v13 = isinstance(authority, S2P13T16ContractAuthority)
     schema_prefix = "stage2-s2p13-t16" if plan_v13 else "stage2-s2t15"
@@ -270,11 +265,8 @@ def run_full_execution(
             not in {"IN_PROGRESS", "COMPLETE_PENDING_VERIFY", "VERIFIED_PASS"}
         ):
             raise ValueError("T15 resume checkpoint binding or status drift")
-        stored_raw_authority = read_json_file(run_root / "manifests" / "authority.json")
-        stored_authority = (
-            S2P13T16ContractAuthority.model_validate(stored_raw_authority)
-            if stored_raw_authority.get("schema_name") == "stage2-s2p13-t16-contract-authority"
-            else S2T15ContractAuthority.model_validate(stored_raw_authority)
+        stored_authority = validate_contract_authority_json(
+            (run_root / "manifests" / "authority.json").read_bytes()
         )
         stored_bins = read_json_file(run_root / "manifests" / "binning-set.json")
         if stored_authority != authority or stored_bins != bins:
