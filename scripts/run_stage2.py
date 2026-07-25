@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 
 from era100x.research.stage_2.rerun.lightweight_governance import (
+    adopt_verified_prefix,
     load_policy,
     record_approval,
     repository_head,
@@ -24,11 +25,21 @@ DEFAULT_POLICY = ROOT / "configs/governance/stage2_active_policy_v2.json"
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "mode", choices=("status", "rehearse", "record-approval", "run", "resume", "verify")
+        "mode",
+        choices=(
+            "status",
+            "rehearse",
+            "record-approval",
+            "adopt-verified-prefix",
+            "run",
+            "resume",
+            "verify",
+        ),
     )
     parser.add_argument("--policy", type=Path, default=DEFAULT_POLICY)
     parser.add_argument("--rehearsal", type=Path)
     parser.add_argument("--approval", type=Path)
+    parser.add_argument("--source-chain", type=Path)
     parser.add_argument("--approved-by", default="Muce")
     parser.add_argument("--approval-source")
     parser.add_argument("--waive-rehearsal-for-background-runtime", action="store_true")
@@ -68,6 +79,15 @@ def main() -> int:
             waiver_reason=args.waiver_reason,
         )
         result = {"status": "APPROVED", "approval_path": str(path)}
+    elif args.mode == "adopt-verified-prefix":
+        if args.approval is None or args.source_chain is None:
+            parser.error("adopt-verified-prefix requires --approval and --source-chain")
+        result = adopt_verified_prefix(
+            approval_path=args.approval,
+            source_chain_root=args.source_chain,
+            policy=policy,
+            repository_root=ROOT,
+        )
     elif args.mode in {"run", "resume"}:
         if args.approval is None:
             parser.error(f"{args.mode} requires --approval")

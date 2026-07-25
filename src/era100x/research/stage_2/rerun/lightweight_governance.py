@@ -17,13 +17,16 @@ from .orchestrator import (
     TASKS,
     RetryableInterruption,
     TaskAdapter,
+    TaskHandoff,
     canonical_hash,
     current_commit,
     repository_clean,
 )
 from .production_adapters import (
     PLAN_SCHEMA,
+    RECEIPT_SCHEMA,
     UPSTREAM_TASKS,
+    VERIFIED_PREFIX_ADOPTION_SCHEMA,
     build_production_adapters,
     load_adapter_plan,
 )
@@ -37,6 +40,8 @@ REHEARSAL_SCHEMA: Final = "stage2-plan-v13-seven-day-rehearsal-v1"
 REHEARSAL_PASS_MODE: Final = "FINAL_CODE_7_DAY_REHEARSAL_PASS"
 BACKGROUND_WAIVER_MODE: Final = "EXPLICIT_BACKGROUND_RUNTIME_WAIVER"
 BACKGROUND_WAIVER_SCOPE: Final = "UNATTENDED_NON_RESEARCH_HOURS"
+VERIFIED_PREFIX_SCHEMA: Final = "stage2-verified-prefix-adoption-v1"
+VERIFIED_PREFIX_TASKS: Final = ("S2P13-T11", "S2P13-T12")
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -435,6 +440,8 @@ def prepare_adapter_plan(
     chain_authority_path: Path,
     policy: Stage2ActivePolicy,
     repository_root: Path,
+    adopted_prefix: dict[str, TaskHandoff] | None = None,
+    adopted_source_chain_root: Path | None = None,
 ) -> tuple[Path, Path]:
     """Create one immutable argv plan underneath the approved evidence root."""
 
@@ -451,11 +458,24 @@ def prepare_adapter_plan(
     evidence_root.mkdir(parents=True, exist_ok=False)
     producer = repository_root / "scripts/run_stage2_v13_producer.py"
     scope = cast(dict[str, str], policy.payload["full_history_scope"])
+    if adopted_prefix is not None and (
+        tuple(adopted_prefix) != VERIFIED_PREFIX_TASKS
+        or adopted_source_chain_root is None
+        or not adopted_source_chain_root.is_absolute()
+        or adopted_source_chain_root.is_symlink()
+        or not adopted_source_chain_root.is_dir()
+    ):
+        raise ValueError("verified prefix adoption must bind exact T11-T12 source evidence")
     tasks: dict[str, Any] = {}
     for task in TASKS:
         task_root = evidence_root / task
         artifact_root = task_root / "artifacts"
         artifact_root.mkdir(parents=True)
+        allowed_artifact_root = (
+            Path(adopted_prefix[task].artifact_root)
+            if adopted_prefix is not None and task in adopted_prefix
+            else artifact_root
+        )
 
         def command(mode: str, *, task_id: str = task) -> list[str]:
             return [
@@ -481,7 +501,7 @@ def prepare_adapter_plan(
             "input_preflight_command": command("input-preflight"),
             "run_command": command("run"),
             "resume_command": command("resume"),
-            "allowed_artifact_root": str(artifact_root),
+            "allowed_artifact_root": str(allowed_artifact_root),
             "checkpoint_path": str(task_root / "checkpoint.json"),
             "receipt_path": str(task_root / "receipt.json"),
         }
@@ -499,12 +519,307 @@ def prepare_adapter_plan(
         "chain_authority_path": str(chain_authority_path),
         "chain_authority_hash": chain["authority_hash"],
         "tasks": tasks,
+        "verified_prefix_source": (
+            {
+                "source_chain_root": str(adopted_source_chain_root),
+                "tasks": {
+                    task: {
+                        "source_run_id": adopted_prefix[task].run_id,
+                        "source_receipt_hash": adopted_prefix[task].producer_receipt_hash,
+                        "output_hash": adopted_prefix[task].output_hash,
+                        "row_count": adopted_prefix[task].row_count,
+                    }
+                    for task in VERIFIED_PREFIX_TASKS
+                },
+            }
+            if adopted_prefix is not None
+            else None
+        ),
         "formal_run_created": False,
     }
     payload["adapter_plan_hash"] = canonical_hash(payload)
     plan_path = chain_root / f"adapter-plan-{payload['adapter_plan_hash']}.json"
     _write_exclusive(plan_path, payload)
     return plan_path, operations_root
+
+
+def _producer_handoff_payload(handoff: TaskHandoff) -> dict[str, object]:
+    payload = handoff.payload()
+    for field in ("consumer_readback", "reconciliation", "verify_status"):
+        payload.pop(field)
+    return payload
+
+
+def _load_verified_prefix(
+    *,
+    source_chain_root: Path,
+    repository_root: Path,
+) -> tuple[dict[str, TaskHandoff], dict[str, Path]]:
+    if (
+        not source_chain_root.is_absolute()
+        or source_chain_root.is_symlink()
+        or not source_chain_root.is_dir()
+    ):
+        raise ValueError("verified-prefix source chain is unsafe or missing")
+    plans = sorted(source_chain_root.glob("adapter-plan-*.json"))
+    if len(plans) != 1:
+        raise ValueError("verified-prefix source requires one exact adapter plan")
+    source_checkpoint = _read_json(source_chain_root / "operations" / "checkpoint.json")
+    if (
+        source_checkpoint.get("status") != "TERMINAL_FAILED"
+        or source_checkpoint.get("stage3_locked") is not True
+    ):
+        raise ValueError("verified-prefix source must be a preserved terminal chain")
+    source_commit = str(source_checkpoint.get("code_commit", ""))
+    source_plan = load_adapter_plan(plans[0], code_commit=source_commit)
+    source_adapters = build_production_adapters(
+        source_plan,
+        supervisor_root=source_chain_root / "operations",
+        repository_root=repository_root,
+    )
+    handoffs: dict[str, TaskHandoff] = {}
+    receipt_paths: dict[str, Path] = {}
+    for task in VERIFIED_PREFIX_TASKS:
+        spec = source_plan.tasks[task]
+        if not spec.receipt_path.is_file():
+            raise ValueError(f"verified-prefix source receipt is missing: {task}")
+        adapter = source_adapters[task]
+        handoff = adapter.run_or_resume()
+        if (
+            handoff.task_id != task
+            or handoff.execution_mode != "FORMAL"
+            or handoff.consumer_readback != "PASS"
+            or handoff.reconciliation != "PASS"
+            or handoff.verify_status != "PASS"
+        ):
+            raise ValueError(f"verified-prefix source is not a formal PASS: {task}")
+        handoffs[task] = handoff
+        receipt_paths[task] = spec.receipt_path
+    if handoffs["S2P13-T12"].row_count != 532_708:
+        raise ValueError("verified-prefix T12 row count drift")
+    return handoffs, receipt_paths
+
+
+def _write_adopted_receipt(
+    *,
+    task: str,
+    source_handoff: TaskHandoff,
+    source_receipt_path: Path,
+    source_chain_root: Path,
+    destination_receipt_path: Path,
+    destination_plan_hash: str,
+    destination_commit: str,
+    destination_chain_id: str,
+    upstream_handoffs: dict[str, dict[str, object]],
+) -> TaskHandoff:
+    source_receipt = _read_json(source_receipt_path)
+    receipt: dict[str, Any] = {
+        "schema_name": RECEIPT_SCHEMA,
+        "status": "PASS",
+        "stage_plan_version": "1.3",
+        "execution_mode": "FORMAL",
+        "task_id": task,
+        "code_commit": destination_commit,
+        "chain_id": destination_chain_id,
+        "run_id": source_handoff.run_id,
+        "evidence_id": source_handoff.run_id,
+        "artifact_root": source_handoff.artifact_root,
+        "snapshot_id": source_handoff.snapshot_id,
+        "manifest_path": source_handoff.manifest_path,
+        "manifest_hash": source_handoff.manifest_hash,
+        "catalog_path": source_handoff.catalog_path,
+        "catalog_hash": source_handoff.catalog_hash,
+        "adapter_plan_hash": destination_plan_hash,
+        "upstream_handoffs": upstream_handoffs,
+        "execution_scope": source_receipt["execution_scope"],
+        "output_hash": source_handoff.output_hash,
+        "row_count": source_handoff.row_count,
+        "consumer_readback": "PASS",
+        "reconciliation": "PASS",
+        "verify_status": "PASS",
+        "verified_prefix_adoption": {
+            "schema_name": VERIFIED_PREFIX_ADOPTION_SCHEMA,
+            "mode": "READ_ONLY",
+            "source_chain_root": str(source_chain_root),
+            "source_code_commit": source_receipt["code_commit"],
+            "source_receipt_path": str(source_receipt_path),
+            "source_receipt_hash": source_receipt["receipt_hash"],
+            "source_run_id": source_handoff.run_id,
+            "source_task_id": task,
+        },
+    }
+    receipt["receipt_hash"] = canonical_hash(receipt)
+    _write_exclusive(destination_receipt_path, receipt)
+    return TaskHandoff(
+        task_id=task,
+        execution_mode="FORMAL",
+        chain_id=destination_chain_id,
+        run_id=source_handoff.run_id,
+        evidence_id=str(source_handoff.run_id),
+        artifact_root=source_handoff.artifact_root,
+        snapshot_id=source_handoff.snapshot_id,
+        manifest_path=source_handoff.manifest_path,
+        manifest_hash=source_handoff.manifest_hash,
+        catalog_path=source_handoff.catalog_path,
+        catalog_hash=source_handoff.catalog_hash,
+        output_hash=source_handoff.output_hash,
+        row_count=source_handoff.row_count,
+        execution_scope_hash=source_handoff.execution_scope_hash,
+        producer_receipt_hash=str(receipt["receipt_hash"]),
+        consumer_readback="PASS",
+        reconciliation="PASS",
+        verify_status="PASS",
+    )
+
+
+def adopt_verified_prefix(
+    *,
+    approval_path: Path,
+    source_chain_root: Path,
+    policy: Stage2ActivePolicy,
+    repository_root: Path,
+) -> dict[str, Any]:
+    """Create one append-only successor seeded by verified T11-T12 receipts."""
+
+    approval = validate_approval(
+        approval_path,
+        policy=policy,
+        repository_root=repository_root,
+    )
+    source_handoffs, source_receipt_paths = _load_verified_prefix(
+        source_chain_root=source_chain_root,
+        repository_root=repository_root,
+    )
+    chain_path = freeze_chain_authority(
+        approval_path=approval_path,
+        policy=policy,
+        repository_root=repository_root,
+    )
+    plan_path, operations_root = prepare_adapter_plan(
+        approval_path=approval_path,
+        chain_authority_path=chain_path,
+        policy=policy,
+        repository_root=repository_root,
+        adopted_prefix=source_handoffs,
+        adopted_source_chain_root=source_chain_root,
+    )
+    plan = load_adapter_plan(plan_path, code_commit=str(approval["code_commit"]))
+    destination_chain_id = f"stage2-s2p13-successor-{plan.plan_hash[:12]}"
+    adopted: dict[str, TaskHandoff] = {}
+    for task in VERIFIED_PREFIX_TASKS:
+        upstream = (
+            {}
+            if task == "S2P13-T11"
+            else {"S2P13-T11": _producer_handoff_payload(adopted["S2P13-T11"])}
+        )
+        adopted[task] = _write_adopted_receipt(
+            task=task,
+            source_handoff=source_handoffs[task],
+            source_receipt_path=source_receipt_paths[task],
+            source_chain_root=source_chain_root,
+            destination_receipt_path=plan.tasks[task].receipt_path,
+            destination_plan_hash=plan.plan_hash,
+            destination_commit=str(approval["code_commit"]),
+            destination_chain_id=destination_chain_id,
+            upstream_handoffs=upstream,
+        )
+    adapters = build_production_adapters(
+        plan,
+        supervisor_root=operations_root,
+        repository_root=repository_root,
+    )
+    chain_authority_hash = _read_json(chain_path)["authority_hash"]
+    checkpoint_path = operations_root / "checkpoint.json"
+    preliminary_checkpoint = {
+        "schema_name": "stage2-lightweight-chain-checkpoint-v2",
+        "status": "NOT_STARTED",
+        "code_commit": approval["code_commit"],
+        "approval_hash": approval["approval_hash"],
+        "chain_authority_hash": chain_authority_hash,
+        "current_task": "S2P13-T12",
+        "tasks": {
+            task: (
+                {"status": "PASS", "handoff": adopted[task].payload()}
+                if task == "S2P13-T11"
+                else {"status": "NOT_STARTED", "handoff": None}
+            )
+            for task in TASKS
+        },
+        "stage3_locked": True,
+    }
+    if checkpoint_path.exists():
+        raise ValueError("verified-prefix destination checkpoint already exists")
+    _write_checkpoint(checkpoint_path, preliminary_checkpoint)
+    verified = {task: adapters[task].run_or_resume() for task in VERIFIED_PREFIX_TASKS}
+    if verified != adopted:
+        raise ValueError("verified-prefix destination read-back drift")
+    adoption_payload: dict[str, Any] = {
+        "schema_name": VERIFIED_PREFIX_SCHEMA,
+        "status": "PASS",
+        "mode": "READ_ONLY",
+        "approval_hash": approval["approval_hash"],
+        "chain_authority_hash": chain_authority_hash,
+        "adapter_plan_hash": plan.plan_hash,
+        "code_commit": approval["code_commit"],
+        "source_chain_root": str(source_chain_root),
+        "tasks": {
+            task: {
+                "source_receipt_path": str(source_receipt_paths[task]),
+                "source_receipt_hash": source_handoffs[task].producer_receipt_hash,
+                "adoption_receipt_path": str(plan.tasks[task].receipt_path),
+                "adoption_receipt_hash": adopted[task].producer_receipt_hash,
+                "run_id": adopted[task].run_id,
+                "row_count": adopted[task].row_count,
+                "output_hash": adopted[task].output_hash,
+                "verify_status": adopted[task].verify_status,
+            }
+            for task in VERIFIED_PREFIX_TASKS
+        },
+        "next_task": "S2P13-T13",
+        "stage3_locked": True,
+    }
+    adoption_payload["adoption_hash"] = canonical_hash(adoption_payload)
+    adoption_path = (
+        operations_root
+        / "adoptions"
+        / (f"verified-prefix-{adoption_payload['adoption_hash']}.json")
+    )
+    _write_exclusive(adoption_path, adoption_payload)
+    checkpoint = {
+        "schema_name": "stage2-lightweight-chain-checkpoint-v2",
+        "status": "NOT_STARTED",
+        "code_commit": approval["code_commit"],
+        "approval_hash": approval["approval_hash"],
+        "chain_authority_hash": adoption_payload["chain_authority_hash"],
+        "current_task": "S2P13-T13",
+        "tasks": {
+            task: (
+                {
+                    "status": "PASS",
+                    "handoff": adopted[task].payload(),
+                    "adoption_receipt_hash": adopted[task].producer_receipt_hash,
+                }
+                if task in adopted
+                else {"status": "NOT_STARTED", "handoff": None}
+            )
+            for task in TASKS
+        },
+        "verified_prefix_adoption_path": str(adoption_path),
+        "verified_prefix_adoption_hash": adoption_payload["adoption_hash"],
+        "stage3_locked": True,
+    }
+    _write_checkpoint(checkpoint_path, checkpoint)
+    return {
+        "status": "PASS",
+        "approval_hash": approval["approval_hash"],
+        "chain_authority_path": str(chain_path),
+        "adapter_plan_path": str(plan_path),
+        "operations_root": str(operations_root),
+        "verified_prefix_adoption_path": str(adoption_path),
+        "verified_prefix_adoption_hash": adoption_payload["adoption_hash"],
+        "next_task": "S2P13-T13",
+        "stage3_locked": True,
+    }
 
 
 def _write_checkpoint(path: Path, payload: dict[str, Any]) -> None:
@@ -701,6 +1016,32 @@ def verify_formal_chain(
         or checkpoint.get("stage3_locked") is not True
     ):
         raise ValueError("formal chain is not complete")
+    adoption_path_value = checkpoint.get("verified_prefix_adoption_path")
+    adoption_hash = checkpoint.get("verified_prefix_adoption_hash")
+    adoption: dict[str, Any] | None = None
+    if adoption_path_value is not None or adoption_hash is not None:
+        adoption_path = Path(str(adoption_path_value))
+        if (
+            not adoption_path.is_absolute()
+            or adoption_path.is_symlink()
+            or not adoption_path.is_file()
+            or not adoption_path.resolve().is_relative_to(operations_root.resolve())
+        ):
+            raise ValueError("formal Verify verified-prefix path drift")
+        adoption = _read_json(adoption_path)
+        if (
+            not _self_hash_valid(adoption, "adoption_hash")
+            or adoption.get("schema_name") != VERIFIED_PREFIX_SCHEMA
+            or adoption.get("status") != "PASS"
+            or adoption.get("mode") != "READ_ONLY"
+            or adoption.get("approval_hash") != approval["approval_hash"]
+            or adoption.get("code_commit") != approval["code_commit"]
+            or adoption.get("adoption_hash") != adoption_hash
+            or adoption.get("next_task") != "S2P13-T13"
+            or adoption.get("stage3_locked") is not True
+            or tuple(cast(dict[str, Any], adoption.get("tasks", {}))) != VERIFIED_PREFIX_TASKS
+        ):
+            raise ValueError("formal Verify verified-prefix adoption drift")
     plan = load_adapter_plan(plans[0], code_commit=str(approval["code_commit"]))
     adapters = build_production_adapters(
         plan,
@@ -715,6 +1056,16 @@ def verify_formal_chain(
         recorded = cast(dict[str, Any], checkpoint["tasks"])[task]["handoff"]
         if handoff.payload() != recorded:
             raise ValueError(f"formal Verify checkpoint drift: {task}")
+        if adoption is not None and task in VERIFIED_PREFIX_TASKS:
+            adopted_task = cast(dict[str, Any], adoption["tasks"])[task]
+            if (
+                adopted_task.get("adoption_receipt_hash") != handoff.producer_receipt_hash
+                or adopted_task.get("run_id") != handoff.run_id
+                or adopted_task.get("row_count") != handoff.row_count
+                or adopted_task.get("output_hash") != handoff.output_hash
+                or adopted_task.get("verify_status") != "PASS"
+            ):
+                raise ValueError(f"formal Verify adopted handoff drift: {task}")
         verified[task] = {
             "run_id": handoff.run_id,
             "row_count": handoff.row_count,
@@ -727,6 +1078,7 @@ def verify_formal_chain(
         "approval_hash": approval["approval_hash"],
         "code_commit": approval["code_commit"],
         "tasks": verified,
+        "verified_prefix_adoption_hash": adoption_hash,
         "stage3_locked": True,
     }
     result["verify_hash"] = canonical_hash(result)

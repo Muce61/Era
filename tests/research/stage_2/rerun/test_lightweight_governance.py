@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
 from era100x.research.stage_2.rerun import lightweight_governance as subject
-from era100x.research.stage_2.rerun.orchestrator import TASKS, canonical_hash
+from era100x.research.stage_2.rerun.orchestrator import TASKS, TaskHandoff, canonical_hash
 
 
 def _write(path: Path, value: object) -> None:
@@ -301,6 +302,184 @@ def test_adapter_plan_cannot_exist_before_chain_authority(
             policy=policy,
             repository_root=policy.path.parent,
         )
+
+
+def _formal_handoff(
+    tmp_path: Path,
+    task: str,
+    *,
+    preregistration_hash: str | None = None,
+) -> TaskHandoff:
+    scope = {
+        "mode": "FULL_HISTORY",
+        "start_date": "2020-01-01",
+        "end_date_exclusive": "2026-07-04",
+    }
+    artifact_root = tmp_path / "source-chain" / "tasks" / task / "artifacts"
+    artifact_root.mkdir(parents=True, exist_ok=True)
+    manifest = artifact_root / "manifest.json"
+    catalog = artifact_root / "catalog.json"
+    manifest_payload = {
+        "schema_name": "source-manifest",
+        **(
+            {"preregistration_hash": preregistration_hash}
+            if preregistration_hash is not None
+            else {}
+        ),
+    }
+    manifest_payload["manifest_hash"] = canonical_hash(manifest_payload)
+    catalog_payload = {"schema_name": "source-catalog"}
+    catalog_payload["catalog_hash"] = canonical_hash(catalog_payload)
+    _write(manifest, manifest_payload)
+    _write(catalog, catalog_payload)
+    return TaskHandoff(
+        task_id=task,
+        execution_mode="FORMAL",
+        chain_id="source-chain",
+        run_id=f"source-{task.lower()}",
+        evidence_id=f"source-{task.lower()}",
+        artifact_root=str(artifact_root),
+        snapshot_id="snapshot",
+        manifest_path=str(manifest),
+        manifest_hash=manifest_payload["manifest_hash"],
+        catalog_path=str(catalog),
+        catalog_hash=catalog_payload["catalog_hash"],
+        output_hash="3" * 64,
+        row_count=12,
+        execution_scope_hash=canonical_hash(scope),
+        producer_receipt_hash="5" * 64,
+        consumer_readback="PASS",
+        reconciliation="PASS",
+        verify_status="PASS",
+    )
+
+
+def _source_receipt(path: Path, handoff: TaskHandoff) -> None:
+    scope = {
+        "mode": "FULL_HISTORY",
+        "start_date": "2020-01-01",
+        "end_date_exclusive": "2026-07-04",
+        "execution_scope_hash": handoff.execution_scope_hash,
+    }
+    payload = {
+        "schema_name": "stage2-plan-v13-production-task-receipt-v2",
+        "status": "PASS",
+        "stage_plan_version": "1.3",
+        "execution_mode": "FORMAL",
+        "task_id": handoff.task_id,
+        "code_commit": "0" * 40,
+        "chain_id": handoff.chain_id,
+        "run_id": handoff.run_id,
+        "evidence_id": handoff.evidence_id,
+        "artifact_root": handoff.artifact_root,
+        "snapshot_id": handoff.snapshot_id,
+        "manifest_path": handoff.manifest_path,
+        "manifest_hash": handoff.manifest_hash,
+        "catalog_path": handoff.catalog_path,
+        "catalog_hash": handoff.catalog_hash,
+        "adapter_plan_hash": "6" * 64,
+        "upstream_handoffs": {},
+        "execution_scope": scope,
+        "output_hash": handoff.output_hash,
+        "row_count": handoff.row_count,
+        "consumer_readback": "PASS",
+        "reconciliation": "PASS",
+        "verify_status": "PASS",
+    }
+    payload["receipt_hash"] = canonical_hash(payload)
+    _write(path, payload)
+
+
+def test_adapter_plan_can_bind_exact_verified_t11_t12_prefix(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    policy = _policy(tmp_path, monkeypatch)
+    rehearsal = tmp_path / "rehearsal.json"
+    _rehearsal(rehearsal)
+    approval = subject.record_approval(
+        policy=policy,
+        repository_root=policy.path.parent,
+        rehearsal_path=rehearsal,
+        approved_by="Muce",
+        approval_source="chat approval",
+    )
+    chain = subject.freeze_chain_authority(
+        approval_path=approval,
+        policy=policy,
+        repository_root=policy.path.parent,
+    )
+    source_chain = tmp_path / "source-chain"
+    adopted = {task: _formal_handoff(tmp_path, task) for task in subject.VERIFIED_PREFIX_TASKS}
+
+    plan_path, _ = subject.prepare_adapter_plan(
+        approval_path=approval,
+        chain_authority_path=chain,
+        policy=policy,
+        repository_root=policy.path.parent,
+        adopted_prefix=adopted,
+        adopted_source_chain_root=source_chain,
+    )
+
+    plan = json.loads(plan_path.read_text())
+    assert plan["verified_prefix_source"]["source_chain_root"] == str(source_chain)
+    for task in subject.VERIFIED_PREFIX_TASKS:
+        assert plan["tasks"][task]["allowed_artifact_root"] == adopted[task].artifact_root
+    assert plan["tasks"]["S2P13-T13"]["allowed_artifact_root"] != adopted["S2P13-T12"].artifact_root
+
+
+def test_adopt_verified_prefix_seeds_t13_without_recomputing_t11_t12(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    policy = _policy(tmp_path, monkeypatch)
+    rehearsal = tmp_path / "rehearsal.json"
+    _rehearsal(rehearsal)
+    approval = subject.record_approval(
+        policy=policy,
+        repository_root=policy.path.parent,
+        rehearsal_path=rehearsal,
+        approved_by="Muce",
+        approval_source="chat approval",
+    )
+    source_chain = tmp_path / "source-chain"
+    source_chain.mkdir(exist_ok=True)
+    handoffs = {
+        task: _formal_handoff(
+            tmp_path,
+            task,
+            preregistration_hash=policy.preregistration_hash,
+        )
+        for task in subject.VERIFIED_PREFIX_TASKS
+    }
+    handoffs["S2P13-T12"] = replace(handoffs["S2P13-T12"], row_count=532_708)
+    receipt_paths = {}
+    for task, handoff in handoffs.items():
+        receipt_path = source_chain / "tasks" / task / "receipt.json"
+        _source_receipt(receipt_path, handoff)
+        receipt_payload = json.loads(receipt_path.read_text())
+        handoffs[task] = replace(
+            handoff,
+            producer_receipt_hash=receipt_payload["receipt_hash"],
+        )
+        receipt_paths[task] = receipt_path
+    monkeypatch.setattr(
+        subject,
+        "_load_verified_prefix",
+        lambda **_kwargs: (handoffs, receipt_paths),
+    )
+
+    result = subject.adopt_verified_prefix(
+        approval_path=approval,
+        source_chain_root=source_chain,
+        policy=policy,
+        repository_root=policy.path.parent,
+    )
+
+    checkpoint = json.loads((Path(result["operations_root"]) / "checkpoint.json").read_text())
+    assert checkpoint["current_task"] == "S2P13-T13"
+    assert checkpoint["tasks"]["S2P13-T11"]["status"] == "PASS"
+    assert checkpoint["tasks"]["S2P13-T12"]["status"] == "PASS"
+    assert checkpoint["tasks"]["S2P13-T13"]["status"] == "NOT_STARTED"
+    assert Path(result["verified_prefix_adoption_path"]).is_file()
 
 
 class _FailingAdapter:

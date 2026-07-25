@@ -11,6 +11,7 @@ from era100x.research.stage_2.rerun.orchestrator import TASKS, RetryableInterrup
 from era100x.research.stage_2.rerun.production_adapters import (
     PLAN_SCHEMA,
     UPSTREAM_TASKS,
+    VERIFIED_PREFIX_ADOPTION_SCHEMA,
     CommandTaskAdapter,
     ProductionTaskSpec,
     load_adapter_plan,
@@ -235,6 +236,25 @@ def test_adapter_runs_real_argv_and_accepts_only_bound_receipt(tmp_path: Path) -
     assert set(receipt["upstream_handoffs"]["S2P13-T11"]).isdisjoint(
         {"consumer_readback", "reconciliation", "verify_status"}
     )
+    source_chain = tmp_path / "source-chain"
+    source_receipt = source_chain / "tasks/S2P13-T12/receipt.json"
+    _write_json(source_receipt, receipt)
+    receipt["verified_prefix_adoption"] = {
+        "schema_name": VERIFIED_PREFIX_ADOPTION_SCHEMA,
+        "mode": "READ_ONLY",
+        "source_chain_root": str(source_chain),
+        "source_code_commit": receipt["code_commit"],
+        "source_receipt_path": str(source_receipt),
+        "source_receipt_hash": receipt["receipt_hash"],
+        "source_run_id": receipt["run_id"],
+        "source_task_id": "S2P13-T12",
+    }
+    receipt["receipt_hash"] = receipt_hash(
+        {key: value for key, value in receipt.items() if key != "receipt_hash"}
+    )
+    _write_json(spec.receipt_path, receipt)
+    assert adapter.run_or_resume().row_count == 12
+
     receipt["upstream_handoffs"] = {"S2P13-T11": {"output_hash": "wrong"}}
     receipt["receipt_hash"] = receipt_hash(
         {key: value for key, value in receipt.items() if key != "receipt_hash"}

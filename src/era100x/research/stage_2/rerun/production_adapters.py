@@ -37,6 +37,7 @@ UPSTREAM_TASKS: dict[str, tuple[str, ...]] = {
     "S2P13-T16": ("S2P13-T11", "S2P13-T13", "S2P13-T15"),
 }
 PREREGISTRATION_CONSUMERS = frozenset({"S2P13-T11", "S2P13-T16"})
+VERIFIED_PREFIX_ADOPTION_SCHEMA = "stage2-verified-prefix-adoption-binding-v1"
 
 
 def _file_hash(path: Path) -> str:
@@ -60,6 +61,56 @@ def _self_hash_valid(payload: Mapping[str, Any], field: str) -> bool:
     claimed = payload.get(field)
     body = {key: value for key, value in payload.items() if key != field}
     return isinstance(claimed, str) and claimed == canonical_hash(body)
+
+
+def _validate_verified_prefix_adoption(payload: Mapping[str, Any]) -> None:
+    adoption = payload.get("verified_prefix_adoption")
+    if adoption is None:
+        return
+    if not isinstance(adoption, dict) or set(adoption) != {
+        "schema_name",
+        "mode",
+        "source_chain_root",
+        "source_code_commit",
+        "source_receipt_path",
+        "source_receipt_hash",
+        "source_run_id",
+        "source_task_id",
+    }:
+        raise ValueError("verified-prefix adoption binding is invalid")
+    source_chain_root = Path(str(adoption.get("source_chain_root", "")))
+    source_receipt_path = Path(str(adoption.get("source_receipt_path", "")))
+    if (
+        adoption.get("schema_name") != VERIFIED_PREFIX_ADOPTION_SCHEMA
+        or adoption.get("mode") != "READ_ONLY"
+        or adoption.get("source_task_id") != payload.get("task_id")
+        or not source_chain_root.is_absolute()
+        or source_chain_root.is_symlink()
+        or not source_chain_root.is_dir()
+        or not source_receipt_path.is_absolute()
+        or source_receipt_path.is_symlink()
+        or not source_receipt_path.is_file()
+        or not source_receipt_path.resolve().is_relative_to(source_chain_root.resolve())
+    ):
+        raise ValueError("verified-prefix adoption binding is invalid")
+    source = _safe_json(source_receipt_path)
+    source_hash = adoption.get("source_receipt_hash")
+    if (
+        not _self_hash_valid(source, "receipt_hash")
+        or source.get("receipt_hash") != source_hash
+        or source.get("code_commit") != adoption.get("source_code_commit")
+        or source.get("task_id") != adoption.get("source_task_id")
+        or source.get("run_id") != adoption.get("source_run_id")
+        or source.get("run_id") != payload.get("run_id")
+        or source.get("output_hash") != payload.get("output_hash")
+        or source.get("row_count") != payload.get("row_count")
+        or source.get("manifest_hash") != payload.get("manifest_hash")
+        or source.get("catalog_hash") != payload.get("catalog_hash")
+        or source.get("consumer_readback") != "PASS"
+        or source.get("reconciliation") != "PASS"
+        or source.get("verify_status") != "PASS"
+    ):
+        raise ValueError("verified-prefix source receipt drift")
 
 
 def _safe_absolute_child(path: Path, root: Path) -> None:
@@ -307,6 +358,7 @@ class CommandTaskAdapter(TaskAdapter):
         payload = _safe_json(self.spec.receipt_path)
         if not _self_hash_valid(payload, "receipt_hash"):
             raise ValueError(f"{self.spec.task_id} production receipt hash mismatch")
+        _validate_verified_prefix_adoption(payload)
         if (
             payload.get("schema_name") != RECEIPT_SCHEMA
             or payload.get("status") != "PASS"
