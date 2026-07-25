@@ -23,15 +23,13 @@ from .scoped_producers import (
     produce_scoped_metrics,
     produce_scoped_paths,
 )
+from .strict_json import strict_json_bytes, strict_json_value
 
 
 def _write_exclusive(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    encoded = (
-        json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
-    ).encode()
     with path.open("xb") as handle:
-        handle.write(encoded)
+        handle.write(strict_json_bytes(value))
 
 
 def _read(path: Path) -> dict[str, Any]:
@@ -445,32 +443,19 @@ def _require_formal_gate(context: ProducerContext, *, resume: bool) -> None:
         raise ValueError("lightweight formal gate binding drift")
 
 
-def execute_producer(context: ProducerContext, *, resume: bool = False) -> dict[str, Any]:
-    """Execute once and publish a strict v2 receipt."""
-
-    context.input_preflight()
-    if context.execution_mode == "FORMAL":
-        _require_formal_gate(context, resume=resume)
-    if context.receipt_path.exists():
-        return verify_producer(context)
-    artifact_root = _artifact_data_root(context)
-    if artifact_root.is_symlink():
-        raise ValueError("producer artifact root is a symlink")
-    artifact_root.mkdir(parents=True, exist_ok=True)
-    checkpoint = _read(context.checkpoint_path) if context.checkpoint_path.exists() else {}
-    attempt = int(checkpoint.get("attempt", 0)) + 1
-    data_root = artifact_root / f"attempt-{attempt}" / "data"
-    if data_root.parent.exists():
-        raise ValueError("producer attempt identity already exists")
-    data_root.parent.mkdir(parents=True)
-    reporter = _FormalProgressReporter(context, attempt=attempt)
-    reporter.start()
-    try:
-        payload = _producer_payload(context, data_root, progress_callback=reporter.update)
-    except BaseException as exc:
-        reporter.fail(f"{type(exc).__name__}: {exc}")
-        raise
-    payload["artifact_data_root"] = str(data_root)
+def _publish_producer_attempt(
+    context: ProducerContext,
+    *,
+    artifact_root: Path,
+    data_root: Path,
+    reporter: _FormalProgressReporter,
+) -> dict[str, Any]:
+    raw_payload = _producer_payload(context, data_root, progress_callback=reporter.update)
+    raw_payload["artifact_data_root"] = str(data_root)
+    normalized = strict_json_value(raw_payload)
+    if not isinstance(normalized, dict):
+        raise TypeError("producer payload must normalize to a JSON object")
+    payload = cast(dict[str, Any], normalized)
     output_path = artifact_root / "output.json"
     _write_exclusive(output_path, payload)
     output_hash = canonical_hash(payload)
@@ -552,6 +537,38 @@ def execute_producer(context: ProducerContext, *, resume: bool = False) -> dict[
     _write_exclusive(context.receipt_path, receipt)
     reporter.finish(row_count=row_count, receipt_hash=str(receipt["receipt_hash"]))
     return verify_producer(context)
+
+
+def execute_producer(context: ProducerContext, *, resume: bool = False) -> dict[str, Any]:
+    """Execute once and publish a strict v2 receipt."""
+
+    context.input_preflight()
+    if context.execution_mode == "FORMAL":
+        _require_formal_gate(context, resume=resume)
+    if context.receipt_path.exists():
+        return verify_producer(context)
+    artifact_root = _artifact_data_root(context)
+    if artifact_root.is_symlink():
+        raise ValueError("producer artifact root is a symlink")
+    artifact_root.mkdir(parents=True, exist_ok=True)
+    checkpoint = _read(context.checkpoint_path) if context.checkpoint_path.exists() else {}
+    attempt = int(checkpoint.get("attempt", 0)) + 1
+    data_root = artifact_root / f"attempt-{attempt}" / "data"
+    if data_root.parent.exists():
+        raise ValueError("producer attempt identity already exists")
+    data_root.parent.mkdir(parents=True)
+    reporter = _FormalProgressReporter(context, attempt=attempt)
+    reporter.start()
+    try:
+        return _publish_producer_attempt(
+            context,
+            artifact_root=artifact_root,
+            data_root=data_root,
+            reporter=reporter,
+        )
+    except BaseException as exc:
+        reporter.fail(f"{type(exc).__name__}: {exc}")
+        raise
 
 
 def verify_producer(context: ProducerContext) -> dict[str, Any]:

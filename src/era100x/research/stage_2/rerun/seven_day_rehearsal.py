@@ -18,10 +18,8 @@ import tempfile
 from collections import Counter
 from collections.abc import Callable
 from functools import lru_cache
-from dataclasses import asdict, is_dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from enum import Enum
 from pathlib import Path
 from typing import Any, cast
 
@@ -89,6 +87,7 @@ from .scoped_producers import (
     produce_scoped_metrics,
     produce_scoped_paths,
 )
+from .strict_json import strict_json_bytes, strict_json_value
 from .trade_supplement import partition_override
 
 NS = 1_000_000_000
@@ -122,33 +121,11 @@ REHEARSAL_BIN_HASH = canonical_hash(
 
 
 def _json_value(value: Any) -> Any:
-    if isinstance(value, Decimal):
-        return format(value, "f")
-    if isinstance(value, Enum):
-        return value.value
-    if isinstance(value, Path):
-        return str(value)
-    if is_dataclass(value):
-        return _json_value(asdict(cast(Any, value)))
-    if hasattr(value, "model_dump"):
-        return _json_value(value.model_dump(mode="python"))
-    if isinstance(value, dict):
-        return {str(key): _json_value(item) for key, item in value.items()}
-    if isinstance(value, (tuple, list)):
-        return [_json_value(item) for item in value]
-    return value
+    return strict_json_value(value)
 
 
 def _encoded(value: object) -> bytes:
-    return (
-        json.dumps(
-            _json_value(value),
-            ensure_ascii=False,
-            sort_keys=True,
-            separators=(",", ":"),
-        )
-        + "\n"
-    ).encode()
+    return strict_json_bytes(value)
 
 
 def _canonical_hash(value: object) -> str:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,13 @@ from era100x.research.stage_2.rerun.producer_execution import (
     _require_formal_gate,
     execute_producer,
     verify_producer,
+)
+from era100x.research.stage_2.lifecycle import (
+    FundingTrack,
+    LifecyclePairResult,
+    LifecyclePolicyResult,
+    OptionalExitModelStatus,
+    SourceCoverage,
 )
 
 
@@ -89,6 +97,120 @@ def test_verify_rejects_output_tamper(tmp_path: Path, monkeypatch: pytest.Monkey
         verify_producer(context)
 
 
+def test_execute_serializes_real_lifecycle_decimal_enum_and_dataclass(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    context = _context(tmp_path)
+    policy = LifecyclePolicyResult(
+        policy_id="CONTINUE_TO_THEORETICAL_FULLY_FLAT",
+        terminal_state="RIGHT_CENSORED",
+        exit_reason=None,
+        censor_reason=None,
+        decision_ts_ns=None,
+        scenario_net_pnl=Decimal("0.400000000000000000"),
+        terminal_ticket_equity=Decimal("10.400000000000000000"),
+        ticket_doubled=False,
+        reserve_breached=False,
+        remaining_proxy_quantity=Decimal("0"),
+    )
+    pair = LifecyclePairResult(
+        market_episode_id="episode-1",
+        instrument="BTCUSDT",
+        eligible_at_primary_landmark=True,
+        activated_before_landmark=False,
+        landmark_net_exitable_pnl=Decimal("0.400000000000000000"),
+        immediate_exit=replace(policy, policy_id="IMMEDIATE_EXIT_AT_8M"),
+        continue_holding=policy,
+        source_coverage=SourceCoverage.COMPLETE,
+        funding_track=FundingTrack.PRIMARY_HISTORICAL_ACTUAL,
+        price_proxy_source="CONTRACT_PRICE_1S",
+        protection_exit_model=OptionalExitModelStatus.NOT_MODELLED_STAGE2,
+        structure_exit_model=OptionalExitModelStatus.NOT_MODELLED_STAGE2,
+        historical_mark_price_claim=False,
+        output_hash="d" * 64,
+    )
+    monkeypatch.setattr(
+        "era100x.research.stage_2.rerun.producer_execution._producer_payload",
+        lambda _context, _data_root, **_kwargs: {
+            "task_id": "S2P13-T11",
+            "entry_reference_price": Decimal("42000.100000000000000000"),
+            "funding_tracks": [pair],
+            "row_count": 1,
+        },
+    )
+
+    receipt = execute_producer(context)
+    output = json.loads((Path(str(receipt["artifact_root"])) / "output.json").read_text())
+
+    assert output["entry_reference_price"] == "42000.100000000000000000"
+    assert output["funding_tracks"][0]["landmark_net_exitable_pnl"] == "0.400000000000000000"
+    assert output["funding_tracks"][0]["source_coverage"] == "COMPLETE"
+    assert output["funding_tracks"][0]["continue_holding"]["scenario_net_pnl"] == (
+        "0.400000000000000000"
+    )
+    assert receipt["verify_status"] == "PASS"
+
+
+@pytest.mark.parametrize(
+    ("task_id", "task_payload"),
+    [
+        (
+            "S2P13-T12",
+            {
+                "reports": [{"instrument": "BTCUSDT", "episode_count": 12}],
+                "file_count": 5,
+            },
+        ),
+        (
+            "S2P13-T13",
+            {
+                "reports": [{"instrument": "BTCUSDT", "episode_count": 12}],
+                "file_count": 2,
+            },
+        ),
+        (
+            "S2P13-T14",
+            {
+                "reports": [{"instrument": "BTCUSDT", "episode_count": 12}],
+                "file_count": 2,
+            },
+        ),
+        (
+            "S2P13-T15",
+            {
+                "reports": [{"instrument": "BTCUSDT", "path_rows": 12}],
+                "classification_count": 360,
+            },
+        ),
+        (
+            "S2P13-T16",
+            {
+                "authority_hash": "a" * 64,
+                "binning_set_hash": "b" * 64,
+                "bin_source_roles": ["TRAIN"],
+            },
+        ),
+    ],
+)
+def test_t12_to_t16_producer_envelopes_strictly_round_trip(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    task_id: str,
+    task_payload: dict[str, object],
+) -> None:
+    context = replace(_context(tmp_path), task_id=task_id)
+    task_payload = {**task_payload, "task_id": task_id, "row_count": 12}
+    monkeypatch.setattr(
+        "era100x.research.stage_2.rerun.producer_execution._producer_payload",
+        lambda _context, _data_root, **_kwargs: task_payload,
+    )
+
+    receipt = execute_producer(context)
+
+    assert receipt["task_id"] == task_id
+    assert verify_producer(context) == receipt
+
+
 def test_progress_checkpoint_and_log_record_completed_utc_days(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -158,6 +280,27 @@ def test_failed_producer_leaves_failed_progress_evidence(
     checkpoint = json.loads(context.checkpoint_path.read_text())
     assert checkpoint["status"] == "FAILED"
     assert checkpoint["failure_reason"] == "ValueError: source hash drift"
+
+
+def test_final_serialization_failure_updates_task_checkpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    context = _context(tmp_path)
+    monkeypatch.setattr(
+        "era100x.research.stage_2.rerun.producer_execution._producer_payload",
+        lambda _context, _data_root, **_kwargs: {
+            "task_id": "S2P13-T11",
+            "forbidden_binary_float": 0.4,
+            "row_count": 1,
+        },
+    )
+
+    with pytest.raises(TypeError, match="binary floats"):
+        execute_producer(context)
+
+    checkpoint = json.loads(context.checkpoint_path.read_text())
+    assert checkpoint["status"] == "FAILED"
+    assert checkpoint["failure_reason"] == ("TypeError: binary floats are forbidden in strict JSON")
 
 
 def test_lightweight_formal_gate_rejects_partial_binding(
