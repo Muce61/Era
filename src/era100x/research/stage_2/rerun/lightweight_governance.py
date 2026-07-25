@@ -42,7 +42,15 @@ REHEARSAL_NOT_REQUIRED_MODE: Final = "REHEARSAL_NOT_REQUIRED"
 BACKGROUND_WAIVER_MODE: Final = "EXPLICIT_BACKGROUND_RUNTIME_WAIVER"
 BACKGROUND_WAIVER_SCOPE: Final = "UNATTENDED_NON_RESEARCH_HOURS"
 VERIFIED_PREFIX_SCHEMA: Final = "stage2-verified-prefix-adoption-v1"
-VERIFIED_PREFIX_TASKS: Final = ("S2P13-T11", "S2P13-T12")
+VERIFIED_PREFIX_TASKS: Final = TASKS[:-1]
+VERIFIED_PREFIX_NEXT_TASK: Final = TASKS[-1]
+VERIFIED_PREFIX_ROW_COUNTS: Final = {
+    "S2P13-T11": 87_768,
+    "S2P13-T12": 532_708,
+    "S2P13-T13": 1_065_416,
+    "S2P13-T14": 1_065_416,
+    "S2P13-T15": 1_065_416,
+}
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -482,7 +490,7 @@ def prepare_adapter_plan(
         or adopted_source_chain_root.is_symlink()
         or not adopted_source_chain_root.is_dir()
     ):
-        raise ValueError("verified prefix adoption must bind exact T11-T12 source evidence")
+        raise ValueError("verified prefix adoption must bind exact T11-T15 source evidence")
     tasks: dict[str, Any] = {}
     for task in TASKS:
         task_root = evidence_root / task
@@ -612,8 +620,9 @@ def _load_verified_prefix(
             raise ValueError(f"verified-prefix source is not a formal PASS: {task}")
         handoffs[task] = handoff
         receipt_paths[task] = spec.receipt_path
-    if handoffs["S2P13-T12"].row_count != 532_708:
-        raise ValueError("verified-prefix T12 row count drift")
+    for task, expected_row_count in VERIFIED_PREFIX_ROW_COUNTS.items():
+        if handoffs[task].row_count != expected_row_count:
+            raise ValueError(f"verified-prefix {task} row count drift")
     return handoffs, receipt_paths
 
 
@@ -696,7 +705,7 @@ def adopt_verified_prefix(
     policy: Stage2ActivePolicy,
     repository_root: Path,
 ) -> dict[str, Any]:
-    """Create one append-only successor seeded by verified T11-T12 receipts."""
+    """Create one append-only successor seeded by verified T11-T15 receipts."""
 
     approval = validate_approval(
         approval_path,
@@ -724,11 +733,10 @@ def adopt_verified_prefix(
     destination_chain_id = f"stage2-s2p13-successor-{plan.plan_hash[:12]}"
     adopted: dict[str, TaskHandoff] = {}
     for task in VERIFIED_PREFIX_TASKS:
-        upstream = (
-            {}
-            if task == "S2P13-T11"
-            else {"S2P13-T11": _producer_handoff_payload(adopted["S2P13-T11"])}
-        )
+        upstream = {
+            upstream_task: _producer_handoff_payload(adopted[upstream_task])
+            for upstream_task in UPSTREAM_TASKS[task]
+        }
         adopted[task] = _write_adopted_receipt(
             task=task,
             source_handoff=source_handoffs[task],
@@ -753,11 +761,11 @@ def adopt_verified_prefix(
         "code_commit": approval["code_commit"],
         "approval_hash": approval["approval_hash"],
         "chain_authority_hash": chain_authority_hash,
-        "current_task": "S2P13-T12",
+        "current_task": VERIFIED_PREFIX_NEXT_TASK,
         "tasks": {
             task: (
                 {"status": "PASS", "handoff": adopted[task].payload()}
-                if task == "S2P13-T11"
+                if task in adopted
                 else {"status": "NOT_STARTED", "handoff": None}
             )
             for task in TASKS
@@ -792,7 +800,7 @@ def adopt_verified_prefix(
             }
             for task in VERIFIED_PREFIX_TASKS
         },
-        "next_task": "S2P13-T13",
+        "next_task": VERIFIED_PREFIX_NEXT_TASK,
         "stage3_locked": True,
     }
     adoption_payload["adoption_hash"] = canonical_hash(adoption_payload)
@@ -808,7 +816,7 @@ def adopt_verified_prefix(
         "code_commit": approval["code_commit"],
         "approval_hash": approval["approval_hash"],
         "chain_authority_hash": adoption_payload["chain_authority_hash"],
-        "current_task": "S2P13-T13",
+        "current_task": VERIFIED_PREFIX_NEXT_TASK,
         "tasks": {
             task: (
                 {
@@ -834,7 +842,7 @@ def adopt_verified_prefix(
         "operations_root": str(operations_root),
         "verified_prefix_adoption_path": str(adoption_path),
         "verified_prefix_adoption_hash": adoption_payload["adoption_hash"],
-        "next_task": "S2P13-T13",
+        "next_task": VERIFIED_PREFIX_NEXT_TASK,
         "stage3_locked": True,
     }
 
@@ -1054,7 +1062,7 @@ def verify_formal_chain(
             or adoption.get("approval_hash") != approval["approval_hash"]
             or adoption.get("code_commit") != approval["code_commit"]
             or adoption.get("adoption_hash") != adoption_hash
-            or adoption.get("next_task") != "S2P13-T13"
+            or adoption.get("next_task") != VERIFIED_PREFIX_NEXT_TASK
             or adoption.get("stage3_locked") is not True
             or tuple(cast(dict[str, Any], adoption.get("tasks", {}))) != VERIFIED_PREFIX_TASKS
         ):

@@ -395,7 +395,7 @@ def _source_receipt(path: Path, handoff: TaskHandoff) -> None:
     _write(path, payload)
 
 
-def test_adapter_plan_can_bind_exact_verified_t11_t12_prefix(
+def test_adapter_plan_can_bind_exact_verified_t11_t15_prefix(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     policy = _policy(tmp_path, monkeypatch)
@@ -429,10 +429,10 @@ def test_adapter_plan_can_bind_exact_verified_t11_t12_prefix(
     assert plan["verified_prefix_source"]["source_chain_root"] == str(source_chain)
     for task in subject.VERIFIED_PREFIX_TASKS:
         assert plan["tasks"][task]["allowed_artifact_root"] == adopted[task].artifact_root
-    assert plan["tasks"]["S2P13-T13"]["allowed_artifact_root"] != adopted["S2P13-T12"].artifact_root
+    assert plan["tasks"]["S2P13-T16"]["allowed_artifact_root"] != adopted["S2P13-T15"].artifact_root
 
 
-def test_adopt_verified_prefix_seeds_t13_without_recomputing_t11_t12(
+def test_adopt_verified_prefix_seeds_t16_without_recomputing_t11_t15(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     policy = _policy(tmp_path, monkeypatch)
@@ -455,7 +455,10 @@ def test_adopt_verified_prefix_seeds_t13_without_recomputing_t11_t12(
         )
         for task in subject.VERIFIED_PREFIX_TASKS
     }
-    handoffs["S2P13-T12"] = replace(handoffs["S2P13-T12"], row_count=532_708)
+    handoffs = {
+        task: replace(handoff, row_count=subject.VERIFIED_PREFIX_ROW_COUNTS[task])
+        for task, handoff in handoffs.items()
+    }
     receipt_paths = {}
     for task, handoff in handoffs.items():
         receipt_path = source_chain / "tasks" / task / "receipt.json"
@@ -480,10 +483,11 @@ def test_adopt_verified_prefix_seeds_t13_without_recomputing_t11_t12(
     )
 
     checkpoint = json.loads((Path(result["operations_root"]) / "checkpoint.json").read_text())
-    assert checkpoint["current_task"] == "S2P13-T13"
-    assert checkpoint["tasks"]["S2P13-T11"]["status"] == "PASS"
-    assert checkpoint["tasks"]["S2P13-T12"]["status"] == "PASS"
-    assert checkpoint["tasks"]["S2P13-T13"]["status"] == "NOT_STARTED"
+    assert checkpoint["current_task"] == "S2P13-T16"
+    for task in subject.VERIFIED_PREFIX_TASKS:
+        assert checkpoint["tasks"][task]["status"] == "PASS"
+    assert checkpoint["tasks"]["S2P13-T16"]["status"] == "NOT_STARTED"
+    assert result["next_task"] == "S2P13-T16"
     assert Path(result["verified_prefix_adoption_path"]).is_file()
 
 
