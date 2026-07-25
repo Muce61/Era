@@ -77,6 +77,8 @@ class _FormalProgressReporter:
     def __init__(self, context: ProducerContext, *, attempt: int) -> None:
         self.context = context
         self.attempt = attempt
+        self.started_at = datetime.now(UTC).isoformat()
+        self.completed_at: str | None = None
         self.log_path = context.checkpoint_path.with_name("daily-progress.jsonl")
         self.sequence = 0
         self.last_checkpoint_write = 0.0
@@ -114,6 +116,8 @@ class _FormalProgressReporter:
                 "current_instrument": update.get("current_instrument"),
                 "current_date": update.get("current_date"),
                 "phase": update.get("phase"),
+                "started_at": self.started_at,
+                "completed_at": self.completed_at,
                 "heartbeat_at": datetime.now(UTC).isoformat(),
                 "progress_log_path": str(self.log_path),
                 "progress_sequence": self.sequence,
@@ -185,6 +189,7 @@ class _FormalProgressReporter:
             self._checkpoint(normalized, status="IN_PROGRESS")
 
     def finish(self, *, row_count: int, receipt_hash: str | None = None) -> None:
+        self.completed_at = datetime.now(UTC).isoformat()
         if self.open_day_update is not None:
             self._append(self.open_day_update, event_type="UTC_DAY_COMPLETED")
             self.open_day_update = None
@@ -201,6 +206,7 @@ class _FormalProgressReporter:
         self._checkpoint(update, status="PASS")
 
     def fail(self, reason: str) -> None:
+        self.completed_at = datetime.now(UTC).isoformat()
         update = {**self.last_update, "failure_reason": reason, "phase": "FAILED"}
         self._append(update, event_type="TASK_FAILED")
         self._checkpoint(update, status="FAILED")

@@ -450,6 +450,18 @@
       const parsed = new Date(value);
       return Number.isNaN(parsed.valueOf()) ? "—" : parsed.toLocaleString("zh-CN", {hour12:false, timeZone:"Asia/Shanghai"}) + " (UTC+8)";
     };
+    const elapsedTime = (task) => {
+      if (!task || !task.started_at) return "—";
+      const started = new Date(task.started_at).valueOf();
+      const completed = task.completed_at ? new Date(task.completed_at).valueOf() : Date.now();
+      if (!Number.isFinite(started) || !Number.isFinite(completed) || completed < started) return "—";
+      const totalSeconds = Math.floor((completed - started) / 1000);
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      return `${days ? `${days}天 ` : ""}${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    };
 
     document.querySelectorAll(".task-button").forEach((button) => {
       button.addEventListener("click", () => {
@@ -758,7 +770,7 @@
           name:`${taskId} · ${label}`,
           icon:taskId === "S2P13-T11" ? "fa-hourglass-half" : "fa-diagram-project",
           state,
-          detail:`${raw} · ${task.reason_code || "—"} · ${position || unitDetail} · ${unitDetail} · rows ${number(task.row_count)} · Verify ${task.verify_status || "—"}`,
+          detail:`${raw} · ${task.reason_code || "—"} · ${position || unitDetail} · ${unitDetail} · 耗时 ${elapsedTime(task)} · rows ${number(task.row_count)} · Verify ${task.verify_status || "—"}`,
           progress:taskProgress
         };
       });
@@ -784,12 +796,14 @@
     }
 
     let legacyRefreshInFlight = false;
+    let lastV13Status = null;
 
     async function refreshV13() {
       try {
         const response = await fetch("/api/v13/status", {cache:"no-store"});
         if (!response.ok) throw new Error("v1.3 status unavailable");
         const status = await response.json();
+        lastV13Status = status;
         const plan = renderV13Flow(status);
         byId("processNote").textContent = plan.server_stale
           ? "STALE_SERVER · 请从当前 main 派生分支重启"
@@ -1008,6 +1022,9 @@
     refreshV13();
     refresh();
     setInterval(refreshV13, 5000);
+    setInterval(() => {
+      if (lastV13Status) renderV13Flow(lastV13Status);
+    }, 1000);
     setInterval(refresh, 30000);
   </script>
 </body>

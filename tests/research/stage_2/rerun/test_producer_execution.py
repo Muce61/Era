@@ -68,6 +68,8 @@ def test_execute_serializes_reads_back_and_reuses_verified_receipt(
     assert checkpoint["status"] == "PASS"
     assert checkpoint["schema_name"] == "stage2-plan-v13-producer-checkpoint-v2"
     assert checkpoint["progress_percent"] == "100.00"
+    assert checkpoint["started_at"]
+    assert checkpoint["completed_at"]
     events = [
         json.loads(line)
         for line in context.checkpoint_path.with_name("daily-progress.jsonl")
@@ -280,6 +282,8 @@ def test_failed_producer_leaves_failed_progress_evidence(
     checkpoint = json.loads(context.checkpoint_path.read_text())
     assert checkpoint["status"] == "FAILED"
     assert checkpoint["failure_reason"] == "ValueError: source hash drift"
+    assert checkpoint["started_at"]
+    assert checkpoint["completed_at"]
 
 
 def test_final_serialization_failure_updates_task_checkpoint(

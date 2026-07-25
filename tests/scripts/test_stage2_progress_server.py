@@ -818,6 +818,11 @@ def test_ui_derives_current_task_version_count_and_acceptance_without_hardcoded_
     assert "task.progress_percent" in page
     assert "task.current_instrument" in page
     assert "task.current_date" in page
+    assert "elapsedTime(task)" in page
+    assert "task.started_at" in page
+    assert "task.completed_at" in page
+    assert "lastV13Status" in page
+    assert "}, 1000)" in page
     assert "rehearsal_progress_percent" in page
     assert "rehearsal_heartbeat_at" in page
     assert "formal_rehearsal_gate_mode" in page
