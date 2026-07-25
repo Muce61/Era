@@ -225,14 +225,16 @@ class CommandTaskAdapter(TaskAdapter):
             if not isinstance(state, dict):
                 raise ValueError(f"required upstream handoff is not PASS: {task_id}")
             handoff = state.get("handoff")
-            if (
-                not isinstance(handoff, dict)
-                or state.get("status") != "PASS"
-                or not isinstance(handoff.get("output_hash"), str)
-                or not isinstance(handoff.get("producer_receipt_hash"), str)
-            ):
+            if not isinstance(handoff, dict) or state.get("status") != "PASS":
                 raise ValueError(f"required upstream handoff is not PASS: {task_id}")
-            result[task_id] = cast(dict[str, Any], handoff)
+            try:
+                validated = TaskHandoff(**handoff)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"required upstream handoff is not PASS: {task_id}") from exc
+            normalized = validated.payload()
+            for status_field in ("consumer_readback", "reconciliation", "verify_status"):
+                normalized.pop(status_field)
+            result[task_id] = cast(dict[str, Any], normalized)
         return result
 
     def _environment(self, upstream_handoffs: Mapping[str, Mapping[str, Any]]) -> dict[str, str]:

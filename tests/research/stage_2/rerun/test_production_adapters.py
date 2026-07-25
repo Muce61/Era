@@ -155,6 +155,37 @@ receipt.write_text(json.dumps(payload, sort_keys=True))
     )
 
 
+def _upstream_handoff(tmp_path: Path, task_id: str) -> dict[str, object]:
+    root = tmp_path / "upstream" / task_id
+    root.mkdir(parents=True, exist_ok=True)
+    manifest = _seal({"schema_name": "test-upstream-manifest"}, "manifest_hash")
+    catalog = _seal({"schema_name": "test-upstream-catalog"}, "catalog_hash")
+    manifest_path = root / "manifest.json"
+    catalog_path = root / "catalog.json"
+    _write_json(manifest_path, manifest)
+    _write_json(catalog_path, catalog)
+    return {
+        "task_id": task_id,
+        "execution_mode": "FORMAL",
+        "chain_id": "formal-test-chain",
+        "run_id": f"formal-{task_id.lower()}",
+        "evidence_id": f"formal-{task_id.lower()}",
+        "artifact_root": str(root),
+        "snapshot_id": str(manifest["manifest_hash"]),
+        "manifest_path": str(manifest_path),
+        "manifest_hash": str(manifest["manifest_hash"]),
+        "catalog_path": str(catalog_path),
+        "catalog_hash": str(catalog["catalog_hash"]),
+        "output_hash": "1" * 64,
+        "row_count": 12,
+        "execution_scope_hash": "4" * 64,
+        "producer_receipt_hash": "5" * 64,
+        "consumer_readback": "PASS",
+        "reconciliation": "PASS",
+        "verify_status": "PASS",
+    }
+
+
 def test_adapter_runs_real_argv_and_accepts_only_bound_receipt(tmp_path: Path) -> None:
     producer = tmp_path / "producer.py"
     _producer_script(producer)
@@ -167,11 +198,7 @@ def test_adapter_runs_real_argv_and_accepts_only_bound_receipt(tmp_path: Path) -
             "tasks": {
                 "S2P13-T11": {
                     "status": "PASS",
-                    "handoff": {
-                        "task_id": "S2P13-T11",
-                        "output_hash": "1" * 64,
-                        "producer_receipt_hash": "5" * 64,
-                    },
+                    "handoff": _upstream_handoff(tmp_path, "S2P13-T11"),
                 }
             }
         },
@@ -205,6 +232,9 @@ def test_adapter_runs_real_argv_and_accepts_only_bound_receipt(tmp_path: Path) -
     assert adapter.run_or_resume() == handoff
 
     receipt = json.loads(spec.receipt_path.read_text())
+    assert set(receipt["upstream_handoffs"]["S2P13-T11"]).isdisjoint(
+        {"consumer_readback", "reconciliation", "verify_status"}
+    )
     receipt["upstream_handoffs"] = {"S2P13-T11": {"output_hash": "wrong"}}
     receipt["receipt_hash"] = receipt_hash(
         {key: value for key, value in receipt.items() if key != "receipt_hash"}
@@ -212,6 +242,84 @@ def test_adapter_runs_real_argv_and_accepts_only_bound_receipt(tmp_path: Path) -
     _write_json(spec.receipt_path, receipt)
     with pytest.raises(ValueError, match="receipt contract mismatch"):
         adapter.run_or_resume()
+
+
+@pytest.mark.parametrize("task_id", tuple(task for task in TASKS if UPSTREAM_TASKS[task]))
+def test_all_downstream_adapters_normalize_verified_supervisor_handoffs(
+    tmp_path: Path, task_id: str
+) -> None:
+    task_root = tmp_path / "evidence" / task_id
+    (task_root / "artifacts").mkdir(parents=True)
+    checkpoint = tmp_path / "supervisor" / "checkpoint.json"
+    upstream = {
+        upstream_task: {
+            "status": "PASS",
+            "handoff": _upstream_handoff(tmp_path, upstream_task),
+        }
+        for upstream_task in UPSTREAM_TASKS[task_id]
+    }
+    _write_json(checkpoint, {"tasks": upstream})
+    spec = ProductionTaskSpec(
+        task_id=task_id,
+        required_upstream_tasks=UPSTREAM_TASKS[task_id],
+        static_preflight_command=(sys.executable, "-c", "raise SystemExit(0)"),
+        input_preflight_command=(sys.executable, "-c", "raise SystemExit(0)"),
+        run_command=(sys.executable, "-c", "raise SystemExit(0)"),
+        resume_command=(sys.executable, "-c", "raise SystemExit(0)"),
+        allowed_artifact_root=task_root / "artifacts",
+        checkpoint_path=task_root / "checkpoint.json",
+        receipt_path=task_root / "receipt.json",
+    )
+    adapter = CommandTaskAdapter(
+        spec=spec,
+        code_commit="a" * 40,
+        adapter_plan_hash="2" * 64,
+        supervisor_checkpoint_path=checkpoint,
+        repository_root=Path.cwd(),
+        preregistration_path=Path(__file__),
+        preregistration_hash=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+    )
+
+    normalized = adapter._upstream_handoffs()
+
+    assert tuple(normalized) == UPSTREAM_TASKS[task_id]
+    for payload in normalized.values():
+        assert set(payload).isdisjoint({"consumer_readback", "reconciliation", "verify_status"})
+
+
+def test_adapter_rejects_upstream_without_all_three_pass_states(tmp_path: Path) -> None:
+    handoff = _upstream_handoff(tmp_path, "S2P13-T11")
+    handoff["verify_status"] = "FAIL"
+    checkpoint = tmp_path / "supervisor" / "checkpoint.json"
+    _write_json(
+        checkpoint,
+        {"tasks": {"S2P13-T11": {"status": "PASS", "handoff": handoff}}},
+    )
+    task_root = tmp_path / "evidence" / "S2P13-T12"
+    (task_root / "artifacts").mkdir(parents=True)
+    spec = ProductionTaskSpec(
+        task_id="S2P13-T12",
+        required_upstream_tasks=("S2P13-T11",),
+        static_preflight_command=(sys.executable, "-c", "raise SystemExit(0)"),
+        input_preflight_command=(sys.executable, "-c", "raise SystemExit(0)"),
+        run_command=(sys.executable, "-c", "raise SystemExit(0)"),
+        resume_command=(sys.executable, "-c", "raise SystemExit(0)"),
+        allowed_artifact_root=task_root / "artifacts",
+        checkpoint_path=task_root / "checkpoint.json",
+        receipt_path=task_root / "receipt.json",
+    )
+    adapter = CommandTaskAdapter(
+        spec=spec,
+        code_commit="a" * 40,
+        adapter_plan_hash="2" * 64,
+        supervisor_checkpoint_path=checkpoint,
+        repository_root=Path.cwd(),
+        preregistration_path=Path(__file__),
+        preregistration_hash=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+    )
+
+    with pytest.raises(ValueError, match="required upstream handoff is not PASS"):
+        adapter._upstream_handoffs()
 
 
 def test_retryable_exit_does_not_become_terminal_handoff(tmp_path: Path) -> None:
