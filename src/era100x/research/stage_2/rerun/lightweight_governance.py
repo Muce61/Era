@@ -42,6 +42,7 @@ REHEARSAL_NOT_REQUIRED_MODE: Final = "REHEARSAL_NOT_REQUIRED"
 BACKGROUND_WAIVER_MODE: Final = "EXPLICIT_BACKGROUND_RUNTIME_WAIVER"
 BACKGROUND_WAIVER_SCOPE: Final = "UNATTENDED_NON_RESEARCH_HOURS"
 VERIFIED_PREFIX_SCHEMA: Final = "stage2-verified-prefix-adoption-v1"
+VERIFIED_T16_PREFIX_SCHEMA: Final = "stage2-verified-t16-prefix-adoption-v1"
 VERIFIED_PREFIX_TASKS: Final = TASKS[:-1]
 VERIFIED_PREFIX_NEXT_TASK: Final = TASKS[-1]
 VERIFIED_PREFIX_ROW_COUNTS: Final = {
@@ -626,6 +627,64 @@ def _load_verified_prefix(
     return handoffs, receipt_paths
 
 
+def _load_verified_t16_prefix(*, source_chain_root: Path) -> dict[str, Any]:
+    """Verify the failed T16 chain reached the outcome-only continuation boundary."""
+
+    plans = sorted(source_chain_root.glob("adapter-plan-*.json"))
+    if len(plans) != 1:
+        raise ValueError("T16 prefix source requires one exact adapter plan")
+    source_checkpoint = _read_json(source_chain_root / "operations" / "checkpoint.json")
+    if (
+        source_checkpoint.get("status") != "TERMINAL_FAILED"
+        or source_checkpoint.get("current_task") != "S2P13-T16"
+        or source_checkpoint.get("stage3_locked") is not True
+    ):
+        raise ValueError("T16 prefix source must be a terminal T16 chain")
+    source_commit = str(source_checkpoint.get("code_commit", ""))
+    source_plan = load_adapter_plan(plans[0], code_commit=source_commit)
+    t16_spec = source_plan.tasks["S2P13-T16"]
+    producer_checkpoint = _read_json(t16_spec.checkpoint_path)
+    if (
+        producer_checkpoint.get("status") != "FAILED"
+        or producer_checkpoint.get("completed_units") != 2
+        or producer_checkpoint.get("total_units") != 4
+        or producer_checkpoint.get("failure_reason")
+        != "OperationalError: attempt to write a readonly database"
+    ):
+        raise ValueError("T16 prefix failure is not the approved SQLite boundary")
+    attempts = sorted(t16_spec.allowed_artifact_root.glob("formal-*/attempt-*/data"))
+    if len(attempts) != 1:
+        raise ValueError("T16 prefix source requires one exact producer attempt")
+    data_root = attempts[0]
+    authority_paths = tuple(
+        path for path in data_root.glob("authority-*.json") if not path.name.startswith("._")
+    )
+    binning_paths = tuple(
+        path
+        for path in data_root.glob("train-bins/*/binning-set-*.json")
+        if not path.name.startswith("._")
+    )
+    run_roots = tuple(
+        path
+        for path in (data_root / "runs").glob("stage2-s2p13-t16-*")
+        if path.is_dir() and not path.is_symlink()
+    )
+    if len(authority_paths) != 1 or len(binning_paths) != 1 or len(run_roots) != 1:
+        raise ValueError("T16 prefix Authority/bin/Run identity is ambiguous")
+    from era100x.research.stage_2.baselines.conditional.execution_run import (
+        validate_post_selection_prefix,
+    )
+
+    prefix = validate_post_selection_prefix(
+        source_run_root=run_roots[0],
+        authority_path=authority_paths[0],
+        binning_set_path=binning_paths[0],
+    )
+    if prefix.get("source_code_commit") != source_commit:
+        raise ValueError("T16 prefix source commit drift")
+    return prefix
+
+
 def _write_adopted_receipt(
     *,
     task: str,
@@ -716,6 +775,7 @@ def adopt_verified_prefix(
         source_chain_root=source_chain_root,
         repository_root=repository_root,
     )
+    t16_prefix = _load_verified_t16_prefix(source_chain_root=source_chain_root)
     chain_path = freeze_chain_authority(
         approval_path=approval_path,
         policy=policy,
@@ -778,6 +838,24 @@ def adopt_verified_prefix(
     verified = {task: adapters[task].run_or_resume() for task in VERIFIED_PREFIX_TASKS}
     if verified != adopted:
         raise ValueError("verified-prefix destination read-back drift")
+    t16_adoption: dict[str, Any] = {
+        "schema_name": VERIFIED_T16_PREFIX_SCHEMA,
+        "status": "PASS",
+        "mode": "READ_ONLY",
+        "approval_hash": approval["approval_hash"],
+        "chain_authority_hash": chain_authority_hash,
+        "adapter_plan_hash": plan.plan_hash,
+        "code_commit": approval["code_commit"],
+        "source_chain_root": str(source_chain_root),
+        "prefix_verification": t16_prefix,
+        "next_phase": "POST_SELECTION_H2_OUTCOMES",
+        "stage3_locked": True,
+    }
+    t16_adoption["adoption_hash"] = canonical_hash(t16_adoption)
+    t16_adoption_path = (
+        operations_root / "adoptions" / f"verified-t16-prefix-{t16_adoption['adoption_hash']}.json"
+    )
+    _write_exclusive(t16_adoption_path, t16_adoption)
     adoption_payload: dict[str, Any] = {
         "schema_name": VERIFIED_PREFIX_SCHEMA,
         "status": "PASS",
@@ -831,6 +909,8 @@ def adopt_verified_prefix(
         },
         "verified_prefix_adoption_path": str(adoption_path),
         "verified_prefix_adoption_hash": adoption_payload["adoption_hash"],
+        "verified_t16_prefix_adoption_path": str(t16_adoption_path),
+        "verified_t16_prefix_adoption_hash": t16_adoption["adoption_hash"],
         "stage3_locked": True,
     }
     _write_checkpoint(checkpoint_path, checkpoint)
@@ -842,6 +922,8 @@ def adopt_verified_prefix(
         "operations_root": str(operations_root),
         "verified_prefix_adoption_path": str(adoption_path),
         "verified_prefix_adoption_hash": adoption_payload["adoption_hash"],
+        "verified_t16_prefix_adoption_path": str(t16_adoption_path),
+        "verified_t16_prefix_adoption_hash": t16_adoption["adoption_hash"],
         "next_task": VERIFIED_PREFIX_NEXT_TASK,
         "stage3_locked": True,
     }
@@ -997,11 +1079,41 @@ def run_formal_chain(
         supervisor_root=operations_root,
         repository_root=repository_root,
     )
+    existing_checkpoint = (
+        _read_json(operations_root / "checkpoint.json")
+        if (operations_root / "checkpoint.json").is_file()
+        else {}
+    )
+    t16_adoption_path_value = existing_checkpoint.get("verified_t16_prefix_adoption_path")
+    t16_adoption_path: Path | None = None
+    if t16_adoption_path_value is not None:
+        t16_adoption_path = Path(str(t16_adoption_path_value))
+        t16_adoption = _read_json(t16_adoption_path)
+        if (
+            not t16_adoption_path.resolve().is_relative_to(operations_root.resolve())
+            or not _self_hash_valid(t16_adoption, "adoption_hash")
+            or t16_adoption.get("schema_name") != VERIFIED_T16_PREFIX_SCHEMA
+            or t16_adoption.get("status") != "PASS"
+            or t16_adoption.get("mode") != "READ_ONLY"
+            or t16_adoption.get("approval_hash") != approval["approval_hash"]
+            or t16_adoption.get("chain_authority_hash") != _read_json(chain_path)["authority_hash"]
+            or t16_adoption.get("code_commit") != approval["code_commit"]
+            or t16_adoption.get("next_phase") != "POST_SELECTION_H2_OUTCOMES"
+            or t16_adoption.get("stage3_locked") is not True
+            or existing_checkpoint.get("verified_t16_prefix_adoption_hash")
+            != t16_adoption.get("adoption_hash")
+        ):
+            raise ValueError("verified T16 prefix adoption drift")
     bound_environment = {
         "ERA_S2P13_CHAIN_AUTHORITY_PATH": str(chain_path),
         "ERA_S2P13_POLICY_PATH": str(policy.path),
         "ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_PATH": str(policy.trade_supplement_path),
         "ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_HASH": policy.trade_supplement_file_hash,
+        **(
+            {"ERA_S2P13_T16_PREFIX_ADOPTION_PATH": str(t16_adoption_path)}
+            if t16_adoption_path is not None
+            else {}
+        ),
     }
     old_environment = {name: os.environ.get(name) for name in bound_environment}
     os.environ.update(bound_environment)
@@ -1067,6 +1179,30 @@ def verify_formal_chain(
             or tuple(cast(dict[str, Any], adoption.get("tasks", {}))) != VERIFIED_PREFIX_TASKS
         ):
             raise ValueError("formal Verify verified-prefix adoption drift")
+    t16_adoption_path_value = checkpoint.get("verified_t16_prefix_adoption_path")
+    t16_adoption_hash = checkpoint.get("verified_t16_prefix_adoption_hash")
+    if t16_adoption_path_value is not None or t16_adoption_hash is not None:
+        t16_adoption_path = Path(str(t16_adoption_path_value))
+        if (
+            not t16_adoption_path.is_absolute()
+            or t16_adoption_path.is_symlink()
+            or not t16_adoption_path.is_file()
+            or not t16_adoption_path.resolve().is_relative_to(operations_root.resolve())
+        ):
+            raise ValueError("formal Verify T16 prefix path drift")
+        t16_adoption = _read_json(t16_adoption_path)
+        if (
+            not _self_hash_valid(t16_adoption, "adoption_hash")
+            or t16_adoption.get("schema_name") != VERIFIED_T16_PREFIX_SCHEMA
+            or t16_adoption.get("status") != "PASS"
+            or t16_adoption.get("mode") != "READ_ONLY"
+            or t16_adoption.get("approval_hash") != approval["approval_hash"]
+            or t16_adoption.get("code_commit") != approval["code_commit"]
+            or t16_adoption.get("adoption_hash") != t16_adoption_hash
+            or t16_adoption.get("next_phase") != "POST_SELECTION_H2_OUTCOMES"
+            or t16_adoption.get("stage3_locked") is not True
+        ):
+            raise ValueError("formal Verify T16 prefix adoption drift")
     plan = load_adapter_plan(plans[0], code_commit=str(approval["code_commit"]))
     adapters = build_production_adapters(
         plan,
@@ -1104,6 +1240,7 @@ def verify_formal_chain(
         "code_commit": approval["code_commit"],
         "tasks": verified,
         "verified_prefix_adoption_hash": adoption_hash,
+        "verified_t16_prefix_adoption_hash": t16_adoption_hash,
         "stage3_locked": True,
     }
     result["verify_hash"] = canonical_hash(result)

@@ -474,6 +474,34 @@ def test_adopt_verified_prefix_seeds_t16_without_recomputing_t11_t15(
         "_load_verified_prefix",
         lambda **_kwargs: (handoffs, receipt_paths),
     )
+    t16_prefix = {
+        "schema_name": "stage2-s2p13-t16-post-selection-prefix-verification-v1",
+        "status": "PASS",
+        "source_run_id": "stage2-s2p13-t16-source",
+        "source_run_root": str(source_chain / "source-t16-run"),
+        "source_code_commit": "f" * 40,
+        "source_authority_path": str(source_chain / "authority.json"),
+        "source_authority_hash": "1" * 64,
+        "source_binning_set_path": str(source_chain / "bins.json"),
+        "source_binning_set_hash": "2" * 64,
+        "source_execution_manifest_hash": "3" * 64,
+        "source_h2_path_count": 532_708,
+        "eligible_episode_count": 413_837,
+        "evaluation_feature_report_count": 6,
+        "evaluation_feature_inventory_hash": "4" * 64,
+        "selection_group_count": 456,
+        "selection_inventory_hash": "5" * 64,
+        "outcome_fields_read_before_matching": [],
+        "resume_phase": "POST_SELECTION_H2_OUTCOMES",
+        "historical_evidence_only": True,
+        "stage3_locked": True,
+    }
+    t16_prefix["prefix_verification_hash"] = canonical_hash(t16_prefix)
+    monkeypatch.setattr(
+        subject,
+        "_load_verified_t16_prefix",
+        lambda **_kwargs: t16_prefix,
+    )
 
     result = subject.adopt_verified_prefix(
         approval_path=approval,
@@ -489,6 +517,11 @@ def test_adopt_verified_prefix_seeds_t16_without_recomputing_t11_t15(
     assert checkpoint["tasks"]["S2P13-T16"]["status"] == "NOT_STARTED"
     assert result["next_task"] == "S2P13-T16"
     assert Path(result["verified_prefix_adoption_path"]).is_file()
+    assert Path(result["verified_t16_prefix_adoption_path"]).is_file()
+    assert (
+        checkpoint["verified_t16_prefix_adoption_hash"]
+        == result["verified_t16_prefix_adoption_hash"]
+    )
 
 
 class _FailingAdapter:

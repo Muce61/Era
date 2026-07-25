@@ -195,6 +195,369 @@ def _aggregate_reconciliation(
     return episode, control
 
 
+def validate_post_selection_prefix(
+    *,
+    source_run_root: Path,
+    authority_path: Path,
+    binning_set_path: Path,
+) -> dict[str, Any]:
+    """Strictly verify a failed Run's outcome-blind prefix without mutating it."""
+
+    for path in (source_run_root, authority_path, binning_set_path):
+        if not path.is_absolute() or path.is_symlink():
+            raise ValueError("T16 prefix paths must be absolute and non-symlinked")
+    if (
+        not source_run_root.is_dir()
+        or not authority_path.is_file()
+        or not binning_set_path.is_file()
+    ):
+        raise ValueError("T16 prefix evidence is missing")
+    authority = validate_contract_authority_json(authority_path.read_bytes())
+    bins = read_binning_set(binning_set_path, authority_hash=authority.authority_hash)
+    checkpoint = read_json_file(source_run_root / "checkpoint.json")
+    if (
+        checkpoint.get("status") != "IN_PROGRESS"
+        or checkpoint.get("phase") != "POST_SELECTION_H2_OUTCOMES"
+        or checkpoint.get("completed_group_count") != 456
+        or checkpoint.get("expected_group_count") != 456
+        or checkpoint.get("authority_hash") != authority.authority_hash
+        or checkpoint.get("binning_set_hash") != bins["binning_set_hash"]
+        or checkpoint.get("stage3_locked") is not True
+    ):
+        raise ValueError("T16 prefix checkpoint is not adoptable")
+    stored_authority = validate_contract_authority_json(
+        (source_run_root / "manifests" / "authority.json").read_bytes()
+    )
+    stored_bins = read_json_file(source_run_root / "manifests" / "binning-set.json")
+    if stored_authority != authority or stored_bins != bins:
+        raise ValueError("T16 prefix Authority or binning evidence drift")
+    execution_manifest = read_json_file(source_run_root / "manifests" / "execution-manifest.json")
+    if (
+        canonical_hash(
+            {
+                key: value
+                for key, value in execution_manifest.items()
+                if key != "execution_manifest_hash"
+            }
+        )
+        != execution_manifest.get("execution_manifest_hash")
+        or execution_manifest.get("code_commit") != authority.code_commit
+        or execution_manifest.get("expected_group_count") != 456
+        or execution_manifest.get("stage3_locked") is not True
+    ):
+        raise ValueError("T16 prefix execution Manifest drift")
+
+    episode_root = source_run_root / "work" / "episodes"
+    episode_path = episode_root / "prepared-episodes.parquet"
+    episode_report_path = episode_root / "prepared-episodes.report.json"
+    episode_report = read_json_file(episode_report_path)
+    if (
+        canonical_hash(
+            {key: value for key, value in episode_report.items() if key != "report_hash"}
+        )
+        != episode_report.get("report_hash")
+        or episode_report.get("status") != "PASS"
+        or episode_report.get("parquet_row_count") != EXPECTED_H2_PATHS
+        or episode_report.get("parquet_sha256") != _sha256_file(episode_path)
+        or episode_report.get("control_outcome_fields_read") != []
+    ):
+        raise ValueError("T16 prefix Episode evidence drift")
+
+    evaluation_root = source_run_root / "work" / "evaluation-features"
+    evaluation_reports = tuple(
+        sorted(
+            path for path in evaluation_root.rglob("*.report.json") if not path.name.startswith(".")
+        )
+    )
+    if len(evaluation_reports) != 6:
+        raise ValueError("T16 prefix evaluation feature universe is incomplete")
+    evaluation_hashes: list[str] = []
+    for report_path in evaluation_reports:
+        report = read_json_file(report_path)
+        parquet_path = report_path.with_suffix("").with_suffix(".parquet")
+        if (
+            canonical_hash({key: value for key, value in report.items() if key != "report_hash"})
+            != report.get("report_hash")
+            or report.get("authority_hash") != authority.authority_hash
+            or report.get("outcome_fields_read") != []
+            or report.get("parquet_sha256") != _sha256_file(parquet_path)
+        ):
+            raise ValueError("T16 prefix evaluation feature drift")
+        evaluation_hashes.append(str(report["report_hash"]))
+
+    selections_root = source_run_root / "work" / "selections"
+    selection_reports = tuple(
+        sorted(
+            path for path in selections_root.rglob("*.report.json") if not path.name.startswith(".")
+        )
+    )
+    if len(selection_reports) != 456:
+        raise ValueError("T16 prefix selection group universe is incomplete")
+    groups: set[tuple[str, str, str, str, str]] = set()
+    selection_hashes: list[str] = []
+    for report_path in selection_reports:
+        report = read_json_file(report_path)
+        parquet_path = report_path.with_suffix("").with_suffix(".parquet")
+        group = (
+            str(report.get("instrument")),
+            str(report.get("period")),
+            str(report.get("fold")),
+            str(report.get("parameter_set_id")),
+            str(report.get("time_combination_id")),
+        )
+        if (
+            canonical_hash({key: value for key, value in report.items() if key != "report_hash"})
+            != report.get("report_hash")
+            or report.get("status") != "PASS"
+            or report.get("outcome_fields_read_before_matching") != []
+            or report.get("selection_parquet_sha256") != _sha256_file(parquet_path)
+            or group in groups
+        ):
+            raise ValueError("T16 prefix outcome-blind selection drift")
+        groups.add(group)
+        selection_hashes.append(str(report["report_hash"]))
+    if len(groups) != 456:
+        raise ValueError("T16 prefix selection identities are not unique")
+
+    payload: dict[str, Any] = {
+        "schema_name": "stage2-s2p13-t16-post-selection-prefix-verification-v1",
+        "status": "PASS",
+        "source_run_id": source_run_root.name,
+        "source_run_root": str(source_run_root),
+        "source_code_commit": authority.code_commit,
+        "source_authority_path": str(authority_path),
+        "source_authority_hash": authority.authority_hash,
+        "source_binning_set_path": str(binning_set_path),
+        "source_binning_set_hash": bins["binning_set_hash"],
+        "source_execution_manifest_hash": execution_manifest["execution_manifest_hash"],
+        "source_h2_path_count": EXPECTED_H2_PATHS,
+        "eligible_episode_count": int(episode_report["eligible_episode_count"]),
+        "evaluation_feature_report_count": len(evaluation_reports),
+        "evaluation_feature_inventory_hash": canonical_hash(evaluation_hashes),
+        "selection_group_count": len(selection_reports),
+        "selection_inventory_hash": canonical_hash(selection_hashes),
+        "outcome_fields_read_before_matching": [],
+        "resume_phase": "POST_SELECTION_H2_OUTCOMES",
+        "historical_evidence_only": True,
+        "stage3_locked": True,
+    }
+    payload["prefix_verification_hash"] = canonical_hash(payload)
+    return payload
+
+
+def continue_full_execution_from_prefix(
+    *,
+    prefix: dict[str, Any],
+    continuation_authority_path: Path,
+    runs_root: Path,
+    t10_snapshot: Path,
+    t10_snapshot_id: str,
+    current_commit: str,
+    repository_clean: bool,
+) -> tuple[dict[str, Any], Path]:
+    """Create one successor Run and continue only after verified blind matching."""
+
+    if (
+        prefix.get("status") != "PASS"
+        or prefix.get("resume_phase") != "POST_SELECTION_H2_OUTCOMES"
+        or prefix.get("selection_group_count") != 456
+        or prefix.get("outcome_fields_read_before_matching") != []
+        or prefix.get("stage3_locked") is not True
+    ):
+        raise ValueError("T16 prefix adoption contract is invalid")
+    claimed = prefix.get("prefix_verification_hash")
+    if (
+        canonical_hash(
+            {key: value for key, value in prefix.items() if key != "prefix_verification_hash"}
+        )
+        != claimed
+    ):
+        raise ValueError("T16 prefix verification hash drift")
+    continuation = read_json_file(continuation_authority_path)
+    if (
+        canonical_hash(
+            {key: value for key, value in continuation.items() if key != "authority_hash"}
+        )
+        != continuation.get("authority_hash")
+        or continuation.get("code_commit") != current_commit
+        or continuation.get("source_prefix_verification_hash") != claimed
+        or continuation.get("stage3_locked") is not True
+        or not repository_clean
+    ):
+        raise ValueError("T16 continuation Authority or clean-commit binding drift")
+    source_run_root = Path(str(prefix["source_run_root"]))
+    source_authority_path = Path(str(prefix["source_authority_path"]))
+    source_binning_path = Path(str(prefix["source_binning_set_path"]))
+    reverified = validate_post_selection_prefix(
+        source_run_root=source_run_root,
+        authority_path=source_authority_path,
+        binning_set_path=source_binning_path,
+    )
+    if reverified != prefix:
+        raise ValueError("T16 prefix changed after adoption")
+    source_authority = validate_contract_authority_json(source_authority_path.read_bytes())
+    bins = read_binning_set(source_binning_path, authority_hash=source_authority.authority_hash)
+    runs_root.mkdir(parents=True, exist_ok=False)
+    run_id = _new_run_id(str(continuation["authority_hash"]), plan_v13=True)
+    run_root = runs_root / run_id
+    run_root.mkdir()
+    checkpoint_path = run_root / "checkpoint.json"
+    checkpoint: dict[str, Any] = {
+        "schema_name": "stage2-s2p13-t16-checkpoint",
+        "schema_version": "1.0",
+        "run_id": run_id,
+        "status": "IN_PROGRESS",
+        "phase": "POST_SELECTION_H2_OUTCOMES",
+        "completed_group_count": 456,
+        "expected_group_count": 456,
+        "authority_hash": continuation["authority_hash"],
+        "source_authority_hash": source_authority.authority_hash,
+        "binning_set_hash": bins["binning_set_hash"],
+        "prefix_verification_hash": claimed,
+        "supersedes_failed_run_id": source_run_root.name,
+        "historical_evidence_only": True,
+        "stage3_locked": True,
+    }
+    _write_checkpoint(checkpoint_path, checkpoint)
+    _write_json_exclusive(run_root / "manifests" / "authority.json", continuation)
+    _write_json_exclusive(
+        run_root / "manifests" / "source-authority.json",
+        source_authority.model_dump(mode="json"),
+    )
+    _write_json_exclusive(run_root / "manifests" / "binning-set.json", bins)
+    _write_json_exclusive(run_root / "manifests" / "prefix-verification.json", prefix)
+    execution_manifest: dict[str, Any] = {
+        "schema_name": "stage2-s2p13-t16-execution-manifest",
+        "schema_version": "1.0",
+        "run_id": run_id,
+        "authority_hash": continuation["authority_hash"],
+        "source_authority_hash": source_authority.authority_hash,
+        "binning_set_hash": bins["binning_set_hash"],
+        "prefix_verification_hash": claimed,
+        "code_commit": current_commit,
+        "supersedes_failed_run_id": source_run_root.name,
+        "expected_h2_path_count": EXPECTED_H2_PATHS,
+        "expected_h2_outcome_cell_count": EXPECTED_H2_OUTCOME_CELLS,
+        "expected_group_count": 456,
+        "registered_parameter_timing_pairs": [
+            list(value) for value in REGISTERED_PARAMETER_TIMING_PAIRS
+        ],
+        "output_layout": [
+            "prepared-episodes",
+            "outcome-blind-selections",
+            "control-outcome-matrices",
+            "conditional-match-matrices",
+            "descriptive-summaries",
+            "reconciliation",
+        ],
+        "historical_evidence_only": True,
+        "stage3_locked": True,
+    }
+    execution_manifest["execution_manifest_hash"] = canonical_hash(execution_manifest)
+    _write_json_exclusive(run_root / "manifests" / "execution-manifest.json", execution_manifest)
+
+    source_work = source_run_root / "work"
+    episode_root = source_work / "episodes"
+    selections_root = source_work / "selections"
+    evaluation_feature_root = source_work / "evaluation-features"
+    episode_report = read_json_file(episode_root / "prepared-episodes.report.json")
+    selection_reports = [
+        read_json_file(path)
+        for path in sorted(
+            item for item in selections_root.rglob("*.report.json") if not item.name.startswith(".")
+        )
+    ]
+    attempt = run_root / "work" / f"post-selection-{uuid.uuid4().hex}"
+    h2_reader = H2ControlReader(t10_snapshot=t10_snapshot, t10_snapshot_id=t10_snapshot_id)
+    post_report = produce_post_selection_evidence(
+        selection_root=selections_root,
+        output_root=attempt,
+        h2_reader=h2_reader,
+    )
+    episode_reconciliation, control_reconciliation = _aggregate_reconciliation(
+        episode_report=episode_report,
+        selection_reports=selection_reports,
+        post_report=post_report,
+    )
+    reconciliation: dict[str, Any] = {
+        "schema_name": "stage2-s2p13-t16-reconciliation",
+        "schema_version": "1.0",
+        "status": "PASS",
+        "episode": episode_reconciliation.model_dump(mode="json"),
+        "control": control_reconciliation.model_dump(mode="json"),
+        "prefix_verification_hash": claimed,
+        "historical_evidence_only": True,
+    }
+    reconciliation["reconciliation_hash"] = canonical_hash(reconciliation)
+
+    checkpoint["phase"] = "PUBLISHING"
+    _write_checkpoint(checkpoint_path, checkpoint)
+    staging = run_root / "staging" / uuid.uuid4().hex
+    _copy_tree_files(episode_root, staging / "episodes")
+    _copy_tree_files(selections_root, staging / "selections")
+    _copy_tree_files(evaluation_feature_root, staging / "evaluation-features")
+    for name in (
+        "control_outcome_matrices.parquet",
+        "conditional_match_matrices.parquet",
+        "descriptive_summaries.parquet",
+    ):
+        source = attempt / name
+        target = staging / "results" / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with source.open("rb") as input_handle, target.open("xb") as output_handle:
+            shutil.copyfileobj(input_handle, output_handle, length=8 * 1024 * 1024)
+    _write_json_exclusive(staging / "reports" / "post-selection.json", post_report)
+    _write_json_exclusive(staging / "reports" / "reconciliation.json", reconciliation)
+    entries = _publication_entries(staging)
+    catalog: dict[str, Any] = {
+        "schema_name": "stage2-s2p13-t16-catalog",
+        "schema_version": "1.0",
+        "run_id": run_id,
+        "authority_hash": continuation["authority_hash"],
+        "source_authority_hash": source_authority.authority_hash,
+        "binning_set_hash": bins["binning_set_hash"],
+        "prefix_verification_hash": claimed,
+        "files": entries,
+        "historical_evidence_only": True,
+    }
+    catalog["catalog_hash"] = canonical_hash(catalog)
+    snapshot_id = str(catalog["catalog_hash"])
+    manifest: dict[str, Any] = {
+        "schema_name": "stage2-s2p13-t16-manifest",
+        "schema_version": "1.0",
+        "run_id": run_id,
+        "snapshot_id": snapshot_id,
+        "authority_hash": continuation["authority_hash"],
+        "source_authority_hash": source_authority.authority_hash,
+        "binning_set_hash": bins["binning_set_hash"],
+        "prefix_verification_hash": claimed,
+        "execution_manifest_hash": execution_manifest["execution_manifest_hash"],
+        "catalog_hash": catalog["catalog_hash"],
+        "reconciliation_hash": reconciliation["reconciliation_hash"],
+        "research_result": "DESCRIPTIVE_ONLY_PRIMARY_PENDING_T18",
+        "historical_evidence_only": True,
+        "stage3_locked": True,
+    }
+    manifest["manifest_hash"] = canonical_hash(manifest)
+    catalog["snapshot_id"] = snapshot_id
+    catalog["manifest_hash"] = manifest["manifest_hash"]
+    _write_json_exclusive(staging / "catalog.json", catalog)
+    _write_json_exclusive(staging / "manifest.json", manifest)
+    published = run_root / "published" / "snapshots" / snapshot_id
+    published.parent.mkdir(parents=True)
+    os.replace(staging, published)
+    checkpoint.update(
+        {
+            "status": "COMPLETE_PENDING_VERIFY",
+            "phase": "PUBLISHED",
+            "snapshot_id": snapshot_id,
+            "manifest_hash": manifest["manifest_hash"],
+        }
+    )
+    _write_checkpoint(checkpoint_path, checkpoint)
+    return manifest, published
+
+
 def run_full_execution(
     *,
     authority_path: Path,

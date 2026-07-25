@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sqlite3
+import tempfile
+from contextlib import contextmanager
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, cast
+from collections.abc import Iterator
 
 import pyarrow as pa  # type: ignore[import-untyped]
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
@@ -83,6 +87,22 @@ def _selection_files(root: Path) -> tuple[Path, ...]:
 
 def _json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+@contextmanager
+def _local_sqlite_database() -> Iterator[Path]:
+    """Create the mutable SQLite work database on a local ephemeral filesystem."""
+
+    configured = os.environ.get("ERA_S2P13_LOCAL_SCRATCH_ROOT")
+    scratch_root = Path(configured).expanduser() if configured else Path(tempfile.gettempdir())
+    if not scratch_root.is_absolute() or scratch_root.is_symlink():
+        raise ValueError("T16 local scratch root must be an absolute non-symlink path")
+    scratch_root.mkdir(parents=True, exist_ok=True)
+    resolved = scratch_root.resolve()
+    if resolved == Path("/Volumes") or resolved.is_relative_to(Path("/Volumes")):
+        raise ValueError("T16 SQLite scratch cannot use an external volume")
+    with tempfile.TemporaryDirectory(prefix="era-s2p13-t16-", dir=resolved) as temporary:
+        yield Path(temporary) / "control-outcomes.sqlite"
 
 
 def _candidate_from_canonical_json(payload: dict[str, Any]) -> V14ControlCandidate:
@@ -387,28 +407,26 @@ def produce_post_selection_evidence(
 ) -> dict[str, Any]:
     output_root.mkdir(parents=True, exist_ok=True)
     files = _selection_files(selection_root)
-    database_path = output_root / "control-outcomes.sqlite"
-    if database_path.exists():
-        raise ValueError("control outcome work database already exists")
-    database = sqlite3.connect(database_path)
-    try:
-        unique_candidates = _ingest_candidates(database, files)
-        control_path = output_root / "control_outcome_matrices.parquet"
-        outcome_count = _produce_control_outcomes(
-            database, reader=h2_reader, output_path=control_path
-        )
-        if outcome_count != unique_candidates:
-            raise ValueError("unique selected controls are not fully classified")
-        match_path = output_root / "conditional_match_matrices.parquet"
-        summary_path = output_root / "descriptive_summaries.parquet"
-        eligible, matched, summaries = _attach_matches(
-            database,
-            files=files,
-            match_path=match_path,
-            summary_path=summary_path,
-        )
-    finally:
-        database.close()
+    with _local_sqlite_database() as database_path:
+        database = sqlite3.connect(database_path)
+        try:
+            unique_candidates = _ingest_candidates(database, files)
+            control_path = output_root / "control_outcome_matrices.parquet"
+            outcome_count = _produce_control_outcomes(
+                database, reader=h2_reader, output_path=control_path
+            )
+            if outcome_count != unique_candidates:
+                raise ValueError("unique selected controls are not fully classified")
+            match_path = output_root / "conditional_match_matrices.parquet"
+            summary_path = output_root / "descriptive_summaries.parquet"
+            eligible, matched, summaries = _attach_matches(
+                database,
+                files=files,
+                match_path=match_path,
+                summary_path=summary_path,
+            )
+        finally:
+            database.close()
     assignments = sum(
         len(values)
         for path in files
@@ -431,6 +449,7 @@ def produce_post_selection_evidence(
         "control_outcomes_sha256": hashlib.sha256(control_path.read_bytes()).hexdigest(),
         "match_matrices_sha256": hashlib.sha256(match_path.read_bytes()).hexdigest(),
         "summaries_sha256": hashlib.sha256(summary_path.read_bytes()).hexdigest(),
+        "sqlite_scratch_policy": "LOCAL_EPHEMERAL_NOT_PUBLISHED",
         "research_result": "DESCRIPTIVE_ONLY_PRIMARY_PENDING_T18",
         "historical_evidence_only": True,
         "stage3_locked": True,

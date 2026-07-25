@@ -290,6 +290,7 @@ def _produce_formal_t16(
         freeze_binning_snapshots,
     )
     from era100x.research.stage_2.baselines.conditional.execution_run import (
+        continue_full_execution_from_prefix,
         run_full_execution,
         verify_published_run,
     )
@@ -302,6 +303,7 @@ def _produce_formal_t16(
     )
 
     from .lightweight_governance import (
+        VERIFIED_T16_PREFIX_SCHEMA,
         _read_json as read_governance_json,
         _self_hash_valid,
         load_policy,
@@ -346,38 +348,109 @@ def _produce_formal_t16(
             "preregistration_hash": context.preregistration_hash,
         }
     )
-    authority_path = data_root / f"authority-{authority.authority_hash}.json"
-    _write_exclusive(authority_path, authority.model_dump(mode="json"))
-    if progress_callback is not None:
-        progress_callback(
-            {"completed_units": 1, "total_units": 4, "phase": "AUTHORITY", "row_count": 0}
+    prefix_adoption_value = os.environ.get("ERA_S2P13_T16_PREFIX_ADOPTION_PATH")
+    if prefix_adoption_value:
+        prefix_adoption_path = Path(prefix_adoption_value)
+        prefix_adoption = read_governance_json(prefix_adoption_path)
+        prefix = prefix_adoption.get("prefix_verification")
+        if (
+            not _self_hash_valid(prefix_adoption, "adoption_hash")
+            or prefix_adoption.get("schema_name") != VERIFIED_T16_PREFIX_SCHEMA
+            or prefix_adoption.get("status") != "PASS"
+            or prefix_adoption.get("mode") != "READ_ONLY"
+            or prefix_adoption.get("code_commit") != context.code_commit
+            or prefix_adoption.get("chain_authority_hash") != chain["authority_hash"]
+            or prefix_adoption.get("adapter_plan_hash") != context.adapter_plan_hash
+            or prefix_adoption.get("next_phase") != "POST_SELECTION_H2_OUTCOMES"
+            or prefix_adoption.get("stage3_locked") is not True
+            or not isinstance(prefix, dict)
+        ):
+            raise ValueError("formal T16 verified-prefix adoption drift")
+        continuation_authority: dict[str, Any] = {
+            "schema_name": "stage2-s2p13-t16-continuation-authority-v1",
+            "schema_version": "1.0",
+            "status": "SEALED",
+            "code_commit": context.code_commit,
+            "chain_authority_hash": chain["authority_hash"],
+            "policy_hash": policy.policy_hash,
+            "source_authority_hash": prefix["source_authority_hash"],
+            "source_binning_set_hash": prefix["source_binning_set_hash"],
+            "source_prefix_verification_hash": prefix["prefix_verification_hash"],
+            "prefix_adoption_hash": prefix_adoption["adoption_hash"],
+            "resume_phase": "POST_SELECTION_H2_OUTCOMES",
+            "historical_evidence_only": True,
+            "stage3_locked": True,
+        }
+        continuation_authority["authority_hash"] = canonical_hash(continuation_authority)
+        continuation_authority_path = (
+            data_root / f"continuation-authority-{continuation_authority['authority_hash']}.json"
         )
-    bins, bins_path = freeze_binning_snapshots(
-        authority_path=authority_path,
-        bin_root=data_root / "train-bins",
-        t10_snapshot=T10_SNAPSHOT,
-        t10_snapshot_id=T10_SNAPSHOT_ID,
-        current_commit=context.code_commit,
-        repository_clean=repository_clean(context.repository_root),
-        lightweight_policy_authorized=True,
-    )
-    if progress_callback is not None:
-        progress_callback(
-            {"completed_units": 2, "total_units": 4, "phase": "TRAIN_BINS", "row_count": 0}
+        _write_exclusive(continuation_authority_path, continuation_authority)
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "completed_units": 1,
+                    "total_units": 4,
+                    "phase": "CONTINUATION_AUTHORITY",
+                    "row_count": 0,
+                }
+            )
+            progress_callback(
+                {
+                    "completed_units": 2,
+                    "total_units": 4,
+                    "phase": "ADOPTED_TRAIN_BINS_AND_SELECTIONS",
+                    "row_count": int(prefix["source_h2_path_count"]),
+                }
+            )
+        manifest, published = continue_full_execution_from_prefix(
+            prefix=cast(dict[str, Any], prefix),
+            continuation_authority_path=continuation_authority_path,
+            runs_root=data_root / "runs",
+            t10_snapshot=T10_SNAPSHOT,
+            t10_snapshot_id=T10_SNAPSHOT_ID,
+            current_commit=context.code_commit,
+            repository_clean=repository_clean(context.repository_root),
         )
-    runs_root = data_root / "runs"
-    runs_root.mkdir()
-    manifest, published = run_full_execution(
-        authority_path=authority_path,
-        binning_set_path=bins_path,
-        runs_root=runs_root,
-        t10_snapshot=T10_SNAPSHOT,
-        t10_snapshot_id=T10_SNAPSHOT_ID,
-        t13_snapshot=first_passage_root,
-        current_commit=context.code_commit,
-        repository_clean=repository_clean(context.repository_root),
-        lightweight_policy_authorized=True,
-    )
+        authority_hash = str(continuation_authority["authority_hash"])
+        source_authority_hash: str | None = str(prefix["source_authority_hash"])
+        binning_set_hash = str(prefix["source_binning_set_hash"])
+    else:
+        authority_path = data_root / f"authority-{authority.authority_hash}.json"
+        _write_exclusive(authority_path, authority.model_dump(mode="json"))
+        if progress_callback is not None:
+            progress_callback(
+                {"completed_units": 1, "total_units": 4, "phase": "AUTHORITY", "row_count": 0}
+            )
+        bins, bins_path = freeze_binning_snapshots(
+            authority_path=authority_path,
+            bin_root=data_root / "train-bins",
+            t10_snapshot=T10_SNAPSHOT,
+            t10_snapshot_id=T10_SNAPSHOT_ID,
+            current_commit=context.code_commit,
+            repository_clean=repository_clean(context.repository_root),
+            lightweight_policy_authorized=True,
+        )
+        if progress_callback is not None:
+            progress_callback(
+                {"completed_units": 2, "total_units": 4, "phase": "TRAIN_BINS", "row_count": 0}
+            )
+        runs_root = data_root / "runs"
+        runs_root.mkdir()
+        manifest, published = run_full_execution(
+            authority_path=authority_path,
+            binning_set_path=bins_path,
+            runs_root=runs_root,
+            t10_snapshot=T10_SNAPSHOT,
+            t10_snapshot_id=T10_SNAPSHOT_ID,
+            t13_snapshot=first_passage_root,
+            current_commit=context.code_commit,
+            repository_clean=repository_clean(context.repository_root),
+            lightweight_policy_authorized=True,
+        )
+        authority_hash = authority.authority_hash
+        source_authority_hash = None
+        binning_set_hash = str(bins["binning_set_hash"])
     if progress_callback is not None:
         progress_callback(
             {
@@ -401,8 +474,9 @@ def _produce_formal_t16(
         )
     return {
         "task_id": "S2P13-T16",
-        "authority_hash": authority.authority_hash,
-        "binning_set_hash": bins["binning_set_hash"],
+        "authority_hash": authority_hash,
+        "source_authority_hash": source_authority_hash,
+        "binning_set_hash": binning_set_hash,
         "bin_source_roles": ["TRAIN"],
         "outcome_fields_read_before_matching": [],
         "published_snapshot": str(published),

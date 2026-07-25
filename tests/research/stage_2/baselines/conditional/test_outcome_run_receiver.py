@@ -11,6 +11,7 @@ import pyarrow.parquet as pq  # type: ignore[import-untyped]
 import pytest
 
 from era100x.research.stage_2.baselines.conditional.outcome_run import _ingest_candidates
+from era100x.research.stage_2.baselines.conditional.outcome_run import _local_sqlite_database
 from era100x.research.stage_2.baselines.conditional.v14_contracts import V14ControlCandidate
 
 NS = 1_000_000_000
@@ -102,3 +103,30 @@ def test_receiver_rejects_non_object_candidate(tmp_path: Path) -> None:
             _ingest_candidates(database, (selection,))
     finally:
         database.close()
+
+
+def test_sqlite_work_database_uses_local_ephemeral_scratch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scratch = tmp_path / "scratch"
+    monkeypatch.setenv("ERA_S2P13_LOCAL_SCRATCH_ROOT", str(scratch))
+    with _local_sqlite_database() as database_path:
+        assert database_path.is_relative_to(scratch)
+        database = sqlite3.connect(database_path)
+        database.execute("CREATE TABLE probe (value INTEGER NOT NULL)")
+        database.execute("INSERT INTO probe VALUES (1)")
+        database.commit()
+        assert database.execute("SELECT COUNT(*) FROM probe").fetchone() == (1,)
+        database.close()
+        temporary_root = database_path.parent
+        assert database_path.is_file()
+    assert not temporary_root.exists()
+
+
+def test_sqlite_work_database_rejects_external_volume(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ERA_S2P13_LOCAL_SCRATCH_ROOT", "/Volumes/FuckingLife/t16-scratch")
+    with pytest.raises(ValueError, match="cannot use an external volume"):
+        with _local_sqlite_database():
+            pass
