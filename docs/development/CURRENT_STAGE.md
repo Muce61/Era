@@ -3,15 +3,16 @@
 ```text
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.3
-Current Task: S2P13-T11 v1.0 — seven-day theoretical lifecycle
-Status: S2P13_T11_IMPLEMENTATION_IN_PROGRESS_FINAL_REHEARSAL_PENDING
+Current Task: S2P13-T16 v1.1 — conditional baseline coverage repair
+Status: T16_ENGINEERING_PASS_RESEARCH_REJECTED_SUCCESSOR_GATED
 ```
 
-Muce approved CR-2026-035, ADR-S2-014/015, V1.3.5 and Stage 2 Plan v1.3 on 2026-07-23.
-Implementation, read-only audit, tests, read-only UI and the isolated final-code seven-day
-rehearsal are authorized. OQ-S2-009/010/011 are resolved. Formal Authority, bins, Run ID,
-publication and resume remain forbidden until a commit-bound human run receipt records either the
-default `FINAL_CODE_7_DAY_REHEARSAL` PASS or the CR-2026-044 explicit unattended-background waiver.
+The formal T11–T16 chain completed and passed mechanical Catalog/Manifest/Verify checks. Acceptance
+then found that T16 controls used daily aggregate quality as if it were window-local coverage:
+98.3178% of control matrices versus 23.4203% of event matrices were marked
+`SOURCE_GAP_BEFORE_DECISION`. CR-2026-045/ADR-S2-021 therefore preserve the predecessor as
+engineering PASS but reject its research interpretation. The window-local repair is authorized;
+a replacement Authority/Run is not yet authorized.
 
 CR-2026-041 producer wiring found OQ-S2-012. Muce approved CR-2026-042/ADR-S2-019: protection and
 structure are explicitly not modeled in Stage 2, Contract Price owns scenario valuation and
@@ -24,10 +25,10 @@ the `(stage_plan_version, task_id)` identity and the namespaced public IDs `S2P1
 `S2P13-T21`. The current execution ceiling is `S2P13-T16`; S2P13-T17～T21 are not authorized and
 Stage 3 remains locked.
 
-The repository now contains the fail-closed SRP framework, namespaced task identity, deterministic
-S2P13-T11 lifecycle core, typed availability audit, recoverable orchestration checkpoint contract
-and evidence-driven Web UI projection. These are implementation facts only; no V1.3 Authority,
-Binning Snapshot, Run ID or formal research result exists.
+The repository contains the fail-closed SRP framework, namespaced task identity, deterministic
+S2P13-T11 lifecycle core, typed availability audit, recoverable orchestration and evidence-driven
+Web UI. The completed formal evidence remains immutable. No S2P13-T17+ work or Stage 3 unlock is
+authorized.
 
 A read-only source inventory on 2026-07-23 confirmed that the fixed T10 snapshot exposes
 `contract_price_1s`, `causal_price_bars`, `trade_second_primitives`, Trades indexes and Group-1

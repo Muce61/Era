@@ -24,6 +24,7 @@ from .episode_producer import prepare_episode_evidence
 from .h2_control_reader import H2ControlReader
 from .outcome_blind_producer import BinningIndex, SameFamilyIntervals, match_group
 from .outcome_run import produce_post_selection_evidence
+from .outcomes import H2_COVERAGE_CONTRACT_ID
 from .reconciliation import ControlReconciliation, EpisodeReconciliation
 from .successor_policy import (
     require_final_successor_creation_state,
@@ -1213,7 +1214,10 @@ def verify_published_run(*, run_root: Path) -> tuple[dict[str, Any], Path]:
 
     outcome_path = snapshot / "results" / "control_outcome_matrices.parquet"
     outcome_masks: dict[str, int] = {}
+    outcome_gap_masks: dict[str, int] = {}
     matrix_ids: set[str] = set()
+    control_gap_matrix_count = 0
+    control_gap_cell_count = 0
     for batch in pq.ParquetFile(outcome_path).iter_batches(
         batch_size=2_000,
         columns=["control_candidate_id", "control_outcome_matrix_id", "matrix_json"],
@@ -1231,12 +1235,23 @@ def verify_published_run(*, run_root: Path) -> tuple[dict[str, Any], Path]:
                 cell.strict_target_first << index
                 for index, cell in enumerate(control_matrix.outcomes)
             )
+            gap_mask = sum(
+                int(cell.label_reason == "SOURCE_GAP_BEFORE_DECISION") << index
+                for index, cell in enumerate(control_matrix.outcomes)
+            )
+            outcome_gap_masks[control_matrix.control_outcome_matrix_id] = gap_mask
+            control_gap_matrix_count += gap_mask != 0
+            control_gap_cell_count += gap_mask.bit_count()
 
     match_path = snapshot / "results" / "conditional_match_matrices.parquet"
     observed_episode_hashes: set[str] = set()
     group_totals: dict[tuple[str, str, str, str, str], dict[str, Any]] = {}
     matched_total = 0
     assignment_total = 0
+    event_gap_matrix_count = 0
+    event_gap_cell_count = 0
+    matched_event_gap_matrix_count = 0
+    control_gap_assignment_count = 0
     for batch in pq.ParquetFile(match_path).iter_batches(batch_size=2_000):
         for row in pa.Table.from_batches([batch]).to_pylist():
             match_matrix = ConditionalBaselineMatchMatrix.model_validate_json(row["matrix_json"])
@@ -1261,18 +1276,38 @@ def verify_published_run(*, run_root: Path) -> tuple[dict[str, Any], Path]:
                     "matched": 0,
                     "event": [0] * 30,
                     "baseline": [Decimal(0)] * 30,
+                    "event_gap": [0] * 30,
+                    "baseline_gap": [Decimal(0)] * 30,
                 },
             )
             totals["eligible"] += 1
+            event_gap_flags = tuple(
+                event.label_reason == "SOURCE_GAP_BEFORE_DECISION"
+                for event in match_matrix.event_outcomes
+            )
+            event_gap_matrix_count += any(event_gap_flags)
+            event_gap_cell_count += sum(event_gap_flags)
             if match_matrix.status == "MATCHED":
                 totals["matched"] += 1
                 matched_total += 1
                 assignment_total += 5
+                matched_event_gap_matrix_count += any(event_gap_flags)
+                control_gap_assignment_count += sum(
+                    outcome_gap_masks[matrix_id] != 0
+                    for matrix_id in match_matrix.control_outcome_matrix_ids
+                )
                 for index, event in enumerate(match_matrix.event_outcomes):
                     totals["event"][index] += event.strict_target_first
+                    totals["event_gap"][index] += event_gap_flags[index]
                     totals["baseline"][index] += Decimal(
                         sum(
                             (outcome_masks[matrix_id] >> index) & 1
+                            for matrix_id in match_matrix.control_outcome_matrix_ids
+                        )
+                    ) / Decimal(5)
+                    totals["baseline_gap"][index] += Decimal(
+                        sum(
+                            (outcome_gap_masks[matrix_id] >> index) & 1
                             for matrix_id in match_matrix.control_outcome_matrix_ids
                         )
                     ) / Decimal(5)
@@ -1303,8 +1338,16 @@ def verify_published_run(*, run_root: Path) -> tuple[dict[str, Any], Path]:
                 format(baseline_rate, "f"),
                 format(event_rate - baseline_rate, "f"),
             )
+            event_gap_rate = Decimal(totals["event_gap"][index]) / Decimal(matched)
+            baseline_gap_rate = Decimal(totals["baseline_gap"][index]) / Decimal(matched)
+            expected_gap: tuple[str | None, str | None, str | None] = (
+                format(event_gap_rate, "f"),
+                format(baseline_gap_rate, "f"),
+                format(event_gap_rate - baseline_gap_rate, "f"),
+            )
         else:
             expected = (None, None, None)
+            expected_gap = (None, None, None)
         actual = (
             row["event_target_first_rate"],
             row["baseline_target_first_rate"],
@@ -1312,6 +1355,13 @@ def verify_published_run(*, run_root: Path) -> tuple[dict[str, Any], Path]:
         )
         if actual != expected:
             raise ValueError("descriptive summary recomputation mismatch")
+        actual_gap = (
+            row["event_gap_affected_rate"],
+            row["baseline_gap_affected_rate"],
+            row["gap_affected_rate_delta"],
+        )
+        if actual_gap != expected_gap or row["coverage_contract_id"] != H2_COVERAGE_CONTRACT_ID:
+            raise ValueError("descriptive summary coverage recomputation mismatch")
         if (
             int(row["eligible_episode_count"]) != int(totals["eligible"])
             or int(row["matched_episode_count"]) != matched
@@ -1338,6 +1388,20 @@ def verify_published_run(*, run_root: Path) -> tuple[dict[str, Any], Path]:
         or control_reconciliation.control_outcome_matrix_count != len(matrix_ids)
     ):
         raise ValueError("reconciliation disagrees with rescanned published evidence")
+    post_report = read_json_file(snapshot / "reports" / "post-selection.json")
+    if (
+        post_report.get("coverage_contract_id") != H2_COVERAGE_CONTRACT_ID
+        or int(post_report.get("event_gap_affected_matrix_count", -1)) != event_gap_matrix_count
+        or int(post_report.get("event_gap_affected_cell_count", -1)) != event_gap_cell_count
+        or int(post_report.get("matched_event_gap_affected_matrix_count", -1))
+        != matched_event_gap_matrix_count
+        or int(post_report.get("control_gap_affected_matrix_count", -1)) != control_gap_matrix_count
+        or int(post_report.get("control_gap_affected_cell_count", -1)) != control_gap_cell_count
+        or int(post_report.get("control_gap_affected_assignment_count", -1))
+        != control_gap_assignment_count
+        or post_report.get("coverage_comparability_status") != "SHARED_CONTRACT_RATES_REPORTED"
+    ):
+        raise ValueError("post-selection coverage report disagrees with rescanned evidence")
     verify: dict[str, Any] = {
         "schema_name": (
             "stage2-s2p13-t16-verify-record"
@@ -1359,6 +1423,14 @@ def verify_published_run(*, run_root: Path) -> tuple[dict[str, Any], Path]:
         "control_assignment_count": assignment_total,
         "unique_control_outcome_matrix_count": len(matrix_ids),
         "summary_row_count": len(summary_rows),
+        "coverage_contract_id": H2_COVERAGE_CONTRACT_ID,
+        "event_gap_affected_matrix_count": event_gap_matrix_count,
+        "event_gap_affected_cell_count": event_gap_cell_count,
+        "matched_event_gap_affected_matrix_count": matched_event_gap_matrix_count,
+        "control_gap_affected_matrix_count": control_gap_matrix_count,
+        "control_gap_affected_cell_count": control_gap_cell_count,
+        "control_gap_affected_assignment_count": control_gap_assignment_count,
+        "coverage_comparability_status": "SHARED_CONTRACT_RATES_REPORTED",
         "research_result": "DESCRIPTIVE_ONLY_PRIMARY_PENDING_T18",
         "historical_evidence_only": True,
         "stage3_locked": True,

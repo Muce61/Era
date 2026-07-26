@@ -17,7 +17,11 @@ import pyarrow as pa  # type: ignore[import-untyped]
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
 from .h2_control_reader import H2ControlReader
-from .outcomes import HORIZONS_SECONDS, build_control_outcome_matrix
+from .outcomes import (
+    H2_COVERAGE_CONTRACT_ID,
+    HORIZONS_SECONDS,
+    build_control_outcome_matrix,
+)
 from .v14_contracts import (
     COMBINATION_ORDER,
     ConditionalBaselineMatchMatrix,
@@ -73,6 +77,10 @@ SUMMARY_SCHEMA = pa.schema(
         pa.field("event_target_first_rate", pa.string(), nullable=True),
         pa.field("baseline_target_first_rate", pa.string(), nullable=True),
         pa.field("delta_target_first", pa.string(), nullable=True),
+        pa.field("event_gap_affected_rate", pa.string(), nullable=True),
+        pa.field("baseline_gap_affected_rate", pa.string(), nullable=True),
+        pa.field("gap_affected_rate_delta", pa.string(), nullable=True),
+        pa.field("coverage_contract_id", pa.string(), nullable=False),
         pa.field("historical_evidence_only", pa.bool_(), nullable=False),
     ]
 )
@@ -180,10 +188,12 @@ def _produce_control_outcomes(
     *,
     reader: H2ControlReader,
     output_path: Path,
-) -> int:
+) -> tuple[int, int, int]:
     writer = pq.ParquetWriter(output_path, CONTROL_OUTCOME_SCHEMA, compression="zstd")
     rows: list[dict[str, Any]] = []
     count = 0
+    gap_matrix_count = 0
+    gap_cell_count = 0
     try:
         cursor = database.execute(
             """
@@ -193,7 +203,7 @@ def _produce_control_outcomes(
         )
         for candidate_id, instrument, anchor_ns, timing_id, reference_price in cursor:
             horizon = HORIZONS_SECONDS[str(timing_id)]
-            trades, declared_gap, source_path_hash = reader.read_window(
+            trades, source_gaps, source_path_hash = reader.read_window(
                 instrument=str(instrument),
                 start_ns=int(anchor_ns),
                 end_ns=int(anchor_ns) + horizon * 1_000_000_000,
@@ -206,9 +216,14 @@ def _produce_control_outcomes(
                 anchor_ns=int(anchor_ns),
                 source_path_hash=source_path_hash,
                 source_partition_bound=True,
-                declared_source_gap=declared_gap,
+                source_gaps=source_gaps,
             )
             outcomes_json = _json([cell.model_dump(mode="json") for cell in matrix.outcomes])
+            matrix_gap_cells = sum(
+                cell.label_reason == "SOURCE_GAP_BEFORE_DECISION" for cell in matrix.outcomes
+            )
+            gap_matrix_count += matrix_gap_cells > 0
+            gap_cell_count += matrix_gap_cells
             matrix_json = _json(matrix.model_dump(mode="json"))
             database.execute(
                 """
@@ -246,7 +261,7 @@ def _produce_control_outcomes(
         database.commit()
     finally:
         writer.close()
-    return count
+    return count, gap_matrix_count, gap_cell_count
 
 
 def _outcome_lookup(
@@ -280,11 +295,15 @@ def _attach_matches(
     files: tuple[Path, ...],
     match_path: Path,
     summary_path: Path,
-) -> tuple[int, int, list[dict[str, Any]]]:
+) -> tuple[int, int, list[dict[str, Any]], dict[str, int]]:
     match_writer = pq.ParquetWriter(match_path, MATCH_SCHEMA, compression="zstd")
     summaries: list[dict[str, Any]] = []
     matched_total = 0
     eligible_total = 0
+    event_gap_matrix_count = 0
+    event_gap_cell_count = 0
+    matched_event_gap_matrix_count = 0
+    control_gap_assignment_count = 0
     try:
         for path in files:
             source_rows = cast(list[dict[str, Any]], pq.read_table(path).to_pylist())
@@ -297,6 +316,8 @@ def _attach_matches(
             output_rows: list[dict[str, Any]] = []
             per_cell_event = [0] * 30
             per_cell_baseline = [Decimal(0)] * 30
+            per_cell_event_gap = [0] * 30
+            per_cell_baseline_gap = [Decimal(0)] * 30
             matched = 0
             for row in source_rows:
                 event_outcomes = tuple(
@@ -304,6 +325,12 @@ def _attach_matches(
                     for item in json.loads(row["event_outcomes_json"])
                 )
                 controls = tuple(str(value) for value in row["control_candidate_ids"])
+                event_gap_cells = tuple(
+                    outcome.label_reason == "SOURCE_GAP_BEFORE_DECISION"
+                    for outcome in event_outcomes
+                )
+                event_gap_matrix_count += any(event_gap_cells)
+                event_gap_cell_count += sum(event_gap_cells)
                 control_matrices: list[ControlOutcomeMatrix] = []
                 for candidate_id in controls:
                     control_matrices.append(lookup[candidate_id])
@@ -324,11 +351,26 @@ def _attach_matches(
                 )
                 if matrix.status == "MATCHED":
                     matched += 1
+                    matched_event_gap_matrix_count += any(event_gap_cells)
+                    control_gap_assignment_count += sum(
+                        any(
+                            outcome.label_reason == "SOURCE_GAP_BEFORE_DECISION"
+                            for outcome in control.outcomes
+                        )
+                        for control in control_matrices
+                    )
                     for index, event in enumerate(event_outcomes):
                         per_cell_event[index] += event.strict_target_first
+                        per_cell_event_gap[index] += event_gap_cells[index]
                         per_cell_baseline[index] += Decimal(
                             sum(
                                 control.outcomes[index].strict_target_first
+                                for control in control_matrices
+                            )
+                        ) / Decimal(5)
+                        per_cell_baseline_gap[index] += Decimal(
+                            sum(
+                                control.outcomes[index].label_reason == "SOURCE_GAP_BEFORE_DECISION"
                                 for control in control_matrices
                             )
                         ) / Decimal(5)
@@ -360,14 +402,20 @@ def _attach_matches(
                 event_rate: Decimal | None
                 baseline_rate: Decimal | None
                 delta: Decimal | None
+                event_gap_rate: Decimal | None
+                baseline_gap_rate: Decimal | None
                 if matched:
                     event_rate = Decimal(per_cell_event[index]) / Decimal(matched)
                     baseline_rate = per_cell_baseline[index] / Decimal(matched)
                     delta = event_rate - baseline_rate
+                    event_gap_rate = Decimal(per_cell_event_gap[index]) / Decimal(matched)
+                    baseline_gap_rate = per_cell_baseline_gap[index] / Decimal(matched)
                 else:
                     event_rate = None
                     baseline_rate = None
                     delta = None
+                    event_gap_rate = None
+                    baseline_gap_rate = None
                 summaries.append(
                     {
                         "instrument": first["instrument"],
@@ -386,6 +434,20 @@ def _attach_matches(
                             format(baseline_rate, "f") if baseline_rate is not None else None
                         ),
                         "delta_target_first": format(delta, "f") if delta is not None else None,
+                        "event_gap_affected_rate": (
+                            format(event_gap_rate, "f") if event_gap_rate is not None else None
+                        ),
+                        "baseline_gap_affected_rate": (
+                            format(baseline_gap_rate, "f")
+                            if baseline_gap_rate is not None
+                            else None
+                        ),
+                        "gap_affected_rate_delta": (
+                            format(event_gap_rate - baseline_gap_rate, "f")
+                            if event_gap_rate is not None and baseline_gap_rate is not None
+                            else None
+                        ),
+                        "coverage_contract_id": H2_COVERAGE_CONTRACT_ID,
                         "historical_evidence_only": True,
                     }
                 )
@@ -396,7 +458,17 @@ def _attach_matches(
         summary_path,
         compression="zstd",
     )
-    return eligible_total, matched_total, summaries
+    return (
+        eligible_total,
+        matched_total,
+        summaries,
+        {
+            "event_gap_affected_matrix_count": event_gap_matrix_count,
+            "event_gap_affected_cell_count": event_gap_cell_count,
+            "matched_event_gap_affected_matrix_count": matched_event_gap_matrix_count,
+            "control_gap_affected_assignment_count": control_gap_assignment_count,
+        },
+    )
 
 
 def produce_post_selection_evidence(
@@ -412,14 +484,14 @@ def produce_post_selection_evidence(
         try:
             unique_candidates = _ingest_candidates(database, files)
             control_path = output_root / "control_outcome_matrices.parquet"
-            outcome_count = _produce_control_outcomes(
+            outcome_count, control_gap_matrices, control_gap_cells = _produce_control_outcomes(
                 database, reader=h2_reader, output_path=control_path
             )
             if outcome_count != unique_candidates:
                 raise ValueError("unique selected controls are not fully classified")
             match_path = output_root / "conditional_match_matrices.parquet"
             summary_path = output_root / "descriptive_summaries.parquet"
-            eligible, matched, summaries = _attach_matches(
+            eligible, matched, summaries, event_gap_counts = _attach_matches(
                 database,
                 files=files,
                 match_path=match_path,
@@ -446,6 +518,37 @@ def produce_post_selection_evidence(
         "control_outcome_matrix_count": outcome_count,
         "control_outcome_cell_count": outcome_count * 30,
         "summary_row_count": len(summaries),
+        "coverage_contract_id": H2_COVERAGE_CONTRACT_ID,
+        "event_gap_affected_matrix_count": event_gap_counts["event_gap_affected_matrix_count"],
+        "event_gap_affected_matrix_rate": format(
+            Decimal(event_gap_counts["event_gap_affected_matrix_count"])
+            / Decimal(max(eligible, 1)),
+            "f",
+        ),
+        "event_gap_affected_cell_count": event_gap_counts["event_gap_affected_cell_count"],
+        "matched_event_gap_affected_matrix_count": event_gap_counts[
+            "matched_event_gap_affected_matrix_count"
+        ],
+        "matched_event_gap_affected_matrix_rate": format(
+            Decimal(event_gap_counts["matched_event_gap_affected_matrix_count"])
+            / Decimal(max(matched, 1)),
+            "f",
+        ),
+        "control_gap_affected_matrix_count": control_gap_matrices,
+        "control_gap_affected_matrix_rate": format(
+            Decimal(control_gap_matrices) / Decimal(max(outcome_count, 1)),
+            "f",
+        ),
+        "control_gap_affected_cell_count": control_gap_cells,
+        "control_gap_affected_assignment_count": event_gap_counts[
+            "control_gap_affected_assignment_count"
+        ],
+        "control_gap_affected_assignment_rate": format(
+            Decimal(event_gap_counts["control_gap_affected_assignment_count"])
+            / Decimal(max(matched * 5, 1)),
+            "f",
+        ),
+        "coverage_comparability_status": "SHARED_CONTRACT_RATES_REPORTED",
         "control_outcomes_sha256": hashlib.sha256(control_path.read_bytes()).hexdigest(),
         "match_matrices_sha256": hashlib.sha256(match_path.read_bytes()).hexdigest(),
         "summaries_sha256": hashlib.sha256(summary_path.read_bytes()).hexdigest(),

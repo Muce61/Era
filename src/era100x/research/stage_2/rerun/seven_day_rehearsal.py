@@ -44,6 +44,7 @@ from era100x.research.stage_2.baselines.conditional.matrix_matcher import (
 from era100x.research.stage_2.baselines.conditional.outcomes import (
     H2Trade,
     build_control_outcome_matrix,
+    detect_h2_window_gaps,
 )
 from era100x.research.stage_2.baselines.conditional.production_core import (
     PreparedMarketFeature,
@@ -941,7 +942,7 @@ def _t16_probe(*, reader: FixedT10Reader, row: dict[str, Any]) -> dict[str, Any]
                 anchor_ns=candidate.candidate_timestamp_ns,
                 source_path_hash=source_hash,
                 source_partition_bound=True,
-                declared_source_gap=bool(declared_gaps),
+                source_gaps=detect_h2_window_gaps(trades),
             )
         )
     matrix = attach_outcome_matrices(

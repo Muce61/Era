@@ -24,7 +24,9 @@ from era100x.research.stage_2.paths.extraction.full_run import (
 from era100x.research.stage_2.metrics.path.full_run import CONFIG_PATH as RECOVERY_CONFIG_PATH
 from era100x.research.stage_2.runtime_v2.catalog import CatalogReaderV2
 
-from .outcomes import H2Trade
+from era100x.research.stage_2.paths.extraction.models import PathGap
+
+from .outcomes import H2_COVERAGE_CONTRACT_ID, H2Trade, detect_h2_window_gaps
 from .v14_contracts import canonical_hash
 
 
@@ -108,16 +110,14 @@ class H2ControlReader:
 
     def read_window(
         self, *, instrument: str, start_ns: int, end_ns: int
-    ) -> tuple[tuple[H2Trade, ...], bool, str]:
+    ) -> tuple[tuple[H2Trade, ...], tuple[PathGap, ...], str]:
         if end_ns <= start_ns:
             raise ValueError("H2 control window must be non-empty")
         selected: list[H2RowGroup] = []
-        declared_gap = False
         for owner_date in _days(start_ns, end_ns):
             quality = self._quality.get((cast(Any, instrument), owner_date))
             if quality is None:
                 raise ValueError("UPSTREAM_SOURCE_PARTITION_UNBOUND")
-            declared_gap |= any(quality.values())
             day_groups = self._groups.get((cast(Any, instrument), owner_date), ())
             selected.extend(select_h2_row_groups(day_groups, start_ns, end_ns))
         facts: list[H2Trade] = []
@@ -150,13 +150,15 @@ class H2ControlReader:
         )
         if facts != ordered:
             raise ValueError("cross-row-group H2 control order drift")
+        gaps = detect_h2_window_gaps(ordered)
         source_path_hash = canonical_hash(
             {
                 "instrument": instrument,
                 "start_ns": start_ns,
                 "end_ns": end_ns,
                 "bindings": bindings,
-                "declared_gap": declared_gap,
+                "coverage_contract_id": H2_COVERAGE_CONTRACT_ID,
+                "gaps": [gap.model_dump(mode="json") for gap in gaps],
             }
         )
-        return tuple(facts), declared_gap, source_path_hash
+        return tuple(facts), gaps, source_path_hash

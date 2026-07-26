@@ -1460,6 +1460,8 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
             "approval_hash": approval_hash,
             "status": "APPROVED",
             "code_commit": "abc123",
+            "rehearsal_gate_mode": "EXPLICIT_BACKGROUND_RUNTIME_WAIVER",
+            "background_runtime_waiver": {"reason": "approved unattended runtime"},
         },
     )
     chain_root = policy_evidence / "chains" / approval_hash
@@ -1513,6 +1515,35 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
     assert formal["formal_heartbeat_at"] == "2999-01-02T00:00:00+00:00"
     assert formal["tasks"]["S2P13-T11"]["progress_percent"] == "25.00"
     assert formal["tasks"]["S2P13-T11"]["phase"] == "LIFECYCLE"
+    assert formal["execution_gates"]["FINAL_CODE_7_DAY_REHEARSAL"] == "WAIVED"
+    assert formal["pending_execution_gates"] == []
+    _write(
+        chain_root / "operations/checkpoint.json",
+        json.dumps(
+            {
+                "status": "COMPLETE",
+                "current_task": "S2P13-T16",
+                "tasks": {
+                    task: {
+                        "status": "PASS",
+                        "handoff": {
+                            "row_count": index,
+                            "output_hash": str(index) * 64,
+                            "verify_status": "PASS",
+                        },
+                    }
+                    for index, task in enumerate(MODULE.V13_TASKS, start=1)
+                },
+            }
+        ),
+    )
+    complete = _stage2_v13_projection(tmp_path / "stage2")
+    assert complete["status"] == "PASS"
+    assert complete["reason_code"] == "FORMAL_CHAIN_COMPLETE"
+    assert complete["current_task"] == "S2P13-T16"
+    assert complete["task_status"] == "PASS"
+    assert complete["formal_successor_result_exists"] is True
+    assert complete["formal_progress_percent"] == 100.0
     (policy_operations / "approvals/approval-formal.json").unlink()
 
     rehearsal_report_path = (
@@ -1624,3 +1655,50 @@ def test_stage2_v13_projection_rejects_stale_server(
     assert result["status"] == "STALE_SERVER"
     assert result["reason_code"] == "S2_V13_STALE_SERVER"
     assert result["server_stale"] is True
+
+
+def test_t16_coverage_projection_rejects_legacy_contract_and_reports_shared_rates(
+    tmp_path: Path,
+) -> None:
+    report_path = (
+        tmp_path / "data/runs/run/published/snapshots/snapshot/reports/post-selection.json"
+    )
+    legacy = _sealed(
+        {
+            "status": "PASS",
+            "event_gap_affected_matrix_count": 96_922,
+            "control_gap_affected_matrix_count": 1_257_019,
+        },
+        "report_hash",
+    )
+    _write(report_path, json.dumps(legacy))
+    rejected = MODULE._t16_coverage_projection(str(tmp_path))
+    assert rejected["status"] == "RESEARCH_REJECTED"
+    assert rejected["reason_code"] == "CONTROL_EVENT_COVERAGE_CONTRACT_ASYMMETRY"
+
+    repaired = _sealed(
+        {
+            "status": "PASS",
+            "coverage_contract_id": "H2_WINDOW_INTERNAL_GAP_BEFORE_DECISION_V1",
+            "coverage_comparability_status": "SHARED_CONTRACT_RATES_REPORTED",
+            "event_gap_affected_matrix_count": 12,
+            "event_gap_affected_matrix_rate": "0.01",
+            "matched_event_gap_affected_matrix_rate": "0.011",
+            "control_gap_affected_matrix_count": 60,
+            "control_gap_affected_matrix_rate": "0.02",
+            "control_gap_affected_assignment_rate": "0.021",
+        },
+        "report_hash",
+    )
+    _write(report_path, json.dumps(repaired))
+    projected = MODULE._t16_coverage_projection(str(tmp_path))
+    assert projected == {
+        "status": "SHARED_CONTRACT_RATES_REPORTED",
+        "coverage_contract_id": "H2_WINDOW_INTERNAL_GAP_BEFORE_DECISION_V1",
+        "event_gap_affected_matrix_count": 12,
+        "event_gap_affected_matrix_rate": "0.01",
+        "matched_event_gap_affected_matrix_rate": "0.011",
+        "control_gap_affected_matrix_count": 60,
+        "control_gap_affected_matrix_rate": "0.02",
+        "control_gap_affected_assignment_rate": "0.021",
+    }

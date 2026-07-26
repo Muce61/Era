@@ -7,6 +7,8 @@ from decimal import Decimal
 from collections.abc import Sequence
 from typing import cast
 
+from era100x.research.stage_2.paths.extraction.models import PathGap
+
 from .v14_contracts import (
     COMBINATION_ORDER,
     REGISTERED_STOP_BPS,
@@ -19,6 +21,7 @@ from .v14_contracts import (
 NS = 1_000_000_000
 BPS = Decimal(10_000)
 HORIZONS_SECONDS = {"T1": 60, "T2": 180, "T3": 300, "T4": 600}
+H2_COVERAGE_CONTRACT_ID = "H2_WINDOW_INTERNAL_GAP_BEFORE_DECISION_V1"
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,6 +32,52 @@ class H2Trade:
     price: Decimal
 
 
+def detect_h2_window_gaps(trades: Sequence[H2Trade]) -> tuple[PathGap, ...]:
+    """Detect only gaps observable between adjacent facts in this exact H2 window."""
+
+    gaps: list[PathGap] = []
+    for left, right in zip(trades, trades[1:], strict=False):
+        if right.venue_trade_id > left.venue_trade_id + 1:
+            gaps.append(
+                PathGap(
+                    evidence_level="H2",
+                    reason_code="H2_VENUE_TRADE_ID_GAP",
+                    preceding_ts_event_ns=left.ts_event_ns,
+                    following_ts_event_ns=right.ts_event_ns,
+                    missing_count=right.venue_trade_id - left.venue_trade_id - 1,
+                    preceding_venue_trade_id=left.venue_trade_id,
+                    following_venue_trade_id=right.venue_trade_id,
+                )
+            )
+        elif right.venue_trade_id < left.venue_trade_id:
+            gaps.append(
+                PathGap(
+                    evidence_level="H2",
+                    reason_code="H2_VENUE_TRADE_ID_REVERSAL",
+                    preceding_ts_event_ns=left.ts_event_ns,
+                    following_ts_event_ns=right.ts_event_ns,
+                    missing_count=left.venue_trade_id - right.venue_trade_id,
+                    preceding_venue_trade_id=left.venue_trade_id,
+                    following_venue_trade_id=right.venue_trade_id,
+                )
+            )
+    return tuple(gaps)
+
+
+def _gap_precedes(
+    gaps: Sequence[PathGap],
+    *,
+    anchor_ns: int,
+    cutoff_ns: int,
+) -> bool:
+    return any(
+        gap.evidence_level == "H2"
+        and gap.preceding_ts_event_ns < cutoff_ns
+        and gap.following_ts_event_ns > anchor_ns
+        for gap in gaps
+    )
+
+
 def classify_h2_cells(
     trades: Sequence[H2Trade],
     *,
@@ -36,7 +85,7 @@ def classify_h2_cells(
     reference_price: Decimal,
     time_combination_id: str,
     source_partition_bound: bool,
-    declared_source_gap: bool = False,
+    source_gaps: Sequence[PathGap] = (),
 ) -> tuple[OutcomeCell, ...]:
     """Classify 30 cells; an unbound partition is a hard run failure."""
 
@@ -74,21 +123,25 @@ def classify_h2_cells(
             if not window:
                 label = "AMBIGUOUS"
                 reason = "NO_OBSERVATIONS"
-            elif declared_source_gap:
-                label = "AMBIGUOUS"
-                reason = "SOURCE_GAP_BEFORE_DECISION"
             else:
                 label = "EXPIRED"
                 reason = "HORIZON_EXPIRED_WITHOUT_TOUCH"
+                decision_ns: int | None = None
                 for trade in window:
                     if trade.price >= target_price:
                         label = "TARGET_FIRST"
                         reason = "TARGET_OBSERVED_FIRST"
+                        decision_ns = trade.ts_event_ns
                         break
                     if trade.price <= stop_price:
                         label = "STOP_FIRST"
                         reason = "STOP_OBSERVED_FIRST"
+                        decision_ns = trade.ts_event_ns
                         break
+                cutoff_ns = end_ns if decision_ns is None else decision_ns
+                if _gap_precedes(source_gaps, anchor_ns=anchor_ns, cutoff_ns=cutoff_ns):
+                    label = "AMBIGUOUS"
+                    reason = "SOURCE_GAP_BEFORE_DECISION"
             cells.append(
                 OutcomeCell.model_validate(
                     {
@@ -113,7 +166,7 @@ def build_control_outcome_matrix(
     anchor_ns: int,
     source_path_hash: str,
     source_partition_bound: bool,
-    declared_source_gap: bool = False,
+    source_gaps: Sequence[PathGap] = (),
 ) -> ControlOutcomeMatrix:
     outcomes = classify_h2_cells(
         trades,
@@ -121,7 +174,7 @@ def build_control_outcome_matrix(
         reference_price=reference_price,
         time_combination_id=time_combination_id,
         source_partition_bound=source_partition_bound,
-        declared_source_gap=declared_source_gap,
+        source_gaps=source_gaps,
     )
     return ControlOutcomeMatrix.seal(
         {

@@ -10,10 +10,12 @@ from era100x.research.stage_2.baselines.conditional.matrix_matcher import (
     attach_outcome_matrices,
     select_outcome_blind_controls,
 )
+from era100x.research.stage_2.baselines.conditional.h2_control_reader import H2ControlReader
 from era100x.research.stage_2.baselines.conditional.outcomes import (
     H2Trade,
     build_control_outcome_matrix,
     classify_h2_cells,
+    detect_h2_window_gaps,
 )
 from era100x.research.stage_2.baselines.conditional.v14_contracts import (
     COMBINATION_ORDER,
@@ -208,7 +210,7 @@ def test_complete_zero_trade_is_ambiguous_not_expired() -> None:
     assert {cell.strict_target_first for cell in cells} == {0}
 
 
-def test_h2_stable_order_gap_and_unbound_partition_fail_closed() -> None:
+def test_h2_stable_order_and_unbound_partition_fail_closed() -> None:
     trades = (
         H2Trade(_ts(1) + NS, 2, "b", Decimal(101)),
         H2Trade(_ts(1) + NS, 1, "a", Decimal(99)),
@@ -229,15 +231,84 @@ def test_h2_stable_order_gap_and_unbound_partition_fail_closed() -> None:
             time_combination_id="T2",
             source_partition_bound=False,
         )
+
+
+def test_h2_window_gap_before_decision_is_ambiguous() -> None:
+    trades = (
+        H2Trade(_ts(1) + NS, 1, "a", Decimal(100)),
+        H2Trade(_ts(1) + 2 * NS, 3, "b", Decimal("100.3")),
+    )
+    gaps = detect_h2_window_gaps(trades)
+    assert len(gaps) == 1
+    assert gaps[0].reason_code == "H2_VENUE_TRADE_ID_GAP"
     gap_cells = classify_h2_cells(
-        (H2Trade(_ts(1) + NS, 1, "a", Decimal(100)),),
+        trades,
         anchor_ns=_ts(1),
         reference_price=Decimal(100),
         time_combination_id="T2",
         source_partition_bound=True,
-        declared_source_gap=True,
+        source_gaps=gaps,
     )
     assert {cell.label for cell in gap_cells} == {"AMBIGUOUS"}
+    assert {cell.label_reason for cell in gap_cells} == {"SOURCE_GAP_BEFORE_DECISION"}
+
+
+def test_h2_decision_before_later_gap_remains_observed() -> None:
+    trades = (
+        H2Trade(_ts(1) + NS, 1, "a", Decimal("100.3")),
+        H2Trade(_ts(1) + 2 * NS, 3, "b", Decimal(100)),
+    )
+    cells = classify_h2_cells(
+        trades,
+        anchor_ns=_ts(1),
+        reference_price=Decimal(100),
+        time_combination_id="T2",
+        source_partition_bound=True,
+        source_gaps=detect_h2_window_gaps(trades),
+    )
+    target_20 = next(cell for cell in cells if cell.combination_id == "target=20|stop=25")
+    assert target_20.label == "TARGET_FIRST"
+    assert target_20.label_reason == "TARGET_OBSERVED_FIRST"
+    target_100 = next(cell for cell in cells if cell.combination_id == "target=100|stop=25")
+    assert target_100.label == "AMBIGUOUS"
+    assert target_100.label_reason == "SOURCE_GAP_BEFORE_DECISION"
+
+
+def test_h2_reversal_is_window_local_gap_but_same_venue_conflict_is_not() -> None:
+    reversal = (
+        H2Trade(_ts(1) + NS, 10, "a", Decimal(100)),
+        H2Trade(_ts(1) + 2 * NS, 8, "b", Decimal(100)),
+    )
+    gaps = detect_h2_window_gaps(reversal)
+    assert len(gaps) == 1
+    assert gaps[0].reason_code == "H2_VENUE_TRADE_ID_REVERSAL"
+    conflicts = (
+        H2Trade(_ts(1) + NS, 10, "a", Decimal(100)),
+        H2Trade(_ts(1) + NS, 10, "b", Decimal(100)),
+    )
+    assert detect_h2_window_gaps(conflicts) == ()
+
+
+def test_daily_aggregate_quality_anomaly_does_not_poison_an_empty_window() -> None:
+    reader = object.__new__(H2ControlReader)
+    reader._quality = {  # type: ignore[attr-defined]
+        ("BTCUSDT", datetime(2020, 6, 1, tzinfo=UTC).date()): {
+            "venue_trade_id_gap_count": 99,
+            "venue_trade_id_reversal_count": 3,
+        }
+    }
+    reader._groups = {}  # type: ignore[attr-defined]
+    reader._overlays = {}  # type: ignore[attr-defined]
+    reader._verified = set()  # type: ignore[attr-defined]
+    reader._cache = {}  # type: ignore[attr-defined]
+    trades, gaps, source_hash = reader.read_window(
+        instrument="BTCUSDT",
+        start_ns=_ts(1),
+        end_ns=_ts(1) + 180 * NS,
+    )
+    assert trades == ()
+    assert gaps == ()
+    assert len(source_hash) == 64
 
 
 def test_all_30_combinations_share_same_five_controls_and_attach_only_after_selection() -> None:

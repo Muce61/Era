@@ -111,6 +111,44 @@ def _self_hash_matches(value: dict[str, Any], field: str) -> bool:
     return expected == _json_hash(payload)
 
 
+def _t16_coverage_projection(artifact_root_value: object) -> dict[str, Any]:
+    if not isinstance(artifact_root_value, str):
+        return {"status": "NOT_AVAILABLE"}
+    artifact_root = Path(artifact_root_value)
+    if not artifact_root.is_absolute() or artifact_root.is_symlink() or not artifact_root.is_dir():
+        return {"status": "EVIDENCE_INVALID"}
+    reports = tuple(
+        path
+        for path in artifact_root.rglob("post-selection.json")
+        if path.is_file() and not path.is_symlink() and not path.name.startswith("._")
+    )
+    if len(reports) != 1:
+        return {"status": "NOT_AVAILABLE" if not reports else "EVIDENCE_INVALID"}
+    report = _safe_json_object(reports[0])
+    if not report or not _self_hash_matches(report, "report_hash"):
+        return {"status": "EVIDENCE_INVALID"}
+    coverage_contract = report.get("coverage_contract_id")
+    if coverage_contract != "H2_WINDOW_INTERNAL_GAP_BEFORE_DECISION_V1":
+        return {
+            "status": "RESEARCH_REJECTED",
+            "reason_code": "CONTROL_EVENT_COVERAGE_CONTRACT_ASYMMETRY",
+            "coverage_contract_id": coverage_contract,
+            "mechanical_verify_unchanged": True,
+        }
+    return {
+        "status": str(report.get("coverage_comparability_status", "REPORTED")),
+        "coverage_contract_id": coverage_contract,
+        "event_gap_affected_matrix_count": report.get("event_gap_affected_matrix_count"),
+        "event_gap_affected_matrix_rate": report.get("event_gap_affected_matrix_rate"),
+        "matched_event_gap_affected_matrix_rate": report.get(
+            "matched_event_gap_affected_matrix_rate"
+        ),
+        "control_gap_affected_matrix_count": report.get("control_gap_affected_matrix_count"),
+        "control_gap_affected_matrix_rate": report.get("control_gap_affected_matrix_rate"),
+        "control_gap_affected_assignment_rate": report.get("control_gap_affected_assignment_rate"),
+    }
+
+
 def _safe_text(path: Path) -> str:
     if not path.is_file() or path.is_symlink():
         return ""
@@ -456,7 +494,9 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
     lightweight_authority_count = 0
     lightweight_chain_checkpoint = {}
     lightweight_historical_chain_checkpoint = {}
+    lightweight_historical_chain_root: Path | None = None
     lightweight_trade_supplement_hash = None
+    t16_coverage = {"status": "NOT_AVAILABLE"}
     formal_progress_percent = 0.0
     formal_heartbeat_at = None
     try:
@@ -490,6 +530,7 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         if checkpoints:
             latest_checkpoint = max(checkpoints, key=lambda path: path.stat().st_mtime_ns)
             lightweight_historical_chain_checkpoint = _safe_json_object(latest_checkpoint)
+            lightweight_historical_chain_root = latest_checkpoint.parents[1]
         if valid_approvals:
             current_chain_root = (
                 lightweight_policy.evidence_root
@@ -534,6 +575,8 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
                                 "verify_status": handoff.get("verify_status"),
                             }
                         )
+                        if task == "S2P13-T16":
+                            t16_coverage = _t16_coverage_projection(handoff.get("artifact_root"))
                 tasks[task] = projected
                 if projected.get("status") == "PASS":
                     formal_fractions.append(1.0)
@@ -548,27 +591,82 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
                         )
                     )
             formal_progress_percent = round(sum(formal_fractions) * 100 / len(V13_TASKS), 2)
+        if (
+            t16_coverage.get("status") == "NOT_AVAILABLE"
+            and lightweight_historical_chain_root is not None
+        ):
+            historical_tasks = cast(
+                dict[str, Any],
+                lightweight_historical_chain_checkpoint.get("tasks") or {},
+            )
+            historical_t16 = cast(dict[str, Any], historical_tasks.get("S2P13-T16") or {})
+            historical_handoff = historical_t16.get("handoff")
+            if isinstance(historical_handoff, dict):
+                t16_coverage = _t16_coverage_projection(historical_handoff.get("artifact_root"))
     except (OSError, ValueError):
         pass
+    rehearsal_gate_mode = str(
+        lightweight_approval.get("rehearsal_gate_mode", "DEFAULT_REHEARSAL_REQUIRED")
+    )
+    rehearsal_gate_waived = (
+        rehearsal_gate_mode == "EXPLICIT_BACKGROUND_RUNTIME_WAIVER"
+        and isinstance(lightweight_approval.get("background_runtime_waiver"), dict)
+    )
+    execution_gate_status = (
+        "PASS" if rehearsal_pass else "WAIVED" if rehearsal_gate_waived else "PENDING"
+    )
+    pending_execution_gates = (
+        [] if execution_gate_status in {"PASS", "WAIVED"} else ["FINAL_CODE_7_DAY_REHEARSAL"]
+    )
+    projected_current_task = (
+        rehearsal_progress.get("current_task") if rehearsal_progress_valid else state.current_task
+    )
+    projected_task_status = state.task_status
+    projected_formal_result_exists = state.formal_successor_result_exists
+    projected_reason_code = str(checkpoint.get("reason_code", "S2_V13_IMPLEMENTATION_GATED"))
+    formal_chain_status = str(lightweight_chain_checkpoint.get("status", "NOT_STARTED"))
+    formal_chain_current_task = lightweight_chain_checkpoint.get("current_task")
+    if not stale_server and formal_chain_status == "COMPLETE":
+        status = "PASS"
+        projected_current_task = "S2P13-T16"
+        projected_task_status = "PASS"
+        projected_formal_result_exists = True
+        projected_reason_code = "FORMAL_CHAIN_COMPLETE"
+    elif not stale_server and formal_chain_status == "IN_PROGRESS":
+        status = "IN_PROGRESS"
+        projected_current_task = formal_chain_current_task or projected_current_task
+        projected_task_status = "IN_PROGRESS"
+        projected_reason_code = "FORMAL_CHAIN_IN_PROGRESS"
+    elif not stale_server and formal_chain_status == "TERMINAL_FAILED":
+        status = "FAILED"
+        projected_current_task = formal_chain_current_task or projected_current_task
+        projected_task_status = "TERMINAL_FAILED"
+        projected_reason_code = str(
+            lightweight_chain_checkpoint.get("reason") or "FORMAL_CHAIN_TERMINAL_FAILED"
+        )
+    elif (
+        not stale_server
+        and t16_coverage.get("status") == "RESEARCH_REJECTED"
+        and lightweight_historical_chain_checkpoint.get("status") == "COMPLETE"
+    ):
+        status = "RESEARCH_REJECTED"
+        projected_current_task = "S2P13-T16"
+        projected_task_status = "COVERAGE_REPAIR_SUCCESSOR_GATED"
+        projected_formal_result_exists = True
+        projected_reason_code = str(
+            t16_coverage.get("reason_code") or "CONTROL_EVENT_COVERAGE_CONTRACT_ASYMMETRY"
+        )
     return {
         "stage_plan_version": "1.3",
         "status": status,
-        "reason_code": (
-            "S2_V13_STALE_SERVER"
-            if stale_server
-            else str(checkpoint.get("reason_code", "S2_V13_IMPLEMENTATION_GATED"))
-        ),
+        "reason_code": ("S2_V13_STALE_SERVER" if stale_server else projected_reason_code),
         "repo_root": str(repo_root),
         "repo_commit": repo_commit,
         "server_stale": stale_server,
-        "current_task": (
-            rehearsal_progress.get("current_task")
-            if rehearsal_progress_valid
-            else state.current_task
-        ),
-        "task_status": state.task_status,
+        "current_task": projected_current_task,
+        "task_status": projected_task_status,
         "blocking_questions": list(state.blocking_questions),
-        "execution_gates": {"FINAL_CODE_7_DAY_REHEARSAL": "PASS" if rehearsal_pass else "PENDING"},
+        "execution_gates": {"FINAL_CODE_7_DAY_REHEARSAL": execution_gate_status},
         "rehearsal_status": (
             "PASS"
             if rehearsal_pass
@@ -601,7 +699,7 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         ),
         "pending_execution_gates": pending_execution_gates,
         "srp_execution_status": state.srp_execution_status,
-        "formal_successor_result_exists": state.formal_successor_result_exists,
+        "formal_successor_result_exists": projected_formal_result_exists,
         "stage3_locked": state.stage3_locked,
         "approved_execution_limit": state.approved_execution_limit,
         "checkpoint_present": checkpoint_valid,
@@ -634,9 +732,7 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         "governance_model": "STAGE2_ACTIVE_POLICY_V2",
         "policy_hash": lightweight_policy_hash,
         "external_approval_status": (lightweight_approval.get("status", "NOT_PRESENT")),
-        "formal_rehearsal_gate_mode": lightweight_approval.get(
-            "rehearsal_gate_mode", "DEFAULT_REHEARSAL_REQUIRED"
-        ),
+        "formal_rehearsal_gate_mode": rehearsal_gate_mode,
         "background_runtime_waiver_reason": cast(
             dict[str, Any],
             lightweight_approval.get("background_runtime_waiver") or {},
@@ -656,6 +752,7 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         "trade_supplement_rehearsal_status": (
             "PASS" if trade_supplement_rehearsal_pass else "NOT_STARTED"
         ),
+        "t16_coverage": t16_coverage,
         "updated_at": (
             rehearsal_progress.get("heartbeat_at")
             if rehearsal_progress_valid
