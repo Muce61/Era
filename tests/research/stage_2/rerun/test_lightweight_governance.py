@@ -537,6 +537,77 @@ def test_adopt_verified_prefix_seeds_t16_without_recomputing_t11_t15(
     assert t16_adoption["next_phase"] == resume_phase
 
 
+def test_restart_t16_adopts_only_t11_t15_and_rejects_old_t16_prefix_use(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    policy = _policy(tmp_path, monkeypatch)
+    rehearsal = tmp_path / "rehearsal.json"
+    _rehearsal(rehearsal)
+    approval = subject.record_approval(
+        policy=policy,
+        repository_root=policy.path.parent,
+        rehearsal_path=rehearsal,
+        approved_by="Muce",
+        approval_source="chat approval",
+    )
+    source_chain = tmp_path / "source-chain"
+    source_chain.mkdir(exist_ok=True)
+    handoffs = {
+        task: replace(
+            _formal_handoff(
+                tmp_path,
+                task,
+                preregistration_hash=policy.preregistration_hash,
+            ),
+            row_count=subject.VERIFIED_PREFIX_ROW_COUNTS[task],
+        )
+        for task in subject.VERIFIED_PREFIX_TASKS
+    }
+    receipt_paths = {}
+    for task, handoff in handoffs.items():
+        receipt_path = source_chain / "tasks" / task / "receipt.json"
+        _source_receipt(receipt_path, handoff)
+        receipt_payload = json.loads(receipt_path.read_text())
+        handoffs[task] = replace(
+            handoff,
+            producer_receipt_hash=receipt_payload["receipt_hash"],
+        )
+        receipt_paths[task] = receipt_path
+    monkeypatch.setattr(
+        subject,
+        "_load_verified_prefix",
+        lambda **_kwargs: (handoffs, receipt_paths),
+    )
+
+    def reject_t16_prefix(**_kwargs: object) -> dict[str, object]:
+        raise AssertionError("restart-t16 must not read or adopt the predecessor T16 prefix")
+
+    monkeypatch.setattr(subject, "_load_verified_t16_prefix", reject_t16_prefix)
+    result = subject.adopt_verified_prefix(
+        approval_path=approval,
+        source_chain_root=source_chain,
+        policy=policy,
+        repository_root=policy.path.parent,
+        restart_t16=True,
+    )
+
+    checkpoint = json.loads((Path(result["operations_root"]) / "checkpoint.json").read_text())
+    assert checkpoint["current_task"] == "S2P13-T16"
+    assert checkpoint["t16_restart_mode"] == "FROM_SCRATCH"
+    assert checkpoint["verified_t16_prefix_adoption_path"] is None
+    assert checkpoint["verified_t16_prefix_adoption_hash"] is None
+    assert result["t16_restart_mode"] == "FROM_SCRATCH"
+    assert result["verified_t16_prefix_adoption_path"] is None
+    assert result["verified_t16_prefix_adoption_hash"] is None
+    for task in subject.VERIFIED_PREFIX_TASKS:
+        assert checkpoint["tasks"][task]["status"] == "PASS"
+    assert checkpoint["tasks"]["S2P13-T16"] == {
+        "status": "NOT_STARTED",
+        "handoff": None,
+    }
+
+
 class _FailingAdapter:
     def static_preflight(self) -> None:
         return None

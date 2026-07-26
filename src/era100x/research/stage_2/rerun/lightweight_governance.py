@@ -776,8 +776,9 @@ def adopt_verified_prefix(
     source_chain_root: Path,
     policy: Stage2ActivePolicy,
     repository_root: Path,
+    restart_t16: bool = False,
 ) -> dict[str, Any]:
-    """Create one append-only successor seeded by verified T11-T15 receipts."""
+    """Create one successor seeded by T11-T15, optionally restarting T16 from scratch."""
 
     approval = validate_approval(
         approval_path,
@@ -788,7 +789,9 @@ def adopt_verified_prefix(
         source_chain_root=source_chain_root,
         repository_root=repository_root,
     )
-    t16_prefix = _load_verified_t16_prefix(source_chain_root=source_chain_root)
+    t16_prefix = (
+        None if restart_t16 else _load_verified_t16_prefix(source_chain_root=source_chain_root)
+    )
     chain_path = freeze_chain_authority(
         approval_path=approval_path,
         policy=policy,
@@ -851,29 +854,34 @@ def adopt_verified_prefix(
     verified = {task: adapters[task].run_or_resume() for task in VERIFIED_PREFIX_TASKS}
     if verified != adopted:
         raise ValueError("verified-prefix destination read-back drift")
-    t16_resume_phase = str(t16_prefix["resume_phase"])
-    t16_adoption: dict[str, Any] = {
-        "schema_name": (
-            VERIFIED_T16_PUBLICATION_PREFIX_SCHEMA
-            if t16_resume_phase == "PUBLISHING"
-            else VERIFIED_T16_PREFIX_SCHEMA
-        ),
-        "status": "PASS",
-        "mode": "READ_ONLY",
-        "approval_hash": approval["approval_hash"],
-        "chain_authority_hash": chain_authority_hash,
-        "adapter_plan_hash": plan.plan_hash,
-        "code_commit": approval["code_commit"],
-        "source_chain_root": str(source_chain_root),
-        "prefix_verification": t16_prefix,
-        "next_phase": t16_resume_phase,
-        "stage3_locked": True,
-    }
-    t16_adoption["adoption_hash"] = canonical_hash(t16_adoption)
-    t16_adoption_path = (
-        operations_root / "adoptions" / f"verified-t16-prefix-{t16_adoption['adoption_hash']}.json"
-    )
-    _write_exclusive(t16_adoption_path, t16_adoption)
+    t16_adoption: dict[str, Any] | None = None
+    t16_adoption_path: Path | None = None
+    if t16_prefix is not None:
+        t16_resume_phase = str(t16_prefix["resume_phase"])
+        t16_adoption = {
+            "schema_name": (
+                VERIFIED_T16_PUBLICATION_PREFIX_SCHEMA
+                if t16_resume_phase == "PUBLISHING"
+                else VERIFIED_T16_PREFIX_SCHEMA
+            ),
+            "status": "PASS",
+            "mode": "READ_ONLY",
+            "approval_hash": approval["approval_hash"],
+            "chain_authority_hash": chain_authority_hash,
+            "adapter_plan_hash": plan.plan_hash,
+            "code_commit": approval["code_commit"],
+            "source_chain_root": str(source_chain_root),
+            "prefix_verification": t16_prefix,
+            "next_phase": t16_resume_phase,
+            "stage3_locked": True,
+        }
+        t16_adoption["adoption_hash"] = canonical_hash(t16_adoption)
+        t16_adoption_path = (
+            operations_root
+            / "adoptions"
+            / f"verified-t16-prefix-{t16_adoption['adoption_hash']}.json"
+        )
+        _write_exclusive(t16_adoption_path, t16_adoption)
     adoption_payload: dict[str, Any] = {
         "schema_name": VERIFIED_PREFIX_SCHEMA,
         "status": "PASS",
@@ -927,8 +935,13 @@ def adopt_verified_prefix(
         },
         "verified_prefix_adoption_path": str(adoption_path),
         "verified_prefix_adoption_hash": adoption_payload["adoption_hash"],
-        "verified_t16_prefix_adoption_path": str(t16_adoption_path),
-        "verified_t16_prefix_adoption_hash": t16_adoption["adoption_hash"],
+        "verified_t16_prefix_adoption_path": (
+            str(t16_adoption_path) if t16_adoption_path is not None else None
+        ),
+        "verified_t16_prefix_adoption_hash": (
+            t16_adoption["adoption_hash"] if t16_adoption is not None else None
+        ),
+        "t16_restart_mode": "FROM_SCRATCH" if restart_t16 else "ADOPT_VERIFIED_PREFIX",
         "stage3_locked": True,
     }
     _write_checkpoint(checkpoint_path, checkpoint)
@@ -940,8 +953,13 @@ def adopt_verified_prefix(
         "operations_root": str(operations_root),
         "verified_prefix_adoption_path": str(adoption_path),
         "verified_prefix_adoption_hash": adoption_payload["adoption_hash"],
-        "verified_t16_prefix_adoption_path": str(t16_adoption_path),
-        "verified_t16_prefix_adoption_hash": t16_adoption["adoption_hash"],
+        "verified_t16_prefix_adoption_path": (
+            str(t16_adoption_path) if t16_adoption_path is not None else None
+        ),
+        "verified_t16_prefix_adoption_hash": (
+            t16_adoption["adoption_hash"] if t16_adoption is not None else None
+        ),
+        "t16_restart_mode": "FROM_SCRATCH" if restart_t16 else "ADOPT_VERIFIED_PREFIX",
         "next_task": VERIFIED_PREFIX_NEXT_TASK,
         "stage3_locked": True,
     }

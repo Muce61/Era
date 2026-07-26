@@ -44,7 +44,14 @@ def main() -> int:
     parser.add_argument("--approval-source")
     parser.add_argument("--waive-rehearsal-for-background-runtime", action="store_true")
     parser.add_argument("--waiver-reason")
+    parser.add_argument(
+        "--restart-t16",
+        action="store_true",
+        help="adopt only verified T11-T15 and recompute T16 from scratch",
+    )
     args = parser.parse_args()
+    if args.restart_t16 and args.mode != "adopt-verified-prefix":
+        parser.error("--restart-t16 is only valid with adopt-verified-prefix")
     policy = load_policy(args.policy, repository_root=ROOT)
     os.environ["ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_PATH"] = str(policy.trade_supplement_path)
     os.environ["ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_HASH"] = policy.trade_supplement_file_hash
@@ -84,6 +91,7 @@ def main() -> int:
             source_chain_root=args.source_chain,
             policy=policy,
             repository_root=ROOT,
+            restart_t16=args.restart_t16,
         )
     elif args.mode in {"run", "resume"}:
         if args.approval is None:
