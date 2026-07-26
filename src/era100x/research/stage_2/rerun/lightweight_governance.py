@@ -43,6 +43,7 @@ BACKGROUND_WAIVER_MODE: Final = "EXPLICIT_BACKGROUND_RUNTIME_WAIVER"
 BACKGROUND_WAIVER_SCOPE: Final = "UNATTENDED_NON_RESEARCH_HOURS"
 VERIFIED_PREFIX_SCHEMA: Final = "stage2-verified-prefix-adoption-v1"
 VERIFIED_T16_PREFIX_SCHEMA: Final = "stage2-verified-t16-prefix-adoption-v1"
+VERIFIED_T16_PUBLICATION_PREFIX_SCHEMA: Final = "stage2-verified-t16-publication-prefix-adoption-v1"
 VERIFIED_PREFIX_TASKS: Final = TASKS[:-1]
 VERIFIED_PREFIX_NEXT_TASK: Final = TASKS[-1]
 VERIFIED_PREFIX_ROW_COUNTS: Final = {
@@ -628,7 +629,7 @@ def _load_verified_prefix(
 
 
 def _load_verified_t16_prefix(*, source_chain_root: Path) -> dict[str, Any]:
-    """Verify the failed T16 chain reached the outcome-only continuation boundary."""
+    """Verify an approved T16 continuation boundary without mutating it."""
 
     plans = sorted(source_chain_root.glob("adapter-plan-*.json"))
     if len(plans) != 1:
@@ -644,18 +645,35 @@ def _load_verified_t16_prefix(*, source_chain_root: Path) -> dict[str, Any]:
     source_plan = load_adapter_plan(plans[0], code_commit=source_commit)
     t16_spec = source_plan.tasks["S2P13-T16"]
     producer_checkpoint = _read_json(t16_spec.checkpoint_path)
-    if (
-        producer_checkpoint.get("status") != "FAILED"
-        or producer_checkpoint.get("completed_units") != 2
-        or producer_checkpoint.get("total_units") != 4
-        or producer_checkpoint.get("failure_reason")
-        != "OperationalError: attempt to write a readonly database"
-    ):
-        raise ValueError("T16 prefix failure is not the approved SQLite boundary")
+    if producer_checkpoint.get("status") != "FAILED":
+        raise ValueError("T16 prefix producer is not failed")
     attempts = sorted(t16_spec.allowed_artifact_root.glob("formal-*/attempt-*/data"))
     if len(attempts) != 1:
         raise ValueError("T16 prefix source requires one exact producer attempt")
     data_root = attempts[0]
+    run_roots = tuple(
+        path
+        for path in (data_root / "runs").glob("stage2-s2p13-t16-*")
+        if path.is_dir() and not path.is_symlink()
+    )
+    if len(run_roots) != 1:
+        raise ValueError("T16 prefix Run identity is ambiguous")
+    failure_reason = str(producer_checkpoint.get("failure_reason", ""))
+    if failure_reason.startswith("ArrowInvalid: Parquet magic bytes not found in footer"):
+        from era100x.research.stage_2.baselines.conditional.execution_run import (
+            validate_publication_prefix,
+        )
+
+        prefix = validate_publication_prefix(source_run_root=run_roots[0])
+        if prefix.get("source_code_commit") != source_commit:
+            raise ValueError("T16 publication-prefix source commit drift")
+        return prefix
+    if (
+        producer_checkpoint.get("completed_units") != 2
+        or producer_checkpoint.get("total_units") != 4
+        or failure_reason != "OperationalError: attempt to write a readonly database"
+    ):
+        raise ValueError("T16 prefix failure is not an approved continuation boundary")
     authority_paths = tuple(
         path for path in data_root.glob("authority-*.json") if not path.name.startswith("._")
     )
@@ -664,13 +682,8 @@ def _load_verified_t16_prefix(*, source_chain_root: Path) -> dict[str, Any]:
         for path in data_root.glob("train-bins/*/binning-set-*.json")
         if not path.name.startswith("._")
     )
-    run_roots = tuple(
-        path
-        for path in (data_root / "runs").glob("stage2-s2p13-t16-*")
-        if path.is_dir() and not path.is_symlink()
-    )
-    if len(authority_paths) != 1 or len(binning_paths) != 1 or len(run_roots) != 1:
-        raise ValueError("T16 prefix Authority/bin/Run identity is ambiguous")
+    if len(authority_paths) != 1 or len(binning_paths) != 1:
+        raise ValueError("T16 prefix Authority/bin identity is ambiguous")
     from era100x.research.stage_2.baselines.conditional.execution_run import (
         validate_post_selection_prefix,
     )
@@ -838,8 +851,13 @@ def adopt_verified_prefix(
     verified = {task: adapters[task].run_or_resume() for task in VERIFIED_PREFIX_TASKS}
     if verified != adopted:
         raise ValueError("verified-prefix destination read-back drift")
+    t16_resume_phase = str(t16_prefix["resume_phase"])
     t16_adoption: dict[str, Any] = {
-        "schema_name": VERIFIED_T16_PREFIX_SCHEMA,
+        "schema_name": (
+            VERIFIED_T16_PUBLICATION_PREFIX_SCHEMA
+            if t16_resume_phase == "PUBLISHING"
+            else VERIFIED_T16_PREFIX_SCHEMA
+        ),
         "status": "PASS",
         "mode": "READ_ONLY",
         "approval_hash": approval["approval_hash"],
@@ -848,7 +866,7 @@ def adopt_verified_prefix(
         "code_commit": approval["code_commit"],
         "source_chain_root": str(source_chain_root),
         "prefix_verification": t16_prefix,
-        "next_phase": "POST_SELECTION_H2_OUTCOMES",
+        "next_phase": t16_resume_phase,
         "stage3_locked": True,
     }
     t16_adoption["adoption_hash"] = canonical_hash(t16_adoption)
@@ -1092,13 +1110,19 @@ def run_formal_chain(
         if (
             not t16_adoption_path.resolve().is_relative_to(operations_root.resolve())
             or not _self_hash_valid(t16_adoption, "adoption_hash")
-            or t16_adoption.get("schema_name") != VERIFIED_T16_PREFIX_SCHEMA
+            or (
+                t16_adoption.get("schema_name"),
+                t16_adoption.get("next_phase"),
+            )
+            not in {
+                (VERIFIED_T16_PREFIX_SCHEMA, "POST_SELECTION_H2_OUTCOMES"),
+                (VERIFIED_T16_PUBLICATION_PREFIX_SCHEMA, "PUBLISHING"),
+            }
             or t16_adoption.get("status") != "PASS"
             or t16_adoption.get("mode") != "READ_ONLY"
             or t16_adoption.get("approval_hash") != approval["approval_hash"]
             or t16_adoption.get("chain_authority_hash") != _read_json(chain_path)["authority_hash"]
             or t16_adoption.get("code_commit") != approval["code_commit"]
-            or t16_adoption.get("next_phase") != "POST_SELECTION_H2_OUTCOMES"
             or t16_adoption.get("stage3_locked") is not True
             or existing_checkpoint.get("verified_t16_prefix_adoption_hash")
             != t16_adoption.get("adoption_hash")
@@ -1193,13 +1217,19 @@ def verify_formal_chain(
         t16_adoption = _read_json(t16_adoption_path)
         if (
             not _self_hash_valid(t16_adoption, "adoption_hash")
-            or t16_adoption.get("schema_name") != VERIFIED_T16_PREFIX_SCHEMA
+            or (
+                t16_adoption.get("schema_name"),
+                t16_adoption.get("next_phase"),
+            )
+            not in {
+                (VERIFIED_T16_PREFIX_SCHEMA, "POST_SELECTION_H2_OUTCOMES"),
+                (VERIFIED_T16_PUBLICATION_PREFIX_SCHEMA, "PUBLISHING"),
+            }
             or t16_adoption.get("status") != "PASS"
             or t16_adoption.get("mode") != "READ_ONLY"
             or t16_adoption.get("approval_hash") != approval["approval_hash"]
             or t16_adoption.get("code_commit") != approval["code_commit"]
             or t16_adoption.get("adoption_hash") != t16_adoption_hash
-            or t16_adoption.get("next_phase") != "POST_SELECTION_H2_OUTCOMES"
             or t16_adoption.get("stage3_locked") is not True
         ):
             raise ValueError("formal Verify T16 prefix adoption drift")

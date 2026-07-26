@@ -432,8 +432,18 @@ def test_adapter_plan_can_bind_exact_verified_t11_t15_prefix(
     assert plan["tasks"]["S2P13-T16"]["allowed_artifact_root"] != adopted["S2P13-T15"].artifact_root
 
 
+@pytest.mark.parametrize(
+    ("resume_phase", "expected_schema"),
+    [
+        ("POST_SELECTION_H2_OUTCOMES", subject.VERIFIED_T16_PREFIX_SCHEMA),
+        ("PUBLISHING", subject.VERIFIED_T16_PUBLICATION_PREFIX_SCHEMA),
+    ],
+)
 def test_adopt_verified_prefix_seeds_t16_without_recomputing_t11_t15(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    resume_phase: str,
+    expected_schema: str,
 ) -> None:
     policy = _policy(tmp_path, monkeypatch)
     rehearsal = tmp_path / "rehearsal.json"
@@ -492,7 +502,7 @@ def test_adopt_verified_prefix_seeds_t16_without_recomputing_t11_t15(
         "selection_group_count": 456,
         "selection_inventory_hash": "5" * 64,
         "outcome_fields_read_before_matching": [],
-        "resume_phase": "POST_SELECTION_H2_OUTCOMES",
+        "resume_phase": resume_phase,
         "historical_evidence_only": True,
         "stage3_locked": True,
     }
@@ -522,6 +532,9 @@ def test_adopt_verified_prefix_seeds_t16_without_recomputing_t11_t15(
         checkpoint["verified_t16_prefix_adoption_hash"]
         == result["verified_t16_prefix_adoption_hash"]
     )
+    t16_adoption = json.loads(Path(result["verified_t16_prefix_adoption_path"]).read_text())
+    assert t16_adoption["schema_name"] == expected_schema
+    assert t16_adoption["next_phase"] == resume_phase
 
 
 class _FailingAdapter:

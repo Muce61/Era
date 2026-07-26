@@ -291,6 +291,7 @@ def _produce_formal_t16(
     )
     from era100x.research.stage_2.baselines.conditional.execution_run import (
         continue_full_execution_from_prefix,
+        publish_verified_results_from_prefix,
         run_full_execution,
         verify_published_run,
     )
@@ -303,6 +304,7 @@ def _produce_formal_t16(
     )
 
     from .lightweight_governance import (
+        VERIFIED_T16_PUBLICATION_PREFIX_SCHEMA,
         VERIFIED_T16_PREFIX_SCHEMA,
         _read_json as read_governance_json,
         _self_hash_valid,
@@ -355,13 +357,19 @@ def _produce_formal_t16(
         prefix = prefix_adoption.get("prefix_verification")
         if (
             not _self_hash_valid(prefix_adoption, "adoption_hash")
-            or prefix_adoption.get("schema_name") != VERIFIED_T16_PREFIX_SCHEMA
+            or (
+                prefix_adoption.get("schema_name"),
+                prefix_adoption.get("next_phase"),
+            )
+            not in {
+                (VERIFIED_T16_PREFIX_SCHEMA, "POST_SELECTION_H2_OUTCOMES"),
+                (VERIFIED_T16_PUBLICATION_PREFIX_SCHEMA, "PUBLISHING"),
+            }
             or prefix_adoption.get("status") != "PASS"
             or prefix_adoption.get("mode") != "READ_ONLY"
             or prefix_adoption.get("code_commit") != context.code_commit
             or prefix_adoption.get("chain_authority_hash") != chain["authority_hash"]
             or prefix_adoption.get("adapter_plan_hash") != context.adapter_plan_hash
-            or prefix_adoption.get("next_phase") != "POST_SELECTION_H2_OUTCOMES"
             or prefix_adoption.get("stage3_locked") is not True
             or not isinstance(prefix, dict)
         ):
@@ -377,7 +385,7 @@ def _produce_formal_t16(
             "source_binning_set_hash": prefix["source_binning_set_hash"],
             "source_prefix_verification_hash": prefix["prefix_verification_hash"],
             "prefix_adoption_hash": prefix_adoption["adoption_hash"],
-            "resume_phase": "POST_SELECTION_H2_OUTCOMES",
+            "resume_phase": prefix["resume_phase"],
             "historical_evidence_only": True,
             "stage3_locked": True,
         }
@@ -399,19 +407,32 @@ def _produce_formal_t16(
                 {
                     "completed_units": 2,
                     "total_units": 4,
-                    "phase": "ADOPTED_TRAIN_BINS_AND_SELECTIONS",
+                    "phase": (
+                        "ADOPTED_COMPLETED_RESULTS"
+                        if prefix["resume_phase"] == "PUBLISHING"
+                        else "ADOPTED_TRAIN_BINS_AND_SELECTIONS"
+                    ),
                     "row_count": int(prefix["source_h2_path_count"]),
                 }
             )
-        manifest, published = continue_full_execution_from_prefix(
-            prefix=cast(dict[str, Any], prefix),
-            continuation_authority_path=continuation_authority_path,
-            runs_root=data_root / "runs",
-            t10_snapshot=T10_SNAPSHOT,
-            t10_snapshot_id=T10_SNAPSHOT_ID,
-            current_commit=context.code_commit,
-            repository_clean=repository_clean(context.repository_root),
-        )
+        if prefix["resume_phase"] == "PUBLISHING":
+            manifest, published = publish_verified_results_from_prefix(
+                prefix=cast(dict[str, Any], prefix),
+                continuation_authority_path=continuation_authority_path,
+                runs_root=data_root / "runs",
+                current_commit=context.code_commit,
+                repository_clean=repository_clean(context.repository_root),
+            )
+        else:
+            manifest, published = continue_full_execution_from_prefix(
+                prefix=cast(dict[str, Any], prefix),
+                continuation_authority_path=continuation_authority_path,
+                runs_root=data_root / "runs",
+                t10_snapshot=T10_SNAPSHOT,
+                t10_snapshot_id=T10_SNAPSHOT_ID,
+                current_commit=context.code_commit,
+                repository_clean=repository_clean(context.repository_root),
+            )
         authority_hash = str(continuation_authority["authority_hash"])
         source_authority_hash: str | None = str(prefix["source_authority_hash"])
         binning_set_hash = str(prefix["source_binning_set_hash"])

@@ -13,6 +13,8 @@ from typing import Any, cast
 
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
+from era100x.foundation.filesystem import iter_evidence_files
+
 from era100x.research.stage_2.labels.first_passage.full_run import (
     COMBINATION_ORDER,
     COMBINATIONS_PER_PATH,
@@ -65,12 +67,7 @@ def _hash_file(path: Path) -> str:
 
 def _tree_summary(root: Path) -> dict[str, Any]:
     files = []
-    for path in sorted(
-        item
-        for item in root.rglob("*")
-        if item.is_file()
-        and not any(part.startswith("._") for part in item.relative_to(root).parts)
-    ):
+    for path in iter_evidence_files(root):
         files.append(
             {
                 "relative_path": str(path.relative_to(root)),

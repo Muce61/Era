@@ -26,6 +26,8 @@ from typing import Any, cast
 import pyarrow.compute as pc  # type: ignore[import-untyped]
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
+from era100x.foundation.filesystem import iter_evidence_files
+
 from era100x.research.stage_2.baselines.conditional.episode_producer import (
     _episode_key,
     _load_t10_bindings,
@@ -1152,9 +1154,8 @@ def _handoff(
                 "sha256": _file_hash(path),
                 "byte_size": path.stat().st_size,
             }
-            for path in sorted(item for item in task_root.rglob("*") if item.is_file())
+            for path in iter_evidence_files(task_root)
             if path.name not in {"manifest.json", "catalog.json"}
-            and not any(part.startswith("._") for part in path.relative_to(task_root).parts)
         ],
     }
     catalog["catalog_hash"] = _canonical_hash(catalog)

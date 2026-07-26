@@ -17,6 +17,8 @@ import pyarrow as pa  # type: ignore[import-untyped]
 import pyarrow.compute as pc  # type: ignore[import-untyped]
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
+from era100x.foundation.filesystem import iter_evidence_files
+
 from .binning_run import prepare_feature_block, read_binning_set
 from .episode_producer import prepare_episode_evidence
 from .h2_control_reader import H2ControlReader
@@ -87,7 +89,7 @@ def _report_relative(path: Path) -> Path:
 
 
 def _copy_tree_files(source: Path, destination: Path) -> None:
-    for path in sorted(item for item in source.rglob("*") if item.is_file()):
+    for path in iter_evidence_files(source):
         if path.is_symlink():
             raise ValueError("symlinked run evidence cannot be published")
         relative = path.relative_to(source)
@@ -99,7 +101,7 @@ def _copy_tree_files(source: Path, destination: Path) -> None:
 
 def _publication_entries(root: Path) -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = []
-    for path in sorted(item for item in root.rglob("*") if item.is_file()):
+    for path in iter_evidence_files(root):
         if path.name in {"catalog.json", "manifest.json"}:
             continue
         item: dict[str, Any] = {
@@ -343,6 +345,300 @@ def validate_post_selection_prefix(
     }
     payload["prefix_verification_hash"] = canonical_hash(payload)
     return payload
+
+
+def validate_publication_prefix(*, source_run_root: Path) -> dict[str, Any]:
+    """Verify completed T16 result files at the publication-only boundary."""
+
+    if (
+        not source_run_root.is_absolute()
+        or source_run_root.is_symlink()
+        or not source_run_root.is_dir()
+        or not RUN_PATTERN.fullmatch(source_run_root.name)
+    ):
+        raise ValueError("T16 publication-prefix Run root is unsafe")
+    checkpoint = read_json_file(source_run_root / "checkpoint.json")
+    if (
+        checkpoint.get("status") != "IN_PROGRESS"
+        or checkpoint.get("phase") != "PUBLISHING"
+        or checkpoint.get("completed_group_count") != 456
+        or checkpoint.get("expected_group_count") != 456
+        or checkpoint.get("stage3_locked") is not True
+    ):
+        raise ValueError("T16 publication-prefix checkpoint is not adoptable")
+    staging_roots = tuple(
+        path
+        for path in (source_run_root / "staging").iterdir()
+        if path.is_dir() and not path.is_symlink() and not path.name.startswith("._")
+    )
+    if len(staging_roots) != 1:
+        raise ValueError("T16 publication-prefix staging identity is ambiguous")
+    staging = staging_roots[0]
+    post_report = read_json_file(staging / "reports" / "post-selection.json")
+    reconciliation = read_json_file(staging / "reports" / "reconciliation.json")
+    if (
+        canonical_hash({key: value for key, value in post_report.items() if key != "report_hash"})
+        != post_report.get("report_hash")
+        or post_report.get("status") != "PASS"
+        or post_report.get("stage3_locked") is not True
+        or post_report.get("sqlite_scratch_policy") != "LOCAL_EPHEMERAL_NOT_PUBLISHED"
+    ):
+        raise ValueError("T16 publication-prefix post-selection report drift")
+    if (
+        canonical_hash(
+            {key: value for key, value in reconciliation.items() if key != "reconciliation_hash"}
+        )
+        != reconciliation.get("reconciliation_hash")
+        or reconciliation.get("status") != "PASS"
+    ):
+        raise ValueError("T16 publication-prefix reconciliation report drift")
+    episode = EpisodeReconciliation.model_validate(reconciliation["episode"])
+    episode.require_frozen_source_baseline()
+    control = ControlReconciliation.model_validate(reconciliation["control"])
+    result_contract = {
+        "control_outcome_matrices.parquet": (
+            int(post_report["control_outcome_matrix_count"]),
+            str(post_report["control_outcomes_sha256"]),
+        ),
+        "conditional_match_matrices.parquet": (
+            int(post_report["eligible_episode_count"]),
+            str(post_report["match_matrices_sha256"]),
+        ),
+        "descriptive_summaries.parquet": (
+            int(post_report["summary_row_count"]),
+            str(post_report["summaries_sha256"]),
+        ),
+    }
+    results: dict[str, dict[str, Any]] = {}
+    for name, (expected_rows, expected_hash) in result_contract.items():
+        path = staging / "results" / name
+        if path.is_symlink() or not path.is_file():
+            raise ValueError(f"T16 publication-prefix result is missing: {name}")
+        parquet = pq.ParquetFile(path)
+        actual_rows = parquet.metadata.num_rows
+        actual_hash = _sha256_file(path)
+        if actual_rows != expected_rows or actual_hash != expected_hash:
+            raise ValueError(f"T16 publication-prefix result drift: {name}")
+        results[name] = {
+            "path": str(path),
+            "row_count": actual_rows,
+            "sha256": actual_hash,
+            "schema": str(parquet.schema_arrow),
+        }
+    if (
+        episode.eligible_episode_count != int(post_report["eligible_episode_count"])
+        or episode.matched_episode_count != int(post_report["matched_episode_count"])
+        or episode.unmatched_episode_count != int(post_report["unmatched_episode_count"])
+        or control.control_assignment_count != int(post_report["control_assignment_count"])
+        or control.control_outcome_matrix_count != int(post_report["control_outcome_matrix_count"])
+        or control.control_outcome_cell_count != int(post_report["control_outcome_cell_count"])
+    ):
+        raise ValueError("T16 publication-prefix reports disagree")
+    inherited_prefix = read_json_file(source_run_root / "manifests" / "prefix-verification.json")
+    if (
+        canonical_hash(
+            {
+                key: value
+                for key, value in inherited_prefix.items()
+                if key != "prefix_verification_hash"
+            }
+        )
+        != inherited_prefix.get("prefix_verification_hash")
+        or inherited_prefix.get("status") != "PASS"
+    ):
+        raise ValueError("T16 publication-prefix inherited verification drift")
+    source_authority_path = Path(str(inherited_prefix["source_authority_path"]))
+    source_binning_path = Path(str(inherited_prefix["source_binning_set_path"]))
+    source_execution_manifest = read_json_file(
+        source_run_root / "manifests" / "execution-manifest.json"
+    )
+    source_authority = validate_contract_authority_json(source_authority_path.read_bytes())
+    bins = read_binning_set(source_binning_path, authority_hash=source_authority.authority_hash)
+    if (
+        source_execution_manifest.get("execution_manifest_hash")
+        != canonical_hash(
+            {
+                key: value
+                for key, value in source_execution_manifest.items()
+                if key != "execution_manifest_hash"
+            }
+        )
+        or checkpoint.get("source_authority_hash") != source_authority.authority_hash
+        or checkpoint.get("binning_set_hash") != bins["binning_set_hash"]
+    ):
+        raise ValueError("T16 publication-prefix upstream binding drift")
+    payload: dict[str, Any] = {
+        "schema_name": "stage2-s2p13-t16-publication-prefix-verification-v1",
+        "status": "PASS",
+        "source_run_id": source_run_root.name,
+        "source_run_root": str(source_run_root),
+        "source_staging_root": str(staging),
+        "source_code_commit": source_execution_manifest["code_commit"],
+        "source_authority_path": str(source_authority_path),
+        "source_authority_hash": source_authority.authority_hash,
+        "source_binning_set_path": str(source_binning_path),
+        "source_binning_set_hash": bins["binning_set_hash"],
+        "source_execution_manifest_hash": source_execution_manifest["execution_manifest_hash"],
+        "post_selection_report_hash": post_report["report_hash"],
+        "reconciliation_hash": reconciliation["reconciliation_hash"],
+        "results": results,
+        "eligible_episode_count": episode.eligible_episode_count,
+        "matched_episode_count": episode.matched_episode_count,
+        "unmatched_episode_count": episode.unmatched_episode_count,
+        "control_outcome_matrix_count": control.control_outcome_matrix_count,
+        "resume_phase": "PUBLISHING",
+        "historical_evidence_only": True,
+        "stage3_locked": True,
+    }
+    payload["prefix_verification_hash"] = canonical_hash(payload)
+    return payload
+
+
+def publish_verified_results_from_prefix(
+    *,
+    prefix: dict[str, Any],
+    continuation_authority_path: Path,
+    runs_root: Path,
+    current_commit: str,
+    repository_clean: bool,
+) -> tuple[dict[str, Any], Path]:
+    """Publish and verify later without recomputing an adopted result matrix."""
+
+    if (
+        prefix.get("status") != "PASS"
+        or prefix.get("resume_phase") != "PUBLISHING"
+        or prefix.get("control_outcome_matrix_count") != 1_278_527
+        or prefix.get("stage3_locked") is not True
+    ):
+        raise ValueError("T16 publication-prefix adoption contract is invalid")
+    claimed = prefix.get("prefix_verification_hash")
+    if (
+        canonical_hash(
+            {key: value for key, value in prefix.items() if key != "prefix_verification_hash"}
+        )
+        != claimed
+    ):
+        raise ValueError("T16 publication-prefix verification hash drift")
+    continuation = read_json_file(continuation_authority_path)
+    if (
+        canonical_hash(
+            {key: value for key, value in continuation.items() if key != "authority_hash"}
+        )
+        != continuation.get("authority_hash")
+        or continuation.get("code_commit") != current_commit
+        or continuation.get("source_prefix_verification_hash") != claimed
+        or continuation.get("resume_phase") != "PUBLISHING"
+        or continuation.get("stage3_locked") is not True
+        or not repository_clean
+    ):
+        raise ValueError("T16 publication continuation Authority drift")
+    source_run_root = Path(str(prefix["source_run_root"]))
+    if validate_publication_prefix(source_run_root=source_run_root) != prefix:
+        raise ValueError("T16 publication-prefix changed after adoption")
+    source_authority_path = Path(str(prefix["source_authority_path"]))
+    source_binning_path = Path(str(prefix["source_binning_set_path"]))
+    source_authority = validate_contract_authority_json(source_authority_path.read_bytes())
+    bins = read_binning_set(source_binning_path, authority_hash=source_authority.authority_hash)
+    runs_root.mkdir(parents=True, exist_ok=False)
+    run_id = _new_run_id(str(continuation["authority_hash"]), plan_v13=True)
+    run_root = runs_root / run_id
+    run_root.mkdir()
+    checkpoint_path = run_root / "checkpoint.json"
+    checkpoint: dict[str, Any] = {
+        "schema_name": "stage2-s2p13-t16-checkpoint",
+        "schema_version": "1.0",
+        "run_id": run_id,
+        "status": "IN_PROGRESS",
+        "phase": "PUBLISHING",
+        "completed_group_count": 456,
+        "expected_group_count": 456,
+        "authority_hash": continuation["authority_hash"],
+        "source_authority_hash": source_authority.authority_hash,
+        "binning_set_hash": bins["binning_set_hash"],
+        "prefix_verification_hash": claimed,
+        "supersedes_failed_run_id": source_run_root.name,
+        "historical_evidence_only": True,
+        "stage3_locked": True,
+    }
+    _write_checkpoint(checkpoint_path, checkpoint)
+    _write_json_exclusive(run_root / "manifests" / "authority.json", continuation)
+    _write_json_exclusive(
+        run_root / "manifests" / "source-authority.json",
+        source_authority.model_dump(mode="json"),
+    )
+    _write_json_exclusive(run_root / "manifests" / "binning-set.json", bins)
+    _write_json_exclusive(run_root / "manifests" / "prefix-verification.json", prefix)
+    execution_manifest: dict[str, Any] = {
+        "schema_name": "stage2-s2p13-t16-execution-manifest",
+        "schema_version": "1.0",
+        "run_id": run_id,
+        "authority_hash": continuation["authority_hash"],
+        "source_authority_hash": source_authority.authority_hash,
+        "binning_set_hash": bins["binning_set_hash"],
+        "prefix_verification_hash": claimed,
+        "code_commit": current_commit,
+        "supersedes_failed_run_id": source_run_root.name,
+        "resume_phase": "PUBLISHING",
+        "reused_result_row_counts": {
+            name: value["row_count"]
+            for name, value in cast(dict[str, Any], prefix["results"]).items()
+        },
+        "historical_evidence_only": True,
+        "stage3_locked": True,
+    }
+    execution_manifest["execution_manifest_hash"] = canonical_hash(execution_manifest)
+    _write_json_exclusive(run_root / "manifests" / "execution-manifest.json", execution_manifest)
+    staging = run_root / "staging" / uuid.uuid4().hex
+    _copy_tree_files(Path(str(prefix["source_staging_root"])), staging)
+    entries = _publication_entries(staging)
+    reconciliation = read_json_file(staging / "reports" / "reconciliation.json")
+    catalog: dict[str, Any] = {
+        "schema_name": "stage2-s2p13-t16-catalog",
+        "schema_version": "1.0",
+        "run_id": run_id,
+        "authority_hash": continuation["authority_hash"],
+        "source_authority_hash": source_authority.authority_hash,
+        "binning_set_hash": bins["binning_set_hash"],
+        "prefix_verification_hash": claimed,
+        "files": entries,
+        "historical_evidence_only": True,
+    }
+    catalog["catalog_hash"] = canonical_hash(catalog)
+    snapshot_id = str(catalog["catalog_hash"])
+    manifest: dict[str, Any] = {
+        "schema_name": "stage2-s2p13-t16-manifest",
+        "schema_version": "1.0",
+        "run_id": run_id,
+        "snapshot_id": snapshot_id,
+        "authority_hash": continuation["authority_hash"],
+        "source_authority_hash": source_authority.authority_hash,
+        "binning_set_hash": bins["binning_set_hash"],
+        "prefix_verification_hash": claimed,
+        "execution_manifest_hash": execution_manifest["execution_manifest_hash"],
+        "catalog_hash": catalog["catalog_hash"],
+        "reconciliation_hash": reconciliation["reconciliation_hash"],
+        "research_result": "DESCRIPTIVE_ONLY_PRIMARY_PENDING_T18",
+        "historical_evidence_only": True,
+        "stage3_locked": True,
+    }
+    manifest["manifest_hash"] = canonical_hash(manifest)
+    catalog["snapshot_id"] = snapshot_id
+    catalog["manifest_hash"] = manifest["manifest_hash"]
+    _write_json_exclusive(staging / "catalog.json", catalog)
+    _write_json_exclusive(staging / "manifest.json", manifest)
+    published = run_root / "published" / "snapshots" / snapshot_id
+    published.parent.mkdir(parents=True)
+    os.replace(staging, published)
+    checkpoint.update(
+        {
+            "status": "COMPLETE_PENDING_VERIFY",
+            "phase": "PUBLISHED",
+            "snapshot_id": snapshot_id,
+            "manifest_hash": manifest["manifest_hash"],
+        }
+    )
+    _write_checkpoint(checkpoint_path, checkpoint)
+    return manifest, published
 
 
 def continue_full_execution_from_prefix(
