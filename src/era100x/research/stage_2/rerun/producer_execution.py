@@ -300,6 +300,7 @@ def _produce_formal_t16(
         T10_SNAPSHOT_ID,
     )
     from era100x.research.stage_2.baselines.conditional.v14_contracts import (
+        EXPECTED_H2_PATHS,
         S2P13T16ContractAuthority,
     )
 
@@ -412,7 +413,7 @@ def _produce_formal_t16(
                         if prefix["resume_phase"] == "PUBLISHING"
                         else "ADOPTED_TRAIN_BINS_AND_SELECTIONS"
                     ),
-                    "row_count": int(prefix["source_h2_path_count"]),
+                    "row_count": int(prefix.get("source_h2_path_count", EXPECTED_H2_PATHS)),
                 }
             )
         if prefix["resume_phase"] == "PUBLISHING":

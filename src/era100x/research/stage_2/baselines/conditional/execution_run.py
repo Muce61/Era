@@ -482,6 +482,7 @@ def validate_publication_prefix(*, source_run_root: Path) -> dict[str, Any]:
         "post_selection_report_hash": post_report["report_hash"],
         "reconciliation_hash": reconciliation["reconciliation_hash"],
         "results": results,
+        "source_h2_path_count": EXPECTED_H2_PATHS,
         "eligible_episode_count": episode.eligible_episode_count,
         "matched_episode_count": episode.matched_episode_count,
         "unmatched_episode_count": episode.unmatched_episode_count,
