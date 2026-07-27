@@ -2,12 +2,21 @@
 
 ```text
 Current Stage: Stage 2
-Current Plan: stage_2_plan_v1.6 — CLOSED AT T19
-Current Task: S2P16-T19 v1.0 — evidence synthesis and gate projection
-Status: FORMAL ENGINEERING PASS / RECONCILIATION PASS / VERIFY PASS / NO_GO_CURRENT_EVIDENCE
+Current Plan: stage_2_plan_v1.7 — IMPLEMENTATION AUTHORIZED / FORMAL RUN GATED
+Current Task: S2P17-T20 v1.0 — final evidence acceptance
+Status: IMPLEMENTATION AND QUALITY GATE PASS / CLEAN-COMMIT FORMAT SMOKE PENDING / FORMAL RUN GATED
 ```
 
-Plan v1.6 authorizes only S2P16-T19. It reads the immutable formal T11, T16, T17 and T18
+Plan v1.7 authorizes only S2P17-T20. It validates the immutable formal T11/T16/T17/T18/T19
+chain, preserves the complete gate and parameter landscape, and selects six real event-card
+identities before reading their outcomes. It does not recompute Trades, paths, outcomes,
+bootstrap, FDR or research gates. The expected current-evidence closure is
+`STAGE2_NO_GO_CURRENT_EVIDENCE`, while lifecycle evidence remains
+`INCONCLUSIVE_SOURCE_GAP_CENSORING`; both must be derived from the formal T19 evidence.
+Authority and Run remain forbidden until the final clean commit passes a real format smoke and
+receives a matching human approval. T21 is not authorized and Stage 3 remains locked.
+
+Plan v1.6 authorized only S2P16-T19. It reads the immutable formal T11, T16, T17 and T18
 evidence, projects the pre-registered H2 F1–F10 and H3 lifecycle gates, and never recomputes
 Trades, outcomes, bootstrap, CI or FDR. Formal Run
 `stage2-s2p16-t19-20260727T134851Z-b515924314e5` completed under Authority
@@ -19,8 +28,8 @@ Catalog, Manifest, reconciliation and independent Verify Hashes are respectively
 `a272924b834d7f687020ae3ec3bb30e7b639d1fb367b810de40807746dcdabef`.
 The formal result is BTC Primary `PRIMARY_FAILED`, ETH `PRIMARY_FAILED`, both lifecycle
 instruments `INCONCLUSIVE_SOURCE_GAP_CENSORING`, and overall `NO_GO_CURRENT_EVIDENCE`.
-Engineering and Verify are PASS; this is not Stage 2 PASS. T20/T21 remain unauthorized and
-Stage 3 remains locked.
+Engineering and Verify are PASS; this is not Stage 2 PASS. T20 is implemented only under the
+new Plan v1.7 gate; T21 remains unauthorized and Stage 3 remains locked.
 
 Plan v1.5 authorizes only S2P15-T18. The implementation binds the immutable T16 Verify
 `b866905c18fd1cb1f3bbed1f74e5301c56a78e891b81ab3eea61bcff37ed2b86` and T17 Verify

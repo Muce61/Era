@@ -1,0 +1,33 @@
+{
+  "canonical_json_schema": "CANONICAL_JSON_CONTENT_V1",
+  "event_card_count": 6,
+  "event_card_namespace": "S2P17T20|EVENT_CARD",
+  "event_card_seed": 20260716,
+  "event_card_strata": [
+    "BTCUSDT|P1",
+    "BTCUSDT|P2",
+    "BTCUSDT|P3",
+    "ETHUSDT|P1",
+    "ETHUSDT|P2",
+    "ETHUSDT|P3"
+  ],
+  "historical_evidence_only": true,
+  "lifecycle_decision": "INCONCLUSIVE_SOURCE_GAP_CENSORING",
+  "primary_combination_id": "target=20|stop=25",
+  "primary_parameter_set_id": "G1-PRIMARY-V1",
+  "primary_timing_id": "T2",
+  "research_decision": "STAGE2_NO_GO_CURRENT_EVIDENCE",
+  "schema_name": "s2p17-t20-final-acceptance-preregistration",
+  "schema_version": "1.0",
+  "source_t11_receipt_hash": "2414dacb4e9483aae6260b2aa2d5460d96670a2bad1cd754332caddba6af0760",
+  "source_t16_verify_hash": "b866905c18fd1cb1f3bbed1f74e5301c56a78e891b81ab3eea61bcff37ed2b86",
+  "source_t17_verify_hash": "bb6f7186f068a1dcd040f369c980bdcae4bb5fef9964c2b5ee61e2d30b6c2f1c",
+  "source_t18_verify_hash": "dc9ebcab3e4af3ff75e03e76ee9fa4f147e27cb2910a80b2b25874f8d5e514d1",
+  "source_t19_verify_hash": "a272924b834d7f687020ae3ec3bb30e7b639d1fb367b810de40807746dcdabef",
+  "stage3_locked": true,
+  "stage_plan_version": "1.7",
+  "task_id": "S2P17-T20",
+  "task_version": "1.0",
+  "visual_authority": "SVG",
+  "visual_preview": "PNG_CHROMIUM_HEADLESS"
+}

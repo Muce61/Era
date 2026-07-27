@@ -1,0 +1,37 @@
+{
+  "code_commit_mode": "CURRENT_CLEAN_HEAD",
+  "contract_paths": [
+    "docs/spec/system_manual_v1.3.5_final.md",
+    "docs/development/plans/stage_2_plan_v1.7.md",
+    "docs/development/changes/CR-2026-049.md",
+    "docs/development/decisions/ADR-S2-025-final-evidence-closure.md",
+    "docs/development/tasks/stage_2/S2P17-T20-final-acceptance.md",
+    "configs/research/stage_2/s2p17_t20_final_acceptance_v1.json"
+  ],
+  "evidence_root": "/Volumes/FuckingLife/era100x_stage2/formal/stage2-plan-v1.7",
+  "execution_limit": "S2P17-T20",
+  "preregistration_path": "configs/research/stage_2/s2p17_t20_final_acceptance_v1.json",
+  "required_gates": [
+    "FORMAT_SMOKE_PASS",
+    "COMMIT_BOUND_HUMAN_APPROVAL",
+    "AUTHORITY_BEFORE_RUN",
+    "UNIQUE_RUN_LOCK",
+    "FULL_RECONCILIATION",
+    "FULL_VERIFY"
+  ],
+  "schema_name": "stage2-active-policy-v6",
+  "schema_version": "6.0",
+  "source_t19_run_root": "/Volumes/FuckingLife/era100x_stage2/formal/stage2-plan-v1.6/runs/stage2-s2p16-t19-20260727T134851Z-b515924314e5",
+  "stage": "S2",
+  "stage3_locked": true,
+  "stage_plan_version": "1.7",
+  "task_dag": {
+    "S2P17-T20": [
+      "S2P13-T11",
+      "S2P13-T16",
+      "S2P14-T17",
+      "S2P15-T18",
+      "S2P16-T19"
+    ]
+  }
+}

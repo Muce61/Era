@@ -21,6 +21,7 @@ _stage2_v13_projection = MODULE._stage2_v13_projection
 _stage2_v14_projection = MODULE._stage2_v14_projection
 _stage2_v15_projection = MODULE._stage2_v15_projection
 _stage2_v16_projection = MODULE._stage2_v16_projection
+_stage2_v17_projection = MODULE._stage2_v17_projection
 _json_hash = MODULE._json_hash
 
 T12_RUN_ID = "stage2-s2t12-metrics-20260721T040435Z-abcdef123456"
@@ -1941,6 +1942,46 @@ def test_stage2_v16_projection_exposes_nine_live_phases(tmp_path: Path, monkeypa
     assert result["phases"][1]["status"] == "PASS"
     assert result["stage3_locked"] is True
     assert result["run_code_commit"] == "run123"
+
+
+def test_stage2_v17_projection_exposes_nine_evidence_driven_phases(
+    tmp_path: Path, monkeypatch
+) -> None:
+    policy = type("Policy", (), {})()
+    monkeypatch.setattr(MODULE, "load_final_acceptance_policy", lambda *_args, **_kwargs: policy)
+    monkeypatch.setattr(
+        MODULE,
+        "final_acceptance_status",
+        lambda *_args, **_kwargs: {
+            "status": "BLOCKED",
+            "reason_code": "COMMIT_BOUND_APPROVAL_REQUIRED",
+            "format_smoke_count": 1,
+            "active_run": {},
+            "run_code_commit": None,
+            "decision": {},
+            "source_decision": {
+                "engineering_status": "PASS",
+                "h2_primary": "PRIMARY_FAILED",
+                "h3_lifecycle": {
+                    "BTCUSDT": "INCONCLUSIVE_SOURCE_GAP_CENSORING",
+                    "ETHUSDT": "INCONCLUSIVE_SOURCE_GAP_CENSORING",
+                },
+                "source_recommendation": "NO_GO_CURRENT_EVIDENCE",
+            },
+            "stage3_locked": True,
+        },
+    )
+    monkeypatch.setattr(MODULE, "_repository_commit", lambda: "abc123")
+
+    result = _stage2_v17_projection(tmp_path)
+
+    assert result["status"] == "BLOCKED"
+    assert result["reason_code"] == "COMMIT_BOUND_APPROVAL_REQUIRED"
+    assert len(result["phases"]) == 9
+    assert result["phases"][0]["status"] == "PASS"
+    assert result["phases"][1]["status"] == "PASS"
+    assert result["stage3_locked"] is True
+    assert result["observer_repo_commit"] == "abc123"
 
 
 def test_projection_reads_historical_approval_without_authorizing_new_run(

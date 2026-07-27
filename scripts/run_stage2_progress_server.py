@@ -53,6 +53,12 @@ from era100x.research.stage_2.acceptance.evidence_gate.cli import (
 from era100x.research.stage_2.acceptance.evidence_gate.governance import (
     load_policy as load_evidence_gate_policy,
 )
+from era100x.research.stage_2.acceptance.final_acceptance.cli import (
+    status_payload as final_acceptance_status,
+)
+from era100x.research.stage_2.acceptance.final_acceptance.governance import (
+    load_policy as load_final_acceptance_policy,
+)
 
 
 def _exclusive_lock_is_held(path: Path) -> bool:
@@ -1638,6 +1644,85 @@ def _stage2_v16_projection(stage2_root: Path) -> dict[str, Any]:
     }
 
 
+def _stage2_v17_projection(stage2_root: Path) -> dict[str, Any]:
+    """Project Plan v1.7/T20 from policy and append-only evidence only."""
+
+    del stage2_root
+    phase_names = (
+        "AUDIT",
+        "FORMAT_SMOKE",
+        "HASH_CHAIN",
+        "BLIND_EVENT_SELECTION",
+        "EVIDENCE_CARDS",
+        "GATE_LEDGER",
+        "FINAL_REPORT",
+        "PUBLISH",
+        "VERIFY",
+    )
+    policy = load_final_acceptance_policy(
+        REPOSITORY_ROOT / "configs/governance/stage2_active_policy_v6.json",
+        repository_root=REPOSITORY_ROOT,
+    )
+    status = final_acceptance_status(policy, REPOSITORY_ROOT)
+    checkpoint = cast(dict[str, Any], status.get("active_run") or {})
+    current_phase = str(
+        checkpoint.get("phase") or ("FORMAT_SMOKE" if status.get("format_smoke_count") else "AUDIT")
+    )
+    current_index = phase_names.index(current_phase) if current_phase in phase_names else 0
+    verified = status.get("status") == "PASS"
+    phases: list[dict[str, Any]] = []
+    for index, name in enumerate(phase_names):
+        if verified or index < current_index:
+            state, processed, percent = "PASS", 1, 100.0
+        elif name == "AUDIT":
+            state, processed, percent = "PASS", 1, 100.0
+        elif name == "FORMAT_SMOKE" and status.get("format_smoke_count"):
+            state, processed, percent = "PASS", 1, 100.0
+        elif checkpoint and index == current_index:
+            state = "IN_PROGRESS"
+            processed = int(checkpoint.get("processed_units") or 0)
+            percent = float(checkpoint.get("percent") or 0.0)
+        else:
+            state, processed, percent = "NOT_STARTED", 0, 0.0
+        phases.append(
+            {
+                "name": name,
+                "status": state,
+                "progress_percent": percent,
+                "processed_units": processed,
+                "total_units": int(checkpoint.get("total_units") or 1)
+                if index == current_index
+                else 1,
+                "elapsed_seconds": checkpoint.get("elapsed_seconds")
+                if index == current_index
+                else 0,
+                "units_per_second": checkpoint.get("rows_per_second")
+                if index == current_index
+                else None,
+                "eta_seconds": checkpoint.get("eta_seconds") if index == current_index else None,
+                "subphase": checkpoint.get("subphase") if index == current_index else None,
+                "heartbeat_at": checkpoint.get("heartbeat_at") if index == current_index else None,
+            }
+        )
+    current = phases[current_index]
+    return {
+        **status,
+        "schema_name": "s2p17-t20-ui-projection",
+        "observer_repo_commit": _repository_commit(),
+        "run_code_commit": status.get("run_code_commit"),
+        "phase": current_phase,
+        "subphase": checkpoint.get("subphase"),
+        "progress_percent": 100.0 if verified else current["progress_percent"],
+        "processed_units": current["processed_units"],
+        "total_units": current["total_units"],
+        "rows_per_second": checkpoint.get("rows_per_second"),
+        "eta_seconds": checkpoint.get("eta_seconds"),
+        "elapsed_seconds": checkpoint.get("elapsed_seconds"),
+        "heartbeat_at": checkpoint.get("heartbeat_at"),
+        "phases": phases,
+    }
+
+
 def _execution_observability(run_root: Path) -> dict[str, Any]:
     """Project append-only execution evidence into compact UI counters."""
 
@@ -3203,6 +3288,14 @@ class ProgressHandler(BaseHTTPRequestHandler):
                 )
             except (OSError, ValueError) as exc:
                 self._reply_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})
+        elif path == "/api/v17/status":
+            try:
+                self._reply_json(
+                    HTTPStatus.OK,
+                    {"stage2_plan_v17": _stage2_v17_projection(self.server.stage2_root)},
+                )
+            except (OSError, ValueError) as exc:
+                self._reply_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})
         elif path == "/api/status":
             try:
                 payload = read_progress_status(self.server.run_root)
@@ -3220,6 +3313,7 @@ class ProgressHandler(BaseHTTPRequestHandler):
                 payload["stage2_plan_v14"] = _stage2_v14_projection(self.server.stage2_root)
                 payload["stage2_plan_v15"] = _stage2_v15_projection(self.server.stage2_root)
                 payload["stage2_plan_v16"] = _stage2_v16_projection(self.server.stage2_root)
+                payload["stage2_plan_v17"] = _stage2_v17_projection(self.server.stage2_root)
                 self._reply_json(HTTPStatus.OK, payload)
             except (OSError, ValueError) as exc:
                 self._reply_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})

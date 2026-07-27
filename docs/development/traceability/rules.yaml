@@ -9,16 +9,19 @@ rules:
   planned_tasks:
   - S2P13-T11
   - S2P16-T19
+  - S2P17-T20
   implementation_paths:
   - src/era100x/research/stage_2/lifecycle/ (IMPLEMENTED deterministic price-only core; formal H3 inputs blocked)
   - src/era100x/research/stage_2/rerun/ (IMPLEMENTED preflight/checkpoint contract; CR-2026-043 exact-key append-only Trade supplement overlay)
   - src/era100x/research/stage_2/funding/ (IMPLEMENTED read-only acceptance contract)
   - src/era100x/research/stage_2/acceptance/evidence_gate/ (S2P16-T19 lifecycle gate projection; no lifecycle recomputation)
+  - src/era100x/research/stage_2/acceptance/final_acceptance/ (S2P17-T20 read-only lifecycle decision packaging; no recomputation)
   test_paths:
   - tests/research/stage_2/lifecycle/ (TESTED)
   - tests/research/stage_2/rerun/ (TESTED)
   - tests/research/stage_2/funding/ (TESTED)
   - tests/research/stage_2/acceptance/evidence_gate/ (S2P16-T19 typed censoring and gate-priority tests)
+  - tests/research/stage_2/acceptance/final_acceptance/ (S2P17-T20 final-decision and visual-boundary tests)
   validation_paths:
   - docs/development/validations/stage_2/S2P13-T11.md (PLANNED; no formal result)
   state: PLANNED
@@ -161,6 +164,7 @@ rules:
   - S2P14-T17
   - S2P15-T18
   - S2P16-T19
+  - S2P17-T20
   implementation_paths:
   - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/ (PLANNED)
   - src/era100x/research/stage_2/metrics/path/ (S2-T12 IMPLEMENTED read-only Episode lineage)
@@ -170,6 +174,7 @@ rules:
   - src/era100x/research/stage_2/baselines/placebo/ (S2P14-T17 FINAL ENGINEERING AND VERIFY PASS; descriptive only)
   - src/era100x/research/stage_2/statistics/bootstrap/ (S2P15-T18 FINAL FORMAL RUN, reconciliation and independent Verify PASS; statistical evidence only; final gate pending)
   - src/era100x/research/stage_2/acceptance/evidence_gate/ (S2P16-T19 read-only evidence synthesis and preregistered gate projection; no upstream recomputation)
+  - src/era100x/research/stage_2/acceptance/final_acceptance/ (S2P17-T20 immutable evidence-chain acceptance and result-blind event-card projection)
   test_paths:
   - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); UT-EVT-011, FI-14
   - tests/research/stage_2/metrics/path/ (S2-T12 TESTED)
@@ -179,6 +184,7 @@ rules:
   - tests/research/stage_2/baselines/placebo/ (S2P14-T17 directed outcome-blind and reconciliation tests)
   - tests/research/stage_2/statistics/bootstrap/ (S2P15-T18 deterministic cluster/bootstrap/FDR and strict-format tests)
   - tests/research/stage_2/acceptance/evidence_gate/ (S2P16-T19 deterministic gate, censoring, format and UI tests)
+  - tests/research/stage_2/acceptance/final_acceptance/ (S2P17-T20 deterministic identity, canonical Hash, format and UI tests)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   stage_2_identity_delivery:
@@ -293,6 +299,7 @@ rules:
   - S2P14-T17
   - S2P15-T18
   - S2P16-T19
+  - S2P17-T20
   - S5-T01
   implementation_paths:
   - src/era100x/data/evidence/, tests/data/evidence/, artifacts/manifests/stage_1/ (PLANNED Stage 1 boundary)
@@ -305,6 +312,7 @@ rules:
   - src/era100x/research/stage_2/baselines/placebo/ (S2P14-T17 historical-only placebo projection; no execution facts)
   - src/era100x/research/stage_2/statistics/bootstrap/ (S2P15-T18 historical statistical evidence only; no execution facts)
   - src/era100x/research/stage_2/acceptance/evidence_gate/ (S2P16-T19 historical evidence synthesis only; no execution facts)
+  - src/era100x/research/stage_2/acceptance/final_acceptance/ (S2P17-T20 historical final evidence package only; no execution facts)
   - src/forward/, tests/forward/, artifacts/manifests/ (PLANNED Stage 5 forward fields)
   test_paths:
   - tests/data/evidence/ (PLANNED); UT-DATA-013
@@ -317,6 +325,7 @@ rules:
   - tests/research/stage_2/baselines/placebo/ (S2P14-T17 TESTED; prohibited live-return interpretations)
   - tests/research/stage_2/statistics/bootstrap/ (S2P15-T18 TESTED; no PnL, live return or final-gate interpretation)
   - tests/research/stage_2/acceptance/evidence_gate/ (S2P16-T19 TESTED; engineering and research conclusions separated)
+  - tests/research/stage_2/acceptance/final_acceptance/ (S2P17-T20 TESTED; engineering and NO-GO conclusions separated)
   - tests/stage_5/ (PLANNED forward regression)
   validation_paths:
   - docs/development/validations/stage_5/ (PLANNED)
@@ -393,6 +402,7 @@ rules:
   - S2P14-T17
   - S2P15-T18
   - S2P16-T19
+  - S2P17-T20
   implementation_paths:
   - src/era100x/data/readers/, src/era100x/data/aggregate/, tests/data/ (PLANNED Stage 1 input boundary)
   - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/gates/ (PLANNED Stage 2 behavior separation)
@@ -404,6 +414,7 @@ rules:
   - src/era100x/research/stage_2/baselines/placebo/ (S2P14-T17 reuses verified H2 matrices; no Trades reread or H3 claim)
   - src/era100x/research/stage_2/statistics/bootstrap/ (S2P15-T18 reuses verified T16/T17 matrices; no Trades reread or execution claim)
   - src/era100x/research/stage_2/acceptance/evidence_gate/ (S2P16-T19 consumes only verified projections; no Trades or outcome recomputation)
+  - src/era100x/research/stage_2/acceptance/final_acceptance/ (S2P17-T20 consumes only verified identities and projections; no Trades or outcome recomputation)
   test_paths:
   - tests/research/stage_2/contracts/, tests/research/stage_2/gates/ (PLANNED); T-EVT-002
   - tests/research/stage_2/paths/extraction/ (S2-T11 TESTED)
@@ -414,6 +425,7 @@ rules:
   - tests/research/stage_2/baselines/placebo/ (S2P14-T17 historical-only evidence boundary tests)
   - tests/research/stage_2/statistics/bootstrap/ (S2P15-T18 historical statistical evidence boundary tests)
   - tests/research/stage_2/acceptance/evidence_gate/ (S2P16-T19 historical evidence boundary and gate-priority tests)
+  - tests/research/stage_2/acceptance/final_acceptance/ (S2P17-T20 historical evidence and non-promoting closure tests)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   stage_1_delivery:
@@ -766,6 +778,7 @@ rules:
   - S2-T20
   - S2P14-T17
   - S2P16-T19
+  - S2P17-T20
   implementation_paths:
   - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/ (PLANNED)
   - src/era100x/research/stage_2/paths/extraction/ (S2-T11 read-only episode lineage)
@@ -774,6 +787,7 @@ rules:
   - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 immutable first-passage lineage)
   - src/era100x/research/stage_2/baselines/placebo/ (S2P14-T17 immutable source Episode and T16 matrix lineage)
   - src/era100x/research/stage_2/acceptance/evidence_gate/ (S2P16-T19 immutable upstream Hash and lineage projection)
+  - src/era100x/research/stage_2/acceptance/final_acceptance/ (S2P17-T20 immutable upstream Hash chain and event identity projection)
   test_paths:
   - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); FI-14
   - tests/research/stage_2/paths/extraction/ (S2-T11 immutable lineage regression)
@@ -782,6 +796,7 @@ rules:
   - tests/research/stage_2/labels/ambiguity/ (S2-T14 immutable lineage regression)
   - tests/research/stage_2/baselines/placebo/ (S2P14-T17 source identity and Hash-drift regression)
   - tests/research/stage_2/acceptance/evidence_gate/ (S2P16-T19 source binding and Hash-drift regression)
+  - tests/research/stage_2/acceptance/final_acceptance/ (S2P17-T20 source binding, selection identity and Hash-drift regression)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   s2_t13_delivery:
@@ -880,6 +895,7 @@ rules:
   - S2-T20
   - S2P14-T17
   - S2P16-T19
+  - S2P17-T20
   implementation_paths:
   - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/ (PLANNED)
   - src/era100x/research/stage_2/paths/extraction/ (S2-T11 strategy-independent lineage)
@@ -888,6 +904,7 @@ rules:
   - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 strategy-independent lineage)
   - src/era100x/research/stage_2/baselines/placebo/ (S2P14-T17 outcome-blind placebo lineage)
   - src/era100x/research/stage_2/acceptance/evidence_gate/ (S2P16-T19 strategy-independent evidence projection)
+  - src/era100x/research/stage_2/acceptance/final_acceptance/ (S2P17-T20 strategy-independent final evidence projection)
   test_paths:
   - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); UT-EVT-011
   - tests/research/stage_2/paths/extraction/ (S2-T11 lineage regression)
@@ -896,6 +913,7 @@ rules:
   - tests/research/stage_2/labels/ambiguity/ (S2-T14 lineage regression)
   - tests/research/stage_2/baselines/placebo/ (S2P14-T17 blind-selection and source-lineage regression)
   - tests/research/stage_2/acceptance/evidence_gate/ (S2P16-T19 strategy-independent gate regression)
+  - tests/research/stage_2/acceptance/final_acceptance/ (S2P17-T20 strategy-independent selection and evidence-card regression)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   s2_t13_delivery:
