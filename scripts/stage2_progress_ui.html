@@ -1163,6 +1163,7 @@
         byId("liveFlowSummary").textContent = "实时证据暂时不可用";
       } finally {
         legacyRefreshInFlight = false;
+        if (lastV14Status) renderV14Flow(lastV14Status);
       }
     }
     refreshV13();
