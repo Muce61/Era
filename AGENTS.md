@@ -36,6 +36,12 @@ Every formal full-data Run must still bind a clean commit and human approval, pr
 
 After each task: run required validation commands; report actual modified files; update traceability; report incomplete work; distinguish tests actually run from tests not run; do not continue automatically; and never claim an unrun test passed.
 
+For the Stage 2 progress Web UI, every newly added Plan, Task, or Task submodule must use the
+Plan v1.3 observability standard: evidence-derived status, processed/total units, percentage,
+elapsed time, throughput, ETA, current phase/subphase, heartbeat, Verify state, and automatic
+left-rail projection. Do not replace these fields with a percentage-only card, hard-code PASS, or
+leave obsolete evidence blocks between active Plan sections.
+
 ## Change Handling
 
 Stop expanding implementation if the manual conflicts with official Binance facts, a `FROZEN` rule is not implementable, an upstream data contract must change, the Task scope is insufficient, research refutes an assumption, risk behavior must change, a real API is needed, or the next Stage is required. Record the matter in `docs/development/OPEN_QUESTIONS.md` or create a Change Request under `docs/development/changes/`.

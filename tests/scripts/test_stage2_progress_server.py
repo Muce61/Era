@@ -802,7 +802,7 @@ def test_ui_derives_current_task_version_count_and_acceptance_without_hardcoded_
     page = MODULE_PATH.with_name("stage2_progress_ui.html").read_text(encoding="utf-8")
 
     assert 'task.task_version || "UNKNOWN"' in page
-    assert "/ 16 PASSED" in page
+    assert "/ 18 PASSED" in page
     assert "S2-T11 v1.2" not in page
     assert "S2-T15<b>CHECKING</b>" in page
     assert "S2-T15<b>PASSED</b>" not in page
@@ -830,11 +830,17 @@ def test_ui_derives_current_task_version_count_and_acceptance_without_hardcoded_
     assert "task.started_at" in page
     assert "task.completed_at" in page
     assert "lastV13Status" in page
+    assert "lastV14Status" in page
     assert "}, 1000)" in page
     assert "rehearsal_progress_percent" in page
     assert "rehearsal_heartbeat_at" in page
-    assert "formal_rehearsal_gate_mode" in page
-    assert "background_runtime_waiver_reason" in page
+    assert 'id="s2p14t17Item"' in page
+    assert 'id="railP13T16Item"' in page
+    assert "units_per_second" in page
+    assert "elapsedDuration(item.elapsed_seconds)" in page
+    assert "run_code_commit" in page
+    assert "只读，不改变 Run" in page
+    assert 'id="v13Evidence"' not in page
     assert 'state === "running" ? 35' not in page
 
 

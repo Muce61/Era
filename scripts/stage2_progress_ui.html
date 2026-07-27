@@ -271,7 +271,7 @@
 
     <section class="layout">
       <aside class="panel task-rail" aria-label="阶段任务轨道">
-        <h2 class="panel-title"><span>阶段任务轨道</span><span id="passedCount" class="passed-count">10 / 16 PASSED</span></h2>
+        <h2 class="panel-title"><span>阶段任务轨道</span><span id="passedCount" class="passed-count">17 / 18 PASSED</span></h2>
         <ol class="task-list">
           <li class="task-item"><button class="task-button" data-task="Manifest：冻结预注册输入、输出布局与 Group-1 执行边界。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">S2-T19</span><span class="task-name">Manifest（前置）</span><span class="task-state">PASSED</span></button></li>
           <li class="task-item"><button class="task-button" data-task="Contracts：Stage 2 输入边界、注册表与 CanonicalKeyLevel 契约。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">01 S2-T01</span><span class="task-name">Contracts</span><span class="task-state">PASSED</span></button></li>
@@ -284,11 +284,18 @@
           <li class="task-item branch"><button class="task-button" data-task="Flow G4：基于 Stage 1 H2 Trades 的流量研究门，与 PRICE 路径隔离。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">07b S2-T08</span><span class="task-name">Flow G4（并行）</span><span class="task-state">PASSED</span></button></li>
           <li class="task-item"><button class="task-button" data-task="MarketEpisode：冻结身份、去重、一次消费与 re-arm 规则。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">08 S2-T09</span><span class="task-name">MarketEpisode（汇聚）</span><span class="task-state">PASSED</span></button></li>
           <li id="s2t10Item" class="task-item active"><button id="s2t10Button" class="task-button" aria-current="step" data-task="Full Generation：由发布、验证和 61,776 分区零容差比较证据自动判定。"><span id="s2t10Node" class="node">10</span><span class="task-code">S2-T10</span><span class="task-name">Full Generation</span><span id="s2t10State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
-          <li id="s2t11Item" class="task-item active"><button id="s2t11Button" class="task-button" aria-current="step" data-task="路径提取：从真实收据自动识别 H1/H2、BTC/ETH、验证与全量输出状态。"><span id="s2t11Node" class="node">11</span><span class="task-code">S2-T11</span><span class="task-name">Path Extraction</span><span id="s2t11State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
-          <li id="s2t12Item" class="task-item active"><button id="s2t12Button" class="task-button" aria-current="step" data-task="路径指标：从最新 Authority、Run、Catalog、Verify 与 validation 自动识别 BTC/ETH 的 H1/H2 历史指标状态。"><span id="s2t12Node" class="node">12</span><span class="task-code">S2-T12</span><span class="task-name">Path Metrics</span><span id="s2t12State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
-          <li id="s2t13Item" class="task-item active"><button id="s2t13Button" class="task-button" aria-current="step" data-task="First Passage：从最新 Authority、Run、Catalog、Verify 与 validation 自动识别 H1/H2 的目标先、止损先、过期和歧义状态。"><span id="s2t13Node" class="node">13</span><span class="task-code">S2-T13</span><span class="task-name">First Passage</span><span id="s2t13State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
-          <li id="s2t14Item" class="task-item active"><button id="s2t14Button" class="task-button" aria-current="step" data-task="Ambiguity Bounds：从最新 Authority、Run、Catalog、Verify 与 validation 自动识别 Primary、条件口径与理论上界，且不删除原始 AMBIGUOUS。"><span id="s2t14Node" class="node">14</span><span class="task-code">S2-T14</span><span class="task-name">Ambiguity Bounds</span><span id="s2t14State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
-          <li id="s2t15Item" class="task-item active"><button id="s2t15Button" class="task-button" aria-current="step" data-task="Conditional Baseline：从治理、只读审计、Authority、Run、Verify 与 validation 自动识别，不预设 PASS。"><span id="s2t15Node" class="node">15</span><span class="task-code">S2-T15</span><span class="task-name">Conditional Baseline</span><span id="s2t15State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
+          <li id="s2t11Item" class="task-item active" hidden><button id="s2t11Button" class="task-button" aria-current="step" data-task="Plan v1.2 历史路径提取。"><span id="s2t11Node" class="node">11</span><span class="task-code">S2-T11</span><span class="task-name">Path Extraction</span><span id="s2t11State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
+          <li id="s2t12Item" class="task-item active" hidden><button id="s2t12Button" class="task-button" aria-current="step" data-task="Plan v1.2 历史路径指标。"><span id="s2t12Node" class="node">12</span><span class="task-code">S2-T12</span><span class="task-name">Path Metrics</span><span id="s2t12State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
+          <li id="s2t13Item" class="task-item active" hidden><button id="s2t13Button" class="task-button" aria-current="step" data-task="Plan v1.2 历史 First Passage。"><span id="s2t13Node" class="node">13</span><span class="task-code">S2-T13</span><span class="task-name">First Passage</span><span id="s2t13State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
+          <li id="s2t14Item" class="task-item active" hidden><button id="s2t14Button" class="task-button" aria-current="step" data-task="Plan v1.2 历史 Ambiguity Bounds。"><span id="s2t14Node" class="node">14</span><span class="task-code">S2-T14</span><span class="task-name">Ambiguity Bounds</span><span id="s2t14State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
+          <li id="s2t15Item" class="task-item active" hidden><button id="s2t15Button" class="task-button" aria-current="step" data-task="Plan v1.2 历史 Conditional Baseline。"><span id="s2t15Node" class="node">15</span><span class="task-code">S2-T15</span><span class="task-name">Conditional Baseline</span><span id="s2t15State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
+          <li id="railP13T11Item" class="task-item"><button class="task-button" data-task="Plan v1.3：7天理论完整生命周期。"><span id="railP13T11Node" class="node">11</span><span class="task-code">S2P13-T11</span><span class="task-name">Lifecycle</span><span id="railP13T11State" class="task-state">CHECKING</span></button></li>
+          <li id="railP13T12Item" class="task-item"><button class="task-button" data-task="Plan v1.3：无退出规则污染的路径提取。"><span id="railP13T12Node" class="node">12</span><span class="task-code">S2P13-T12</span><span class="task-name">Path Extraction</span><span id="railP13T12State" class="task-state">CHECKING</span></button></li>
+          <li id="railP13T13Item" class="task-item"><button class="task-button" data-task="Plan v1.3：历史路径指标。"><span id="railP13T13Node" class="node">13</span><span class="task-code">S2P13-T13</span><span class="task-name">Path Metrics</span><span id="railP13T13State" class="task-state">CHECKING</span></button></li>
+          <li id="railP13T14Item" class="task-item"><button class="task-button" data-task="Plan v1.3：First Passage。"><span id="railP13T14Node" class="node">14</span><span class="task-code">S2P13-T14</span><span class="task-name">First Passage</span><span id="railP13T14State" class="task-state">CHECKING</span></button></li>
+          <li id="railP13T15Item" class="task-item"><button class="task-button" data-task="Plan v1.3：AMBIGUOUS 合同。"><span id="railP13T15Node" class="node">15</span><span class="task-code">S2P13-T15</span><span class="task-name">AMBIGUOUS</span><span id="railP13T15State" class="task-state">CHECKING</span></button></li>
+          <li id="railP13T16Item" class="task-item"><button class="task-button" data-task="Plan v1.3：条件随机基线。"><span id="railP13T16Node" class="node">16</span><span class="task-code">S2P13-T16</span><span class="task-name">Conditional Baseline</span><span id="railP13T16State" class="task-state">CHECKING</span></button></li>
+          <li id="s2p14t17Item" class="task-item active"><button id="s2p14t17Button" class="task-button" aria-current="step" data-task="Plan v1.4 安慰剂信号：从正式 T16 证据执行 outcome-blind 假事件与同层对照匹配，只输出 H2 历史描述性证据。"><span id="s2p14t17Node" class="node">17</span><span class="task-code">S2P14-T17</span><span class="task-name">Placebo Signal</span><span id="s2p14t17State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
         </ol>
         <div id="taskHint" class="task-hint">选择节点查看职责。</div>
       </aside>
@@ -340,7 +347,6 @@
         <section class="live-flow" aria-labelledby="v13FlowTitle">
           <div class="live-flow-head"><strong id="v13FlowTitle">Plan v1.3 · 生命周期与 successor 流水线</strong><span id="v13FlowSummary">正在读取治理、短跑与 checkpoint…</span></div>
           <div id="v13FlowGrid" class="flow-grid" aria-live="polite"></div>
-          <span id="v13Evidence" class="live-evidence">CHECKING · Stage 3 LOCKED</span>
         </section>
 
         <section class="live-flow" aria-labelledby="v14FlowTitle">
@@ -474,6 +480,14 @@
       if (value < 60) return `${Math.ceil(value)}s`;
       if (value < 3600) return `${Math.floor(value / 60)}m ${Math.ceil(value % 60)}s`;
       return `${Math.floor(value / 3600)}h ${Math.floor((value % 3600) / 60)}m`;
+    };
+    const elapsedDuration = (seconds) => {
+      const totalSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const remainder = totalSeconds % 60;
+      return `${days ? `${days}天 ` : ""}${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
     };
     const compactBytes = (bytes) => {
       const value = Math.max(0, Number(bytes) || 0);
@@ -760,7 +774,7 @@
       byId("s2t15State").textContent = raw;
       byId("taskProgressTag").className = passed ? "tag approved" : "tag progress";
       byId("taskProgressTag").innerHTML = `S2-T15 v${escapeText(task.task_version || "1.4")}<b>${raw}</b>`;
-      byId("passedCount").textContent = `${priorPassedCount + (passed ? 1 : 0)} / 16 PASSED`;
+      byId("passedCount").textContent = `${priorPassedCount + (passed ? 1 : 0)} / 18 PASSED`;
       byId("conditionalRunId").textContent = escapeText(task.run_id);
       byId("conditionalEvidence").textContent = `${raw} · audit ${escapeText(task.audit_status)} · missing receipt distributions ${number(task.missing_distribution_partition_count)} · Authority ${number(task.authority_count)} · H2 paths ${number(task.h2_path_count)} · cells ${number(task.h2_outcome_cell_count)} · ${escapeText(task.research_result)} · Stage 3 LOCKED`;
       return {task, passed, failed, blocked, running: raw === "IN_PROGRESS"};
@@ -819,6 +833,29 @@
         };
       });
       byId("v13FlowGrid").innerHTML = states.map(flowCard).join("");
+      const railIds = {
+        "S2P13-T11":"railP13T11",
+        "S2P13-T12":"railP13T12",
+        "S2P13-T13":"railP13T13",
+        "S2P13-T14":"railP13T14",
+        "S2P13-T15":"railP13T15",
+        "S2P13-T16":"railP13T16"
+      };
+      let planV13Passed = 0;
+      Object.entries(railIds).forEach(([taskId, prefix]) => {
+        const raw = String((tasks[taskId] || {}).status || "CHECKING");
+        const passed = raw === "PASS";
+        const failed = raw === "FAILED" || raw === "TERMINAL_FAILED";
+        const blocked = raw === "BLOCKED";
+        const running = raw === "IN_PROGRESS" || raw === "PREFLIGHT";
+        if (passed) planV13Passed += 1;
+        byId(`${prefix}Item`).classList.toggle("active", running);
+        byId(`${prefix}Item`).classList.toggle("failed", failed);
+        byId(`${prefix}Item`).classList.toggle("blocked", blocked);
+        byId(`${prefix}Node`).innerHTML = passed ? '<i class="fa-solid fa-check"></i>' : failed ? '<i class="fa-solid fa-xmark"></i>' : blocked ? '<i class="fa-solid fa-pause"></i>' : taskId.slice(-2);
+        byId(`${prefix}State`).textContent = raw;
+      });
+      legacyRailPassedCount = 11 + planV13Passed;
       const blockers = (plan.blocking_questions || []).join(", ") || "NONE";
       const pendingGates = (plan.pending_execution_gates || []).join(", ") || "NONE";
       const formalVisible = !["NOT_STARTED", "NOT_PRESENT"].includes(String(plan.formal_chain_status || "NOT_STARTED"));
@@ -828,19 +865,7 @@
       const activeTask = formalVisible ? plan.formal_chain_current_task : plan.current_task;
       const activeLabel = formalVisible ? "正式链" : "7天短跑";
       const coverage = plan.t16_coverage || {status:"NOT_AVAILABLE"};
-      const coverageRejected = coverage.status === "RESEARCH_REJECTED" || coverage.status === "EVIDENCE_INVALID";
-      const coverageText = coverage.coverage_contract_id
-        ? `${coverage.status} · contract ${coverage.coverage_contract_id} · event gap ${number(coverage.event_gap_affected_matrix_count)} (${coverage.event_gap_affected_matrix_rate ?? "—"}; matched ${coverage.matched_event_gap_affected_matrix_rate ?? "—"}) · control gap ${number(coverage.control_gap_affected_matrix_count)} (${coverage.control_gap_affected_matrix_rate ?? "—"}; assigned ${coverage.control_gap_affected_assignment_rate ?? "—"})`
-        : `${coverage.status} · ${coverage.reason_code || "coverage report not available"}`;
       byId("v13FlowSummary").textContent = `${plan.status || "BLOCKED"} · ${activeLabel} ${formalVisible ? (plan.formal_chain_status || "NOT_STARTED") : (plan.rehearsal_status || "NOT_STARTED")} · ${liveProgress.toFixed(2)}% · 当前 ${activeTask || "—"} · T16 research ${coverage.status || "NOT_AVAILABLE"} · 心跳 ${heartbeat} · 5秒自动刷新 · open questions ${blockers} · gates ${pendingGates}`;
-      const inputBlockers = (plan.remaining_input_blockers || []).join(", ") || "NONE";
-      const fundingTracks = (plan.funding_tracks || []).join(" / ") || "—";
-      const fundingEvidence = plan.funding_evidence || {};
-      const fundingEvidenceText = `${fundingEvidence.status || "NOT_STARTED"}/${fundingEvidence.scope || "—"} · rows ${number(fundingEvidence.total_row_count)} · differences ${number(fundingEvidence.difference_count)} · Verify ${fundingEvidence.verify_status || "NOT_RUN"} · acceptance ${fundingEvidence.acceptance_status || "NOT_PRESENT"} · bound ${fundingEvidence.historical_funding_bound ? "YES" : "NO"}`;
-      const rehearsalMatches = Object.entries(plan.rehearsal_t16_match_levels || {}).map(([instrument, level]) => `${instrument} ${level}`).join(" / ") || "—";
-      const metrics = `governance ${plan.governance_model || "LEGACY"} · policy ${plan.policy_hash || "—"} · external approval ${plan.external_approval_status || "NOT_PRESENT"} · selected approval ${plan.selected_approval_hash || "—"} (${plan.approval_selection_basis || "—"}) · reason schema v${plan.reason_code_schema_version || "—"} · ${plan.reason_message || plan.reason_code || "—"} · rehearsal gate ${plan.formal_rehearsal_gate_mode || "DEFAULT_REHEARSAL_REQUIRED"} · waiver reason ${plan.background_runtime_waiver_reason || "—"} · ChainAuthority ${number(plan.chain_authority_count)} · formal chain ${plan.formal_chain_status || "NOT_STARTED"} · formal task ${plan.formal_chain_current_task || "—"} · formal reason ${plan.formal_chain_reason || "—"} · T16 coverage ${coverageText} · historical chain ${plan.historical_formal_chain_status || "NOT_PRESENT"} · historical reason ${plan.historical_formal_chain_reason || "—"} · Trade supplement ${plan.trade_supplement_status || "NOT_PRESENT"} ${plan.trade_supplement_acceptance_hash || "—"} · supplement 7-day ${plan.trade_supplement_rehearsal_status || "NOT_STARTED"} · 7天短跑 ${plan.rehearsal_status || "NOT_STARTED"} ${liveProgress.toFixed(2)}%（仅验收格式与接线，不是正式结果） · heartbeat ${heartbeat} · failure ${plan.rehearsal_progress_failure_reason || "—"} · report Verify ${plan.rehearsal_report_valid ? "PASS" : "NOT_PRESENT"} · T16 ${rehearsalMatches} · repo ${plan.repo_root || "—"} · commit ${plan.repo_commit || "—"} · price ${plan.price_proxy_source || "—"} · 20bp auxiliary · target ${plan.lifecycle_target_contract || "—"} · funding ${fundingTracks} · funding evidence ${fundingEvidenceText} · liquidation ${plan.liquidation_contract || "—"} · input blockers ${inputBlockers} · right-censored ${number(plan.right_censored_count)} · scenario liquidation ${number(plan.scenario_liquidation_count)} · ticket double Δ ${plan.ticket_double_probability_delta ?? "—"} · equity/day Δ ${plan.ticket_equity_per_day_delta ?? "—"} · Stage 3 ${plan.stage3_locked ? "LOCKED" : "UNEXPECTED_UNLOCK"}`;
-      byId("v13Evidence").textContent = metrics;
-      byId("v13Evidence").classList.toggle("bad", Boolean(plan.server_stale) || coverageRejected);
       return plan;
     }
 
@@ -860,11 +885,23 @@
         const item = phaseMap[phase] || {status:"NOT_STARTED", progress_percent:0};
         const raw = String(item.status || "NOT_STARTED");
         const state = raw === "PASS" ? "pass" : raw === "IN_PROGRESS" ? "running" : raw === "FAILED" ? "failed" : "pending";
+        const processed = Number(item.processed_units) || 0;
+        const total = Number(item.total_units) || 0;
+        const throughput = Number(item.units_per_second) || 0;
+        const details = [
+          `${raw} · ${Number(item.progress_percent || 0).toFixed(2)}%`,
+          total ? `${number(processed)} / ${number(total)}` : null,
+          `耗时 ${elapsedDuration(item.elapsed_seconds)}`,
+          throughput ? `吞吐 ${throughput.toFixed(2)} units/s` : null,
+          item.eta_seconds ? `ETA ${compactDuration(item.eta_seconds)}` : null,
+          item.subphase ? `当前 ${item.subphase}` : null,
+          item.heartbeat_at ? `心跳 ${dateTime(item.heartbeat_at)}` : null
+        ].filter(Boolean).join(" · ");
         return {
           name:`${phase} · ${label}`,
           icon:phase === "BLIND_SELECTION" ? "fa-eye-slash" : phase === "VERIFY" ? "fa-shield-halved" : "fa-diagram-project",
           state,
-          detail:`${raw} · ${Number(item.progress_percent || 0).toFixed(2)}%`,
+          detail:details,
           progress:Math.max(0, Math.min(100, Number(item.progress_percent) || 0))
         };
       });
@@ -872,14 +909,28 @@
       const percent = Math.max(0, Math.min(100, Number(plan.progress_percent) || 0));
       byId("v14FlowSummary").textContent = `${plan.status || "BLOCKED"} · ${plan.reason_code || "UNKNOWN_REASON"} · ${plan.phase || "AUDIT"} ${plan.subphase || ""} · ${percent.toFixed(2)}% · ${number(plan.processed_units)} / ${number(plan.total_units)} · ETA ${compactDuration(plan.eta_seconds)} · 心跳 ${plan.heartbeat_at ? dateTime(plan.heartbeat_at) : "—"} · 5秒自动刷新`;
       const counts = plan.source_counts || {};
-      byId("v14Evidence").textContent = `${plan.evidence_label || "H2 historical placebo evidence"} · source T16 ${plan.source_t16_status || "CHECKING"} ${plan.source_t16_verify_hash || "—"} · eligible ${number(counts.eligible)} · slots ${number(counts.matched)} · source unmatched ${number(counts.unmatched)} · controls ${number(counts.controls)} · approval ${number(plan.approval_count)} · Authority ${number(plan.authority_count)} · Run ${number(plan.run_count)} · matched ${number(plan.placebo_matched)} · unmatched ${number(plan.placebo_unmatched)} · summaries ${number(plan.summary_row_count)} · ${plan.research_status || "DESCRIPTIVE_ONLY_CLUSTERING_BOOTSTRAP_PENDING"} · Stage 3 ${plan.stage3_locked ? "LOCKED" : "UNEXPECTED_UNLOCK"}`;
+      byId("v14Evidence").textContent = `${plan.evidence_label || "H2 historical placebo evidence"} · source T16 ${plan.source_t16_status || "CHECKING"} ${plan.source_t16_verify_hash || "—"} · eligible ${number(counts.eligible)} · slots ${number(counts.matched)} · source unmatched ${number(counts.unmatched)} · controls ${number(counts.controls)} · approval ${number(plan.approval_count)} · Authority ${number(plan.authority_count)} · Run ${number(plan.run_count)} · run code ${plan.run_code_commit || "—"} · observer ${plan.observer_repo_commit || plan.repo_commit || "—"}（只读，不改变 Run） · matched ${number(plan.placebo_matched)} · unmatched ${number(plan.placebo_unmatched)} · summaries ${number(plan.summary_row_count)} · ${plan.research_status || "DESCRIPTIVE_ONLY_CLUSTERING_BOOTSTRAP_PENDING"} · Stage 3 ${plan.stage3_locked ? "LOCKED" : "UNEXPECTED_UNLOCK"}`;
       byId("v14Evidence").classList.toggle("bad", !plan.stage3_locked || plan.status === "FAILED");
+      const railPassed = plan.status === "PASS";
+      const railFailed = plan.status === "FAILED";
+      const railBlocked = plan.status === "BLOCKED";
+      byId("s2p14t17Item").classList.toggle("active", plan.status === "IN_PROGRESS");
+      byId("s2p14t17Item").classList.toggle("failed", railFailed);
+      byId("s2p14t17Item").classList.toggle("blocked", railBlocked);
+      if (railPassed) byId("s2p14t17Button").removeAttribute("aria-current");
+      else byId("s2p14t17Button").setAttribute("aria-current", "step");
+      byId("s2p14t17Node").innerHTML = railPassed ? '<i class="fa-solid fa-check"></i>' : railFailed ? '<i class="fa-solid fa-xmark"></i>' : railBlocked ? '<i class="fa-solid fa-pause"></i>' : "17";
+      byId("s2p14t17State").textContent = plan.status || "CHECKING";
+      byId("passedCount").textContent = `${legacyRailPassedCount + (railPassed ? 1 : 0)} / 18 PASSED`;
+      byId("taskProgressTag").className = railPassed ? "tag approved" : "tag progress";
+      byId("taskProgressTag").innerHTML = `S2P14-T17 v1.0<b>${escapeHtml(plan.status || "CHECKING")}</b>`;
       return plan;
     }
 
     let legacyRefreshInFlight = false;
     let lastV13Status = null;
     let lastV14Status = null;
+    let legacyRailPassedCount = 17;
 
     async function refreshV13() {
       try {
@@ -893,8 +944,6 @@
           : `Plan v1.3 · ${escapeText(plan.status || "BLOCKED")} · ${escapeText(plan.current_task || "—")}`;
       } catch (error) {
         byId("v13FlowSummary").textContent = "BLOCKED · Plan v1.3 轻量状态接口不可用";
-        byId("v13Evidence").textContent = "状态读取失败；不得把 CHECKING 当作 PASS。";
-        byId("v13Evidence").classList.add("bad");
       }
     }
 

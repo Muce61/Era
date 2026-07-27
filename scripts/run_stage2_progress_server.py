@@ -1048,9 +1048,11 @@ def _stage2_v14_projection(stage2_root: Path) -> dict[str, Any]:
     )
     checkpoint: dict[str, Any] = {}
     verify: dict[str, Any] = {}
+    run_contract: dict[str, Any] = {}
     run_id = None
     if runs:
         run_id = runs[-1].name
+        run_contract = _safe_json_object(runs[-1] / "run-contract.json")
         checkpoint = _safe_json_object(runs[-1] / "checkpoint.json")
         verify_files = tuple(
             path
@@ -1070,19 +1072,154 @@ def _stage2_v14_projection(stage2_root: Path) -> dict[str, Any]:
             ):
                 verify = candidate
     current_phase = str(checkpoint.get("phase") or ("VERIFY" if verify else "AUDIT"))
-    current_index = phases.index(current_phase) if current_phase in phases else 0
     progress_value = float(checkpoint.get("percent") or 0.0)
+    now_epoch = datetime.now(UTC).timestamp()
+    active_root = runs[-1] if runs else None
+
+    def first_mtime(paths: Sequence[Path]) -> float | None:
+        values = [
+            path.stat().st_mtime
+            for path in paths
+            if path.is_file() and not path.is_symlink() and not path.name.startswith("._")
+        ]
+        return min(values) if values else None
+
+    run_started_epoch = (
+        (active_root / "run-contract.json").stat().st_mtime
+        if active_root is not None
+        and (active_root / "run-contract.json").is_file()
+        and not (active_root / "run-contract.json").is_symlink()
+        else None
+    )
+    blind_files = (
+        tuple((active_root / "work/blind-selections").rglob("*.parquet"))
+        if active_root is not None
+        else ()
+    )
+    match_files = (
+        tuple((active_root / "work/results/matches").rglob("*.parquet"))
+        if active_root is not None
+        else ()
+    )
+    blind_started_epoch = first_mtime(blind_files)
+    outcome_started_epoch = first_mtime(match_files)
+    summary_started_epoch = (
+        first_mtime(
+            (
+                active_root / "work/results/descriptive_summaries.parquet",
+                active_root / "work/results/matches/descriptive_summaries.parquet",
+            )
+        )
+        if active_root is not None
+        else None
+    )
+    publish_started_epoch = (
+        first_mtime(tuple((active_root / "published").rglob("*")))
+        if active_root is not None and (active_root / "published").is_dir()
+        else None
+    )
+    verify_started_epoch = (
+        first_mtime(tuple((active_root / "verify").glob("*.json")))
+        if active_root is not None and (active_root / "verify").is_dir()
+        else None
+    )
+    phase_start_epochs: dict[str, float | None] = {
+        "AUDIT": run_started_epoch,
+        "BLIND_SELECTION": blind_started_epoch,
+        "GROUP_MATCHING": blind_started_epoch,
+        "OUTCOME_ATTACH": outcome_started_epoch,
+        "SUMMARY": summary_started_epoch,
+        "PUBLISH": publish_started_epoch,
+        "VERIFY": verify_started_epoch,
+    }
+    phase_end_epochs: dict[str, float | None] = {
+        "AUDIT": blind_started_epoch,
+        "BLIND_SELECTION": outcome_started_epoch,
+        "GROUP_MATCHING": outcome_started_epoch,
+        "OUTCOME_ATTACH": summary_started_epoch or publish_started_epoch or verify_started_epoch,
+        "SUMMARY": publish_started_epoch,
+        "PUBLISH": verify_started_epoch,
+        "VERIFY": now_epoch if verify_started_epoch is not None else None,
+    }
+    later_phases = {
+        "AUDIT": {"BLIND_SELECTION", "OUTCOME_ATTACH", "VERIFY"},
+        "BLIND_SELECTION": {"OUTCOME_ATTACH", "VERIFY"},
+        "GROUP_MATCHING": {"OUTCOME_ATTACH", "VERIFY"},
+        "OUTCOME_ATTACH": {"VERIFY"},
+        "SUMMARY": {"VERIFY"},
+        "PUBLISH": {"VERIFY"},
+        "VERIFY": set(),
+    }
     phase_rows: list[dict[str, Any]] = []
-    for index, name in enumerate(phases):
-        if verify:
+    for name in phases:
+        phase_is_current = name == current_phase or (
+            current_phase == "BLIND_SELECTION" and name == "GROUP_MATCHING"
+        )
+        phase_has_started = phase_start_epochs[name] is not None
+        phase_is_complete = bool(verify) or current_phase in later_phases[name]
+        if name == "AUDIT" and checkpoint:
+            phase_is_complete = True
+        if phase_is_complete:
             state, percent = "PASS", 100.0
-        elif index < current_index or name == "AUDIT":
-            state, percent = "PASS", 100.0
-        elif index == current_index and checkpoint:
+        elif phase_is_current and checkpoint:
+            state, percent = "IN_PROGRESS", progress_value
+        elif phase_has_started:
             state, percent = "IN_PROGRESS", progress_value
         else:
             state, percent = "NOT_STARTED", 0.0
-        phase_rows.append({"name": name, "status": state, "progress_percent": percent})
+        if name == "AUDIT":
+            processed, total = (1 if checkpoint else 0), 1
+        elif name in {"BLIND_SELECTION", "GROUP_MATCHING"}:
+            processed = (
+                int(checkpoint.get("processed_units", 0))
+                if current_phase == "BLIND_SELECTION"
+                else (456 if phase_is_complete else 0)
+            )
+            total = 456
+        elif name == "OUTCOME_ATTACH":
+            processed = (
+                int(checkpoint.get("processed_units", 0))
+                if current_phase == name
+                else (456 if phase_is_complete else 0)
+            )
+            total = int(checkpoint.get("total_units", 456)) if current_phase == name else 456
+        elif name == "SUMMARY":
+            processed = int(verify.get("summary_row_count") or 0)
+            total = int(binding.counts.get("summaries", 0))
+        else:
+            processed, total = (1 if phase_is_complete else 0), 1
+        started_epoch = phase_start_epochs[name]
+        ended_epoch = phase_end_epochs[name]
+        elapsed_seconds = (
+            max(0, int((ended_epoch or now_epoch) - started_epoch))
+            if started_epoch is not None
+            else 0
+        )
+        units_per_second = processed / elapsed_seconds if processed and elapsed_seconds else None
+        eta_seconds = (
+            max(0, int((total - processed) / units_per_second))
+            if state == "IN_PROGRESS" and units_per_second and total > processed
+            else None
+        )
+        phase_rows.append(
+            {
+                "name": name,
+                "status": state,
+                "progress_percent": percent,
+                "processed_units": processed,
+                "total_units": total,
+                "elapsed_seconds": elapsed_seconds,
+                "units_per_second": units_per_second,
+                "eta_seconds": eta_seconds,
+                "started_at": (
+                    datetime.fromtimestamp(started_epoch, UTC).isoformat()
+                    if started_epoch is not None
+                    else None
+                ),
+                "subphase": checkpoint.get("subphase") if phase_is_current else None,
+                "heartbeat_at": checkpoint.get("heartbeat_at") if phase_is_current else None,
+            }
+        )
     authority_without_run = bool(authorities) and not runs
     empty_run_prefix = bool(runs) and not checkpoint and not verify
     run_lock_held = _exclusive_lock_is_held(policy.operations_root / "run.lock")
@@ -1113,6 +1250,10 @@ def _stage2_v14_projection(stage2_root: Path) -> dict[str, Any]:
             )
         )
     )
+    current_phase_row = next(
+        (row for row in phase_rows if row["name"] == current_phase),
+        phase_rows[0],
+    )
     base.update(
         {
             "status": status,
@@ -1125,14 +1266,24 @@ def _stage2_v14_projection(stage2_root: Path) -> dict[str, Any]:
             "authority_count": len(authorities),
             "run_count": len(runs),
             "run_id": run_id,
+            "run_code_commit": run_contract.get("code_commit"),
+            "observer_repo_commit": _repository_commit(),
+            "observer_changes_do_not_mutate_run": True,
             "phase": current_phase,
             "subphase": checkpoint.get("subphase"),
             "progress_percent": 100.0 if verify else progress_value,
             "processed_units": checkpoint.get("processed_units", 0),
             "total_units": checkpoint.get("total_units", 456),
             "rows_per_second": checkpoint.get("rows_per_second"),
-            "eta_seconds": checkpoint.get("eta_seconds"),
-            "elapsed_seconds": checkpoint.get("elapsed_seconds"),
+            "units_per_second": current_phase_row.get("units_per_second"),
+            "eta_seconds": checkpoint.get("eta_seconds") or current_phase_row.get("eta_seconds"),
+            "elapsed_seconds": checkpoint.get("elapsed_seconds")
+            or current_phase_row.get("elapsed_seconds"),
+            "started_at": (
+                datetime.fromtimestamp(run_started_epoch, UTC).isoformat()
+                if run_started_epoch is not None
+                else None
+            ),
             "heartbeat_at": checkpoint.get("heartbeat_at"),
             "phases": phase_rows,
             "verify_hash": verify.get("verify_hash"),
