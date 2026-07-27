@@ -1735,6 +1735,16 @@ def test_stage2_v14_projection_is_evidence_driven_and_reports_live_progress(
     assert blocked["source_counts"]["matched"] == 413827
     assert blocked["stage3_locked"] is True
 
+    _write(
+        evidence_root / f"authorities/authority-{'3' * 64}.json",
+        json.dumps({"authority_hash": "3" * 64}),
+    )
+    authority_only = _stage2_v14_projection(tmp_path)
+    assert authority_only["status"] == "BLOCKED"
+    assert authority_only["reason_code"] == "AUTHORITY_SEALED_WITHOUT_RUN"
+    assert authority_only["authority_count"] == 1
+    assert authority_only["run_count"] == 0
+
     run_root = evidence_root / "runs/stage2-s2p14-t17-test"
     _write(
         run_root / "checkpoint.json",

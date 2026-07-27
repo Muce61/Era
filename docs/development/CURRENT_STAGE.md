@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.4 — T17 IMPLEMENTATION AUTHORIZED
 Current Task: S2P14-T17 v1.0 — placebo signal
-Status: IMPLEMENTATION_READY / FORMAL_RUN_COMMIT_BOUND_APPROVAL_REQUIRED
+Status: FORMAL_PRE_RUN_BLOCKED / SUCCESSOR_APPROVAL_REQUIRED
 ```
 
 Plan v1.4 is approved only for the S2P14-T17 same-stratum non-event placebo. It binds the final
@@ -14,6 +14,14 @@ mypy, strict Traceability, governance validation and 786 repository tests; brows
 confirmed the automatic T17 projection, exact T16 counts, five-second refresh and Stage 3 lock.
 A formal Authority/Run remains forbidden until the final clean commit receives a commit-bound
 human approval. T18–T21 are not authorized and Stage 3 remains locked.
+
+The first commit-bound formal attempt at `272e22644864ab07738846350d5815ec306454d3` sealed Authority
+`b447069df72a951a9d0685ca74d833802f066d27607c380d450ffe0cb55a0bfc`, then stopped before Run ID
+creation because the strict Python reader rejected JSON arrays for two frozen tuple fields. The
+Authority remains append-only; no Run, selection, outcome, summary or publication exists. The
+reader now uses Pydantic's strict JSON path, which preserves tuple validation while accepting
+canonical JSON arrays. A new clean commit and explicit unique-successor approval are required
+before any further formal write.
 
 The final formal successor `fa92072063be8455fab814c1e9f302f2b06392a999820a53bd430e7282f57579`
 completed T11–T16 at commit `555c2a543a9cb3fdf1cb8c79c644792933de2260`. Every Task handoff,

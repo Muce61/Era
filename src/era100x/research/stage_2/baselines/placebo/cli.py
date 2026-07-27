@@ -67,7 +67,11 @@ def _status(policy: Any, repository_root: Path) -> dict[str, Any]:
     if approvals:
         status, reason = "NOT_STARTED", "FORMAL_APPROVAL_PRESENT"
     if authorities:
-        status, reason = "IN_PROGRESS", "AUTHORITY_SEALED"
+        status, reason = (
+            ("IN_PROGRESS", "AUTHORITY_SEALED")
+            if runs
+            else ("BLOCKED", "AUTHORITY_SEALED_WITHOUT_RUN")
+        )
     if active_run:
         status = str(active_run.get("status", "IN_PROGRESS"))
         reason = str(active_run.get("phase", "RUN_IN_PROGRESS"))

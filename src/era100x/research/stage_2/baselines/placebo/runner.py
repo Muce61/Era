@@ -972,7 +972,7 @@ def run_formal(
             authority_path,
             json.loads(authority.model_dump_json()),
         )
-        reread = S2P14T17Authority.model_validate(read_json(authority_path))
+        reread = S2P14T17Authority.model_validate_json(authority_path.read_text())
         if reread.authority_hash != authority.authority_hash:
             raise ValueError("placebo Authority read-back failed")
         timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
@@ -1077,7 +1077,7 @@ def resume_formal(
     if len(runs) != 1 or len(authorities) != 1:
         raise ValueError("resume requires exactly one Authority and one Run")
     run_root = runs[0]
-    authority = S2P14T17Authority.model_validate(read_json(authorities[0]))
+    authority = S2P14T17Authority.model_validate_json(authorities[0].read_text())
     contract = read_json(run_root / "run-contract.json")
     if (
         canonical_hash(

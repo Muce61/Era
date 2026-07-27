@@ -1068,11 +1068,20 @@ def _stage2_v14_projection(stage2_root: Path) -> dict[str, Any]:
         else:
             state, percent = "NOT_STARTED", 0.0
         phase_rows.append({"name": name, "status": state, "progress_percent": percent})
+    authority_without_run = bool(authorities) and not runs
     status = "PASS" if verify else ("IN_PROGRESS" if checkpoint else "BLOCKED")
     reason_code = (
         "FORMAL_TASK_VERIFIED_PASS"
         if verify
-        else ("RUN_IN_PROGRESS" if checkpoint else "FORMAL_APPROVAL_REQUIRED")
+        else (
+            "RUN_IN_PROGRESS"
+            if checkpoint
+            else (
+                "AUTHORITY_SEALED_WITHOUT_RUN"
+                if authority_without_run
+                else "FORMAL_APPROVAL_REQUIRED"
+            )
+        )
     )
     base.update(
         {

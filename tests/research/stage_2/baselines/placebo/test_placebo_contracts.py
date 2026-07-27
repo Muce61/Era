@@ -10,6 +10,8 @@ from era100x.research.stage_2.baselines.conditional.v14_contracts import (
 from era100x.research.stage_2.baselines.placebo.contracts import (
     BlindPlaceboSelection,
     PlaceboMatchMatrix,
+    RELAXATION_LEVELS,
+    S2P14T17Authority,
 )
 
 
@@ -114,3 +116,30 @@ def test_outcome_field_cannot_be_smuggled_into_blind_selection() -> None:
                 "outcomes_json": "forbidden",
             }
         )
+
+
+def test_authority_strictly_reads_back_its_json_array_fields() -> None:
+    authority = S2P14T17Authority.seal(
+        {
+            "code_commit": "1" * 40,
+            "policy_hash": _hash(1),
+            "approval_hash": _hash(2),
+            "preregistration_hash": _hash(3),
+            "source_t16_receipt_hash": _hash(4),
+            "source_t16_authority_hash": _hash(5),
+            "source_t16_binning_hash": _hash(6),
+            "source_t16_manifest_hash": _hash(7),
+            "source_t16_catalog_hash": _hash(8),
+            "source_t16_snapshot_id": _hash(9),
+            "source_t16_verify_hash": _hash(10),
+            "source_counts_hash": _hash(11),
+            "exact_fields": ("instrument", "evaluation_fold"),
+            "relaxation_order": RELAXATION_LEVELS,
+        }
+    )
+
+    reread = S2P14T17Authority.model_validate_json(authority.model_dump_json())
+
+    assert reread == authority
+    assert isinstance(reread.exact_fields, tuple)
+    assert isinstance(reread.relaxation_order, tuple)
