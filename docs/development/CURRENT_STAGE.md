@@ -2,10 +2,19 @@
 
 ```text
 Current Stage: Stage 2
-Current Plan: stage_2_plan_v1.5 — CLOSED AT T18
-Current Task: S2P15-T18 v1.0 — cluster bootstrap
-Status: FORMAL ENGINEERING PASS / RECONCILIATION PASS / VERIFY PASS / STATISTICAL EVIDENCE ONLY
+Current Plan: stage_2_plan_v1.6 — AUTHORIZED ONLY FOR T19 IMPLEMENTATION
+Current Task: S2P16-T19 v1.0 — evidence synthesis and gate projection
+Status: IMPLEMENTATION / FORMAT SMOKE PASS ON PRE-COMMIT CODE / FORMAL AUTHORITY AND RUN FORBIDDEN
 ```
+
+Plan v1.6 authorizes only S2P16-T19. It reads the immutable formal T11, T16, T17 and T18
+evidence, projects the pre-registered H2 F1–F10 and H3 lifecycle gates, and never recomputes
+Trades, outcomes, bootstrap, CI or FDR. The first real read-only format smoke found BTC Primary
+`PRIMARY_FAILED`, both lifecycle instruments `INCONCLUSIVE_SOURCE_GAP_CENSORING`, and the overall
+recommendation `NO_GO_CURRENT_EVIDENCE`; these are implementation-smoke observations, not a
+formal T19 Run. A clean final commit, current format-smoke receipt and external commit-bound human
+approval are still required before Authority or Run creation. T20/T21 remain unauthorized and
+Stage 3 remains locked.
 
 Plan v1.5 authorizes only S2P15-T18. The implementation binds the immutable T16 Verify
 `b866905c18fd1cb1f3bbed1f74e5301c56a78e891b81ab3eea61bcff37ed2b86` and T17 Verify

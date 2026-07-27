@@ -163,6 +163,10 @@
     .recovery-list .sum { color: var(--green); }
     .live-evidence { display: block; margin-top: 14px; padding: 10px; border-radius: 8px; background: #081725; border: 1px solid var(--line); color: var(--dim); font-size: 11px; }
     .live-evidence b { display: block; color: #aebfd1; margin-bottom: 4px; }
+    .research-cards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:8px; }
+    .research-card { padding:10px; border:1px solid var(--line); border-radius:8px; background:#081725; font-size:11px; color:var(--dim); }
+    .research-card strong { display:block; margin-top:4px; color:#f2c86b; font-size:12px; }
+    .research-card.fail strong { color:#ff7373; }
     .decision { margin-top: 23px; min-height: 168px; border: 1px solid #643238; border-radius: 12px; background: #0b1724; display: grid; grid-template-columns: 325px 1fr 355px; overflow: hidden; }
     .locked { border-right: 1px solid var(--line); padding: 22px 24px; display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-content: center; color: var(--red); }
     .locked i { font-size: 38px; align-self: center; }
@@ -231,7 +235,7 @@
       .task-hint { display: none; }
       .execution { overflow-x: auto; padding-bottom: 8px; }
       .step-track { min-width: 760px; }
-      .flow-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .flow-grid, .research-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .authority { overflow-x: auto; }
       .authority-flow { min-width: 690px; }
       .lane { min-width: 720px; }
@@ -247,7 +251,7 @@
     @media (max-width: 520px) {
       .live-flow-head { display: block; }
       .live-flow-head span { display: block; margin-top: 5px; text-align: left; }
-      .flow-grid { grid-template-columns: 1fr; }
+      .flow-grid, .research-cards { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -297,6 +301,7 @@
           <li id="railP13T16Item" class="task-item"><button class="task-button" data-task="Plan v1.3：条件随机基线。"><span id="railP13T16Node" class="node">16</span><span class="task-code">S2P13-T16</span><span class="task-name">Conditional Baseline</span><span id="railP13T16State" class="task-state">CHECKING</span></button></li>
           <li id="s2p14t17Item" class="task-item"><button id="s2p14t17Button" class="task-button" data-task="Plan v1.4 安慰剂信号：从正式 T16 证据执行 outcome-blind 假事件与同层对照匹配，只输出 H2 历史描述性证据。"><span id="s2p14t17Node" class="node">17</span><span class="task-code">S2P14-T17</span><span class="task-name">Placebo Signal</span><span id="s2p14t17State" class="task-state">CHECKING</span></button></li>
           <li id="s2p15t18Item" class="task-item active"><button id="s2p15t18Button" class="task-button" aria-current="step" data-task="Plan v1.5 Cluster Bootstrap：按来源事件UTC周聚类，输出真实、安慰剂及配对差的CI与FDR统计证据。"><span id="s2p15t18Node" class="node">18</span><span class="task-code">S2P15-T18</span><span class="task-name">Cluster Bootstrap</span><span id="s2p15t18State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
+          <li id="s2p16t19Item" class="task-item active"><button id="s2p16t19Button" class="task-button" aria-current="step" data-task="Plan v1.6 Evidence Gate：只读综合 T11/T16/T17/T18，并执行预注册的 H2 与 H3 门槛。"><span id="s2p16t19Node" class="node">19</span><span class="task-code">S2P16-T19</span><span class="task-name">Evidence Gate</span><span id="s2p16t19State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
         </ol>
         <div id="taskHint" class="task-hint">选择节点查看职责。</div>
       </aside>
@@ -360,6 +365,18 @@
           <div class="live-flow-head"><strong id="v15FlowTitle">Plan v1.5 · S2P15-T18 Cluster Bootstrap</strong><span id="v15FlowSummary">正在读取 Policy、T16/T17 绑定与格式门…</span></div>
           <div id="v15FlowGrid" class="flow-grid" aria-live="polite"></div>
           <span id="v15Evidence" class="live-evidence">H2 historical cluster-bootstrap evidence · Stage 3 LOCKED</span>
+        </section>
+
+        <section class="live-flow" aria-labelledby="v16FlowTitle">
+          <div class="live-flow-head"><strong id="v16FlowTitle">Plan v1.6 · S2P16-T19 Evidence Synthesis & Gate</strong><span id="v16FlowSummary">正在读取 Policy 与 T11/T16/T17/T18 绑定…</span></div>
+          <div id="v16FlowGrid" class="flow-grid" aria-live="polite"></div>
+          <div class="research-cards">
+            <div class="research-card"><span>工程状态</span><strong id="v16Engineering">CHECKING</strong></div>
+            <div class="research-card fail"><span>BTC Primary</span><strong id="v16BtcPrimary">PENDING</strong></div>
+            <div class="research-card"><span>生命周期</span><strong id="v16Lifecycle">PENDING</strong></div>
+            <div class="research-card fail"><span>总体建议</span><strong id="v16Overall">PENDING</strong></div>
+          </div>
+          <span id="v16Evidence" class="live-evidence">H2/H3 historical evidence synthesis · Stage 3 LOCKED</span>
         </section>
 
         <section class="authority">
@@ -995,10 +1012,76 @@
       return plan;
     }
 
+    function renderV16Flow(status) {
+      const plan = status.stage2_plan_v16 || {};
+      const labels = {
+        "AUDIT":"上游审计",
+        "FORMAT_SMOKE":"真实格式预检",
+        "SOURCE_PROJECTION":"来源投影",
+        "H2_F1_F10":"H2 F1–F10",
+        "H3_LIFECYCLE_GATE":"H3 生命周期门",
+        "PARAMETER_LANDSCAPE":"完整参数地形",
+        "EVIDENCE_CARDS":"证据卡",
+        "PUBLISH":"Append-only 发布",
+        "VERIFY":"独立 Verify"
+      };
+      const phaseMap = Object.fromEntries((plan.phases || []).map(item => [item.name, item]));
+      const cards = Object.entries(labels).map(([phase, label]) => {
+        const item = phaseMap[phase] || {status:"NOT_STARTED", progress_percent:0};
+        const raw = String(item.status || "NOT_STARTED");
+        const state = raw === "PASS" ? "pass" : raw === "IN_PROGRESS" ? "running" : raw === "FAILED" || raw === "BLOCKED" ? "failed" : "pending";
+        const processed = Number(item.processed_units) || 0;
+        const total = Number(item.total_units) || 0;
+        const throughput = Number(item.units_per_second) || 0;
+        return {
+          name:`${phase} · ${label}`,
+          icon:phase === "VERIFY" ? "fa-shield-halved" : phase === "H2_F1_F10" || phase === "H3_LIFECYCLE_GATE" ? "fa-scale-balanced" : "fa-layer-group",
+          state,
+          detail:[
+            `${raw} · ${Number(item.progress_percent || 0).toFixed(2)}%`,
+            total ? `${number(processed)} / ${number(total)}` : null,
+            `耗时 ${elapsedDuration(item.elapsed_seconds)}`,
+            throughput ? `吞吐 ${throughput.toFixed(2)} units/s` : null,
+            item.eta_seconds ? `ETA ${compactDuration(item.eta_seconds)}` : null,
+            item.heartbeat_at ? `心跳 ${dateTime(item.heartbeat_at)}` : null
+          ].filter(Boolean).join(" · "),
+          progress:Math.max(0, Math.min(100, Number(item.progress_percent) || 0))
+        };
+      });
+      byId("v16FlowGrid").innerHTML = cards.map(flowCard).join("");
+      const percent = Math.max(0, Math.min(100, Number(plan.progress_percent) || 0));
+      byId("v16FlowSummary").textContent = `${plan.status || "BLOCKED"} · ${plan.reason_code || "UNKNOWN_REASON"} · ${plan.phase || "AUDIT"} · ${percent.toFixed(2)}% · ${number(plan.processed_units)} / ${number(plan.total_units)} · ETA ${compactDuration(plan.eta_seconds)} · 心跳 ${plan.heartbeat_at ? dateTime(plan.heartbeat_at) : "—"} · 5秒自动刷新`;
+      const evidence = plan.evidence_cards || {};
+      const lifecycle = evidence.lifecycle || {};
+      const lifecycleDecision = lifecycle.BTCUSDT?.decision || lifecycle.ETHUSDT?.decision || "PENDING";
+      byId("v16Engineering").textContent = evidence.engineering_status || plan.status || "CHECKING";
+      byId("v16BtcPrimary").textContent = evidence.btc_primary || "PENDING";
+      byId("v16Lifecycle").textContent = lifecycleDecision;
+      byId("v16Overall").textContent = evidence.overall_recommendation || "PENDING";
+      byId("v16Evidence").textContent = `${plan.evidence_label || "H2/H3 historical evidence synthesis"} · T11 ${plan.source_t11_receipt_hash || "—"} · T16 ${plan.source_t16_verify_hash || "—"} · T17 ${plan.source_t17_verify_hash || "—"} · T18 ${plan.source_t18_verify_hash || "—"} · format smoke ${number(plan.format_smoke_count)} · approval ${number(plan.approval_count)} · Authority ${number(plan.authority_count)} · Run ${number(plan.run_count)} · ${plan.research_status || "EVIDENCE_SYNTHESIS_COMPLETE_FINAL_HUMAN_GATE_PENDING"} · Stage 3 ${plan.stage3_locked ? "LOCKED" : "UNEXPECTED_UNLOCK"}`;
+      byId("v16Evidence").classList.toggle("bad", !plan.stage3_locked || plan.status === "FAILED");
+      const passed = plan.status === "PASS";
+      const failed = plan.status === "FAILED";
+      const blocked = plan.status === "BLOCKED";
+      byId("s2p16t19Item").classList.toggle("active", plan.status === "IN_PROGRESS" || plan.status === "NOT_STARTED");
+      byId("s2p16t19Item").classList.toggle("failed", failed);
+      byId("s2p16t19Item").classList.toggle("blocked", blocked);
+      if (passed) byId("s2p16t19Button").removeAttribute("aria-current"); else byId("s2p16t19Button").setAttribute("aria-current", "step");
+      byId("s2p16t19Node").innerHTML = passed ? '<i class="fa-solid fa-check"></i>' : failed ? '<i class="fa-solid fa-xmark"></i>' : blocked ? '<i class="fa-solid fa-pause"></i>' : "19";
+      byId("s2p16t19State").textContent = plan.status || "CHECKING";
+      const v14Passed = String((lastV14Status || {}).stage2_plan_v14?.status || "") === "PASS";
+      const v15Passed = String((lastV15Status || {}).stage2_plan_v15?.status || "") === "PASS";
+      byId("passedCount").textContent = `${legacyRailPassedCount + (v14Passed ? 1 : 0) + (v15Passed ? 1 : 0) + (passed ? 1 : 0)} / 20 PASSED`;
+      byId("taskProgressTag").className = passed ? "tag approved" : "tag progress";
+      byId("taskProgressTag").innerHTML = `S2P16-T19 v1.0<b>${escapeHtml(plan.status || "CHECKING")}</b>`;
+      return plan;
+    }
+
     let legacyRefreshInFlight = false;
     let lastV13Status = null;
     let lastV14Status = null;
     let lastV15Status = null;
+    let lastV16Status = null;
     let legacyRailPassedCount = 17;
 
     async function refreshV13() {
@@ -1041,6 +1124,20 @@
         byId("v15FlowSummary").textContent = "BLOCKED · Plan v1.5 状态接口不可用";
         byId("v15Evidence").textContent = "状态读取失败；不得把 CHECKING 当作 PASS。";
         byId("v15Evidence").classList.add("bad");
+      }
+    }
+
+    async function refreshV16() {
+      try {
+        const response = await fetch("/api/v16/status", {cache:"no-store"});
+        if (!response.ok) throw new Error("v1.6 status unavailable");
+        const status = await response.json();
+        lastV16Status = status;
+        renderV16Flow(status);
+      } catch (error) {
+        byId("v16FlowSummary").textContent = "BLOCKED · Plan v1.6 状态接口不可用";
+        byId("v16Evidence").textContent = "状态读取失败；不得把 CHECKING 当作 PASS。";
+        byId("v16Evidence").classList.add("bad");
       }
     }
 
@@ -1248,19 +1345,23 @@
         legacyRefreshInFlight = false;
         if (lastV14Status) renderV14Flow(lastV14Status);
         if (lastV15Status) renderV15Flow(lastV15Status);
+        if (lastV16Status) renderV16Flow(lastV16Status);
       }
     }
     refreshV13();
     refreshV14();
     refreshV15();
+    refreshV16();
     refresh();
     setInterval(refreshV13, 5000);
     setInterval(refreshV14, 5000);
     setInterval(refreshV15, 5000);
+    setInterval(refreshV16, 5000);
     setInterval(() => {
       if (lastV13Status) renderV13Flow(lastV13Status);
       if (lastV14Status) renderV14Flow(lastV14Status);
       if (lastV15Status) renderV15Flow(lastV15Status);
+      if (lastV16Status) renderV16Flow(lastV16Status);
     }, 1000);
     setInterval(refresh, 30000);
   </script>

@@ -1,0 +1,19 @@
+{
+  "schema_name": "s2p16-t19-evidence-gate-preregistration",
+  "schema_version": "1.0",
+  "stage_plan_version": "1.6",
+  "task_id": "S2P16-T19",
+  "task_version": "1.0",
+  "source_t11_receipt_hash": "2414dacb4e9483aae6260b2aa2d5460d96670a2bad1cd754332caddba6af0760",
+  "source_t11_output_hash": "12c33c5d47147e859bb5bab95d42abeafc46dfbeda085c46179a71acd058bf6c",
+  "source_t16_verify_hash": "b866905c18fd1cb1f3bbed1f74e5301c56a78e891b81ab3eea61bcff37ed2b86",
+  "source_t17_verify_hash": "bb6f7186f068a1dcd040f369c980bdcae4bb5fef9964c2b5ee61e2d30b6c2f1c",
+  "source_t18_verify_hash": "dc9ebcab3e4af3ff75e03e76ee9fa4f147e27cb2910a80b2b25874f8d5e514d1",
+  "group1_manifest_hash": "6b0f66e4007b86e08b58a9b366170eeee952199baa203d7f174b2ca69478c1f9",
+  "group1_config_hash": "adb6295e210de66d1e69aa008e6161e8fef1e1fd72001ff812b68597f8c72e3f",
+  "lifecycle_preregistration_hash": "822d1ae13909b8e56f21a923f7b1a6b6627a5807027ed3e7c08d9f387721f4f9",
+  "h2_gate_contract": "ADR-S2-004-F1-F10",
+  "lifecycle_gate_contract": "SYSTEM-MANUAL-V1.3.5-SECTION-14.2",
+  "research_status": "EVIDENCE_SYNTHESIS_COMPLETE_FINAL_HUMAN_GATE_PENDING",
+  "stage3_locked": true
+}

@@ -20,6 +20,7 @@ _stage2_conditional_baseline_projection = MODULE._stage2_conditional_baseline_pr
 _stage2_v13_projection = MODULE._stage2_v13_projection
 _stage2_v14_projection = MODULE._stage2_v14_projection
 _stage2_v15_projection = MODULE._stage2_v15_projection
+_stage2_v16_projection = MODULE._stage2_v16_projection
 _json_hash = MODULE._json_hash
 
 T12_RUN_ID = "stage2-s2t12-metrics-20260721T040435Z-abcdef123456"
@@ -1911,6 +1912,33 @@ def test_stage2_v15_projection_never_hardcodes_pass(tmp_path: Path, monkeypatch)
 
     assert result["status"] != "PASS"
     assert result.get("verify_hash") is None
+
+
+def test_stage2_v16_projection_exposes_nine_live_phases(tmp_path: Path, monkeypatch) -> None:
+    policy = type("Policy", (), {})()
+    monkeypatch.setattr(MODULE, "load_evidence_gate_policy", lambda *_args, **_kwargs: policy)
+    monkeypatch.setattr(
+        MODULE,
+        "evidence_gate_status",
+        lambda *_args, **_kwargs: {
+            "status": "BLOCKED",
+            "reason_code": "COMMIT_BOUND_APPROVAL_REQUIRED",
+            "format_smoke_count": 1,
+            "active_run": {},
+            "evidence_cards": {},
+            "stage3_locked": True,
+        },
+    )
+    monkeypatch.setattr(MODULE, "_repository_commit", lambda: "abc123")
+
+    result = _stage2_v16_projection(tmp_path)
+
+    assert result["status"] == "BLOCKED"
+    assert result["reason_code"] == "COMMIT_BOUND_APPROVAL_REQUIRED"
+    assert len(result["phases"]) == 9
+    assert result["phases"][0]["status"] == "PASS"
+    assert result["phases"][1]["status"] == "PASS"
+    assert result["stage3_locked"] is True
 
 
 def test_projection_reads_historical_approval_without_authorizing_new_run(

@@ -1,0 +1,34 @@
+{
+  "schema_name": "stage2-active-policy-v5",
+  "schema_version": "5.0",
+  "stage": "S2",
+  "stage_plan_version": "1.6",
+  "execution_limit": "S2P16-T19",
+  "stage3_locked": true,
+  "code_commit_mode": "CURRENT_CLEAN_HEAD",
+  "contract_paths": [
+    "docs/spec/system_manual_v1.3.5_final.md",
+    "docs/development/plans/stage_2_plan_v1.6.md",
+    "docs/development/changes/CR-2026-048.md",
+    "docs/development/decisions/ADR-S2-024-evidence-gate.md",
+    "docs/development/tasks/stage_2/S2P16-T19-evidence-gate.md",
+    "configs/research/stage_2/s2p16_t19_evidence_gate_v1.json"
+  ],
+  "preregistration_path": "configs/research/stage_2/s2p16_t19_evidence_gate_v1.json",
+  "evidence_root": "/Volumes/FuckingLife/era100x_stage2/formal/stage2-plan-v1.6",
+  "task_dag": {
+    "S2P16-T19": ["S2P13-T11", "S2P13-T16", "S2P14-T17", "S2P15-T18"]
+  },
+  "source_t11_chain_root": "/Volumes/FuckingLife/era100x_stage2/formal/stage2-plan-v1.3/chains/fa92072063be8455fab814c1e9f302f2b06392a999820a53bd430e7282f57579",
+  "source_t16_chain_root": "/Volumes/FuckingLife/era100x_stage2/formal/stage2-plan-v1.3/chains/fa92072063be8455fab814c1e9f302f2b06392a999820a53bd430e7282f57579",
+  "source_t17_run_root": "/Volumes/FuckingLife/era100x_stage2/formal/stage2-plan-v1.4/runs/stage2-s2p14-t17-20260727T071439Z-0928be24425c",
+  "source_t18_run_root": "/Volumes/FuckingLife/era100x_stage2/formal/stage2-plan-v1.5/runs/stage2-s2p15-t18-20260727T101117Z-6be54d26a190",
+  "required_gates": [
+    "FORMAT_SMOKE_PASS",
+    "COMMIT_BOUND_HUMAN_APPROVAL",
+    "AUTHORITY_BEFORE_RUN",
+    "UNIQUE_RUN_LOCK",
+    "FULL_RECONCILIATION",
+    "FULL_VERIFY"
+  ]
+}
