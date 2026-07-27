@@ -2,19 +2,25 @@
 
 ```text
 Current Stage: Stage 2
-Current Plan: stage_2_plan_v1.4 — T17 IMPLEMENTATION AUTHORIZED
+Current Plan: stage_2_plan_v1.4 — CLOSED AT T17
 Current Task: S2P14-T17 v1.0 — placebo signal
-Status: FORMAL_AUDIT_PREFIX_BLOCKED / PATH_IDENTITY_FIX_VALIDATING
+Status: FORMAL ENGINEERING PASS / VERIFY PASS / DESCRIPTIVE ONLY
 ```
 
-Plan v1.4 is approved only for the S2P14-T17 same-stratum non-event placebo. It binds the final
-formal T16 Verify Hash below and keeps Plan v1.3, policy v2 and every T16 object read-only. T17 code,
-tests, source audit and read-only UI are authorized. The latest correction gate passed Ruff,
-strict mypy, strict Traceability, governance validation and 793 repository tests; browser
-inspection confirmed the stopped-prefix projection, exact T16 counts, five-second refresh and
-Stage 3 lock.
-A formal Authority/Run remains forbidden until the final clean commit receives a commit-bound
-human approval. T18–T21 are not authorized and Stage 3 remains locked.
+Plan v1.4 completed only the approved S2P14-T17 same-stratum non-event placebo. The final formal
+Run `stage2-s2p14-t17-20260727T071439Z-0928be24425c` passed publication, reconciliation and an
+independent Verify. Its Authority is
+`0928be24425ccb334314d033abdbfa36d344fefafb29065ec21705a1ae144433`; Catalog/Snapshot,
+Manifest, reconciliation and Verify Hashes are respectively
+`2e5f00e4e375ad7e89e84a29bc6baaded7752cfa59e634f69a92e9dce1d91b00`,
+`f28d75bb4146d1e77ef20f43188395c090b63df946ea2a9abde41ad8b66a0b26`,
+`0cd5dd2a8b513658194d96e898205e356ed07bb94203ee0bb49149282af7b7da` and
+`bb6f7186f068a1dcd040f369c980bdcae4bb5fef9964c2b5ee61e2d30b6c2f1c`.
+The Run reconciled 413,827 placebo slots into 412,021 matched and 1,806 unmatched matrices,
+2,060,105 assignments and 13,680 summary rows across all 456 groups, with zero orphan, within-
+matrix duplicate or within-group fake-event duplicate. The engineering result is PASS; the
+research result remains `DESCRIPTIVE_ONLY_CLUSTERING_BOOTSTRAP_PENDING`, not Stage 2 Primary PASS.
+T18–T21 were not executed and Stage 3 remains locked.
 
 The first commit-bound formal attempt at `272e22644864ab07738846350d5815ec306454d3` sealed Authority
 `b447069df72a951a9d0685ca74d833802f066d27607c380d450ffe0cb55a0bfc`, then stopped before Run ID
