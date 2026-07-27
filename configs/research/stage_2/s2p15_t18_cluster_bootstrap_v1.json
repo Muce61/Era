@@ -1,0 +1,40 @@
+{
+  "schema_name": "s2p15-t18-cluster-bootstrap-preregistration",
+  "schema_version": "1.0",
+  "stage_plan_version": "1.5",
+  "task_id": "S2P15-T18",
+  "task_version": "1.0",
+  "source_t16_verify_hash": "b866905c18fd1cb1f3bbed1f74e5301c56a78e891b81ab3eea61bcff37ed2b86",
+  "source_t17_verify_hash": "bb6f7186f068a1dcd040f369c980bdcae4bb5fef9964c2b5ee61e2d30b6c2f1c",
+  "metric_families": [
+    "REAL_EVENT_DELTA",
+    "PLACEBO_DELTA",
+    "PAIRED_REAL_MINUS_PLACEBO"
+  ],
+  "analysis_scopes": ["FOLD", "PERIOD", "OVERALL"],
+  "cluster_contract": "INSTRUMENT_UTC_MONDAY_WEEK_V1",
+  "bootstrap_iterations": 5000,
+  "bootstrap_seed": 20260716,
+  "rng": "NUMPY_PCG64_DERIVED_GROUP_SEED_V1",
+  "confidence_level": "0.95",
+  "confidence_interval": "TWO_SIDED_PERCENTILE_LINEAR_V1",
+  "p_value": "NULL_CENTERED_TWO_SIDED_ADD_ONE_V1",
+  "fdr": "BENJAMINI_HOCHBERG_Q_0_10_V1",
+  "primary": {
+    "parameter_set_id": "G1-PRIMARY-V1",
+    "time_combination_id": "T2",
+    "combination_id": "target=20|stop=25",
+    "included_in_bh": false
+  },
+  "expected_counts": {
+    "real_matched": 413827,
+    "placebo_matched": 412021,
+    "placebo_unmatched": 1806,
+    "source_groups": 456,
+    "parameter_timing_pairs": 19,
+    "combinations": 30
+  },
+  "published_decimal_quantum": "0.000000000000000001",
+  "research_status": "STATISTICAL_EVIDENCE_ONLY_FINAL_GATE_PENDING",
+  "stage3_locked": true
+}

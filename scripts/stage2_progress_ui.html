@@ -271,7 +271,7 @@
 
     <section class="layout">
       <aside class="panel task-rail" aria-label="阶段任务轨道">
-        <h2 class="panel-title"><span>阶段任务轨道</span><span id="passedCount" class="passed-count">17 / 18 PASSED</span></h2>
+        <h2 class="panel-title"><span>阶段任务轨道</span><span id="passedCount" class="passed-count">18 / 19 PASSED</span></h2>
         <ol class="task-list">
           <li class="task-item"><button class="task-button" data-task="Manifest：冻结预注册输入、输出布局与 Group-1 执行边界。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">S2-T19</span><span class="task-name">Manifest（前置）</span><span class="task-state">PASSED</span></button></li>
           <li class="task-item"><button class="task-button" data-task="Contracts：Stage 2 输入边界、注册表与 CanonicalKeyLevel 契约。"><span class="node"><i class="fa-solid fa-check"></i></span><span class="task-code">01 S2-T01</span><span class="task-name">Contracts</span><span class="task-state">PASSED</span></button></li>
@@ -295,7 +295,8 @@
           <li id="railP13T14Item" class="task-item"><button class="task-button" data-task="Plan v1.3：First Passage。"><span id="railP13T14Node" class="node">14</span><span class="task-code">S2P13-T14</span><span class="task-name">First Passage</span><span id="railP13T14State" class="task-state">CHECKING</span></button></li>
           <li id="railP13T15Item" class="task-item"><button class="task-button" data-task="Plan v1.3：AMBIGUOUS 合同。"><span id="railP13T15Node" class="node">15</span><span class="task-code">S2P13-T15</span><span class="task-name">AMBIGUOUS</span><span id="railP13T15State" class="task-state">CHECKING</span></button></li>
           <li id="railP13T16Item" class="task-item"><button class="task-button" data-task="Plan v1.3：条件随机基线。"><span id="railP13T16Node" class="node">16</span><span class="task-code">S2P13-T16</span><span class="task-name">Conditional Baseline</span><span id="railP13T16State" class="task-state">CHECKING</span></button></li>
-          <li id="s2p14t17Item" class="task-item active"><button id="s2p14t17Button" class="task-button" aria-current="step" data-task="Plan v1.4 安慰剂信号：从正式 T16 证据执行 outcome-blind 假事件与同层对照匹配，只输出 H2 历史描述性证据。"><span id="s2p14t17Node" class="node">17</span><span class="task-code">S2P14-T17</span><span class="task-name">Placebo Signal</span><span id="s2p14t17State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
+          <li id="s2p14t17Item" class="task-item"><button id="s2p14t17Button" class="task-button" data-task="Plan v1.4 安慰剂信号：从正式 T16 证据执行 outcome-blind 假事件与同层对照匹配，只输出 H2 历史描述性证据。"><span id="s2p14t17Node" class="node">17</span><span class="task-code">S2P14-T17</span><span class="task-name">Placebo Signal</span><span id="s2p14t17State" class="task-state">CHECKING</span></button></li>
+          <li id="s2p15t18Item" class="task-item active"><button id="s2p15t18Button" class="task-button" aria-current="step" data-task="Plan v1.5 Cluster Bootstrap：按来源事件UTC周聚类，输出真实、安慰剂及配对差的CI与FDR统计证据。"><span id="s2p15t18Node" class="node">18</span><span class="task-code">S2P15-T18</span><span class="task-name">Cluster Bootstrap</span><span id="s2p15t18State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
         </ol>
         <div id="taskHint" class="task-hint">选择节点查看职责。</div>
       </aside>
@@ -353,6 +354,12 @@
           <div class="live-flow-head"><strong id="v14FlowTitle">Plan v1.4 · S2P14-T17 安慰剂信号</strong><span id="v14FlowSummary">正在读取 Policy、T16 绑定与正式批准门…</span></div>
           <div id="v14FlowGrid" class="flow-grid" aria-live="polite"></div>
           <span id="v14Evidence" class="live-evidence">H2 historical placebo evidence · Stage 3 LOCKED</span>
+        </section>
+
+        <section class="live-flow" aria-labelledby="v15FlowTitle">
+          <div class="live-flow-head"><strong id="v15FlowTitle">Plan v1.5 · S2P15-T18 Cluster Bootstrap</strong><span id="v15FlowSummary">正在读取 Policy、T16/T17 绑定与格式门…</span></div>
+          <div id="v15FlowGrid" class="flow-grid" aria-live="polite"></div>
+          <span id="v15Evidence" class="live-evidence">H2 historical cluster-bootstrap evidence · Stage 3 LOCKED</span>
         </section>
 
         <section class="authority">
@@ -927,9 +934,71 @@
       return plan;
     }
 
+    function renderV15Flow(status) {
+      const plan = status.stage2_plan_v15 || {};
+      const labels = {
+        "AUDIT":"上游审计",
+        "FORMAT_SMOKE":"真实格式预检",
+        "CLUSTER_AGGREGATION":"UTC周级聚合",
+        "REAL_BOOTSTRAP":"真实事件 Bootstrap",
+        "PLACEBO_BOOTSTRAP":"安慰剂 Bootstrap",
+        "PAIRED_CONTRAST":"配对差 Bootstrap",
+        "BH_FDR":"BH 多重比较校正",
+        "PUBLISH":"Append-only 发布",
+        "VERIFY":"独立 Verify"
+      };
+      const phaseMap = Object.fromEntries((plan.phases || []).map(item => [item.name, item]));
+      const cards = Object.entries(labels).map(([phase, label]) => {
+        const item = phaseMap[phase] || {status:"NOT_STARTED", progress_percent:0};
+        const raw = String(item.status || "NOT_STARTED");
+        const state = raw === "PASS" ? "pass" : raw === "IN_PROGRESS" ? "running" : raw === "FAILED" ? "failed" : raw === "BLOCKED" ? "failed" : "pending";
+        const processed = Number(item.processed_units) || 0;
+        const total = Number(item.total_units) || 0;
+        const throughput = Number(item.units_per_second) || 0;
+        const details = [
+          `${raw} · ${Number(item.progress_percent || 0).toFixed(2)}%`,
+          total ? `${number(processed)} / ${number(total)}` : null,
+          `耗时 ${elapsedDuration(item.elapsed_seconds)}`,
+          throughput ? `吞吐 ${throughput.toFixed(2)} units/s` : null,
+          item.eta_seconds ? `ETA ${compactDuration(item.eta_seconds)}` : null,
+          item.subphase ? `当前 ${item.subphase}` : null,
+          item.heartbeat_at ? `心跳 ${dateTime(item.heartbeat_at)}` : null
+        ].filter(Boolean).join(" · ");
+        return {
+          name:`${phase} · ${label}`,
+          icon:phase === "FORMAT_SMOKE" ? "fa-file-circle-check" : phase === "VERIFY" ? "fa-shield-halved" : phase === "BH_FDR" ? "fa-filter-circle-dollar" : "fa-chart-line",
+          state,
+          detail:details,
+          progress:Math.max(0, Math.min(100, Number(item.progress_percent) || 0))
+        };
+      });
+      byId("v15FlowGrid").innerHTML = cards.map(flowCard).join("");
+      const percent = Math.max(0, Math.min(100, Number(plan.progress_percent) || 0));
+      byId("v15FlowSummary").textContent = `${plan.status || "BLOCKED"} · ${plan.reason_code || "UNKNOWN_REASON"} · ${plan.phase || "AUDIT"} ${plan.subphase || ""} · ${percent.toFixed(2)}% · ${number(plan.processed_units)} / ${number(plan.total_units)} · ETA ${compactDuration(plan.eta_seconds)} · 心跳 ${plan.heartbeat_at ? dateTime(plan.heartbeat_at) : "—"} · 5秒自动刷新`;
+      const counts = plan.source_counts || {};
+      byId("v15Evidence").textContent = `${plan.evidence_label || "H2 historical cluster-bootstrap evidence"} · T16 ${plan.source_t16_status || "CHECKING"} ${plan.source_t16_verify_hash || "—"} · T17 ${plan.source_t17_status || "CHECKING"} ${plan.source_t17_verify_hash || "—"} · real ${number(counts.source_matched_slots)} · placebo matched ${number(counts.placebo_matched)} · unmatched ${number(counts.placebo_unmatched)} · iterations ${number(plan.bootstrap_iterations || 5000)} · format smoke ${number(plan.format_smoke_count)} · approval ${number(plan.approval_count)} · Authority ${number(plan.authority_count)} · Run ${number(plan.run_count)} · clusters ${number(plan.cluster_rows)} · summaries ${number(plan.summary_rows)} · FDR families ${number(plan.fdr_family_rows)} · run code ${plan.run_code_commit || "—"} · observer ${plan.observer_repo_commit || plan.repo_commit || "—"} · ${plan.research_status || "STATISTICAL_EVIDENCE_ONLY_FINAL_GATE_PENDING"} · Stage 3 ${plan.stage3_locked ? "LOCKED" : "UNEXPECTED_UNLOCK"}`;
+      byId("v15Evidence").classList.toggle("bad", !plan.stage3_locked || plan.status === "FAILED");
+      const railPassed = plan.status === "PASS";
+      const railFailed = plan.status === "FAILED";
+      const railBlocked = plan.status === "BLOCKED";
+      byId("s2p15t18Item").classList.toggle("active", plan.status === "IN_PROGRESS" || plan.status === "NOT_STARTED");
+      byId("s2p15t18Item").classList.toggle("failed", railFailed);
+      byId("s2p15t18Item").classList.toggle("blocked", railBlocked);
+      if (railPassed) byId("s2p15t18Button").removeAttribute("aria-current");
+      else byId("s2p15t18Button").setAttribute("aria-current", "step");
+      byId("s2p15t18Node").innerHTML = railPassed ? '<i class="fa-solid fa-check"></i>' : railFailed ? '<i class="fa-solid fa-xmark"></i>' : railBlocked ? '<i class="fa-solid fa-pause"></i>' : "18";
+      byId("s2p15t18State").textContent = plan.status || "CHECKING";
+      const v14Passed = String((lastV14Status || {}).stage2_plan_v14?.status || "") === "PASS";
+      byId("passedCount").textContent = `${legacyRailPassedCount + (v14Passed ? 1 : 0) + (railPassed ? 1 : 0)} / 19 PASSED`;
+      byId("taskProgressTag").className = railPassed ? "tag approved" : "tag progress";
+      byId("taskProgressTag").innerHTML = `S2P15-T18 v1.0<b>${escapeHtml(plan.status || "CHECKING")}</b>`;
+      return plan;
+    }
+
     let legacyRefreshInFlight = false;
     let lastV13Status = null;
     let lastV14Status = null;
+    let lastV15Status = null;
     let legacyRailPassedCount = 17;
 
     async function refreshV13() {
@@ -958,6 +1027,20 @@
         byId("v14FlowSummary").textContent = "BLOCKED · Plan v1.4 状态接口不可用";
         byId("v14Evidence").textContent = "状态读取失败；不得把 CHECKING 当作 PASS。";
         byId("v14Evidence").classList.add("bad");
+      }
+    }
+
+    async function refreshV15() {
+      try {
+        const response = await fetch("/api/v15/status", {cache:"no-store"});
+        if (!response.ok) throw new Error("v1.5 status unavailable");
+        const status = await response.json();
+        lastV15Status = status;
+        renderV15Flow(status);
+      } catch (error) {
+        byId("v15FlowSummary").textContent = "BLOCKED · Plan v1.5 状态接口不可用";
+        byId("v15Evidence").textContent = "状态读取失败；不得把 CHECKING 当作 PASS。";
+        byId("v15Evidence").classList.add("bad");
       }
     }
 
@@ -1164,16 +1247,20 @@
       } finally {
         legacyRefreshInFlight = false;
         if (lastV14Status) renderV14Flow(lastV14Status);
+        if (lastV15Status) renderV15Flow(lastV15Status);
       }
     }
     refreshV13();
     refreshV14();
+    refreshV15();
     refresh();
     setInterval(refreshV13, 5000);
     setInterval(refreshV14, 5000);
+    setInterval(refreshV15, 5000);
     setInterval(() => {
       if (lastV13Status) renderV13Flow(lastV13Status);
       if (lastV14Status) renderV14Flow(lastV14Status);
+      if (lastV15Status) renderV15Flow(lastV15Status);
     }, 1000);
     setInterval(refresh, 30000);
   </script>

@@ -19,6 +19,7 @@ _stage2_ambiguity_bounds_projection = MODULE._stage2_ambiguity_bounds_projection
 _stage2_conditional_baseline_projection = MODULE._stage2_conditional_baseline_projection
 _stage2_v13_projection = MODULE._stage2_v13_projection
 _stage2_v14_projection = MODULE._stage2_v14_projection
+_stage2_v15_projection = MODULE._stage2_v15_projection
 _json_hash = MODULE._json_hash
 
 T12_RUN_ID = "stage2-s2t12-metrics-20260721T040435Z-abcdef123456"
@@ -1805,6 +1806,108 @@ def test_stage2_v14_projection_never_hardcodes_pass(tmp_path: Path, monkeypatch)
     monkeypatch.setattr(MODULE, "_repository_commit", lambda: "abc123")
 
     result = _stage2_v14_projection(tmp_path)
+
+    assert result["status"] != "PASS"
+    assert result.get("verify_hash") is None
+
+
+def test_stage2_v15_projection_exposes_plan_v13_observability_fields(
+    tmp_path: Path, monkeypatch
+) -> None:
+    evidence_root = tmp_path / "formal"
+    policy = type(
+        "Policy",
+        (),
+        {
+            "policy_hash": "1" * 64,
+            "evidence_root": evidence_root,
+            "operations_root": evidence_root / "operations",
+        },
+    )()
+    t16 = type("T16", (), {"verify_hash": "2" * 64})()
+    t17 = type(
+        "T17",
+        (),
+        {
+            "verify_hash": "3" * 64,
+            "counts": {
+                "source_matched_slots": 413827,
+                "placebo_matched": 412021,
+                "placebo_unmatched": 1806,
+            },
+        },
+    )()
+    sources = type("Sources", (), {"t16": t16, "t17": t17})()
+    monkeypatch.setattr(MODULE, "load_bootstrap_policy", lambda *_args, **_kwargs: policy)
+    monkeypatch.setattr(MODULE, "audit_bootstrap_sources", lambda *_args, **_kwargs: sources)
+    monkeypatch.setattr(MODULE, "_repository_commit", lambda: "abc123")
+
+    blocked = _stage2_v15_projection(tmp_path)
+    assert blocked["status"] == "BLOCKED"
+    assert blocked["reason_code"] == "FORMAT_SMOKE_REQUIRED"
+    assert len(blocked["phases"]) == 9
+    assert all(
+        {
+            "processed_units",
+            "total_units",
+            "progress_percent",
+            "elapsed_seconds",
+            "units_per_second",
+            "eta_seconds",
+            "subphase",
+            "heartbeat_at",
+        }
+        <= set(item)
+        for item in blocked["phases"]
+    )
+    assert blocked["stage3_locked"] is True
+
+    smoke = {
+        "schema_name": "s2p15-t18-format-smoke",
+        "status": "PASS",
+        "code_commit": "abc123",
+        "policy_hash": "1" * 64,
+        "source_t16_verify_hash": "2" * 64,
+        "source_t17_verify_hash": "3" * 64,
+        "format_smoke_hash": "",
+    }
+    smoke["format_smoke_hash"] = MODULE.bootstrap_hash(
+        {key: value for key, value in smoke.items() if key != "format_smoke_hash"}
+    )
+    _write(
+        evidence_root / "operations/format-smokes" / f"{smoke['format_smoke_hash']}.json",
+        json.dumps(smoke),
+    )
+    ready = _stage2_v15_projection(tmp_path)
+    assert ready["reason_code"] == "COMMIT_BOUND_APPROVAL_REQUIRED"
+    assert (
+        next(item for item in ready["phases"] if item["name"] == "FORMAT_SMOKE")["status"] == "PASS"
+    )
+
+
+def test_stage2_v15_projection_never_hardcodes_pass(tmp_path: Path, monkeypatch) -> None:
+    policy = type(
+        "Policy",
+        (),
+        {
+            "policy_hash": "1" * 64,
+            "evidence_root": tmp_path / "formal",
+            "operations_root": tmp_path / "formal/operations",
+        },
+    )()
+    sources = type(
+        "Sources",
+        (),
+        {
+            "t16": type("T16", (), {"verify_hash": "2" * 64})(),
+            "t17": type("T17", (), {"verify_hash": "3" * 64, "counts": {}})(),
+        },
+    )()
+    monkeypatch.setattr(MODULE, "load_bootstrap_policy", lambda *_args, **_kwargs: policy)
+    monkeypatch.setattr(MODULE, "audit_bootstrap_sources", lambda *_args, **_kwargs: sources)
+    monkeypatch.setattr(MODULE, "_repository_commit", lambda: "abc123")
+
+    result = _stage2_v15_projection(tmp_path)
 
     assert result["status"] != "PASS"
     assert result.get("verify_hash") is None

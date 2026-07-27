@@ -39,6 +39,14 @@ from era100x.research.stage_2.baselines.placebo.governance import (
     audit_t16_source as audit_placebo_t16_source,
     load_policy as load_placebo_policy,
 )
+from era100x.research.stage_2.statistics.bootstrap.formatting import (
+    canonical_hash as bootstrap_hash,
+)
+from era100x.research.stage_2.statistics.bootstrap.governance import (
+    audit_sources as audit_bootstrap_sources,
+    load_policy as load_bootstrap_policy,
+    validate_approval as validate_bootstrap_approval,
+)
 
 
 def _exclusive_lock_is_held(path: Path) -> bool:
@@ -1291,6 +1299,255 @@ def _stage2_v14_projection(stage2_root: Path) -> dict[str, Any]:
             "placebo_matched": verify.get("placebo_matched"),
             "placebo_unmatched": verify.get("placebo_unmatched"),
             "summary_row_count": verify.get("summary_row_count"),
+        }
+    )
+    return base
+
+
+def _stage2_v15_projection(stage2_root: Path) -> dict[str, Any]:
+    """Project Plan v1.5/T18 without mutating research evidence."""
+
+    del stage2_root
+    phase_names = (
+        "AUDIT",
+        "FORMAT_SMOKE",
+        "CLUSTER_AGGREGATION",
+        "REAL_BOOTSTRAP",
+        "PLACEBO_BOOTSTRAP",
+        "PAIRED_CONTRAST",
+        "BH_FDR",
+        "PUBLISH",
+        "VERIFY",
+    )
+    totals = {
+        "AUDIT": 1,
+        "FORMAT_SMOKE": 1,
+        "CLUSTER_AGGREGATION": 456,
+        "REAL_BOOTSTRAP": 608,
+        "PLACEBO_BOOTSTRAP": 608,
+        "PAIRED_CONTRAST": 608,
+        "BH_FDR": 96,
+        "PUBLISH": 1,
+        "VERIFY": 1,
+    }
+    base: dict[str, Any] = {
+        "schema_name": "s2p15-t18-ui-projection",
+        "schema_version": "1.0",
+        "stage_plan_version": "1.5",
+        "task_id": "S2P15-T18",
+        "status": "BLOCKED",
+        "reason_code": "POLICY_OR_SOURCE_NOT_VERIFIED",
+        "repo_root": str(REPOSITORY_ROOT.resolve()),
+        "repo_commit": _repository_commit(),
+        "observer_repo_commit": _repository_commit(),
+        "source_t16_status": "CHECKING",
+        "source_t17_status": "CHECKING",
+        "format_smoke_count": 0,
+        "approval_count": 0,
+        "authority_count": 0,
+        "run_count": 0,
+        "phase": "AUDIT",
+        "subphase": None,
+        "progress_percent": 0.0,
+        "processed_units": 0,
+        "total_units": 1,
+        "rows_per_second": None,
+        "clusters_per_second": None,
+        "eta_seconds": None,
+        "heartbeat_at": None,
+        "phases": [],
+        "evidence_label": "H2 historical cluster-bootstrap evidence",
+        "research_status": "STATISTICAL_EVIDENCE_ONLY_FINAL_GATE_PENDING",
+        "stage3_locked": True,
+    }
+    try:
+        policy = load_bootstrap_policy(
+            REPOSITORY_ROOT / "configs/governance/stage2_active_policy_v4.json",
+            repository_root=REPOSITORY_ROOT,
+        )
+        sources = audit_bootstrap_sources(
+            policy,
+            repository_root=REPOSITORY_ROOT,
+            full_hash_scan=False,
+        )
+    except (OSError, ValueError) as exc:
+        base["reason"] = str(exc)
+        base["phases"] = [
+            {
+                "name": name,
+                "status": "BLOCKED",
+                "progress_percent": 0.0,
+                "processed_units": 0,
+                "total_units": totals[name],
+                "elapsed_seconds": 0,
+                "units_per_second": None,
+                "eta_seconds": None,
+                "subphase": None,
+                "heartbeat_at": None,
+            }
+            for name in phase_names
+        ]
+        return base
+
+    def safe_files(root: Path, pattern: str) -> tuple[Path, ...]:
+        return tuple(
+            sorted(
+                path
+                for path in root.glob(pattern)
+                if path.is_file() and not path.is_symlink() and not path.name.startswith("._")
+            )
+        )
+
+    smokes = safe_files(policy.operations_root / "format-smokes", "*.json")
+    valid_smokes = []
+    current_commit = _repository_commit()
+    for path in smokes:
+        payload = _safe_json_object(path)
+        claimed = payload.get("format_smoke_hash")
+        if (
+            isinstance(claimed, str)
+            and bootstrap_hash(
+                {key: value for key, value in payload.items() if key != "format_smoke_hash"}
+            )
+            == claimed
+            and payload.get("status") == "PASS"
+            and payload.get("code_commit") == current_commit
+            and payload.get("policy_hash") == policy.policy_hash
+            and payload.get("source_t16_verify_hash") == sources.t16.verify_hash
+            and payload.get("source_t17_verify_hash") == sources.t17.verify_hash
+        ):
+            valid_smokes.append(payload)
+    approval_candidates = safe_files(policy.operations_root / "approvals", "approval-*.json")
+    approvals: list[Path] = []
+    for path in approval_candidates:
+        try:
+            validate_bootstrap_approval(
+                path,
+                policy=policy,
+                repository_root=REPOSITORY_ROOT,
+            )
+        except (OSError, ValueError):
+            continue
+        approvals.append(path)
+    authorities = safe_files(policy.evidence_root / "authorities", "authority-*.json")
+    runs = tuple(
+        sorted(
+            path
+            for path in (policy.evidence_root / "runs").glob("stage2-s2p15-t18-*")
+            if path.is_dir() and not path.is_symlink()
+        )
+    )
+    checkpoint: dict[str, Any] = {}
+    run_contract: dict[str, Any] = {}
+    verify: dict[str, Any] = {}
+    if runs:
+        run_contract = _safe_json_object(runs[-1] / "run-contract.json")
+        checkpoint = _safe_json_object(runs[-1] / "checkpoint.json")
+        verify_files = safe_files(runs[-1] / "verify", "*.json")
+        if len(verify_files) == 1:
+            candidate = _safe_json_object(verify_files[0])
+            claimed = candidate.get("verify_hash")
+            if (
+                isinstance(claimed, str)
+                and bootstrap_hash(
+                    {key: value for key, value in candidate.items() if key != "verify_hash"}
+                )
+                == claimed
+                and candidate.get("status") == "PASS"
+            ):
+                verify = candidate
+    current_phase = str(
+        checkpoint.get("phase")
+        or ("VERIFY" if verify else ("FORMAT_SMOKE" if valid_smokes else "AUDIT"))
+    )
+    current_index = phase_names.index(current_phase) if current_phase in phase_names else 0
+    phase_rows: list[dict[str, Any]] = []
+    for index, name in enumerate(phase_names):
+        total = totals[name]
+        if verify or index < current_index:
+            state, processed, percent = "PASS", total, 100.0
+        elif name == "AUDIT":
+            state, processed, percent = "PASS", 1, 100.0
+        elif name == "FORMAT_SMOKE" and valid_smokes:
+            state, processed, percent = "PASS", 1, 100.0
+        elif checkpoint and index == current_index:
+            state = "IN_PROGRESS"
+            processed = int(checkpoint.get("processed_units") or 0)
+            total = int(checkpoint.get("total_units") or total)
+            percent = float(checkpoint.get("percent") or 0.0)
+        else:
+            state, processed, percent = "NOT_STARTED", 0, 0.0
+        phase_rows.append(
+            {
+                "name": name,
+                "status": state,
+                "progress_percent": percent,
+                "processed_units": processed,
+                "total_units": total,
+                "elapsed_seconds": (
+                    int(float(checkpoint.get("elapsed_seconds") or 0))
+                    if checkpoint and index == current_index
+                    else 0
+                ),
+                "units_per_second": checkpoint.get("units_per_second")
+                or checkpoint.get("rows_per_second"),
+                "eta_seconds": checkpoint.get("eta_seconds"),
+                "subphase": checkpoint.get("subphase") if index == current_index else None,
+                "heartbeat_at": checkpoint.get("heartbeat_at") if index == current_index else None,
+            }
+        )
+    if verify:
+        status, reason_code = "PASS", "FORMAL_TASK_VERIFIED_PASS"
+    elif checkpoint:
+        status, reason_code = (
+            ("IN_PROGRESS", "RUN_IN_PROGRESS")
+            if _exclusive_lock_is_held(policy.operations_root / "run.lock")
+            else ("BLOCKED", "INTERRUPTED_PREFIX_REVIEW_REQUIRED")
+        )
+    elif authorities or runs:
+        status, reason_code = "BLOCKED", "UNFINISHED_FORMAL_PREFIX"
+    elif approvals:
+        status, reason_code = "NOT_STARTED", "FORMAL_APPROVAL_PRESENT"
+    elif valid_smokes:
+        status, reason_code = "BLOCKED", "COMMIT_BOUND_APPROVAL_REQUIRED"
+    else:
+        status, reason_code = "BLOCKED", "FORMAT_SMOKE_REQUIRED"
+    current_row = phase_rows[current_index]
+    base.update(
+        {
+            "status": status,
+            "reason_code": reason_code,
+            "policy_hash": policy.policy_hash,
+            "source_t16_status": "PASS",
+            "source_t17_status": "PASS",
+            "source_t16_verify_hash": sources.t16.verify_hash,
+            "source_t17_verify_hash": sources.t17.verify_hash,
+            "source_counts": sources.t17.counts,
+            "format_smoke_count": len(valid_smokes),
+            "latest_format_smoke_hash": (
+                valid_smokes[-1].get("format_smoke_hash") if valid_smokes else None
+            ),
+            "approval_count": len(approvals),
+            "authority_count": len(authorities),
+            "run_count": len(runs),
+            "run_id": runs[-1].name if runs else None,
+            "run_code_commit": run_contract.get("code_commit"),
+            "phase": current_phase,
+            "subphase": checkpoint.get("subphase"),
+            "progress_percent": 100.0 if verify else current_row["progress_percent"],
+            "processed_units": current_row["processed_units"],
+            "total_units": current_row["total_units"],
+            "rows_per_second": checkpoint.get("rows_per_second"),
+            "clusters_per_second": checkpoint.get("clusters_per_second"),
+            "eta_seconds": checkpoint.get("eta_seconds"),
+            "elapsed_seconds": checkpoint.get("elapsed_seconds"),
+            "heartbeat_at": checkpoint.get("heartbeat_at"),
+            "phases": phase_rows,
+            "verify_hash": verify.get("verify_hash"),
+            "cluster_rows": verify.get("cluster_rows"),
+            "summary_rows": verify.get("summary_rows"),
+            "fdr_family_rows": verify.get("fdr_family_rows"),
+            "bootstrap_iterations": 5000,
         }
     )
     return base
@@ -2845,6 +3102,14 @@ class ProgressHandler(BaseHTTPRequestHandler):
                 )
             except (OSError, ValueError) as exc:
                 self._reply_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})
+        elif path == "/api/v15/status":
+            try:
+                self._reply_json(
+                    HTTPStatus.OK,
+                    {"stage2_plan_v15": _stage2_v15_projection(self.server.stage2_root)},
+                )
+            except (OSError, ValueError) as exc:
+                self._reply_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})
         elif path == "/api/status":
             try:
                 payload = read_progress_status(self.server.run_root)
@@ -2860,6 +3125,7 @@ class ProgressHandler(BaseHTTPRequestHandler):
                 payload["execution_observability"] = observability
                 payload["stage2_plan_v13"] = _stage2_v13_projection(self.server.stage2_root)
                 payload["stage2_plan_v14"] = _stage2_v14_projection(self.server.stage2_root)
+                payload["stage2_plan_v15"] = _stage2_v15_projection(self.server.stage2_root)
                 self._reply_json(HTTPStatus.OK, payload)
             except (OSError, ValueError) as exc:
                 self._reply_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})

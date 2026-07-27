@@ -156,13 +156,15 @@ rules:
   - S2-T20
   - S2P13-T16
   - S2P14-T17
+  - S2P15-T18
   implementation_paths:
   - src/era100x/research/stage_2/episodes/identity/, src/era100x/research/stage_2/pipelines/candidates/ (PLANNED)
   - src/era100x/research/stage_2/metrics/path/ (S2-T12 IMPLEMENTED read-only Episode lineage)
   - src/era100x/research/stage_2/labels/first_passage/ (S2-T13 IMPLEMENTED fixture first-passage capability)
   - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 IMPLEMENTED historical ambiguity bounds)
   - src/era100x/research/stage_2/baselines/conditional/ (S2P13-T16 v1.1 CR-2026-045 window-local H2 coverage repair; final successor engineering and Verify PASS; descriptive only)
-  - src/era100x/research/stage_2/baselines/placebo/ (S2P14-T17 IMPLEMENTATION AUTHORIZED; formal Run gated)
+  - src/era100x/research/stage_2/baselines/placebo/ (S2P14-T17 FINAL ENGINEERING AND VERIFY PASS; descriptive only)
+  - src/era100x/research/stage_2/statistics/bootstrap/ (S2P15-T18 IMPLEMENTED; real source audit and format smoke pass; formal Run gated)
   test_paths:
   - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); UT-EVT-011, FI-14
   - tests/research/stage_2/metrics/path/ (S2-T12 TESTED)
@@ -170,6 +172,7 @@ rules:
   - tests/research/stage_2/labels/ambiguity/ (S2-T14 TESTED)
   - tests/research/stage_2/baselines/conditional/ (S2P13-T16 v1.1 window-local gap and coverage-report tests)
   - tests/research/stage_2/baselines/placebo/ (S2P14-T17 directed outcome-blind and reconciliation tests)
+  - tests/research/stage_2/statistics/bootstrap/ (S2P15-T18 deterministic cluster/bootstrap/FDR and strict-format tests)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   stage_2_identity_delivery:
@@ -211,7 +214,12 @@ rules:
     implementation: src/era100x/research/stage_2/baselines/placebo/
     tests: tests/research/stage_2/baselines/placebo/
     validation: docs/development/validations/stage_2/S2P14-T17.md
-    state: IMPLEMENTATION_AUTHORIZED_FORMAL_RUN_GATED
+    state: FINAL_ENGINEERING_VERIFY_PASS_DESCRIPTIVE_ONLY_CLUSTERING_BOOTSTRAP_PENDING
+  s2p15_t18_delivery:
+    implementation: src/era100x/research/stage_2/statistics/bootstrap/
+    tests: tests/research/stage_2/statistics/bootstrap/
+    validation: docs/development/validations/stage_2/S2P15-T18.md
+    state: IMPLEMENTED_SOURCE_AUDIT_FORMAT_SMOKE_PASS_FORMAL_RUN_GATED
   state: PLANNED
 - rule_id: FILL-FIRST-NONZERO-PROTECT
   rule_status: FROZEN
@@ -277,6 +285,7 @@ rules:
   - S2-T14
   - S2P13-T16
   - S2P14-T17
+  - S2P15-T18
   - S5-T01
   implementation_paths:
   - src/era100x/data/evidence/, tests/data/evidence/, artifacts/manifests/stage_1/ (PLANNED Stage 1 boundary)
@@ -287,6 +296,7 @@ rules:
   - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 IMPLEMENTED historical-only ambiguity bounds)
   - src/era100x/research/stage_2/baselines/conditional/ (S2P13-T16 IMPLEMENTED historical-only conditional evidence with window-local H2 coverage)
   - src/era100x/research/stage_2/baselines/placebo/ (S2P14-T17 historical-only placebo projection; no execution facts)
+  - src/era100x/research/stage_2/statistics/bootstrap/ (S2P15-T18 historical statistical evidence only; no execution facts)
   - src/forward/, tests/forward/, artifacts/manifests/ (PLANNED Stage 5 forward fields)
   test_paths:
   - tests/data/evidence/ (PLANNED); UT-DATA-013
@@ -297,6 +307,7 @@ rules:
   - tests/research/stage_2/labels/ambiguity/ (S2-T14 TESTED; no execution-field fabrication)
   - tests/research/stage_2/baselines/conditional/ (S2P13-T16 TESTED; no live-return interpretation)
   - tests/research/stage_2/baselines/placebo/ (S2P14-T17 TESTED; prohibited live-return interpretations)
+  - tests/research/stage_2/statistics/bootstrap/ (S2P15-T18 TESTED; no PnL, live return or final-gate interpretation)
   - tests/stage_5/ (PLANNED forward regression)
   validation_paths:
   - docs/development/validations/stage_5/ (PLANNED)
@@ -371,6 +382,7 @@ rules:
   - S2-T20
   - S2P13-T16
   - S2P14-T17
+  - S2P15-T18
   implementation_paths:
   - src/era100x/data/readers/, src/era100x/data/aggregate/, tests/data/ (PLANNED Stage 1 input boundary)
   - src/era100x/research/stage_2/contracts/, src/era100x/research/stage_2/gates/ (PLANNED Stage 2 behavior separation)
@@ -380,6 +392,7 @@ rules:
   - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 IMPLEMENTED H1/H2 ambiguity bounds)
   - src/era100x/research/stage_2/baselines/conditional/ (S2P13-T16 historical-only; CR-2026-045 shared window-local coverage repair; final successor Verify PASS; predecessor research rejected)
   - src/era100x/research/stage_2/baselines/placebo/ (S2P14-T17 reuses verified H2 matrices; no Trades reread or H3 claim)
+  - src/era100x/research/stage_2/statistics/bootstrap/ (S2P15-T18 reuses verified T16/T17 matrices; no Trades reread or execution claim)
   test_paths:
   - tests/research/stage_2/contracts/, tests/research/stage_2/gates/ (PLANNED); T-EVT-002
   - tests/research/stage_2/paths/extraction/ (S2-T11 TESTED)
@@ -388,6 +401,7 @@ rules:
   - tests/research/stage_2/labels/ambiguity/ (S2-T14 TESTED)
   - tests/research/stage_2/baselines/conditional/ (S2P13-T16 v1.1 historical-only coverage tests)
   - tests/research/stage_2/baselines/placebo/ (S2P14-T17 historical-only evidence boundary tests)
+  - tests/research/stage_2/statistics/bootstrap/ (S2P15-T18 historical statistical evidence boundary tests)
   validation_paths:
   - docs/development/validations/stage_2/ (PLANNED)
   stage_1_delivery:

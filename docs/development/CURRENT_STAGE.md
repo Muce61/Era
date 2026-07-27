@@ -2,10 +2,18 @@
 
 ```text
 Current Stage: Stage 2
-Current Plan: stage_2_plan_v1.4 — CLOSED AT T17
-Current Task: S2P14-T17 v1.0 — placebo signal
-Status: FORMAL ENGINEERING PASS / VERIFY PASS / DESCRIPTIVE ONLY
+Current Plan: stage_2_plan_v1.5 — IMPLEMENTATION AUTHORIZED AT T18
+Current Task: S2P15-T18 v1.0 — cluster bootstrap
+Status: IMPLEMENTATION / SOURCE AUDIT PASS / FORMAT SMOKE PASS / FORMAL RUN GATED
 ```
+
+Plan v1.5 authorizes only S2P15-T18. The implementation binds the immutable T16 Verify
+`b866905c18fd1cb1f3bbed1f74e5301c56a78e891b81ab3eea61bcff37ed2b86` and T17 Verify
+`bb6f7186f068a1dcd040f369c980bdcae4bb5fef9964c2b5ee61e2d30b6c2f1c`. A real T17 group passed
+the strict producer-to-reader format smoke without creating an Authority or Run. Formal execution
+remains blocked until the final clean commit is pushed, a smoke receipt binds that commit, and a
+human approval binds the commit, policy and both source Verify Hashes. T18 produces statistical
+evidence only; T19–T21 remain unauthorized and Stage 3 remains locked.
 
 Plan v1.4 completed only the approved S2P14-T17 same-stratum non-event placebo. The final formal
 Run `stage2-s2p14-t17-20260727T071439Z-0928be24425c` passed publication, reconciliation and an

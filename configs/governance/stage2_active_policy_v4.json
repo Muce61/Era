@@ -1,0 +1,32 @@
+{
+  "schema_name": "stage2-active-policy-v4",
+  "schema_version": "4.0",
+  "stage": "S2",
+  "stage_plan_version": "1.5",
+  "execution_limit": "S2P15-T18",
+  "stage3_locked": true,
+  "code_commit_mode": "CURRENT_CLEAN_HEAD",
+  "contract_paths": [
+    "docs/spec/system_manual_v1.3.5_final.md",
+    "docs/development/plans/stage_2_plan_v1.5.md",
+    "docs/development/changes/CR-2026-047.md",
+    "docs/development/decisions/ADR-S2-023-cluster-bootstrap.md",
+    "docs/development/tasks/stage_2/S2P15-T18-cluster-bootstrap.md",
+    "configs/research/stage_2/s2p15_t18_cluster_bootstrap_v1.json"
+  ],
+  "preregistration_path": "configs/research/stage_2/s2p15_t18_cluster_bootstrap_v1.json",
+  "evidence_root": "/Volumes/FuckingLife/era100x_stage2/formal/stage2-plan-v1.5",
+  "task_dag": {
+    "S2P15-T18": ["S2P13-T16", "S2P14-T17"]
+  },
+  "source_t16_chain_root": "/Volumes/FuckingLife/era100x_stage2/formal/stage2-plan-v1.3/chains/fa92072063be8455fab814c1e9f302f2b06392a999820a53bd430e7282f57579",
+  "source_t17_run_root": "/Volumes/FuckingLife/era100x_stage2/formal/stage2-plan-v1.4/runs/stage2-s2p14-t17-20260727T071439Z-0928be24425c",
+  "required_gates": [
+    "FORMAT_SMOKE_PASS",
+    "COMMIT_BOUND_HUMAN_APPROVAL",
+    "AUTHORITY_BEFORE_RUN",
+    "UNIQUE_RUN_LOCK",
+    "FULL_RECONCILIATION",
+    "FULL_VERIFY"
+  ]
+}
