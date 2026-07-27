@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import subprocess
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -21,6 +22,31 @@ EXPECTED_T11_RECEIPT = "2414dacb4e9483aae6260b2aa2d5460d96670a2bad1cd754332caddb
 EXPECTED_T11_OUTPUT = "12c33c5d47147e859bb5bab95d42abeafc46dfbeda085c46179a71acd058bf6c"
 EXPECTED_T18_VERIFY = "dc9ebcab3e4af3ff75e03e76ee9fa4f147e27cb2910a80b2b25874f8d5e514d1"
 APPROVAL_SCHEMA = "s2p16-t19-formal-approval-v1"
+
+
+def canonical_json_file_hash(path: Path) -> str:
+    """Hash canonical JSON bytes while excluding its required terminal LF."""
+
+    size = path.stat().st_size
+    if size < 2:
+        raise ValueError("canonical JSON file is empty")
+    with path.open("rb") as handle:
+        handle.seek(-1, 2)
+        if handle.read(1) != b"\n":
+            raise ValueError("canonical JSON file must end with one LF")
+        handle.seek(-2, 2)
+        if handle.read(1) in {b"\n", b"\r"}:
+            raise ValueError("canonical JSON file has a non-canonical terminal sequence")
+        handle.seek(0)
+        digest = hashlib.sha256()
+        remaining = size - 1
+        while remaining:
+            chunk = handle.read(min(8 * 1024 * 1024, remaining))
+            if not chunk:
+                raise ValueError("canonical JSON file truncated during Hash scan")
+            digest.update(chunk)
+            remaining -= len(chunk)
+    return digest.hexdigest()
 
 
 def repository_commit(root: Path) -> str:
@@ -174,7 +200,7 @@ def audit_sources(
     ):
         raise ValueError("formal T11 Manifest/Catalog drift")
     output_path = Path(str(receipt["artifact_root"])) / "output.json"
-    if full_hash_scan and sha256_file(output_path) != EXPECTED_T11_OUTPUT:
+    if full_hash_scan and canonical_json_file_hash(output_path) != EXPECTED_T11_OUTPUT:
         raise ValueError("formal T11 output Hash drift")
 
     old_policy = load_t18_policy(

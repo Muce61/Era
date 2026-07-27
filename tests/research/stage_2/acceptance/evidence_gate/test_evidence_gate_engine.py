@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from decimal import Decimal
 from pathlib import Path
@@ -13,6 +14,9 @@ from era100x.research.stage_2.acceptance.evidence_gate.engine import (
     project_lifecycle,
 )
 from era100x.research.stage_2.acceptance.evidence_gate.formatting import canonical_json
+from era100x.research.stage_2.acceptance.evidence_gate.governance import (
+    canonical_json_file_hash,
+)
 
 SOURCE_HASH = "1" * 64
 
@@ -126,3 +130,17 @@ def test_gate_hash_tamper_fails() -> None:
 def test_canonical_json_rejects_binary_float() -> None:
     with pytest.raises(ValueError, match="float"):
         canonical_json({"value": 0.1})
+
+
+def test_canonical_json_file_hash_excludes_exactly_one_terminal_lf(
+    tmp_path: Path,
+) -> None:
+    payload = canonical_json({"rows": [1, 2, 3]})
+    path = tmp_path / "output.json"
+    path.write_text(payload + "\n", encoding="utf-8")
+
+    assert canonical_json_file_hash(path) == hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    path.write_text(payload + "\n\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="terminal"):
+        canonical_json_file_hash(path)
