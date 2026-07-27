@@ -2,10 +2,18 @@
 
 ```text
 Current Stage: Stage 2
-Current Plan: stage_2_plan_v1.3 — CLOSED_AT_APPROVED_EXECUTION_LIMIT
-Current Task: NONE — Plan v1.3 closed after S2P13-T16
-Status: PLAN_V13_T11_T16_ENGINEERING_VERIFY_PASS_RESEARCH_PRIMARY_PENDING
+Current Plan: stage_2_plan_v1.4 — T17 IMPLEMENTATION AUTHORIZED
+Current Task: S2P14-T17 v1.0 — placebo signal
+Status: IMPLEMENTATION_READY / FORMAL_RUN_COMMIT_BOUND_APPROVAL_REQUIRED
 ```
+
+Plan v1.4 is approved only for the S2P14-T17 same-stratum non-event placebo. It binds the final
+formal T16 Verify Hash below and keeps Plan v1.3, policy v2 and every T16 object read-only. T17 code,
+tests, source audit and read-only UI are authorized. The implementation gate passed Ruff, strict
+mypy, strict Traceability, governance validation and 786 repository tests; browser inspection
+confirmed the automatic T17 projection, exact T16 counts, five-second refresh and Stage 3 lock.
+A formal Authority/Run remains forbidden until the final clean commit receives a commit-bound
+human approval. T18–T21 are not authorized and Stage 3 remains locked.
 
 The final formal successor `fa92072063be8455fab814c1e9f302f2b06392a999820a53bd430e7282f57579`
 completed T11–T16 at commit `555c2a543a9cb3fdf1cb8c79c644792933de2260`. Every Task handoff,

@@ -1,0 +1,30 @@
+{
+  "schema_name": "stage2-active-policy-v3",
+  "schema_version": "3.0",
+  "stage": "S2",
+  "stage_plan_version": "1.4",
+  "execution_limit": "S2P14-T17",
+  "stage3_locked": true,
+  "code_commit_mode": "CURRENT_CLEAN_HEAD",
+  "contract_paths": [
+    "docs/spec/system_manual_v1.3.5_final.md",
+    "docs/development/plans/stage_2_plan_v1.4.md",
+    "docs/development/changes/CR-2026-046.md",
+    "docs/development/decisions/ADR-S2-022-placebo-signal.md",
+    "docs/development/tasks/stage_2/S2P14-T17-placebo.md",
+    "configs/research/stage_2/s2p14_t17_placebo_v1.json"
+  ],
+  "preregistration_path": "configs/research/stage_2/s2p14_t17_placebo_v1.json",
+  "evidence_root": "/Volumes/FuckingLife/era100x_stage2/formal/stage2-plan-v1.4",
+  "task_dag": {
+    "S2P14-T17": ["S2P13-T16"]
+  },
+  "source_t16_chain_root": "/Volumes/FuckingLife/era100x_stage2/formal/stage2-plan-v1.3/chains/fa92072063be8455fab814c1e9f302f2b06392a999820a53bd430e7282f57579",
+  "required_gates": [
+    "COMMIT_BOUND_HUMAN_APPROVAL",
+    "AUTHORITY_BEFORE_RUN",
+    "UNIQUE_RUN_LOCK",
+    "FULL_RECONCILIATION",
+    "FULL_VERIFY"
+  ]
+}

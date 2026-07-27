@@ -18,6 +18,7 @@ _stage2_first_passage_projection = MODULE._stage2_first_passage_projection
 _stage2_ambiguity_bounds_projection = MODULE._stage2_ambiguity_bounds_projection
 _stage2_conditional_baseline_projection = MODULE._stage2_conditional_baseline_projection
 _stage2_v13_projection = MODULE._stage2_v13_projection
+_stage2_v14_projection = MODULE._stage2_v14_projection
 _json_hash = MODULE._json_hash
 
 T12_RUN_ID = "stage2-s2t12-metrics-20260721T040435Z-abcdef123456"
@@ -1692,6 +1693,95 @@ def test_approval_selection_orders_by_declared_time_then_hash() -> None:
     selected = max(approvals, key=MODULE._approval_order)
 
     assert selected["approval_hash"] == "a" * 64
+
+
+def test_stage2_v14_projection_is_evidence_driven_and_reports_live_progress(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    evidence_root = tmp_path / "formal"
+    operations_root = evidence_root / "operations"
+    policy = type(
+        "Policy",
+        (),
+        {
+            "policy_hash": "1" * 64,
+            "evidence_root": evidence_root,
+            "operations_root": operations_root,
+        },
+    )()
+    binding = type(
+        "Binding",
+        (),
+        {
+            "verify_hash": "2" * 64,
+            "counts": {
+                "eligible": 413837,
+                "matched": 413827,
+                "unmatched": 10,
+                "controls": 1278527,
+                "summaries": 13680,
+                "groups": 456,
+            },
+        },
+    )()
+    monkeypatch.setattr(MODULE, "load_placebo_policy", lambda *_args, **_kwargs: policy)
+    monkeypatch.setattr(MODULE, "audit_placebo_t16_source", lambda *_args, **_kwargs: binding)
+    monkeypatch.setattr(MODULE, "_repository_commit", lambda: "abc123")
+
+    blocked = _stage2_v14_projection(tmp_path)
+    assert blocked["status"] == "BLOCKED"
+    assert blocked["reason_code"] == "FORMAL_APPROVAL_REQUIRED"
+    assert blocked["source_counts"]["matched"] == 413827
+    assert blocked["stage3_locked"] is True
+
+    run_root = evidence_root / "runs/stage2-s2p14-t17-test"
+    _write(
+        run_root / "checkpoint.json",
+        json.dumps(
+            {
+                "phase": "BLIND_SELECTION",
+                "subphase": "GROUPS",
+                "percent": 25.0,
+                "processed_units": 114,
+                "total_units": 456,
+                "heartbeat_at": "2026-07-27T00:00:00+00:00",
+            }
+        ),
+    )
+    running = _stage2_v14_projection(tmp_path)
+    assert running["status"] == "IN_PROGRESS"
+    assert running["progress_percent"] == 25.0
+    assert running["processed_units"] == 114
+    assert (
+        next(item for item in running["phases"] if item["name"] == "BLIND_SELECTION")["status"]
+        == "IN_PROGRESS"
+    )
+
+
+def test_stage2_v14_projection_never_hardcodes_pass(tmp_path: Path, monkeypatch) -> None:
+    policy = type(
+        "Policy",
+        (),
+        {
+            "policy_hash": "1" * 64,
+            "evidence_root": tmp_path / "formal",
+            "operations_root": tmp_path / "formal/operations",
+        },
+    )()
+    binding = type(
+        "Binding",
+        (),
+        {"verify_hash": "2" * 64, "counts": {"groups": 456}},
+    )()
+    monkeypatch.setattr(MODULE, "load_placebo_policy", lambda *_args, **_kwargs: policy)
+    monkeypatch.setattr(MODULE, "audit_placebo_t16_source", lambda *_args, **_kwargs: binding)
+    monkeypatch.setattr(MODULE, "_repository_commit", lambda: "abc123")
+
+    result = _stage2_v14_projection(tmp_path)
+
+    assert result["status"] != "PASS"
+    assert result.get("verify_hash") is None
 
 
 def test_projection_reads_historical_approval_without_authorizing_new_run(

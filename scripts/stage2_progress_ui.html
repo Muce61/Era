@@ -343,6 +343,12 @@
           <span id="v13Evidence" class="live-evidence">CHECKING · Stage 3 LOCKED</span>
         </section>
 
+        <section class="live-flow" aria-labelledby="v14FlowTitle">
+          <div class="live-flow-head"><strong id="v14FlowTitle">Plan v1.4 · S2P14-T17 安慰剂信号</strong><span id="v14FlowSummary">正在读取 Policy、T16 绑定与正式批准门…</span></div>
+          <div id="v14FlowGrid" class="flow-grid" aria-live="polite"></div>
+          <span id="v14Evidence" class="live-evidence">H2 historical placebo evidence · Stage 3 LOCKED</span>
+        </section>
+
         <section class="authority">
           <div class="subhead">CR-2026-018 / 019 最小恢复与比较授权链</div>
           <div class="authority-flow">
@@ -838,8 +844,42 @@
       return plan;
     }
 
+    function renderV14Flow(status) {
+      const plan = status.stage2_plan_v14 || {};
+      const labels = {
+        "AUDIT":"上游审计",
+        "BLIND_SELECTION":"盲选密封",
+        "GROUP_MATCHING":"456 组匹配",
+        "OUTCOME_ATTACH":"结果绑定",
+        "SUMMARY":"描述性汇总",
+        "PUBLISH":"Append-only 发布",
+        "VERIFY":"独立 Verify"
+      };
+      const phaseMap = Object.fromEntries((plan.phases || []).map(item => [item.name, item]));
+      const cards = Object.entries(labels).map(([phase, label]) => {
+        const item = phaseMap[phase] || {status:"NOT_STARTED", progress_percent:0};
+        const raw = String(item.status || "NOT_STARTED");
+        const state = raw === "PASS" ? "pass" : raw === "IN_PROGRESS" ? "running" : raw === "FAILED" ? "failed" : "pending";
+        return {
+          name:`${phase} · ${label}`,
+          icon:phase === "BLIND_SELECTION" ? "fa-eye-slash" : phase === "VERIFY" ? "fa-shield-halved" : "fa-diagram-project",
+          state,
+          detail:`${raw} · ${Number(item.progress_percent || 0).toFixed(2)}%`,
+          progress:Math.max(0, Math.min(100, Number(item.progress_percent) || 0))
+        };
+      });
+      byId("v14FlowGrid").innerHTML = cards.map(flowCard).join("");
+      const percent = Math.max(0, Math.min(100, Number(plan.progress_percent) || 0));
+      byId("v14FlowSummary").textContent = `${plan.status || "BLOCKED"} · ${plan.phase || "AUDIT"} ${plan.subphase || ""} · ${percent.toFixed(2)}% · ${number(plan.processed_units)} / ${number(plan.total_units)} · ETA ${compactDuration(plan.eta_seconds)} · 心跳 ${plan.heartbeat_at ? dateTime(plan.heartbeat_at) : "—"} · 5秒自动刷新`;
+      const counts = plan.source_counts || {};
+      byId("v14Evidence").textContent = `${plan.evidence_label || "H2 historical placebo evidence"} · source T16 ${plan.source_t16_status || "CHECKING"} ${plan.source_t16_verify_hash || "—"} · eligible ${number(counts.eligible)} · slots ${number(counts.matched)} · source unmatched ${number(counts.unmatched)} · controls ${number(counts.controls)} · approval ${number(plan.approval_count)} · Authority ${number(plan.authority_count)} · Run ${number(plan.run_count)} · matched ${number(plan.placebo_matched)} · unmatched ${number(plan.placebo_unmatched)} · summaries ${number(plan.summary_row_count)} · ${plan.research_status || "DESCRIPTIVE_ONLY_CLUSTERING_BOOTSTRAP_PENDING"} · Stage 3 ${plan.stage3_locked ? "LOCKED" : "UNEXPECTED_UNLOCK"}`;
+      byId("v14Evidence").classList.toggle("bad", !plan.stage3_locked || plan.status === "FAILED");
+      return plan;
+    }
+
     let legacyRefreshInFlight = false;
     let lastV13Status = null;
+    let lastV14Status = null;
 
     async function refreshV13() {
       try {
@@ -855,6 +895,20 @@
         byId("v13FlowSummary").textContent = "BLOCKED · Plan v1.3 轻量状态接口不可用";
         byId("v13Evidence").textContent = "状态读取失败；不得把 CHECKING 当作 PASS。";
         byId("v13Evidence").classList.add("bad");
+      }
+    }
+
+    async function refreshV14() {
+      try {
+        const response = await fetch("/api/v14/status", {cache:"no-store"});
+        if (!response.ok) throw new Error("v1.4 status unavailable");
+        const status = await response.json();
+        lastV14Status = status;
+        renderV14Flow(status);
+      } catch (error) {
+        byId("v14FlowSummary").textContent = "BLOCKED · Plan v1.4 状态接口不可用";
+        byId("v14Evidence").textContent = "状态读取失败；不得把 CHECKING 当作 PASS。";
+        byId("v14Evidence").classList.add("bad");
       }
     }
 
@@ -1063,10 +1117,13 @@
       }
     }
     refreshV13();
+    refreshV14();
     refresh();
     setInterval(refreshV13, 5000);
+    setInterval(refreshV14, 5000);
     setInterval(() => {
       if (lastV13Status) renderV13Flow(lastV13Status);
+      if (lastV14Status) renderV14Flow(lastV14Status);
     }, 1000);
     setInterval(refresh, 30000);
   </script>

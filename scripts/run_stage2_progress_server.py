@@ -33,6 +33,11 @@ from era100x.research.stage_2.rerun.lightweight_governance import (
     load_policy,
     validate_approval,
 )
+from era100x.research.stage_2.baselines.placebo.contracts import canonical_hash as placebo_hash
+from era100x.research.stage_2.baselines.placebo.governance import (
+    audit_t16_source as audit_placebo_t16_source,
+    load_policy as load_placebo_policy,
+)
 
 DEFAULT_ROOT = Path("/Volumes/FuckingLife/era100x_stage2")
 REPOSITORY_ROOT = Path(__file__).parents[1]
@@ -957,6 +962,148 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
             else checkpoint.get("updated_at")
         ),
     }
+
+
+def _stage2_v14_projection(stage2_root: Path) -> dict[str, Any]:
+    """Project Plan v1.4/T17 from policy and append-only evidence only."""
+
+    del stage2_root
+    phases = (
+        "AUDIT",
+        "BLIND_SELECTION",
+        "GROUP_MATCHING",
+        "OUTCOME_ATTACH",
+        "SUMMARY",
+        "PUBLISH",
+        "VERIFY",
+    )
+    base: dict[str, Any] = {
+        "schema_name": "s2p14-t17-ui-projection",
+        "stage_plan_version": "1.4",
+        "task_id": "S2P14-T17",
+        "status": "BLOCKED",
+        "reason_code": "POLICY_OR_SOURCE_NOT_VERIFIED",
+        "repo_root": str(REPOSITORY_ROOT.resolve()),
+        "repo_commit": _repository_commit(),
+        "source_t16_status": "CHECKING",
+        "approval_count": 0,
+        "authority_count": 0,
+        "run_count": 0,
+        "phase": "AUDIT",
+        "subphase": None,
+        "progress_percent": 0.0,
+        "processed_units": 0,
+        "total_units": 456,
+        "rows_per_second": None,
+        "eta_seconds": None,
+        "heartbeat_at": None,
+        "phases": [],
+        "evidence_label": "H2 historical placebo evidence",
+        "research_status": "DESCRIPTIVE_ONLY_CLUSTERING_BOOTSTRAP_PENDING",
+        "stage3_locked": True,
+    }
+    try:
+        policy = load_placebo_policy(
+            REPOSITORY_ROOT / "configs/governance/stage2_active_policy_v3.json",
+            repository_root=REPOSITORY_ROOT,
+        )
+        binding = audit_placebo_t16_source(policy, full_hash_scan=False)
+    except (OSError, ValueError) as exc:
+        base["reason"] = str(exc)
+        base["phases"] = [
+            {"name": name, "status": "BLOCKED", "progress_percent": 0.0} for name in phases
+        ]
+        return base
+    approvals = tuple(
+        path
+        for path in (policy.operations_root / "approvals").glob("approval-*.json")
+        if path.is_file() and not path.is_symlink() and not path.name.startswith("._")
+    )
+    authorities = tuple(
+        path
+        for path in (policy.evidence_root / "authorities").glob("authority-*.json")
+        if path.is_file() and not path.is_symlink() and not path.name.startswith("._")
+    )
+    runs = tuple(
+        sorted(
+            path
+            for path in (policy.evidence_root / "runs").glob("stage2-s2p14-t17-*")
+            if path.is_dir() and not path.is_symlink()
+        )
+    )
+    checkpoint: dict[str, Any] = {}
+    verify: dict[str, Any] = {}
+    run_id = None
+    if runs:
+        run_id = runs[-1].name
+        checkpoint = _safe_json_object(runs[-1] / "checkpoint.json")
+        verify_files = tuple(
+            path
+            for path in (runs[-1] / "verify").glob("*.json")
+            if path.is_file() and not path.is_symlink() and not path.name.startswith("._")
+        )
+        if len(verify_files) == 1:
+            candidate = _safe_json_object(verify_files[0])
+            claimed = candidate.get("verify_hash")
+            if (
+                isinstance(claimed, str)
+                and placebo_hash(
+                    {key: value for key, value in candidate.items() if key != "verify_hash"}
+                )
+                == claimed
+                and candidate.get("status") == "PASS"
+            ):
+                verify = candidate
+    current_phase = str(checkpoint.get("phase") or ("VERIFY" if verify else "AUDIT"))
+    current_index = phases.index(current_phase) if current_phase in phases else 0
+    progress_value = float(checkpoint.get("percent") or 0.0)
+    phase_rows: list[dict[str, Any]] = []
+    for index, name in enumerate(phases):
+        if verify:
+            state, percent = "PASS", 100.0
+        elif index < current_index or name == "AUDIT":
+            state, percent = "PASS", 100.0
+        elif index == current_index and checkpoint:
+            state, percent = "IN_PROGRESS", progress_value
+        else:
+            state, percent = "NOT_STARTED", 0.0
+        phase_rows.append({"name": name, "status": state, "progress_percent": percent})
+    status = "PASS" if verify else ("IN_PROGRESS" if checkpoint else "BLOCKED")
+    reason_code = (
+        "FORMAL_TASK_VERIFIED_PASS"
+        if verify
+        else ("RUN_IN_PROGRESS" if checkpoint else "FORMAL_APPROVAL_REQUIRED")
+    )
+    base.update(
+        {
+            "status": status,
+            "reason_code": reason_code,
+            "policy_hash": policy.policy_hash,
+            "source_t16_status": "PASS",
+            "source_t16_verify_hash": binding.verify_hash,
+            "source_counts": binding.counts,
+            "approval_count": len(approvals),
+            "authority_count": len(authorities),
+            "run_count": len(runs),
+            "run_id": run_id,
+            "phase": current_phase,
+            "subphase": checkpoint.get("subphase"),
+            "progress_percent": 100.0 if verify else progress_value,
+            "processed_units": checkpoint.get("processed_units", 0),
+            "total_units": checkpoint.get("total_units", 456),
+            "rows_per_second": checkpoint.get("rows_per_second"),
+            "eta_seconds": checkpoint.get("eta_seconds"),
+            "elapsed_seconds": checkpoint.get("elapsed_seconds"),
+            "heartbeat_at": checkpoint.get("heartbeat_at"),
+            "phases": phase_rows,
+            "verify_hash": verify.get("verify_hash"),
+            "placebo_slot_count": verify.get("placebo_slot_count"),
+            "placebo_matched": verify.get("placebo_matched"),
+            "placebo_unmatched": verify.get("placebo_unmatched"),
+            "summary_row_count": verify.get("summary_row_count"),
+        }
+    )
+    return base
 
 
 def _execution_observability(run_root: Path) -> dict[str, Any]:
@@ -2500,6 +2647,14 @@ class ProgressHandler(BaseHTTPRequestHandler):
                 )
             except (OSError, ValueError) as exc:
                 self._reply_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})
+        elif path == "/api/v14/status":
+            try:
+                self._reply_json(
+                    HTTPStatus.OK,
+                    {"stage2_plan_v14": _stage2_v14_projection(self.server.stage2_root)},
+                )
+            except (OSError, ValueError) as exc:
+                self._reply_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})
         elif path == "/api/status":
             try:
                 payload = read_progress_status(self.server.run_root)
@@ -2514,6 +2669,7 @@ class ProgressHandler(BaseHTTPRequestHandler):
                 }
                 payload["execution_observability"] = observability
                 payload["stage2_plan_v13"] = _stage2_v13_projection(self.server.stage2_root)
+                payload["stage2_plan_v14"] = _stage2_v14_projection(self.server.stage2_root)
                 self._reply_json(HTTPStatus.OK, payload)
             except (OSError, ValueError) as exc:
                 self._reply_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})
