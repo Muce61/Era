@@ -2,9 +2,9 @@
 
 ```text
 Current Stage: Stage 2
-Current Plan: stage_2_plan_v1.3
-Current Task: S2P13-T16 v1.1 — conditional baseline
-Status: T16_FINAL_SUCCESSOR_ENGINEERING_VERIFY_PASS_DESCRIPTIVE_ONLY
+Current Plan: stage_2_plan_v1.3 — CLOSED_AT_APPROVED_EXECUTION_LIMIT
+Current Task: NONE — Plan v1.3 closed after S2P13-T16
+Status: PLAN_V13_T11_T16_ENGINEERING_VERIFY_PASS_RESEARCH_PRIMARY_PENDING
 ```
 
 The final formal successor `fa92072063be8455fab814c1e9f302f2b06392a999820a53bd430e7282f57579`
@@ -16,6 +16,14 @@ and 13,680 summaries. Its Verify Hash is
 The shared window-local contract reports 96,922 / 413,837 gap-affected event matrices and
 307,603 / 1,278,527 gap-affected control matrices. The engineering result is PASS; the research
 result remains `DESCRIPTIVE_ONLY_PRIMARY_PENDING_T18`, not Stage 2 Primary PASS.
+
+Muce accepted the performance and Reason Code projection change at
+`007b3147abc013ea0a41f214cbff52650b2b20a2` without another data Run. That change passed the
+complete repository quality gate, but no claim is made that it produced or accelerated the
+immutable formal successor above. Plan v1.3 is now closed at its approved T16 execution ceiling.
+S2P13-T17～T21 remain unexecuted, and any continuation requires a new approved plan/version. The
+append-only governance decision is recorded in
+[`stage_2_plan_v1.3_closure.md`](validations/stage_2/stage_2_plan_v1.3_closure.md).
 
 The earlier formal predecessor remains append-only engineering evidence. Acceptance found that it
 used daily aggregate quality as if it were window-local coverage, so CR-2026-045/ADR-S2-021
@@ -30,7 +38,7 @@ remains blocked.
 
 Plan v1.2 and every old S2-T10～T15 artifact remain immutable historical evidence. Plan v1.3 uses
 the `(stage_plan_version, task_id)` identity and the namespaced public IDs `S2P13-T11` through
-`S2P13-T21`. The current execution ceiling is `S2P13-T16`; S2P13-T17～T21 are not authorized and
+`S2P13-T21`. The completed execution ceiling is `S2P13-T16`; S2P13-T17～T21 were not executed and
 Stage 3 remains locked.
 
 The repository contains the fail-closed SRP framework, namespaced task identity, deterministic

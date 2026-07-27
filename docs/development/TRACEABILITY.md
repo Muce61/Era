@@ -10,13 +10,13 @@ Model: formal rule → Stage → Task → implementation → tests → validatio
 ## Stage 2 Plan v1.3 lifecycle successor status
 
 CR-2026-035 and ADR-S2-014/015 establish V1.3.5 and Plan v1.3 without mutating Plan v1.2 evidence.
-The current identity is `stage_2_plan_v1.3/S2P13-T16`; implementation is authorized through
-S2P13-T16 only. The repository implements the SRP fail-closed framework, task namespace,
+The final executed identity is `stage_2_plan_v1.3/S2P13-T16`; Plan v1.3 closed at that approved
+execution ceiling on 2026-07-27. The repository implements the SRP fail-closed framework, task namespace,
 price-only lifecycle core, typed availability audit, recoverable orchestrator contract and
 evidence-driven UI projection with directed tests. The production adapter layer now requires an
 approved, commit-bound six-task argv plan, complete versioned upstream handoffs, self-hashed
 producer receipts, consumer read-back, reconciliation and Verify PASS before translating any task
-result into the successor checkpoint. CR-2026-041 freezes the successor source-binding scope and
+result into the successor checkpoint. CR-2026-041 froze the successor source-binding scope and
 corrects the DAG so T13 and T14 both consume T12 while T12 binds T11 only as a PASS gate. The
 adapter distinguishes retryable process interruption from terminal producer failure and never
 invokes commands through a shell.
@@ -28,11 +28,9 @@ The shared extraction/metric/First-Passage cores now accept explicit successor r
 the Plan v1.3 producer CLI seals full upstream handoffs, preregistration, scope, Manifest, Catalog,
 output and receipt hashes. A real pre-commit seven-day component chain passed T12 through T15 and
 the lifecycle component correctly fail-closed all 42 Primary Episodes as declared-gap censored.
-The clean-commit full chain and UI observation remain the active gate.
 The first clean-commit attempt at `0c27e41` failed closed on external-volume AppleDouble
 `._*.parquet` sidecars during T12 inventory. The unpublished failed root is retained; the scoped
-inventory now ignores only those metadata sidecars and has a dedicated regression test. The next
-commit must rerun the complete chain.
+inventory ignores only those metadata sidecars and has a dedicated regression test.
 
 The final formal successor
 `fa92072063be8455fab814c1e9f302f2b06392a999820a53bd430e7282f57579` completed T11–T16 at
@@ -42,6 +40,12 @@ passed Catalog, Manifest, reconciliation and independent Verify. T16 Verify Hash
 `b866905c18fd1cb1f3bbed1f74e5301c56a78e891b81ab3eea61bcff37ed2b86`; its engineering result is
 PASS and its research result remains `DESCRIPTIVE_ONLY_PRIMARY_PENDING_T18`. The append-only
 predecessor remains engineering PASS but research-rejected under CR-2026-045/ADR-S2-021.
+The performance and Reason Code projection change at
+`007b3147abc013ea0a41f214cbff52650b2b20a2` later passed the complete repository quality gate and
+was accepted without another data Run. It is code evidence only and is not attributed to the
+immutable formal successor. Plan v1.3 is closed at T16; S2P13-T17～T21 remain unexecuted. The
+closure decision is recorded in
+[`stage_2_plan_v1.3_closure.md`](validations/stage_2/stage_2_plan_v1.3_closure.md).
 CR-2026-038 resolves
 OQ-S2-010 by binding the accepted BTC/ETH historical funding source. CR-2026-039 resolves
 OQ-S2-011 after the SRP framework passed repository-wide quality and traceability; the framework
@@ -49,9 +53,8 @@ and all historical SRP/CR/ADR records remain. CR-2026-040 resolves OQ-S2-009 and
 defined seven-day requirement to the independent `FINAL_CODE_7_DAY_REHEARSAL` execution gate.
 CR-2026-044 keeps that gate as the default and permits only a commit-bound, explicitly approved
 unattended-background waiver. A clean commit and commit-bound human run receipt remain mandatory
-before a unique successor chain. The formal full-data Run still validates and reconciles the
-complete range and fails closed on unknown missingness or drift. S2P13-T17～T21 are not authorized;
-Stage 3 remains locked.
+before a unique successor chain. The completed formal Run validated and reconciled the complete
+range and failed closed on unknown missingness or drift. Stage 3 remains locked.
 
 ## Stage 0 v1.0 Foundation Coverage
 
@@ -324,7 +327,7 @@ run is immutable; its sealed objects require a new-run adoption Manifest and ful
 | Conditional random baseline | S2P13-T16 v1.1 | causal RMS/activity/distance; rolling F0-F3; outcome-blind 5 controls shared by 30 H2 cells; shared window-local H2 gap-before-decision contract; no PnL/return | FINAL SUCCESSOR ENGINEERING/VERIFY PASS / DESCRIPTIVE ONLY / PRIMARY PENDING T18 |
 | Seven-day theoretical lifecycle | Plan v1.3 S2P13-T11 | `stage_2/lifecycle`; Contract Price H3 proxy; 20bp auxiliary; dynamic net ticket-doubling; historical Primary and adverse Stress funding; -8U margin depletion | IMPLEMENTED CORE / DIRECTED TESTS PASS / CR-2026-038 FUNDING ACCEPTANCE REHEARSAL AUTHORIZED |
 | Historical funding acceptance | Plan v1.3 S2P13-T11 | `stage_2/funding`; complete local BTC/ETH history plus seven-day official sample; checksum, append-only acceptance, Manifest/Catalog/Verify, strict read-back | HUMAN ACCEPTED / 7,128+7,128 LOCAL ROWS HASH-BOUND / MONTHLY RECONCILIATION WAIVED / NO LIFECYCLE RUN |
-| Plan v1.3 successor orchestration | S2P13-T11～T16 | CR-2026-041/042/045; `stage_2/rerun`; static/input preflight, exclusive lock, complete source bindings, checkpoint/readback/reconciliation/Verify; T16 SQLite uses local scratch; H2 coverage parity is independently reported | FINAL FORMAL CHAIN COMPLETE / T11-T16 VERIFY PASS / STAGE 3 LOCKED |
+| Plan v1.3 successor orchestration | S2P13-T11～T16 | CR-2026-041/042/045; `stage_2/rerun`; static/input preflight, exclusive lock, complete source bindings, checkpoint/readback/reconciliation/Verify; T16 SQLite uses local scratch; H2 coverage parity is independently reported | PLAN V1.3 CLOSED AT T16 / FINAL FORMAL CHAIN COMPLETE / T11-T16 VERIFY PASS / PRIMARY PENDING / STAGE 3 LOCKED |
 | Append-only Trade partition recovery | S2P13-T11 | CR-2026-043; ADR-S2-020; exact-key supplement overlay for truncated `BTCUSDT/2022-03-01`; official archive checksum plus original receipt byte/logical/count equality; Policy/approval/Authority binding | IMPLEMENTATION AUTHORIZED / FIRST FORMAL CHAIN TERMINAL_FAILED / SUCCESSOR GATED |
 | Special research point explicit exemptions | Plan v1.3 governance; SRP-S2-001 | default all-rules inheritance; explicit exact exemptions; non-waivable truth/safety/governance; unknown/wildcard/hash drift rejection; formal consumer rejection | FRAMEWORK IMPLEMENTED / FULL QUALITY PASS / OQ-S2-011 RESOLVED; SRP-S2-001 EXEMPTIONS EXPIRED |
 | Placebo | S2-T16 | preregistered placebo; separate future Task | DRAFT_NOT_APPROVED |

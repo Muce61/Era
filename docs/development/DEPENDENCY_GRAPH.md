@@ -86,13 +86,11 @@ Plan v1.2 sealed T10/T11/T13/T14 evidence
 S2P13-T11 + S2P13-T20 ─────────────────────────────────┘
 ```
 
-The approved execution ceiling is S2P13-T16. S2P13-T17～T21 and Stage 3 remain locked. Before any
-successor Authority or Run ID, the commit-bound approval must bind either the default
-`FINAL_CODE_7_DAY_REHEARSAL` PASS or the CR-2026-044 explicit unattended-background waiver.
-CR-2026-042 resolves OQ-S2-012; no producer may invent protection/structure facts or import a
-Stage 3 rule.
-serialization, strict consumer readback, reconciliation, Verify and UI, and a commit-bound human
-run receipt must exist. OQ-S2-009/010/011 are resolved. A separate whole-history pre-audit is not
-required, but the formal full-data Run retains complete-range validation, reconciliation and
-fail-closed missingness/drift handling. Contract Price/Trades are the approved Stage 2 H3 price
-proxy, and CR-2026-038 binds the accepted historical funding source.
+Plan v1.3 closed at its approved S2P13-T16 execution ceiling after the final successor completed
+serialization, strict consumer readback, reconciliation, Verify and UI projection. The historical
+commit-bound approval bound the applicable rehearsal or CR-2026-044 waiver before its Authority
+and Run IDs. CR-2026-042 resolves OQ-S2-012; no producer may invent protection/structure facts or
+import a Stage 3 rule. OQ-S2-009/010/011 are resolved. Contract Price/Trades remain the approved
+Stage 2 H3 price proxy, and CR-2026-038 binds the accepted historical funding source.
+S2P13-T17～T21 were not executed; any continuation requires a new approved plan/version and Stage 3
+remains locked.
