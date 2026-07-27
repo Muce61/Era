@@ -1746,6 +1746,10 @@ def test_stage2_v14_projection_is_evidence_driven_and_reports_live_progress(
     assert authority_only["run_count"] == 0
 
     run_root = evidence_root / "runs/stage2-s2p14-t17-test"
+    run_root.mkdir(parents=True)
+    empty_run = _stage2_v14_projection(tmp_path)
+    assert empty_run["status"] == "BLOCKED"
+    assert empty_run["reason_code"] == "EMPTY_RUN_PREFIX_BLOCKED"
     _write(
         run_root / "checkpoint.json",
         json.dumps(
