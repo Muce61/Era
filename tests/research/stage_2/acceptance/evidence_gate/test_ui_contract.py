@@ -21,4 +21,7 @@ def test_ui_has_nine_live_t19_modules_and_no_hardcoded_pass() -> None:
         assert f'"{phase}"' in page
     assert 'fetch("/api/v16/status"' in page
     assert "evidence.engineering_status" in page
+    assert "plan.parameter_landscape_rows" in page
+    assert "plan.verify_hash" in page
+    assert "plan.run_code_commit" in page
     assert "NO_GO_CURRENT_EVIDENCE</strong>" not in page

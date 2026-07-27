@@ -94,10 +94,23 @@ def status_payload(policy: Any, repository_root: Path) -> dict[str, Any]:
     )
     active: dict[str, Any] = {}
     run_contract: dict[str, Any] = {}
+    verify: dict[str, Any] = {}
     if runs and (runs[-1] / "checkpoint.json").is_file():
         active = read_json(runs[-1] / "checkpoint.json")
     if runs and (runs[-1] / "run-contract.json").is_file():
         run_contract = read_json(runs[-1] / "run-contract.json")
+    if runs:
+        verify_files = tuple(
+            path
+            for path in (runs[-1] / "verify").glob("*.json")
+            if path.is_file() and not path.is_symlink() and not path.name.startswith("._")
+        )
+        if len(verify_files) == 1:
+            candidate = read_json(verify_files[0])
+            if candidate.get("status") == "PASS" and candidate.get("verify_hash") == canonical_hash(
+                {key: value for key, value in candidate.items() if key != "verify_hash"}
+            ):
+                verify = candidate
     if active:
         status = str(active.get("status", "IN_PROGRESS"))
         reason = (
@@ -136,6 +149,10 @@ def status_payload(policy: Any, repository_root: Path) -> dict[str, Any]:
         "run_count": len(runs),
         "run_id": run_contract.get("run_id"),
         "run_code_commit": run_contract.get("code_commit"),
+        "verify_hash": verify.get("verify_hash"),
+        "gate_rows": verify.get("gate_rows"),
+        "parameter_landscape_rows": verify.get("parameter_landscape_rows"),
+        "frequency_waiting_rows": verify.get("frequency_waiting_rows"),
         "active_run": active,
         "evidence_cards": cards,
         "run_lock_held": _lock_is_held(policy.operations_root / "run.lock"),
