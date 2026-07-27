@@ -577,6 +577,38 @@ def _states(
     return result
 
 
+def _is_v2_stably_ordered(table: pa.Table) -> bool:
+    """Check the frozen H2 lexicographic order without materializing a sorted copy."""
+
+    columns = ("ts_event_ns", "venue_trade_id", "canonical_trade_id")
+    if any(table[name].null_count for name in columns):
+        return False
+    if table.num_rows < 2:
+        return True
+    timestamps = table["ts_event_ns"]
+    venue_ids = table["venue_trade_id"]
+    canonical_ids = table["canonical_trade_id"]
+    left_ts = timestamps.slice(0, table.num_rows - 1)
+    right_ts = timestamps.slice(1)
+    left_venue = venue_ids.slice(0, table.num_rows - 1)
+    right_venue = venue_ids.slice(1)
+    left_canonical = canonical_ids.slice(0, table.num_rows - 1)
+    right_canonical = canonical_ids.slice(1)
+    timestamp_reversal = pc.less(right_ts, left_ts)
+    timestamp_equal = pc.equal(right_ts, left_ts)
+    venue_reversal = pc.less(right_venue, left_venue)
+    venue_equal = pc.equal(right_venue, left_venue)
+    canonical_reversal = pc.less(right_canonical, left_canonical)
+    violation = pc.or_(
+        timestamp_reversal,
+        pc.and_(
+            timestamp_equal,
+            pc.or_(venue_reversal, pc.and_(venue_equal, canonical_reversal)),
+        ),
+    )
+    return not bool(pc.any(violation).as_py())
+
+
 def _process_h1(
     states: dict[str, _MetricState],
     slices: list[dict[str, Any]],
@@ -677,14 +709,7 @@ def _process_h2(states: dict[str, _MetricState], slices: list[dict[str, Any]]) -
             table = pq.ParquetFile(path).read_row_group(
                 group[1], columns=["ts_event_ns", "venue_trade_id", "canonical_trade_id", "price"]
             )
-            expected = table.sort_by(
-                [
-                    ("ts_event_ns", "ascending"),
-                    ("venue_trade_id", "ascending"),
-                    ("canonical_trade_id", "ascending"),
-                ]
-            )
-            if not table.equals(expected):
+            if not _is_v2_stably_ordered(table):
                 raise ValueError("H2 row group violates the V2 stable order")
             timestamps = cast(list[int], table["ts_event_ns"].to_pylist())
             prices = table["price"]

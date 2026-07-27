@@ -818,6 +818,13 @@ def test_ui_derives_current_task_version_count_and_acceptance_without_hardcoded_
     assert "task.progress_percent" in page
     assert "task.current_instrument" in page
     assert "task.current_date" in page
+    assert "task.subphase" in page
+    assert "task.subphase_total_units" in page
+    assert "task.rows_per_second" in page
+    assert "task.eta_seconds" in page
+    assert "task.cache_hits" in page
+    assert "task.rss_bytes" in page
+    assert "子阶段" in page
     assert "elapsedTime(task)" in page
     assert "task.started_at" in page
     assert "task.completed_at" in page
@@ -1530,13 +1537,39 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
                             "row_count": index,
                             "output_hash": str(index) * 64,
                             "verify_status": "PASS",
+                            "producer_receipt_hash": (f"{index:x}" * 64)[:64],
                         },
+                        **(
+                            {"adoption_receipt_hash": (f"{index:x}" * 64)[:64]}
+                            if task in MODULE.V13_TASKS[:-1]
+                            else {}
+                        ),
                     }
                     for index, task in enumerate(MODULE.V13_TASKS, start=1)
                 },
             }
         ),
     )
+    completed_producer_checkpoint = {
+        key: value for key, value in formal_task_checkpoint.items() if key != "checkpoint_hash"
+    }
+    completed_producer_checkpoint.update(
+        {
+            "status": "PASS",
+            "reason_code": "PRODUCER_PASS",
+            "completed_units": 80,
+            "progress_percent": "100.00",
+        }
+    )
+    _write(
+        chain_root / "tasks/S2P13-T11/checkpoint.json",
+        json.dumps(_sealed(completed_producer_checkpoint, "checkpoint_hash")),
+    )
+    produced_precedence = _stage2_v13_projection(tmp_path / "stage2")
+    assert produced_precedence["tasks"]["S2P13-T11"]["reason_code"] == ("FORMAL_TASK_VERIFIED_PASS")
+    assert produced_precedence["tasks"]["S2P13-T11"]["evidence_origin"] == "PRODUCED"
+    assert produced_precedence["tasks"]["S2P13-T11"]["source_reason_code"] == "PRODUCER_PASS"
+    (chain_root / "tasks/S2P13-T11/checkpoint.json").unlink()
     complete = _stage2_v13_projection(tmp_path / "stage2")
     assert complete["status"] == "PASS"
     assert complete["reason_code"] == "FORMAL_CHAIN_COMPLETE"
@@ -1544,6 +1577,15 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
     assert complete["task_status"] == "PASS"
     assert complete["formal_successor_result_exists"] is True
     assert complete["formal_progress_percent"] == 100.0
+    assert complete["reason_code_schema_version"] == 2
+    assert complete["reason_message"] == "Plan v1.3 正式链已全部完成并通过核验。"
+    assert complete["selected_approval_hash"] == approval_hash
+    assert complete["approval_selection_basis"] == "MAX_APPROVED_AT_THEN_APPROVAL_HASH"
+    assert complete["tasks"]["S2P13-T11"]["reason_code"] == "FORMAL_VERIFIED_PREFIX_ADOPTED_PASS"
+    assert complete["tasks"]["S2P13-T11"]["evidence_origin"] == "ADOPTED_VERIFIED_PREFIX"
+    assert complete["tasks"]["S2P13-T11"]["source_reason_code"] is None
+    assert complete["tasks"]["S2P13-T16"]["reason_code"] == "FORMAL_TASK_VERIFIED_PASS"
+    assert complete["tasks"]["S2P13-T16"]["evidence_origin"] == "PRODUCED"
     (policy_operations / "approvals/approval-formal.json").unlink()
 
     rehearsal_report_path = (
@@ -1617,6 +1659,8 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
         task["reason_code"] == "SEVEN_DAY_REHEARSAL_PASS_NOT_FORMAL"
         for task in rehearsed["tasks"].values()
     )
+    assert all(task["evidence_origin"] == "REHEARSAL" for task in rehearsed["tasks"].values())
+    assert all(task["reason_code_schema_version"] == 2 for task in rehearsed["tasks"].values())
 
     receipt["code_commit"] = "wrong"
     receipt["receipt_hash"] = _json_hash(
@@ -1636,6 +1680,61 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
     drifted = _stage2_v13_projection(tmp_path / "stage2")
     assert drifted["rehearsal_status"] == "NOT_STARTED"
     assert drifted["execution_gates"]["FINAL_CODE_7_DAY_REHEARSAL"] == "PENDING"
+
+
+def test_approval_selection_orders_by_declared_time_then_hash() -> None:
+    approvals = [
+        {"approved_at": "2026-07-21T12:00:00+00:00", "approval_hash": "f" * 64},
+        {"approved_at": "2026-07-22T12:00:00+00:00", "approval_hash": "0" * 64},
+        {"approved_at": "2026-07-22T12:00:00+00:00", "approval_hash": "a" * 64},
+    ]
+
+    selected = max(approvals, key=MODULE._approval_order)
+
+    assert selected["approval_hash"] == "a" * 64
+
+
+def test_projection_reads_historical_approval_without_authorizing_new_run(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    evidence_root = tmp_path / "evidence"
+    policy = type(
+        "Policy",
+        (),
+        {"policy_hash": "1" * 64, "evidence_root": evidence_root},
+    )()
+    approval = _sealed(
+        {
+            "schema_name": "stage2-formal-approval-v2",
+            "schema_version": "2.0",
+            "status": "APPROVED",
+            "stage_plan_version": "1.3",
+            "stage3_locked": True,
+            "policy_hash": policy.policy_hash,
+            "evidence_root": str(evidence_root),
+            "tasks": list(MODULE.V13_TASKS),
+            "approved_at": "2026-07-26T00:00:00+00:00",
+        },
+        "approval_hash",
+    )
+    approval_path = tmp_path / "approval.json"
+    _write(approval_path, json.dumps(approval))
+    monkeypatch.setattr(
+        MODULE,
+        "validate_approval",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            ValueError("formal approval cannot authorize a dirty repository")
+        ),
+    )
+
+    projected = MODULE._read_projection_approval(
+        approval_path,
+        policy=policy,
+        repository_root=tmp_path,
+    )
+
+    assert projected["approval_hash"] == approval["approval_hash"]
 
 
 def test_stage2_v13_projection_rejects_stale_server(

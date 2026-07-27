@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 from collections import Counter
+from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -215,25 +216,34 @@ def prepare_feature_block(
     )
 
 
-def _boundary_values(
+def _boundary_value_sets(
     paths: tuple[Path, ...],
     *,
-    column: str,
+    columns: tuple[str, ...],
     train_start_ns: int,
     train_end_ns: int,
-) -> tuple[tuple[Decimal, ...], int]:
-    values: list[Decimal] = []
+) -> tuple[dict[str, tuple[Decimal, ...]], int]:
+    values: dict[str, list[Decimal]] = {column: [] for column in columns}
     source_anchor_count = 0
     for path in paths:
-        table = pq.read_table(path, columns=["anchor_ns", column])
-        for anchor, value in zip(
-            table["anchor_ns"].to_pylist(), table[column].to_pylist(), strict=True
-        ):
-            if train_start_ns + 3600 * NS <= int(anchor) and int(anchor) + 600 * NS <= train_end_ns:
-                source_anchor_count += 1
-                if value is not None:
-                    values.append(Decimal(value))
-    return tuple(values), source_anchor_count
+        parquet = pq.ParquetFile(path)
+        for batch in parquet.iter_batches(batch_size=65_536, columns=["anchor_ns", *columns]):
+            anchors = batch["anchor_ns"].to_pylist()
+            feature_columns = {column: batch[column].to_pylist() for column in columns}
+            for row_index, anchor in enumerate(anchors):
+                if (
+                    train_start_ns + 3600 * NS <= int(anchor)
+                    and int(anchor) + 600 * NS <= train_end_ns
+                ):
+                    source_anchor_count += 1
+                    for column in columns:
+                        value = feature_columns[column][row_index]
+                        if value is not None:
+                            values[column].append(Decimal(value))
+    return (
+        {column: tuple(column_values) for column, column_values in values.items()},
+        source_anchor_count,
+    )
 
 
 def freeze_binning_snapshots(
@@ -245,6 +255,7 @@ def freeze_binning_snapshots(
     current_commit: str,
     repository_clean: bool,
     lightweight_policy_authorized: bool = False,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> tuple[dict[str, Any], Path]:
     """Prepare TRAIN blocks and freeze all 504 registered boundary objects."""
 
@@ -261,9 +272,14 @@ def freeze_binning_snapshots(
     root = bin_root / authority.authority_hash
     reader = FixedT10Reader(t10_snapshot, expected_snapshot_id=t10_snapshot_id)
     block_reports: list[dict[str, Any]] = []
+    cache_hits = 0
+    cache_misses = 0
+    bytes_read = 0
     for instrument in ("BTCUSDT", "ETHUSDT"):
         for period in ("P1", "P2", "P3"):
             for block_index in range(4):
+                block_path = _block_path(root, instrument, period, block_index)
+                was_cached = block_path.is_file() and _block_report_path(block_path).is_file()
                 block_reports.append(
                     _prepare_block(
                         reader=reader,
@@ -275,11 +291,27 @@ def freeze_binning_snapshots(
                         parameter_set_ids=parameter_set_ids,
                     )
                 )
+                cache_hits += int(was_cached)
+                cache_misses += int(not was_cached)
+                bytes_read += block_path.stat().st_size
+                if progress_callback is not None:
+                    progress_callback(
+                        {
+                            "subphase": "FEATURE_BLOCKS",
+                            "processed_units": len(block_reports),
+                            "total_units": 24,
+                            "current_instrument": instrument,
+                            "bytes_read": bytes_read,
+                            "cache_hits": cache_hits,
+                            "cache_misses": cache_misses,
+                        }
+                    )
     split_contract_hash = canonical_hash(
         [contract.model_dump(mode="json") for contract in ROLLING_FOLDS]
     )
     boundary_refs: list[dict[str, Any]] = []
     combined: dict[str, str] = {}
+    completed_boundary_groups = 0
     for contract in ROLLING_FOLDS:
         for instrument in ("BTCUSDT", "ETHUSDT"):
             source_paths = tuple(
@@ -287,22 +319,28 @@ def freeze_binning_snapshots(
                 for index in range(int(contract.fold[1]) + 1)
             )
             hashes = tuple(_sha256_file(path) for path in source_paths)
+            columns = (
+                "volatility_rms_bps",
+                "activity_count_60s",
+                *(_safe_parameter_column(parameter) for parameter in parameter_set_ids),
+            )
+            boundary_values, source_anchor_count = _boundary_value_sets(
+                source_paths,
+                columns=columns,
+                train_start_ns=contract.train_start_ns,
+                train_end_ns=contract.train_end_ns,
+            )
+            bytes_read += sum(path.stat().st_size for path in source_paths)
             market_boundaries: dict[str, str] = {}
             for feature_kind, column in (
                 ("VOLATILITY", "volatility_rms_bps"),
                 ("TRADES_ACTIVITY", "activity_count_60s"),
             ):
-                values, source_anchor_count = _boundary_values(
-                    source_paths,
-                    column=column,
-                    train_start_ns=contract.train_start_ns,
-                    train_end_ns=contract.train_end_ns,
-                )
                 source_hash = canonical_hash(
                     {"blocks": hashes, "column": column, "split": split_contract_hash}
                 )
                 boundary = freeze_tie_preserving_quintiles(
-                    values,
+                    boundary_values[column],
                     instrument=instrument,
                     period=contract.period,
                     fold=contract.fold,
@@ -325,17 +363,11 @@ def freeze_binning_snapshots(
                 market_boundaries[feature_kind] = boundary.boundary_hash
             for parameter in parameter_set_ids:
                 column = _safe_parameter_column(parameter)
-                values, source_anchor_count = _boundary_values(
-                    source_paths,
-                    column=column,
-                    train_start_ns=contract.train_start_ns,
-                    train_end_ns=contract.train_end_ns,
-                )
                 source_hash = canonical_hash(
                     {"blocks": hashes, "column": column, "split": split_contract_hash}
                 )
                 boundary = freeze_tie_preserving_quintiles(
-                    values,
+                    boundary_values[column],
                     instrument=instrument,
                     period=contract.period,
                     fold=contract.fold,
@@ -363,6 +395,19 @@ def freeze_binning_snapshots(
                         "activity_boundary_hash": market_boundaries["TRADES_ACTIVITY"],
                         "distance_boundary_hash": boundary.boundary_hash,
                         "split_contract_hash": split_contract_hash,
+                    }
+                )
+            completed_boundary_groups += 1
+            if progress_callback is not None:
+                progress_callback(
+                    {
+                        "subphase": "BOUNDARY_GROUPS",
+                        "processed_units": completed_boundary_groups,
+                        "total_units": 24,
+                        "current_instrument": instrument,
+                        "bytes_read": bytes_read,
+                        "cache_hits": cache_hits,
+                        "cache_misses": cache_misses,
                     }
                 )
     if len(boundary_refs) != 504 or len(combined) != 456:

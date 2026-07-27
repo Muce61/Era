@@ -53,6 +53,17 @@ S2T14_SUMMARY_RELATIVE_PATH = Path(
 S2T14_VALIDATION_RELATIVE_PATH = Path("docs/development/validations/stage_2/S2-T14.md")
 S2T15_RUN_PREFIX = "stage2-s2t15-conditional-"
 S2T15_VALIDATION_RELATIVE_PATH = Path("docs/development/validations/stage_2/S2-T15.md")
+REASON_CODE_SCHEMA_VERSION = 2
+_SOURCE_REASON_UNSET = object()
+REASON_MESSAGES = {
+    "FORMAL_VERIFIED_PREFIX_ADOPTED_PASS": "旧链结果已完整核验，并被当前正式链只读接收。",
+    "FORMAL_TASK_VERIFIED_PASS": "当前正式链已完成生产，完整核验通过。",
+    "FORMAL_CHAIN_COMPLETE": "Plan v1.3 正式链已全部完成并通过核验。",
+    "SEVEN_DAY_REHEARSAL_PASS_NOT_FORMAL": "七天短跑已通过，但它不是正式全历史结果。",
+    "FUNDING_EVIDENCE_VERIFY_PASS_AWAITING_ACCEPTANCE": (
+        "资金费证据已核验通过，正在等待正式只读接收。"
+    ),
+}
 
 _PAGE_PATH = Path(__file__).with_name("stage2_progress_ui.html")
 RUNTIME_TASK_RECEIPTS = {
@@ -147,6 +158,83 @@ def _t16_coverage_projection(artifact_root_value: object) -> dict[str, Any]:
         "control_gap_affected_matrix_rate": report.get("control_gap_affected_matrix_rate"),
         "control_gap_affected_assignment_rate": report.get("control_gap_affected_assignment_rate"),
     }
+
+
+def _reason_message(reason_code: str) -> str:
+    """Return a plain-language projection without changing source evidence."""
+
+    return REASON_MESSAGES.get(reason_code, f"当前状态：{reason_code}。")
+
+
+def _project_reason(
+    payload: dict[str, Any],
+    *,
+    reason_code: str,
+    evidence_origin: str,
+    source_plan_version: str,
+    source_task_id: str | None,
+    source_reason_code: object = _SOURCE_REASON_UNSET,
+) -> dict[str, Any]:
+    """Add the v2 read-only reason projection to one status payload."""
+
+    projected = dict(payload)
+    raw_reason = (
+        projected.get("reason_code")
+        if source_reason_code is _SOURCE_REASON_UNSET
+        else source_reason_code
+    )
+    projected.update(
+        {
+            "reason_code": reason_code,
+            "source_reason_code": (str(raw_reason) if raw_reason not in {None, ""} else None),
+            "reason_message": _reason_message(reason_code),
+            "reason_code_schema_version": REASON_CODE_SCHEMA_VERSION,
+            "evidence_origin": evidence_origin,
+            "source_plan_version": source_plan_version,
+            "source_task_id": source_task_id,
+        }
+    )
+    return projected
+
+
+def _approval_order(approval: dict[str, Any]) -> tuple[str, str]:
+    """Order approvals by their declared time, then by stable identity."""
+
+    return (
+        str(approval.get("approved_at") or ""),
+        str(approval.get("approval_hash") or ""),
+    )
+
+
+def _read_projection_approval(
+    approval_path: Path,
+    *,
+    policy: Any,
+    repository_root: Path,
+) -> dict[str, Any]:
+    """Read an approval for display without authorizing a new execution."""
+
+    try:
+        return validate_approval(
+            approval_path,
+            policy=policy,
+            repository_root=repository_root,
+        )
+    except (OSError, ValueError):
+        approval = _safe_json_object(approval_path)
+        if (
+            approval.get("schema_name") != "stage2-formal-approval-v2"
+            or approval.get("schema_version") != "2.0"
+            or approval.get("status") != "APPROVED"
+            or approval.get("stage_plan_version") != "1.3"
+            or approval.get("stage3_locked") is not True
+            or approval.get("policy_hash") != policy.policy_hash
+            or approval.get("evidence_root") != str(policy.evidence_root)
+            or tuple(approval.get("tasks") or ()) != tuple(V13_TASKS)
+            or not _self_hash_matches(approval, "approval_hash")
+        ):
+            return {}
+        return approval
 
 
 def _safe_text(path: Path) -> str:
@@ -496,6 +584,8 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
     lightweight_historical_chain_checkpoint = {}
     lightweight_historical_chain_root: Path | None = None
     lightweight_trade_supplement_hash = None
+    selected_approval_hash = None
+    approval_selection_basis = None
     t16_coverage = {"status": "NOT_AVAILABLE"}
     formal_progress_percent = 0.0
     formal_heartbeat_at = None
@@ -507,16 +597,17 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         for approval_path in sorted(
             lightweight_policy.operations_root.glob("approvals/approval-*.json")
         ):
-            try:
-                candidate_approval = validate_approval(
-                    approval_path,
-                    policy=lightweight_policy,
-                    repository_root=repo_root,
-                )
+            candidate_approval = _read_projection_approval(
+                approval_path,
+                policy=lightweight_policy,
+                repository_root=repo_root,
+            )
+            if candidate_approval:
                 valid_approvals.append(candidate_approval)
-                lightweight_approval = candidate_approval
-            except (OSError, ValueError):
-                continue
+        if valid_approvals:
+            lightweight_approval = max(valid_approvals, key=_approval_order)
+            selected_approval_hash = lightweight_approval.get("approval_hash")
+            approval_selection_basis = "MAX_APPROVED_AT_THEN_APPROVAL_HASH"
         lightweight_authority_count = sum(
             _safe_json_object(path).get("policy_hash") == lightweight_policy.policy_hash
             and _safe_json_object(path).get("code_commit") == repo_commit
@@ -535,11 +626,36 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
             current_chain_root = (
                 lightweight_policy.evidence_root
                 / "chains"
-                / str(valid_approvals[-1]["approval_hash"])
+                / str(lightweight_approval["approval_hash"])
             )
             current_checkpoint = current_chain_root / "operations/checkpoint.json"
             lightweight_chain_checkpoint = _safe_json_object(current_checkpoint)
             chain_tasks = cast(dict[str, Any], lightweight_chain_checkpoint.get("tasks") or {})
+            adopted_tasks: set[str] = set()
+            adoption_path_value = lightweight_chain_checkpoint.get("verified_prefix_adoption_path")
+            if adoption_path_value:
+                adoption_path = Path(str(adoption_path_value))
+                if (
+                    adoption_path.is_absolute()
+                    and adoption_path.is_file()
+                    and not adoption_path.is_symlink()
+                    and adoption_path.resolve().is_relative_to(
+                        lightweight_policy.operations_root.resolve()
+                    )
+                ):
+                    adoption = _safe_json_object(adoption_path)
+                    adoption_task_payload = adoption.get("tasks")
+                    if (
+                        adoption.get("status") == "PASS"
+                        and adoption.get("mode") == "READ_ONLY"
+                        and adoption.get("approval_hash")
+                        == lightweight_approval.get("approval_hash")
+                        and _self_hash_matches(adoption, "adoption_hash")
+                        and isinstance(adoption_task_payload, dict)
+                    ):
+                        adopted_tasks = {
+                            str(task) for task in adoption_task_payload if task in V13_TASKS
+                        }
             formal_fractions: list[float] = []
             for task in V13_TASKS:
                 chain_task = cast(dict[str, Any], chain_tasks.get(task) or {})
@@ -549,18 +665,21 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
                 checkpoint_valid_for_task = (
                     task_checkpoint.get("schema_name") == "stage2-plan-v13-producer-checkpoint-v2"
                     and task_checkpoint.get("task_id") == task
-                    and task_checkpoint.get("code_commit") == valid_approvals[-1].get("code_commit")
+                    and task_checkpoint.get("code_commit")
+                    == lightweight_approval.get("code_commit")
                     and _self_hash_matches(task_checkpoint, "checkpoint_hash")
                 )
                 projected = dict(tasks.get(task) or {})
+                source_reason_code = projected.get("reason_code")
                 if checkpoint_valid_for_task:
                     projected.update(task_checkpoint)
+                    source_reason_code = task_checkpoint.get("reason_code")
                     formal_heartbeat_value = task_checkpoint.get("heartbeat_at")
                     if isinstance(formal_heartbeat_value, str):
                         formal_heartbeat_at = formal_heartbeat_value
                 if chain_task:
                     chain_status = str(chain_task.get("status", "NOT_STARTED"))
-                    if chain_status in {
+                    if not checkpoint_valid_for_task and chain_status in {
                         "PASS",
                         "TERMINAL_FAILED",
                         "RETRYABLE_INTERRUPTED",
@@ -568,6 +687,13 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
                         projected["status"] = chain_status
                     handoff = chain_task.get("handoff")
                     if isinstance(handoff, dict):
+                        adoption_receipt_hash = chain_task.get("adoption_receipt_hash")
+                        if (
+                            isinstance(adoption_receipt_hash, str)
+                            and adoption_receipt_hash == handoff.get("producer_receipt_hash")
+                            and handoff.get("verify_status") == "PASS"
+                        ):
+                            adopted_tasks.add(task)
                         projected.update(
                             {
                                 "row_count": handoff.get("row_count"),
@@ -577,6 +703,35 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
                         )
                         if task == "S2P13-T16":
                             t16_coverage = _t16_coverage_projection(handoff.get("artifact_root"))
+                    effective_status = str(projected.get("status", "NOT_STARTED"))
+                    if effective_status == "PASS":
+                        if checkpoint_valid_for_task:
+                            projected = _project_reason(
+                                projected,
+                                reason_code="FORMAL_TASK_VERIFIED_PASS",
+                                evidence_origin="PRODUCED",
+                                source_plan_version="1.3",
+                                source_task_id=task,
+                                source_reason_code=source_reason_code,
+                            )
+                        elif task in adopted_tasks:
+                            projected = _project_reason(
+                                projected,
+                                reason_code="FORMAL_VERIFIED_PREFIX_ADOPTED_PASS",
+                                evidence_origin="ADOPTED_VERIFIED_PREFIX",
+                                source_plan_version="1.3",
+                                source_task_id=task,
+                                source_reason_code=chain_task.get("reason_code"),
+                            )
+                        else:
+                            projected = _project_reason(
+                                projected,
+                                reason_code="FORMAL_TASK_VERIFIED_PASS",
+                                evidence_origin="PRODUCED",
+                                source_plan_version="1.3",
+                                source_task_id=task,
+                                source_reason_code=chain_task.get("reason_code"),
+                            )
                 tasks[task] = projected
                 if projected.get("status") == "PASS":
                     formal_fractions.append(1.0)
@@ -656,10 +811,51 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         projected_reason_code = str(
             t16_coverage.get("reason_code") or "CONTROL_EVENT_COVERAGE_CONTRACT_ASYMMETRY"
         )
+    for task, task_payload in tasks.items():
+        if not isinstance(task_payload, dict):
+            continue
+        if task_payload.get("reason_code_schema_version") == REASON_CODE_SCHEMA_VERSION:
+            continue
+        raw_reason = str(task_payload.get("reason_code") or "UNKNOWN")
+        if raw_reason in {
+            "SEVEN_DAY_REHEARSAL_PASS_NOT_FORMAL",
+            "SEVEN_DAY_REHEARSAL_PASS_PENDING_UI_CHECK",
+            "WAITING_FOR_REHEARSAL",
+        }:
+            origin = "REHEARSAL"
+            source_plan_version = "1.3"
+        elif checkpoint_valid:
+            origin = "PRODUCED"
+            source_plan_version = "1.3"
+        else:
+            origin = "LEGACY_V12"
+            source_plan_version = "1.2"
+        tasks[task] = _project_reason(
+            task_payload,
+            reason_code=raw_reason,
+            evidence_origin=origin,
+            source_plan_version=source_plan_version,
+            source_task_id=task,
+        )
+    source_plan_reason_code = "S2_V13_STALE_SERVER" if stale_server else projected_reason_code
+    plan_reason = _project_reason(
+        {},
+        reason_code=source_plan_reason_code,
+        evidence_origin=(
+            "PRODUCED"
+            if formal_chain_status not in {"NOT_STARTED", "NOT_PRESENT"}
+            else "REHEARSAL"
+            if rehearsal_pass or rehearsal_pending or rehearsal_progress_valid
+            else "LEGACY_V12"
+        ),
+        source_plan_version="1.3",
+        source_task_id=projected_current_task,
+        source_reason_code=projected_reason_code,
+    )
     return {
         "stage_plan_version": "1.3",
         "status": status,
-        "reason_code": ("S2_V13_STALE_SERVER" if stale_server else projected_reason_code),
+        **plan_reason,
         "repo_root": str(repo_root),
         "repo_commit": repo_commit,
         "server_stale": stale_server,
@@ -732,6 +928,8 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         "governance_model": "STAGE2_ACTIVE_POLICY_V2",
         "policy_hash": lightweight_policy_hash,
         "external_approval_status": (lightweight_approval.get("status", "NOT_PRESENT")),
+        "selected_approval_hash": selected_approval_hash,
+        "approval_selection_basis": approval_selection_basis,
         "formal_rehearsal_gate_mode": rehearsal_gate_mode,
         "background_runtime_waiver_reason": cast(
             dict[str, Any],

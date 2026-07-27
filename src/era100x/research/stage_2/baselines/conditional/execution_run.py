@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import uuid
+from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -652,6 +653,7 @@ def continue_full_execution_from_prefix(
     t10_snapshot_id: str,
     current_commit: str,
     repository_clean: bool,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> tuple[dict[str, Any], Path]:
     """Create one successor Run and continue only after verified blind matching."""
 
@@ -771,7 +773,17 @@ def continue_full_execution_from_prefix(
         selection_root=selections_root,
         output_root=attempt,
         h2_reader=h2_reader,
+        progress_callback=progress_callback,
     )
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "phase": "POST_SELECTION_H2_OUTCOMES",
+                "subphase": "RECONCILIATION",
+                "processed_units": 1,
+                "total_units": 1,
+            }
+        )
     episode_reconciliation, control_reconciliation = _aggregate_reconciliation(
         episode_report=episode_report,
         selection_reports=selection_reports,
@@ -868,6 +880,7 @@ def run_full_execution(
     repository_clean: bool,
     resume_run_id: str | None = None,
     lightweight_policy_authorized: bool = False,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> tuple[dict[str, Any], Path]:
     authority = validate_contract_authority_json(authority_path.read_bytes())
     bins = read_binning_set(binning_set_path, authority_hash=authority.authority_hash)
@@ -987,6 +1000,20 @@ def run_full_execution(
                 block_index=4,
                 parameter_set_ids=parameter_ids,
             )
+            if progress_callback is not None:
+                progress_callback(
+                    {
+                        "phase": "CONDITIONAL_BASELINE",
+                        "subphase": "FEATURE_BLOCKS",
+                        "processed_units": (
+                            ("BTCUSDT", "ETHUSDT").index(instrument) * 3
+                            + ("P1", "P2", "P3").index(period)
+                            + 1
+                        ),
+                        "total_units": 6,
+                        "current_instrument": instrument,
+                    }
+                )
 
     checkpoint["phase"] = "PREPARING_EPISODES"
     _write_checkpoint(checkpoint_path, checkpoint)
@@ -994,6 +1021,15 @@ def run_full_execution(
     episode_report, episode_path = prepare_episode_evidence(
         reader=reader, t13_snapshot=t13_snapshot, output_root=episode_root
     )
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "phase": "CONDITIONAL_BASELINE",
+                "subphase": "EPISODE_PREPARATION",
+                "processed_units": int(episode_report.get("source_primary_episode_count", 0)),
+                "total_units": EXPECTED_H2_PATHS,
+            }
+        )
     episode_table = pq.read_table(episode_path)
     same_family = SameFamilyIntervals(episode_table)
     bin_index = BinningIndex(binning_set_path, authority_hash=authority.authority_hash)
@@ -1074,6 +1110,16 @@ def run_full_execution(
                     selection_reports.append(report)
                     checkpoint["completed_group_count"] = len(selection_reports)
                     _write_checkpoint(checkpoint_path, checkpoint)
+                    if progress_callback is not None:
+                        progress_callback(
+                            {
+                                "phase": "CONDITIONAL_BASELINE",
+                                "subphase": "MATCH_GROUPS",
+                                "processed_units": len(selection_reports),
+                                "total_units": 456,
+                                "current_instrument": instrument,
+                            }
+                        )
     if len(selection_reports) != 456:
         raise ValueError("outcome-blind matching group universe is incomplete")
 
@@ -1085,7 +1131,17 @@ def run_full_execution(
         selection_root=selections_root,
         output_root=attempt,
         h2_reader=h2_reader,
+        progress_callback=progress_callback,
     )
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "phase": "CONDITIONAL_BASELINE",
+                "subphase": "RECONCILIATION",
+                "processed_units": 1,
+                "total_units": 1,
+            }
+        )
     episode_reconciliation, control_reconciliation = _aggregate_reconciliation(
         episode_report=episode_report,
         selection_reports=selection_reports,

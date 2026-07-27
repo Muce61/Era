@@ -98,19 +98,15 @@ def classify_h2_cells(
     except KeyError as exc:
         raise ValueError("unregistered time combination") from exc
     end_ns = anchor_ns + horizon_seconds * NS
-    ordered = tuple(
-        sorted(
-            trades,
-            key=lambda row: (row.ts_event_ns, row.venue_trade_id, row.canonical_trade_id),
-        )
-    )
-    identities = tuple(
-        (row.ts_event_ns, row.venue_trade_id, row.canonical_trade_id) for row in ordered
-    )
-    if len(identities) != len(set(identities)):
-        raise ValueError("duplicate H2 stable-order identity")
-    if tuple(trades) != ordered:
-        raise ValueError("H2 input must already use the frozen stable order")
+    ordered = tuple(trades)
+    previous_identity: tuple[int, int, str] | None = None
+    for row in ordered:
+        identity = (row.ts_event_ns, row.venue_trade_id, row.canonical_trade_id)
+        if identity == previous_identity:
+            raise ValueError("duplicate H2 stable-order identity")
+        if previous_identity is not None and identity < previous_identity:
+            raise ValueError("H2 input must already use the frozen stable order")
+        previous_identity = identity
     window = tuple(row for row in ordered if anchor_ns <= row.ts_event_ns < end_ns)
     if any(row.price <= 0 for row in window):
         raise ValueError("invalid H2 Trade price")

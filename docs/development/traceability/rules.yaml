@@ -160,7 +160,7 @@ rules:
   - src/era100x/research/stage_2/metrics/path/ (S2-T12 IMPLEMENTED read-only Episode lineage)
   - src/era100x/research/stage_2/labels/first_passage/ (S2-T13 IMPLEMENTED fixture first-passage capability)
   - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 IMPLEMENTED historical ambiguity bounds)
-  - src/era100x/research/stage_2/baselines/conditional/ (S2P13-T16 v1.1 CR-2026-045 window-local H2 coverage repair implemented; predecessor engineering PASS and research rejected; successor gated)
+  - src/era100x/research/stage_2/baselines/conditional/ (S2P13-T16 v1.1 CR-2026-045 window-local H2 coverage repair; final successor engineering and Verify PASS; descriptive only)
   test_paths:
   - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); UT-EVT-011, FI-14
   - tests/research/stage_2/metrics/path/ (S2-T12 TESTED)
@@ -203,7 +203,7 @@ rules:
     implementation: src/era100x/research/stage_2/baselines/conditional/
     tests: tests/research/stage_2/baselines/conditional/
     validation: docs/development/validations/stage_2/S2P13-T16.md
-    state: PREDECESSOR_ENGINEERING_PASS_RESEARCH_REJECTED_REPAIR_SUCCESSOR_GATED
+    state: FINAL_SUCCESSOR_ENGINEERING_VERIFY_PASS_DESCRIPTIVE_ONLY_PRIMARY_PENDING_T18
   state: PLANNED
 - rule_id: FILL-FIRST-NONZERO-PROTECT
   rule_status: FROZEN
@@ -366,7 +366,7 @@ rules:
   - src/era100x/research/stage_2/metrics/path/ (S2-T12 IMPLEMENTED H1/H2 price-only metrics)
   - src/era100x/research/stage_2/labels/first_passage/ (S2-T13 IMPLEMENTED H1/H2 price-only classification)
   - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 IMPLEMENTED H1/H2 ambiguity bounds)
-  - src/era100x/research/stage_2/baselines/conditional/ (S2P13-T16 historical-only; CR-2026-045 shared window-local coverage repair; predecessor research rejected)
+  - src/era100x/research/stage_2/baselines/conditional/ (S2P13-T16 historical-only; CR-2026-045 shared window-local coverage repair; final successor Verify PASS; predecessor research rejected)
   test_paths:
   - tests/research/stage_2/contracts/, tests/research/stage_2/gates/ (PLANNED); T-EVT-002
   - tests/research/stage_2/paths/extraction/ (S2-T11 TESTED)
@@ -413,7 +413,7 @@ rules:
     implementation: src/era100x/research/stage_2/baselines/conditional/
     tests: tests/research/stage_2/baselines/conditional/
     validation: docs/development/validations/stage_2/S2P13-T16.md
-    state: REPAIR_IMPLEMENTED_PREDECESSOR_RESEARCH_REJECTED_SUCCESSOR_GATED
+    state: FINAL_SUCCESSOR_ENGINEERING_VERIFY_PASS_DESCRIPTIVE_ONLY_PRIMARY_PENDING_T18
   state: PLANNED
 - rule_id: RESEARCH-H3-CONDITIONAL-ROUND-PROB
   rule_status: FROZEN

@@ -15,8 +15,11 @@ import os
 import shutil
 import subprocess
 import tempfile
+from array import array
+from bisect import bisect_left, bisect_right
 from collections import Counter
 from collections.abc import Callable
+from dataclasses import dataclass
 from functools import lru_cache
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
@@ -78,7 +81,10 @@ from era100x.research.stage_2.lifecycle import (
     evaluate_lifecycle_pair,
     replay_single_position_admission,
 )
-from era100x.research.stage_2.metrics.path.full_run import _reference_prices
+from era100x.research.stage_2.metrics.path.full_run import (
+    _is_v2_stably_ordered,
+    _reference_prices,
+)
 from era100x.research.stage_2.paths.extraction.full_run import _episode_tables
 from era100x.research.stage_2.runtime_v2.catalog import CatalogReaderV2
 
@@ -489,31 +495,27 @@ def _verified_trade_window(
     cursor = _date_from_ns(start_ns)
     last_date = _date_from_ns(end_ns - 1)
     while cursor <= last_date:
-        table, partition_hash, gap = _verified_trade_day(instrument, cursor)
-        if gap is not None:
-            declared_gaps.append(gap)
-        table = table.filter(pc.greater_equal(table["ts_event_ns"], start_ns))
-        table = table.filter(pc.less(table["ts_event_ns"], end_ns))
-        rows.extend(
+        day = _verified_trade_day(instrument, cursor)
+        if day.gap is not None:
+            declared_gaps.append(day.gap)
+        start = bisect_left(day.timestamps_ns, start_ns)
+        end = bisect_left(day.timestamps_ns, end_ns)
+        selected = day.table.slice(start, end - start)
+        selected_rows = tuple(
             H2Trade(
                 ts_event_ns=int(row["ts_event_ns"]),
                 venue_trade_id=int(row["venue_trade_id"]),
                 canonical_trade_id=str(row["canonical_trade_id"]),
                 price=Decimal(row["price"]),
             )
-            for row in table.to_pylist()
+            for row in selected.to_pylist()
         )
-        partition_hashes.append(partition_hash)
+        if rows and selected_rows and _trade_key(selected_rows[0]) <= _trade_key(rows[-1]):
+            raise ValueError("Stage 1 Trade days violate stable identity order")
+        rows.extend(selected_rows)
+        partition_hashes.append(day.partition_hash)
         cursor += timedelta(days=1)
-    ordered = tuple(
-        sorted(rows, key=lambda row: (row.ts_event_ns, row.venue_trade_id, row.canonical_trade_id))
-    )
-    identities = tuple(
-        (row.ts_event_ns, row.venue_trade_id, row.canonical_trade_id) for row in ordered
-    )
-    if len(identities) != len(set(identities)):
-        raise ValueError("Stage 1 Trade window contains duplicate stable identities")
-    return ordered, tuple(partition_hashes), tuple(declared_gaps)
+    return tuple(rows), tuple(partition_hashes), tuple(declared_gaps)
 
 
 @lru_cache(maxsize=16)
@@ -572,16 +574,55 @@ def _verified_trade_receipt_day(
     return parquet_path, str(receipt["byte_sha256"]), gap
 
 
+def _trade_key(row: H2Trade) -> tuple[int, int, str]:
+    return row.ts_event_ns, row.venue_trade_id, row.canonical_trade_id
+
+
+@dataclass(frozen=True, slots=True)
+class _VerifiedTradeDay:
+    timestamps_ns: memoryview
+    table: Any
+    partition_hash: str
+    gap: dict[str, Any] | None
+
+
 @lru_cache(maxsize=16)
-def _verified_trade_day(
-    instrument: str, owner_date: date
-) -> tuple[Any, str, dict[str, Any] | None]:
+def _verified_trade_day(instrument: str, owner_date: date) -> _VerifiedTradeDay:
+    """Verify and decode one Trade partition once for overlapping lifecycle windows."""
+
     parquet_path, partition_hash, gap = _verified_trade_receipt_day(instrument, owner_date)
     table = pq.read_table(
         parquet_path,
         columns=["ts_event_ns", "venue_trade_id", "canonical_trade_id", "price"],
     )
-    return table, partition_hash, gap
+    if not _is_v2_stably_ordered(table):
+        raise ValueError("Stage 1 Trade day violates unique stable identity order")
+    if table.num_rows > 1:
+        duplicate = pc.and_(
+            pc.equal(
+                table["ts_event_ns"].slice(1),
+                table["ts_event_ns"].slice(0, table.num_rows - 1),
+            ),
+            pc.and_(
+                pc.equal(
+                    table["venue_trade_id"].slice(1),
+                    table["venue_trade_id"].slice(0, table.num_rows - 1),
+                ),
+                pc.equal(
+                    table["canonical_trade_id"].slice(1),
+                    table["canonical_trade_id"].slice(0, table.num_rows - 1),
+                ),
+            ),
+        )
+        if bool(pc.any(duplicate).as_py()):
+            raise ValueError("Stage 1 Trade day violates unique stable identity order")
+    timestamps = array("q", table["ts_event_ns"].to_pylist())
+    return _VerifiedTradeDay(
+        timestamps_ns=memoryview(timestamps).toreadonly(),
+        table=table,
+        partition_hash=partition_hash,
+        gap=gap,
+    )
 
 
 def _verified_trade_metadata(
@@ -600,28 +641,76 @@ def _verified_trade_metadata(
     return tuple(hashes), tuple(gaps)
 
 
-def _funding_rows(
-    acceptance: dict[str, Any], *, instrument: str, start_ns: int, end_ns: int
-) -> tuple[tuple[int, Decimal], ...]:
-    entry = cast(dict[str, Any], acceptance["local_history"][instrument])
-    path = Path(str(entry["path"]))
-    if path.is_symlink() or not path.is_file() or _file_hash(path) != entry["sha256"]:
-        raise ValueError(f"accepted funding source drift: {instrument}")
-    result: list[tuple[int, Decimal]] = []
-    with path.open(newline="", encoding="utf-8") as handle:
-        for raw in csv.DictReader(handle):
-            timestamp_ms = int(raw.get("settlement_ts_ms") or raw.get("calc_time") or 0)
-            timestamp_ns = timestamp_ms * 1_000_000
-            if start_ns < timestamp_ns <= end_ns:
-                result.append(
-                    (
-                        timestamp_ns,
-                        Decimal(raw.get("last_funding_rate") or raw["funding_rate"]),
+@dataclass(frozen=True, slots=True)
+class _FundingSeries:
+    """One verified funding source parsed once for bounded window lookup."""
+
+    timestamps_ns: tuple[int, ...]
+    signed_rates: tuple[Decimal, ...]
+
+    def between(self, *, start_ns: int, end_ns: int) -> tuple[tuple[int, Decimal], ...]:
+        if end_ns < start_ns:
+            raise ValueError("funding lookup end precedes start")
+        # Preserve the frozen interval contract: start < settlement <= end.
+        start = bisect_right(self.timestamps_ns, start_ns)
+        end = bisect_right(self.timestamps_ns, end_ns)
+        return tuple(zip(self.timestamps_ns[start:end], self.signed_rates[start:end], strict=True))
+
+
+@dataclass(frozen=True, slots=True)
+class _FundingIndex:
+    """Verified BTC/ETH funding inputs shared by every lifecycle Episode."""
+
+    series_by_instrument: dict[str, _FundingSeries]
+
+    @classmethod
+    def from_acceptance(cls, acceptance: dict[str, Any]) -> _FundingIndex:
+        series_by_instrument: dict[str, _FundingSeries] = {}
+        local_history = cast(dict[str, Any], acceptance["local_history"])
+        for instrument in sorted(local_history):
+            entry = cast(dict[str, Any], local_history[instrument])
+            path = Path(str(entry["path"]))
+            if path.is_symlink() or not path.is_file() or _file_hash(path) != entry["sha256"]:
+                raise ValueError(f"accepted funding source drift: {instrument}")
+            rows: list[tuple[int, Decimal]] = []
+            with path.open(newline="", encoding="utf-8") as handle:
+                for raw in csv.DictReader(handle):
+                    timestamp_ms = int(raw.get("settlement_ts_ms") or raw.get("calc_time") or 0)
+                    rows.append(
+                        (
+                            timestamp_ms * 1_000_000,
+                            Decimal(raw.get("last_funding_rate") or raw["funding_rate"]),
+                        )
                     )
-                )
-    if tuple(result) != tuple(sorted(result)):
-        raise ValueError("accepted funding rows are not time ordered")
-    return tuple(result)
+            if tuple(rows) != tuple(sorted(rows)):
+                raise ValueError("accepted funding rows are not time ordered")
+            series_by_instrument[instrument] = _FundingSeries(
+                timestamps_ns=tuple(timestamp for timestamp, _ in rows),
+                signed_rates=tuple(rate for _, rate in rows),
+            )
+        return cls(series_by_instrument=series_by_instrument)
+
+    def between(
+        self, *, instrument: str, start_ns: int, end_ns: int
+    ) -> tuple[tuple[int, Decimal], ...]:
+        try:
+            series = self.series_by_instrument[instrument]
+        except KeyError as error:
+            raise ValueError(f"accepted funding source missing: {instrument}") from error
+        return series.between(start_ns=start_ns, end_ns=end_ns)
+
+
+def _funding_rows(
+    source: dict[str, Any] | _FundingIndex,
+    *,
+    instrument: str,
+    start_ns: int,
+    end_ns: int,
+) -> tuple[tuple[int, Decimal], ...]:
+    """Return one causal funding window, retaining compatibility for direct callers."""
+
+    index = source if isinstance(source, _FundingIndex) else _FundingIndex.from_acceptance(source)
+    return index.between(instrument=instrument, start_ns=start_ns, end_ns=end_ns)
 
 
 def _selected_t10_rows(
@@ -695,24 +784,38 @@ def _contract_prices(
     cursor = _date_from_ns(start_ns)
     last_date = _date_from_ns(end_ns - 1)
     while cursor <= last_date:
-        table = _contract_price_day(reader, instrument, cursor)
-        table = table.filter(pc.greater_equal(table["event_ts_ns"], start_ns))
-        table = table.filter(pc.less(table["event_ts_ns"], end_ns))
-        rows.extend(
+        day = _contract_price_day(reader, instrument, cursor)
+        start = bisect_left(day.timestamps_ns, start_ns)
+        end = bisect_left(day.timestamps_ns, end_ns)
+        selected = day.table.slice(start, end - start)
+        selected_rows = tuple(
             ContractPricePoint(
                 event_ts_ns=int(item["event_ts_ns"]),
                 available_at_ns=int(item["available_at_ns"]),
                 close=Decimal(item["close"]),
             )
-            for item in table.to_pylist()
+            for item in selected.to_pylist()
         )
+        if rows and selected_rows and selected_rows[0].event_ts_ns <= rows[-1].event_ts_ns:
+            raise ValueError("Contract Price days violate timestamp order")
+        rows.extend(selected_rows)
         cursor += timedelta(days=1)
-    return tuple(sorted(rows, key=lambda item: item.event_ts_ns))
+    return tuple(rows)
+
+
+@dataclass(frozen=True, slots=True)
+class _ContractPriceDay:
+    timestamps_ns: memoryview
+    table: Any
 
 
 @lru_cache(maxsize=16)
-def _contract_price_day(reader: FixedT10Reader, instrument: str, owner_date: date) -> Any:
-    return reader.read(
+def _contract_price_day(
+    reader: FixedT10Reader, instrument: str, owner_date: date
+) -> _ContractPriceDay:
+    """Decode one Contract Price day once for overlapping lifecycle windows."""
+
+    table = reader.read(
         dataset_name="contract_price_1s",
         dataset_version="2.0",
         instrument=instrument,
@@ -720,10 +823,19 @@ def _contract_price_day(reader: FixedT10Reader, instrument: str, owner_date: dat
         owner_date=owner_date,
         columns=["event_ts_ns", "available_at_ns", "close"],
     )
+    timestamp_array = array("q", table["event_ts_ns"].to_pylist())
+    timestamps = memoryview(timestamp_array).toreadonly()
+    if any(right <= left for left, right in zip(timestamps, timestamps[1:], strict=False)):
+        raise ValueError("Contract Price day violates unique timestamp order")
+    return _ContractPriceDay(timestamps_ns=timestamps, table=table)
 
 
 def _lifecycle_probe(
-    *, reader: FixedT10Reader, row: dict[str, Any], acceptance: dict[str, Any]
+    *,
+    reader: FixedT10Reader,
+    row: dict[str, Any],
+    acceptance: dict[str, Any],
+    funding_index: _FundingIndex | None = None,
 ) -> tuple[dict[str, Any], tuple[LifecyclePairResult, ...]]:
     instrument = str(row["instrument"])
     start_ns = int(row["window_start_ns"])
@@ -737,7 +849,12 @@ def _lifecycle_probe(
         start_ns=start_ns,
         end_ns=end_ns,
     )
-    funding = _funding_rows(acceptance, instrument=instrument, start_ns=start_ns, end_ns=end_ns)
+    funding = _funding_rows(
+        funding_index if funding_index is not None else acceptance,
+        instrument=instrument,
+        start_ns=start_ns,
+        end_ns=end_ns,
+    )
     if declared_gaps:
         source_coverage = SourceCoverage.DECLARED_GAP
     if source_coverage is not SourceCoverage.COMPLETE:
@@ -982,6 +1099,7 @@ def produce_scoped_lifecycle(
     )
     reader = FixedT10Reader(T10_SNAPSHOT, expected_snapshot_id=T10_SNAPSHOT_ID)
     acceptance = _read_json(FUNDING_ACCEPTANCE)
+    funding_index = _FundingIndex.from_acceptance(acceptance)
     lifecycle: list[dict[str, Any]] = []
     admission: list[Any] = []
     total_units = sum(len(rows[instrument]) for instrument in ("BTCUSDT", "ETHUSDT"))
@@ -994,6 +1112,7 @@ def produce_scoped_lifecycle(
                 reader=reader,
                 row=row,
                 acceptance=acceptance,
+                funding_index=funding_index,
             )
             lifecycle.append(probe)
             primary = next(
@@ -1012,6 +1131,9 @@ def produce_scoped_lifecycle(
                         "row_count": completed_units * len(FundingTrack),
                         "current_instrument": instrument,
                         "current_date": _date_from_ns(int(row["window_start_ns"])).isoformat(),
+                        "phase": "LIFECYCLE",
+                        "subphase": "EPISODE_REPLAY",
+                        "processed_units": completed_units,
                     }
                 )
         admission.extend(

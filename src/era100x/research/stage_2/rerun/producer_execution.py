@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import time
@@ -10,9 +11,9 @@ from datetime import UTC, date, datetime
 from decimal import Decimal, ROUND_HALF_EVEN
 from pathlib import Path
 from typing import Any, cast
-import hashlib
 
 from era100x.foundation.governance import require_operation_allowed
+from era100x.research.stage_2.runtime_v2.memory import process_current_rss_bytes
 
 from .orchestrator import canonical_hash, repository_clean
 from .producer_contracts import ProducerContext
@@ -79,12 +80,58 @@ class _FormalProgressReporter:
         self.attempt = attempt
         self.started_at = datetime.now(UTC).isoformat()
         self.completed_at: str | None = None
+        self.started_monotonic = time.monotonic()
         self.log_path = context.checkpoint_path.with_name("daily-progress.jsonl")
         self.sequence = 0
         self.last_checkpoint_write = 0.0
         self.last_update: dict[str, Any] = {}
         self.open_day: tuple[str, str] | None = None
         self.open_day_update: dict[str, Any] | None = None
+        self.rate_phase: tuple[str, str] | None = None
+        self.rate_started_at = self.started_monotonic
+        self.rate_started_units = 0
+        self.last_telemetry_event_key: tuple[str, str] | None = None
+
+    def _normalize(self, update: dict[str, Any]) -> dict[str, Any]:
+        """Add optional telemetry without changing the task-level progress denominator."""
+
+        normalized = dict(update)
+        if "completed_units" not in update:
+            if "processed_units" in update and "total_units" in update:
+                normalized["subphase_total_units"] = update["total_units"]
+            normalized["completed_units"] = int(self.last_update.get("completed_units", 0))
+            normalized["total_units"] = int(self.last_update.get("total_units", 0))
+        normalized.setdefault("row_count", int(self.last_update.get("row_count", 0)))
+        normalized["rss_bytes"] = max(
+            0, int(normalized.get("rss_bytes", process_current_rss_bytes()))
+        )
+        normalized["heartbeat_at"] = datetime.now(UTC).isoformat()
+
+        processed_value = normalized.get("processed_units")
+        subphase_total_value = normalized.get("subphase_total_units")
+        if processed_value is not None:
+            processed = max(0, int(processed_value))
+            normalized["processed_units"] = processed
+            phase_key = (
+                str(normalized.get("phase") or ""),
+                str(normalized.get("subphase") or ""),
+            )
+            now = time.monotonic()
+            if phase_key != self.rate_phase:
+                self.rate_phase = phase_key
+                self.rate_started_at = now
+                self.rate_started_units = processed
+                completed_since_start = 0
+            else:
+                completed_since_start = max(0, processed - self.rate_started_units)
+            elapsed = now - self.rate_started_at
+            if elapsed > 0 and completed_since_start > 0:
+                rate = completed_since_start / elapsed
+                normalized.setdefault("rows_per_second", round(rate, 3))
+                if subphase_total_value is not None and rate > 0:
+                    remaining = max(0, int(subphase_total_value) - processed)
+                    normalized.setdefault("eta_seconds", round(remaining / rate, 3))
+        return normalized
 
     def _checkpoint(self, update: dict[str, Any], *, status: str) -> None:
         completed = max(0, int(update.get("completed_units", 0)))
@@ -96,6 +143,21 @@ class _FormalProgressReporter:
             if total
             else Decimal("0.00")
         )
+        telemetry = {
+            key: update[key]
+            for key in (
+                "subphase",
+                "processed_units",
+                "subphase_total_units",
+                "rows_per_second",
+                "bytes_read",
+                "cache_hits",
+                "cache_misses",
+                "rss_bytes",
+                "eta_seconds",
+            )
+            if update.get(key) is not None
+        }
         payload = _seal(
             {
                 "schema_name": "stage2-plan-v13-producer-checkpoint-v2",
@@ -116,9 +178,10 @@ class _FormalProgressReporter:
                 "current_instrument": update.get("current_instrument"),
                 "current_date": update.get("current_date"),
                 "phase": update.get("phase"),
+                **telemetry,
                 "started_at": self.started_at,
                 "completed_at": self.completed_at,
-                "heartbeat_at": datetime.now(UTC).isoformat(),
+                "heartbeat_at": update.get("heartbeat_at", datetime.now(UTC).isoformat()),
                 "progress_log_path": str(self.log_path),
                 "progress_sequence": self.sequence,
                 **(
@@ -160,17 +223,20 @@ class _FormalProgressReporter:
             os.fsync(handle.fileno())
 
     def start(self) -> None:
-        update = {
-            "completed_units": 0,
-            "total_units": 0,
-            "row_count": 0,
-            "phase": "STARTING",
-        }
+        update = self._normalize(
+            {
+                "completed_units": 0,
+                "total_units": 0,
+                "row_count": 0,
+                "phase": "STARTING",
+            }
+        )
+        self.last_update = update
         self._append(update, event_type="TASK_STARTED")
         self._checkpoint(update, status="IN_PROGRESS")
 
     def update(self, update: dict[str, Any]) -> None:
-        normalized = dict(update)
+        normalized = self._normalize(update)
         current_date = normalized.get("current_date")
         instrument = str(normalized.get("current_instrument") or "")
         day_changed = False
@@ -183,9 +249,31 @@ class _FormalProgressReporter:
             self.open_day = day_key
             self.open_day_update = normalized
         else:
-            self._append(normalized, event_type="UNIT_COMPLETED")
+            telemetry_only = "processed_units" in update and "completed_units" not in update
+            telemetry_key = (
+                str(normalized.get("phase") or ""),
+                str(normalized.get("subphase") or ""),
+            )
+            processed = int(normalized.get("processed_units", 0))
+            subphase_total = int(normalized.get("subphase_total_units", 0))
+            subphase_complete = subphase_total > 0 and processed >= subphase_total
+            if (
+                not telemetry_only
+                or telemetry_key != self.last_telemetry_event_key
+                or subphase_complete
+            ):
+                self._append(
+                    normalized,
+                    event_type="SUBPHASE_PROGRESS" if telemetry_only else "UNIT_COMPLETED",
+                )
+                if telemetry_only:
+                    self.last_telemetry_event_key = telemetry_key
         self.last_update = normalized
-        if day_changed or time.monotonic() - self.last_checkpoint_write >= 2:
+        if (
+            day_changed
+            or "processed_units" in update
+            or time.monotonic() - self.last_checkpoint_write >= 2
+        ):
             self._checkpoint(normalized, status="IN_PROGRESS")
 
     def finish(self, *, row_count: int, receipt_hash: str | None = None) -> None:
@@ -193,13 +281,15 @@ class _FormalProgressReporter:
         if self.open_day_update is not None:
             self._append(self.open_day_update, event_type="UTC_DAY_COMPLETED")
             self.open_day_update = None
+        final_total = max(1, int(self.last_update.get("total_units", 0)))
         update = {
             **self.last_update,
-            "completed_units": int(self.last_update.get("total_units", 1)),
-            "total_units": int(self.last_update.get("total_units", 1)),
+            "completed_units": final_total,
+            "total_units": final_total,
             "row_count": row_count,
             "phase": "COMPLETE",
         }
+        update = self._normalize(update)
         if receipt_hash is not None:
             update["receipt_hash"] = receipt_hash
         self._append(update, event_type="TASK_COMPLETED")
@@ -207,7 +297,7 @@ class _FormalProgressReporter:
 
     def fail(self, reason: str) -> None:
         self.completed_at = datetime.now(UTC).isoformat()
-        update = {**self.last_update, "failure_reason": reason, "phase": "FAILED"}
+        update = self._normalize({**self.last_update, "failure_reason": reason, "phase": "FAILED"})
         self._append(update, event_type="TASK_FAILED")
         self._checkpoint(update, status="FAILED")
 
@@ -433,6 +523,7 @@ def _produce_formal_t16(
                 t10_snapshot_id=T10_SNAPSHOT_ID,
                 current_commit=context.code_commit,
                 repository_clean=repository_clean(context.repository_root),
+                progress_callback=progress_callback,
             )
         authority_hash = str(continuation_authority["authority_hash"])
         source_authority_hash: str | None = str(prefix["source_authority_hash"])
@@ -444,6 +535,21 @@ def _produce_formal_t16(
             progress_callback(
                 {"completed_units": 1, "total_units": 4, "phase": "AUTHORITY", "row_count": 0}
             )
+
+        def binning_progress(update: dict[str, Any]) -> None:
+            if progress_callback is None:
+                return
+            nested = dict(update)
+            nested["subphase_total_units"] = int(nested.pop("total_units", 0))
+            nested.update(
+                {
+                    "completed_units": 1,
+                    "total_units": 4,
+                    "phase": "TRAIN_BINS",
+                }
+            )
+            progress_callback(nested)
+
         bins, bins_path = freeze_binning_snapshots(
             authority_path=authority_path,
             bin_root=data_root / "train-bins",
@@ -452,6 +558,7 @@ def _produce_formal_t16(
             current_commit=context.code_commit,
             repository_clean=repository_clean(context.repository_root),
             lightweight_policy_authorized=True,
+            progress_callback=binning_progress,
         )
         if progress_callback is not None:
             progress_callback(
@@ -469,6 +576,7 @@ def _produce_formal_t16(
             current_commit=context.code_commit,
             repository_clean=repository_clean(context.repository_root),
             lightweight_policy_authorized=True,
+            progress_callback=progress_callback,
         )
         authority_hash = authority.authority_hash
         source_authority_hash = None

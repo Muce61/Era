@@ -3,16 +3,24 @@
 ```text
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.3
-Current Task: S2P13-T16 v1.1 — conditional baseline coverage repair
-Status: T16_ENGINEERING_PASS_RESEARCH_REJECTED_SUCCESSOR_GATED
+Current Task: S2P13-T16 v1.1 — conditional baseline
+Status: T16_FINAL_SUCCESSOR_ENGINEERING_VERIFY_PASS_DESCRIPTIVE_ONLY
 ```
 
-The formal T11–T16 chain completed and passed mechanical Catalog/Manifest/Verify checks. Acceptance
-then found that T16 controls used daily aggregate quality as if it were window-local coverage:
-98.3178% of control matrices versus 23.4203% of event matrices were marked
-`SOURCE_GAP_BEFORE_DECISION`. CR-2026-045/ADR-S2-021 therefore preserve the predecessor as
-engineering PASS but reject its research interpretation. The window-local repair is authorized;
-a replacement Authority/Run is not yet authorized.
+The final formal successor `fa92072063be8455fab814c1e9f302f2b06392a999820a53bd430e7282f57579`
+completed T11–T16 at commit `555c2a543a9cb3fdf1cb8c79c644792933de2260`. Every Task handoff,
+Catalog, Manifest, reconciliation and independent Verify passed. T16 published 532,708 H2 paths,
+413,837 eligible Episodes, 413,827 matched and 10 unmatched Episodes, 1,278,527 control matrices
+and 13,680 summaries. Its Verify Hash is
+`b866905c18fd1cb1f3bbed1f74e5301c56a78e891b81ab3eea61bcff37ed2b86`.
+The shared window-local contract reports 96,922 / 413,837 gap-affected event matrices and
+307,603 / 1,278,527 gap-affected control matrices. The engineering result is PASS; the research
+result remains `DESCRIPTIVE_ONLY_PRIMARY_PENDING_T18`, not Stage 2 Primary PASS.
+
+The earlier formal predecessor remains append-only engineering evidence. Acceptance found that it
+used daily aggregate quality as if it were window-local coverage, so CR-2026-045/ADR-S2-021
+rejected that predecessor's research interpretation. The final successor above applies
+`H2_WINDOW_INTERNAL_GAP_BEFORE_DECISION_V1` symmetrically and does not rewrite the predecessor.
 
 CR-2026-041 producer wiring found OQ-S2-012. Muce approved CR-2026-042/ADR-S2-019: protection and
 structure are explicitly not modeled in Stage 2, Contract Price owns scenario valuation and

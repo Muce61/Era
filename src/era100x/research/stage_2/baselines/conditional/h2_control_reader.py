@@ -6,6 +6,7 @@ import hashlib
 import json
 from bisect import bisect_left
 from collections import OrderedDict
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
@@ -52,6 +53,14 @@ def _days(start_ns: int, end_ns: int) -> tuple[date, ...]:
     return tuple(values)
 
 
+@dataclass(frozen=True, slots=True)
+class _CachedH2RowGroup:
+    """One verified row group decoded once into immutable typed columns."""
+
+    timestamps: tuple[int, ...]
+    trades: tuple[H2Trade, ...]
+
+
 class H2ControlReader:
     """Fail-closed Stage1 reader that never substitutes another control."""
 
@@ -65,14 +74,28 @@ class H2ControlReader:
             for item in config.get("read_only_recovery_overlays", [])
         }
         self._verified: set[str] = set()
-        self._cache: OrderedDict[tuple[str, int], list[dict[str, Any]]] = OrderedDict()
+        self._cache: OrderedDict[tuple[str, int], _CachedH2RowGroup] = OrderedDict()
+        self._cache_hits = 0
+        self._cache_misses = 0
+        self._bytes_read = 0
 
-    def _group_rows(self, group: H2RowGroup) -> list[dict[str, Any]]:
+    def metrics(self) -> dict[str, int]:
+        """Return non-evidentiary reader counters for progress reporting."""
+
+        return {
+            "cache_hits": self._cache_hits,
+            "cache_misses": self._cache_misses,
+            "bytes_read": self._bytes_read,
+        }
+
+    def _group_rows(self, group: H2RowGroup) -> _CachedH2RowGroup:
         key = (group.source_relative_path, group.ordinal)
         cached = self._cache.get(key)
         if cached is not None:
             self._cache.move_to_end(key)
+            self._cache_hits += 1
             return cached
+        self._cache_misses += 1
         overlay = self._overlays.get(group.source_relative_path)
         path = (
             _safe_relative(STAGE1_PUBLISHED_ROOT, group.source_relative_path)
@@ -89,20 +112,41 @@ class H2ControlReader:
             if _sha256_file(path) != expected_hash:
                 raise ValueError("H2 control source byte hash drift")
             self._verified.add(identity)
+            self._bytes_read += path.stat().st_size
         table = pq.ParquetFile(path).read_row_group(
             group.ordinal,
             columns=["ts_event_ns", "venue_trade_id", "canonical_trade_id", "price"],
         )
-        expected = table.sort_by(
-            [
-                ("ts_event_ns", "ascending"),
-                ("venue_trade_id", "ascending"),
-                ("canonical_trade_id", "ascending"),
-            ]
+        timestamps = tuple(int(value) for value in table["ts_event_ns"].to_pylist())
+        venue_trade_ids = tuple(int(value) for value in table["venue_trade_id"].to_pylist())
+        canonical_trade_ids = tuple(str(value) for value in table["canonical_trade_id"].to_pylist())
+        prices = tuple(table["price"].to_pylist())
+        trades = tuple(
+            H2Trade(
+                ts_event_ns=timestamp,
+                venue_trade_id=venue_trade_id,
+                canonical_trade_id=canonical_trade_id,
+                price=price,
+            )
+            for timestamp, venue_trade_id, canonical_trade_id, price in zip(
+                timestamps,
+                venue_trade_ids,
+                canonical_trade_ids,
+                prices,
+                strict=True,
+            )
         )
-        if not table.equals(expected):
-            raise ValueError("H2 control row group violates frozen stable order")
-        rows = cast(list[dict[str, Any]], table.to_pylist())
+        previous_key: tuple[int, int, str] | None = None
+        for trade in trades:
+            current_key = (
+                trade.ts_event_ns,
+                trade.venue_trade_id,
+                trade.canonical_trade_id,
+            )
+            if previous_key is not None and current_key < previous_key:
+                raise ValueError("H2 control row group violates frozen stable order")
+            previous_key = current_key
+        rows = _CachedH2RowGroup(timestamps=timestamps, trades=trades)
         self._cache[key] = rows
         while len(self._cache) > 8:
             self._cache.popitem(last=False)
@@ -122,20 +166,22 @@ class H2ControlReader:
             selected.extend(select_h2_row_groups(day_groups, start_ns, end_ns))
         facts: list[H2Trade] = []
         bindings: list[dict[str, Any]] = []
+        previous_key: tuple[int, int, str] | None = None
         for group in selected:
             rows = self._group_rows(group)
-            timestamps = [int(row["ts_event_ns"]) for row in rows]
-            first = bisect_left(timestamps, start_ns)
-            last = bisect_left(timestamps, end_ns)
-            facts.extend(
-                H2Trade(
-                    ts_event_ns=int(row["ts_event_ns"]),
-                    venue_trade_id=int(row["venue_trade_id"]),
-                    canonical_trade_id=str(row["canonical_trade_id"]),
-                    price=row["price"],
+            first = bisect_left(rows.timestamps, start_ns)
+            last = bisect_left(rows.timestamps, end_ns)
+            selected_trades = rows.trades[first:last]
+            for trade in selected_trades:
+                current_key = (
+                    trade.ts_event_ns,
+                    trade.venue_trade_id,
+                    trade.canonical_trade_id,
                 )
-                for row in rows[first:last]
-            )
+                if previous_key is not None and current_key < previous_key:
+                    raise ValueError("cross-row-group H2 control order drift")
+                previous_key = current_key
+            facts.extend(selected_trades)
             bindings.append(
                 {
                     "relative_path": group.source_relative_path,
@@ -144,13 +190,7 @@ class H2ControlReader:
                     "row_group_ordinal": group.ordinal,
                 }
             )
-        ordered = sorted(
-            facts,
-            key=lambda row: (row.ts_event_ns, row.venue_trade_id, row.canonical_trade_id),
-        )
-        if facts != ordered:
-            raise ValueError("cross-row-group H2 control order drift")
-        gaps = detect_h2_window_gaps(ordered)
+        gaps = detect_h2_window_gaps(facts)
         source_path_hash = canonical_hash(
             {
                 "instrument": instrument,

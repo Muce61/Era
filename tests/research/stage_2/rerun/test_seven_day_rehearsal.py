@@ -534,3 +534,129 @@ def test_lifecycle_source_end_keeps_complete_seven_day_window(
 
     assert end_ns == start_ns + 7 * subject.DAY_NS
     assert coverage is subject.SourceCoverage.COMPLETE
+
+
+def test_funding_index_verifies_and_parses_each_source_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    local_history: dict[str, dict[str, str]] = {}
+    for instrument in ("BTCUSDT", "ETHUSDT"):
+        path = tmp_path / f"{instrument}.csv"
+        path.write_text(
+            "settlement_ts_ms,funding_rate\n1000,0.001\n2000,-0.002\n3000,0.003\n",
+            encoding="utf-8",
+        )
+        local_history[instrument] = {
+            "path": str(path),
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
+    calls: list[Path] = []
+    real_hash = subject._file_hash
+
+    def counted_hash(path: Path) -> str:
+        calls.append(path)
+        return real_hash(path)
+
+    monkeypatch.setattr(subject, "_file_hash", counted_hash)
+    index = subject._FundingIndex.from_acceptance({"local_history": local_history})
+
+    assert index.between(
+        instrument="BTCUSDT",
+        start_ns=1_000_000_000,
+        end_ns=2_000_000_000,
+    ) == ((2_000_000_000, Decimal("-0.002")),)
+    assert index.between(
+        instrument="BTCUSDT",
+        start_ns=0,
+        end_ns=3_000_000_000,
+    ) == (
+        (1_000_000_000, Decimal("0.001")),
+        (2_000_000_000, Decimal("-0.002")),
+        (3_000_000_000, Decimal("0.003")),
+    )
+    assert len(calls) == 2
+
+
+def test_trade_day_decodes_once_and_bisects_overlapping_windows(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "trades.parquet"
+    pq.write_table(
+        pa.table(
+            {
+                "ts_event_ns": [1_000_000_000, 2_000_000_000, 3_000_000_000],
+                "venue_trade_id": [1, 2, 3],
+                "canonical_trade_id": ["a", "b", "c"],
+                "price": [Decimal("100"), Decimal("101"), Decimal("102")],
+            }
+        ),
+        path,
+    )
+    monkeypatch.setattr(
+        subject,
+        "_verified_trade_receipt_day",
+        lambda _instrument, _date: (path, "f" * 64, None),
+    )
+    subject._verified_trade_day.cache_clear()
+    read_calls = 0
+    real_read = pq.read_table
+
+    def counted_read(*args: object, **kwargs: object) -> pa.Table:
+        nonlocal read_calls
+        read_calls += 1
+        return real_read(*args, **kwargs)
+
+    monkeypatch.setattr(subject.pq, "read_table", counted_read)
+    first, hashes, gaps = subject._verified_trade_window(
+        instrument="BTCUSDT",
+        start_ns=1_000_000_000,
+        end_ns=3_000_000_000,
+    )
+    second, _, _ = subject._verified_trade_window(
+        instrument="BTCUSDT",
+        start_ns=2_000_000_000,
+        end_ns=4_000_000_000,
+    )
+
+    assert [row.canonical_trade_id for row in first] == ["a", "b"]
+    assert [row.canonical_trade_id for row in second] == ["b", "c"]
+    assert hashes == ("f" * 64,)
+    assert gaps == ()
+    assert read_calls == 1
+    subject._verified_trade_day.cache_clear()
+
+
+def test_contract_price_day_decodes_once_and_bisects_overlapping_windows() -> None:
+    class Reader:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def read(self, **_kwargs: object) -> pa.Table:
+            self.calls += 1
+            return pa.table(
+                {
+                    "event_ts_ns": [1_000_000_000, 2_000_000_000, 3_000_000_000],
+                    "available_at_ns": [1_000_000_000, 2_000_000_000, 3_000_000_000],
+                    "close": [Decimal("100"), Decimal("101"), Decimal("102")],
+                }
+            )
+
+    reader = Reader()
+    subject._contract_price_day.cache_clear()
+    first = subject._contract_prices(
+        reader,  # type: ignore[arg-type]
+        instrument="ETHUSDT",
+        start_ns=1_000_000_000,
+        end_ns=3_000_000_000,
+    )
+    second = subject._contract_prices(
+        reader,  # type: ignore[arg-type]
+        instrument="ETHUSDT",
+        start_ns=2_000_000_000,
+        end_ns=4_000_000_000,
+    )
+
+    assert [row.close for row in first] == [Decimal("100"), Decimal("101")]
+    assert [row.close for row in second] == [Decimal("101"), Decimal("102")]
+    assert reader.calls == 1
+    subject._contract_price_day.cache_clear()

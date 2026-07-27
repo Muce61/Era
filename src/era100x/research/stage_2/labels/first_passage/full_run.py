@@ -33,6 +33,7 @@ from era100x.research.stage_2.metrics.path.full_run import (
     SOURCE_S2T11_SNAPSHOT_ROOT,
     STAGE2_ROOT,
     _json_hash,
+    _is_v2_stably_ordered,
     _load_inputs,
     _reference_prices,
     _safe_relative,
@@ -658,14 +659,7 @@ def _process_h2(states: dict[str, _PassageState], slices: list[dict[str, Any]]) 
                 group[1],
                 columns=["ts_event_ns", "venue_trade_id", "canonical_trade_id", "price"],
             )
-            expected = table.sort_by(
-                [
-                    ("ts_event_ns", "ascending"),
-                    ("venue_trade_id", "ascending"),
-                    ("canonical_trade_id", "ascending"),
-                ]
-            )
-            if not table.equals(expected):
+            if not _is_v2_stably_ordered(table):
                 raise ValueError("H2 row group violates V2 stable order")
             timestamps = cast(list[int], table["ts_event_ns"].to_pylist())
             venue_ids = table["venue_trade_id"]

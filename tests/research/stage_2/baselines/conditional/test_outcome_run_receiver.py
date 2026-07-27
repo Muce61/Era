@@ -12,6 +12,7 @@ import pytest
 
 from era100x.research.stage_2.baselines.conditional.outcome_run import _ingest_candidates
 from era100x.research.stage_2.baselines.conditional.outcome_run import _local_sqlite_database
+from era100x.research.stage_2.baselines.conditional.outcome_run import _produce_control_outcomes
 from era100x.research.stage_2.baselines.conditional.v14_contracts import V14ControlCandidate
 
 NS = 1_000_000_000
@@ -130,3 +131,58 @@ def test_sqlite_work_database_rejects_external_volume(
     with pytest.raises(ValueError, match="cannot use an external volume"):
         with _local_sqlite_database():
             pass
+
+
+def test_control_outcomes_batch_updates_and_report_fine_grained_progress(tmp_path: Path) -> None:
+    payloads = [_candidate_payload(Decimal("100")), _candidate_payload(Decimal("101"))]
+    payloads[1]["parameter_set_id"] = "SECONDARY"
+    payloads[1]["control_entry_price"] = Decimal(str(payloads[1]["control_entry_price"]))
+    second = V14ControlCandidate.seal(payloads[1]).model_dump(mode="json")
+    selection = tmp_path / "selection.parquet"
+    encoded = json.dumps(
+        [payloads[0], second],
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    pq.write_table(pa.table({"selected_candidates_json": [encoded]}), selection)
+    database = sqlite3.connect(":memory:")
+
+    class Reader:
+        def read_window(
+            self, *, instrument: str, start_ns: int, end_ns: int
+        ) -> tuple[tuple[object, ...], tuple[object, ...], str]:
+            assert instrument == "BTCUSDT"
+            assert end_ns > start_ns
+            return (), (), "8" * 64
+
+        def metrics(self) -> dict[str, int]:
+            return {"cache_hits": 7, "cache_misses": 2, "bytes_read": 123}
+
+    updates: list[dict[str, object]] = []
+    try:
+        assert _ingest_candidates(database, (selection,)) == 2
+        count, gap_matrices, gap_cells = _produce_control_outcomes(
+            database,
+            reader=Reader(),  # type: ignore[arg-type]
+            output_path=tmp_path / "outcomes.parquet",
+            total_count=2,
+            progress_callback=updates.append,
+        )
+        stored = database.execute(
+            "SELECT COUNT(*) FROM candidates WHERE matrix_id IS NOT NULL"
+        ).fetchone()
+    finally:
+        database.close()
+
+    assert (count, gap_matrices, gap_cells) == (2, 0, 0)
+    assert stored == (2,)
+    assert updates[-1] == {
+        "phase": "POST_SELECTION_H2_OUTCOMES",
+        "subphase": "CONTROL_OUTCOMES",
+        "processed_units": 2,
+        "total_units": 2,
+        "cache_hits": 7,
+        "cache_misses": 2,
+        "bytes_read": 123,
+    }

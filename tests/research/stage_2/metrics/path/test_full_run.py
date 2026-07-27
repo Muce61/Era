@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import pyarrow as pa
+
 from era100x.research.stage_2.metrics.path import full_run
 
 
@@ -41,3 +43,30 @@ def test_latest_preflight_uses_recency_not_authority_hash_order(
     monkeypatch.setattr(full_run, "AUTHORITY_ROOT", tmp_path)
 
     assert full_run.latest_preflight_manifest() == newer
+
+
+def test_v2_stable_order_check_avoids_sort_copy_and_detects_each_key_level() -> None:
+    def table(rows: list[tuple[int, int, str]]) -> pa.Table:
+        return pa.table(
+            {
+                "ts_event_ns": [row[0] for row in rows],
+                "venue_trade_id": [row[1] for row in rows],
+                "canonical_trade_id": [row[2] for row in rows],
+            }
+        )
+
+    assert full_run._is_v2_stably_ordered(
+        table([(1, 2, "a"), (1, 2, "b"), (1, 3, "a"), (2, 1, "a")])
+    )
+    assert not full_run._is_v2_stably_ordered(table([(2, 1, "a"), (1, 2, "a")]))
+    assert not full_run._is_v2_stably_ordered(table([(1, 2, "a"), (1, 1, "z")]))
+    assert not full_run._is_v2_stably_ordered(table([(1, 2, "b"), (1, 2, "a")]))
+    assert not full_run._is_v2_stably_ordered(
+        pa.table(
+            {
+                "ts_event_ns": pa.array([1, None], type=pa.int64()),
+                "venue_trade_id": [1, 2],
+                "canonical_trade_id": ["a", "b"],
+            }
+        )
+    )

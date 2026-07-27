@@ -34,11 +34,15 @@ The first clean-commit attempt at `0c27e41` failed closed on external-volume App
 inventory now ignores only those metadata sidecars and has a dedicated regression test. The next
 commit must rerun the complete chain.
 
-The formal T11–T16 chain completed, but CR-2026-045/ADR-S2-021 reject the T16 research result
-because the predecessor applied daily aggregate gaps to control windows while events used
-window-local gap-before-decision semantics. The append-only predecessor remains engineering PASS.
-The replacement code uses `H2_WINDOW_INTERNAL_GAP_BEFORE_DECISION_V1` on both sides and reports
-both gap distributions; a new successor remains human-gated. CR-2026-038 resolves
+The final formal successor
+`fa92072063be8455fab814c1e9f302f2b06392a999820a53bd430e7282f57579` completed T11–T16 at
+`555c2a543a9cb3fdf1cb8c79c644792933de2260`. The replacement uses
+`H2_WINDOW_INTERNAL_GAP_BEFORE_DECISION_V1` on both sides, reports both gap distributions and
+passed Catalog, Manifest, reconciliation and independent Verify. T16 Verify Hash is
+`b866905c18fd1cb1f3bbed1f74e5301c56a78e891b81ab3eea61bcff37ed2b86`; its engineering result is
+PASS and its research result remains `DESCRIPTIVE_ONLY_PRIMARY_PENDING_T18`. The append-only
+predecessor remains engineering PASS but research-rejected under CR-2026-045/ADR-S2-021.
+CR-2026-038 resolves
 OQ-S2-010 by binding the accepted BTC/ETH historical funding source. CR-2026-039 resolves
 OQ-S2-011 after the SRP framework passed repository-wide quality and traceability; the framework
 and all historical SRP/CR/ADR records remain. CR-2026-040 resolves OQ-S2-009 and moves the already
@@ -317,10 +321,10 @@ run is immutable; its sealed objects require a new-run adoption Manifest and ful
 | Historical first-passage labels | S2-T13 v1.3 | strict H1/H2 TARGET_FIRST/STOP_FIRST/EXPIRED/AMBIGUOUS; 1,065,416 path rows; 31,962,480 classifications; full Verify/UI PASS; no PnL/ROUND_SUCCESS/bounds | PASSED / HUMAN ACCEPTED |
 | Historical AMBIGUOUS bounds | S2-T14 v1.3 | immutable raw labels; Primary failure treatment; conditional exclusion; theoretical upper; H1 adverse/optimistic bounds; 31,962,480 classifications; 2,280 compact distributions; full Verify/UI PASS; no PnL/ROUND_SUCCESS | PASSED / HUMAN ACCEPTED; CR-2026-024 |
 | Historical H1/H2 path extraction | S2-T11 v1.3 | `paths/extraction`; approved lossless source-slice CLI; BTC 220,201 + ETH 312,507 episodes; Manifest `d4d6a2f5…`; verify/UI/quality PASS; Muce accepted 2026-07-21; `validations/stage_2/S2-T11.md` | PASSED / HUMAN ACCEPTED |
-| Conditional random baseline | S2P13-T16 v1.1 | causal RMS/activity/distance; rolling F0-F3; outcome-blind 5 controls shared by 30 H2 cells; shared window-local H2 gap-before-decision contract; no PnL/return | PREDECESSOR ENGINEERING PASS / RESEARCH REJECTED / CR-2026-045 REPAIR IN VALIDATION / SUCCESSOR GATED |
+| Conditional random baseline | S2P13-T16 v1.1 | causal RMS/activity/distance; rolling F0-F3; outcome-blind 5 controls shared by 30 H2 cells; shared window-local H2 gap-before-decision contract; no PnL/return | FINAL SUCCESSOR ENGINEERING/VERIFY PASS / DESCRIPTIVE ONLY / PRIMARY PENDING T18 |
 | Seven-day theoretical lifecycle | Plan v1.3 S2P13-T11 | `stage_2/lifecycle`; Contract Price H3 proxy; 20bp auxiliary; dynamic net ticket-doubling; historical Primary and adverse Stress funding; -8U margin depletion | IMPLEMENTED CORE / DIRECTED TESTS PASS / CR-2026-038 FUNDING ACCEPTANCE REHEARSAL AUTHORIZED |
 | Historical funding acceptance | Plan v1.3 S2P13-T11 | `stage_2/funding`; complete local BTC/ETH history plus seven-day official sample; checksum, append-only acceptance, Manifest/Catalog/Verify, strict read-back | HUMAN ACCEPTED / 7,128+7,128 LOCAL ROWS HASH-BOUND / MONTHLY RECONCILIATION WAIVED / NO LIFECYCLE RUN |
-| Plan v1.3 successor orchestration | S2P13-T11～T16 | CR-2026-041/042/045; `stage_2/rerun`; static/input preflight, exclusive lock, complete source bindings, checkpoint/readback/reconciliation/Verify; T16 SQLite uses local scratch; H2 coverage parity is independently reported | FORMAL CHAIN COMPLETE / T16 ENGINEERING PASS / T16 RESEARCH REJECTED / REPAIR SUCCESSOR GATED |
+| Plan v1.3 successor orchestration | S2P13-T11～T16 | CR-2026-041/042/045; `stage_2/rerun`; static/input preflight, exclusive lock, complete source bindings, checkpoint/readback/reconciliation/Verify; T16 SQLite uses local scratch; H2 coverage parity is independently reported | FINAL FORMAL CHAIN COMPLETE / T11-T16 VERIFY PASS / STAGE 3 LOCKED |
 | Append-only Trade partition recovery | S2P13-T11 | CR-2026-043; ADR-S2-020; exact-key supplement overlay for truncated `BTCUSDT/2022-03-01`; official archive checksum plus original receipt byte/logical/count equality; Policy/approval/Authority binding | IMPLEMENTATION AUTHORIZED / FIRST FORMAL CHAIN TERMINAL_FAILED / SUCCESSOR GATED |
 | Special research point explicit exemptions | Plan v1.3 governance; SRP-S2-001 | default all-rules inheritance; explicit exact exemptions; non-waivable truth/safety/governance; unknown/wildcard/hash drift rejection; formal consumer rejection | FRAMEWORK IMPLEMENTED / FULL QUALITY PASS / OQ-S2-011 RESOLVED; SRP-S2-001 EXEMPTIONS EXPIRED |
 | Placebo | S2-T16 | preregistered placebo; separate future Task | DRAFT_NOT_APPROVED |

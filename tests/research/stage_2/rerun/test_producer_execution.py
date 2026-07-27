@@ -83,6 +83,78 @@ def test_execute_serializes_reads_back_and_reuses_verified_receipt(
     assert execute_producer(context) == receipt
 
 
+def test_nested_progress_keeps_overall_percent_and_exposes_subphase_metrics(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    context = _context(tmp_path)
+
+    def payload(
+        _context: object,
+        _data_root: Path,
+        *,
+        progress_callback,
+    ) -> dict[str, object]:
+        progress_callback(
+            {
+                "completed_units": 2,
+                "total_units": 4,
+                "phase": "TRAIN_BINS",
+                "row_count": 0,
+            }
+        )
+        progress_callback(
+            {
+                "phase": "TRAIN_BINS",
+                "subphase": "BOUNDARY_GROUPS",
+                "processed_units": 12,
+                "total_units": 24,
+                "bytes_read": 4096,
+                "cache_hits": 3,
+                "cache_misses": 1,
+            }
+        )
+        progress_callback(
+            {
+                "phase": "TRAIN_BINS",
+                "subphase": "BOUNDARY_GROUPS",
+                "processed_units": 13,
+                "total_units": 24,
+                "bytes_read": 8192,
+                "cache_hits": 4,
+                "cache_misses": 1,
+            }
+        )
+        return {"task_id": "S2P13-T11", "row_count": 3}
+
+    monkeypatch.setattr(
+        "era100x.research.stage_2.rerun.producer_execution._producer_payload",
+        payload,
+    )
+
+    execute_producer(context)
+
+    events = [
+        json.loads(line)
+        for line in context.checkpoint_path.with_name("daily-progress.jsonl")
+        .read_text()
+        .splitlines()
+    ]
+    telemetry_events = [event for event in events if event.get("event_type") == "SUBPHASE_PROGRESS"]
+    assert len(telemetry_events) == 1
+    nested = telemetry_events[0]
+    assert nested["completed_units"] == 2
+    assert nested["total_units"] == 4
+    assert nested["processed_units"] == 12
+    assert nested["subphase_total_units"] == 24
+    assert nested["bytes_read"] == 4096
+    assert nested["cache_hits"] == 3
+    assert nested["cache_misses"] == 1
+    assert nested["rss_bytes"] > 0
+    checkpoint = json.loads(context.checkpoint_path.read_text())
+    assert checkpoint["status"] == "PASS"
+    assert checkpoint["progress_percent"] == "100.00"
+
+
 def test_verify_rejects_output_tamper(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     context = _context(tmp_path)
     monkeypatch.setattr(

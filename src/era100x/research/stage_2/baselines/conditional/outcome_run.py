@@ -7,11 +7,12 @@ import json
 import os
 import sqlite3
 import tempfile
+import time
 from contextlib import contextmanager
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, cast
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 import pyarrow as pa  # type: ignore[import-untyped]
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
@@ -188,12 +189,35 @@ def _produce_control_outcomes(
     *,
     reader: H2ControlReader,
     output_path: Path,
+    total_count: int | None = None,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> tuple[int, int, int]:
     writer = pq.ParquetWriter(output_path, CONTROL_OUTCOME_SCHEMA, compression="zstd")
     rows: list[dict[str, Any]] = []
     count = 0
     gap_matrix_count = 0
     gap_cell_count = 0
+    updates: list[tuple[str, str, str, str, str]] = []
+    last_progress_at = time.monotonic()
+
+    def report_progress(*, force: bool = False) -> None:
+        nonlocal last_progress_at
+        if progress_callback is None:
+            return
+        now = time.monotonic()
+        if not force and now - last_progress_at < 4.5:
+            return
+        progress_callback(
+            {
+                "phase": "POST_SELECTION_H2_OUTCOMES",
+                "subphase": "CONTROL_OUTCOMES",
+                "processed_units": count,
+                "total_units": total_count,
+                **reader.metrics(),
+            }
+        )
+        last_progress_at = now
+
     try:
         cursor = database.execute(
             """
@@ -225,18 +249,14 @@ def _produce_control_outcomes(
             gap_matrix_count += matrix_gap_cells > 0
             gap_cell_count += matrix_gap_cells
             matrix_json = _json(matrix.model_dump(mode="json"))
-            database.execute(
-                """
-                UPDATE candidates SET matrix_id=?,matrix_json=?,outcomes_json=?,source_path_hash=?
-                WHERE control_candidate_id=?
-                """,
+            updates.append(
                 (
                     matrix.control_outcome_matrix_id,
                     matrix_json,
                     outcomes_json,
                     source_path_hash,
-                    candidate_id,
-                ),
+                    str(candidate_id),
+                )
             )
             rows.append(
                 {
@@ -252,13 +272,33 @@ def _produce_control_outcomes(
                 }
             )
             count += 1
+            report_progress()
             if len(rows) >= 2_000:
+                database.executemany(
+                    """
+                    UPDATE candidates
+                    SET matrix_id=?,matrix_json=?,outcomes_json=?,source_path_hash=?
+                    WHERE control_candidate_id=?
+                    """,
+                    updates,
+                )
                 writer.write_table(pa.Table.from_pylist(rows, schema=CONTROL_OUTCOME_SCHEMA))
                 rows.clear()
+                updates.clear()
                 database.commit()
+                report_progress(force=True)
         if rows:
+            database.executemany(
+                """
+                UPDATE candidates
+                SET matrix_id=?,matrix_json=?,outcomes_json=?,source_path_hash=?
+                WHERE control_candidate_id=?
+                """,
+                updates,
+            )
             writer.write_table(pa.Table.from_pylist(rows, schema=CONTROL_OUTCOME_SCHEMA))
         database.commit()
+        report_progress(force=True)
     finally:
         writer.close()
     return count, gap_matrix_count, gap_cell_count
@@ -295,6 +335,7 @@ def _attach_matches(
     files: tuple[Path, ...],
     match_path: Path,
     summary_path: Path,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> tuple[int, int, list[dict[str, Any]], dict[str, int]]:
     match_writer = pq.ParquetWriter(match_path, MATCH_SCHEMA, compression="zstd")
     summaries: list[dict[str, Any]] = []
@@ -305,7 +346,7 @@ def _attach_matches(
     matched_event_gap_matrix_count = 0
     control_gap_assignment_count = 0
     try:
-        for path in files:
+        for file_index, path in enumerate(files, start=1):
             source_rows = cast(list[dict[str, Any]], pq.read_table(path).to_pylist())
             candidate_ids = {
                 str(candidate_id)
@@ -451,6 +492,15 @@ def _attach_matches(
                         "historical_evidence_only": True,
                     }
                 )
+            if progress_callback is not None:
+                progress_callback(
+                    {
+                        "phase": "POST_SELECTION_H2_OUTCOMES",
+                        "subphase": "ATTACH_MATCHES",
+                        "processed_units": file_index,
+                        "total_units": len(files),
+                    }
+                )
     finally:
         match_writer.close()
     pq.write_table(
@@ -476,6 +526,7 @@ def produce_post_selection_evidence(
     selection_root: Path,
     output_root: Path,
     h2_reader: H2ControlReader,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     output_root.mkdir(parents=True, exist_ok=True)
     files = _selection_files(selection_root)
@@ -483,9 +534,22 @@ def produce_post_selection_evidence(
         database = sqlite3.connect(database_path)
         try:
             unique_candidates = _ingest_candidates(database, files)
+            if progress_callback is not None:
+                progress_callback(
+                    {
+                        "phase": "POST_SELECTION_H2_OUTCOMES",
+                        "subphase": "CANDIDATE_INDEX",
+                        "processed_units": unique_candidates,
+                        "total_units": unique_candidates,
+                    }
+                )
             control_path = output_root / "control_outcome_matrices.parquet"
             outcome_count, control_gap_matrices, control_gap_cells = _produce_control_outcomes(
-                database, reader=h2_reader, output_path=control_path
+                database,
+                reader=h2_reader,
+                output_path=control_path,
+                total_count=unique_candidates,
+                progress_callback=progress_callback,
             )
             if outcome_count != unique_candidates:
                 raise ValueError("unique selected controls are not fully classified")
@@ -496,6 +560,7 @@ def produce_post_selection_evidence(
                 files=files,
                 match_path=match_path,
                 summary_path=summary_path,
+                progress_callback=progress_callback,
             )
         finally:
             database.close()
