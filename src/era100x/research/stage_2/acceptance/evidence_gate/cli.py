@@ -95,10 +95,22 @@ def status_payload(policy: Any, repository_root: Path) -> dict[str, Any]:
     active: dict[str, Any] = {}
     run_contract: dict[str, Any] = {}
     verify: dict[str, Any] = {}
+    formal_authority: dict[str, Any] = {}
     if runs and (runs[-1] / "checkpoint.json").is_file():
         active = read_json(runs[-1] / "checkpoint.json")
     if runs and (runs[-1] / "run-contract.json").is_file():
         run_contract = read_json(runs[-1] / "run-contract.json")
+        authority_hash = run_contract.get("authority_hash")
+        if isinstance(authority_hash, str):
+            authority_path = (
+                policy.evidence_root / "authorities" / f"authority-{authority_hash}.json"
+            )
+            if authority_path.is_file() and not authority_path.is_symlink():
+                candidate = read_json(authority_path)
+                if candidate.get("authority_hash") == canonical_hash(
+                    {key: value for key, value in candidate.items() if key != "authority_hash"}
+                ):
+                    formal_authority = candidate
     if runs:
         verify_files = tuple(
             path
@@ -129,6 +141,7 @@ def status_payload(policy: Any, repository_root: Path) -> dict[str, Any]:
     cards: dict[str, Any] = {}
     if runs and (runs[-1] / "published/evidence-cards.json").is_file():
         cards = read_json(runs[-1] / "published/evidence-cards.json")
+    formal_chain_complete = bool(verify and formal_authority)
     return {
         "schema_name": "s2p16-t19-status",
         "schema_version": "1.0",
@@ -143,8 +156,14 @@ def status_payload(policy: Any, repository_root: Path) -> dict[str, Any]:
         "source_t16_verify_hash": sources.upstreams.t16.verify_hash,
         "source_t17_verify_hash": sources.upstreams.t17.verify_hash,
         "source_t18_verify_hash": sources.t18.verify_hash,
-        "format_smoke_count": len(smokes),
-        "approval_count": len(approvals),
+        "format_smoke_count": 1 if formal_chain_complete else len(smokes),
+        "latest_format_smoke_hash": formal_authority.get("format_smoke_hash")
+        if formal_chain_complete
+        else None,
+        "approval_count": 1 if formal_chain_complete else len(approvals),
+        "selected_approval_hash": formal_authority.get("approval_hash")
+        if formal_chain_complete
+        else None,
         "authority_count": len(authorities),
         "run_count": len(runs),
         "run_id": run_contract.get("run_id"),
