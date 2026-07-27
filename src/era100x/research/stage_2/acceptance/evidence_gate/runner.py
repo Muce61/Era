@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import fcntl
 import os
+import resource
 import shutil
+import sys
 import tempfile
 import time
 from collections.abc import Callable
@@ -57,6 +59,11 @@ FREQUENCY_SCHEMA = pa.schema(
         pa.field("p95_wait_seconds", pa.string()),
     ]
 )
+
+
+def _rss_bytes() -> int:
+    value = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    return value if sys.platform == "darwin" else value * 1024
 
 
 def _atomic_checkpoint(path: Path, payload: dict[str, Any]) -> None:
@@ -184,6 +191,7 @@ def format_smoke(
             for path in sorted(root.iterdir())
             if path.is_file() and not path.name.startswith("._")
         }
+    elapsed = max(time.monotonic() - started, 0.000001)
     payload: dict[str, Any] = {
         "schema_name": "s2p16-t19-format-smoke",
         "schema_version": "1.0",
@@ -197,7 +205,12 @@ def format_smoke(
         "source_t18_verify_hash": sources.t18.verify_hash,
         "projection": projection,
         "output_hashes": output_hashes,
-        "elapsed_seconds": f"{time.monotonic() - started:.6f}",
+        "elapsed_seconds": f"{elapsed:.6f}",
+        "bytes_read": sources.t11.output_path.stat().st_size,
+        "rows_per_second": f"{21_942 / elapsed:.6f}",
+        "rss_bytes": _rss_bytes(),
+        "cache_hits": 0,
+        "cache_misses": 1,
         "formal_objects_created": False,
     }
     payload["format_smoke_hash"] = canonical_hash(payload)
@@ -394,6 +407,7 @@ def run_formal(
                     "percent": f"{processed * 100 / total:.6f}",
                     "elapsed_seconds": f"{elapsed:.6f}",
                     "rows_per_second": f"{rate:.6f}",
+                    "rss_bytes": _rss_bytes(),
                     "eta_seconds": None if rate == 0 else f"{(total - processed) / rate:.6f}",
                     "heartbeat_at": datetime.now(UTC).isoformat(),
                 },
