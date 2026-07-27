@@ -2,18 +2,24 @@
 
 ```text
 Current Stage: Stage 2
-Current Plan: stage_2_plan_v1.5 — IMPLEMENTATION AUTHORIZED AT T18
+Current Plan: stage_2_plan_v1.5 — CLOSED AT T18
 Current Task: S2P15-T18 v1.0 — cluster bootstrap
-Status: IMPLEMENTATION / SOURCE AUDIT PASS / FORMAT SMOKE PASS / FORMAL RUN GATED
+Status: FORMAL ENGINEERING PASS / RECONCILIATION PASS / VERIFY PASS / STATISTICAL EVIDENCE ONLY
 ```
 
 Plan v1.5 authorizes only S2P15-T18. The implementation binds the immutable T16 Verify
 `b866905c18fd1cb1f3bbed1f74e5301c56a78e891b81ab3eea61bcff37ed2b86` and T17 Verify
-`bb6f7186f068a1dcd040f369c980bdcae4bb5fef9964c2b5ee61e2d30b6c2f1c`. A real T17 group passed
-the strict producer-to-reader format smoke without creating an Authority or Run. Formal execution
-remains blocked until the final clean commit is pushed, a smoke receipt binds that commit, and a
-human approval binds the commit, policy and both source Verify Hashes. T18 produces statistical
-evidence only; T19–T21 remain unauthorized and Stage 3 remains locked.
+`bb6f7186f068a1dcd040f369c980bdcae4bb5fef9964c2b5ee61e2d30b6c2f1c`. Formal Run
+`stage2-s2p15-t18-20260727T101117Z-6be54d26a190` completed publication and reconciliation under
+Authority `6be54d26a190bfc5894fa8957cb5fe7d65365db465f1f43332a607efc8dc8f5a`. Its Catalog,
+Manifest, reconciliation and independent Verify Hashes are respectively
+`14b2730411c23febec80cf8bda99b209a061d32716c987ab3d4eead70f166478`,
+`996c3a0eb6f0898cd28caeb4e66cde72d41d2bb04ecf06fbf1ec247882682b95`,
+`e2762dad9b19993d81216ea3e285873608f606d4f595a2045111d1451ca11e2d` and
+`dc9ebcab3e4af3ff75e03e76ee9fa4f147e27cb2910a80b2b25874f8d5e514d1`. The Run reconciled
+10,329 cluster rows, 54,720 bootstrap summaries and 96 FDR families. T18 engineering and Verify
+are PASS; the research status remains `STATISTICAL_EVIDENCE_ONLY_FINAL_GATE_PENDING`. T19–T21 were
+not executed and Stage 3 remains locked.
 
 Plan v1.4 completed only the approved S2P14-T17 same-stratum non-event placebo. The final formal
 Run `stage2-s2p14-t17-20260727T071439Z-0928be24425c` passed publication, reconciliation and an
@@ -27,8 +33,9 @@ Manifest, reconciliation and Verify Hashes are respectively
 The Run reconciled 413,827 placebo slots into 412,021 matched and 1,806 unmatched matrices,
 2,060,105 assignments and 13,680 summary rows across all 456 groups, with zero orphan, within-
 matrix duplicate or within-group fake-event duplicate. The engineering result is PASS; the
-research result remains `DESCRIPTIVE_ONLY_CLUSTERING_BOOTSTRAP_PENDING`, not Stage 2 Primary PASS.
-T18–T21 were not executed and Stage 3 remains locked.
+research result at T17 closure remained `DESCRIPTIVE_ONLY_CLUSTERING_BOOTSTRAP_PENDING`, not Stage
+2 Primary PASS. T18 was subsequently executed only under Plan v1.5; T19–T21 were not executed and
+Stage 3 remains locked.
 
 The first commit-bound formal attempt at `272e22644864ab07738846350d5815ec306454d3` sealed Authority
 `b447069df72a951a9d0685ca74d833802f066d27607c380d450ffe0cb55a0bfc`, then stopped before Run ID

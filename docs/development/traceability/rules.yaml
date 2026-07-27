@@ -164,7 +164,7 @@ rules:
   - src/era100x/research/stage_2/labels/ambiguity/ (S2-T14 IMPLEMENTED historical ambiguity bounds)
   - src/era100x/research/stage_2/baselines/conditional/ (S2P13-T16 v1.1 CR-2026-045 window-local H2 coverage repair; final successor engineering and Verify PASS; descriptive only)
   - src/era100x/research/stage_2/baselines/placebo/ (S2P14-T17 FINAL ENGINEERING AND VERIFY PASS; descriptive only)
-  - src/era100x/research/stage_2/statistics/bootstrap/ (S2P15-T18 IMPLEMENTED; real source audit and format smoke pass; formal Run gated)
+  - src/era100x/research/stage_2/statistics/bootstrap/ (S2P15-T18 FINAL FORMAL RUN, reconciliation and independent Verify PASS; statistical evidence only; final gate pending)
   test_paths:
   - tests/research/stage_2/episodes/identity/, tests/research/stage_2/pipelines/candidates/ (PLANNED); UT-EVT-011, FI-14
   - tests/research/stage_2/metrics/path/ (S2-T12 TESTED)
@@ -219,7 +219,7 @@ rules:
     implementation: src/era100x/research/stage_2/statistics/bootstrap/
     tests: tests/research/stage_2/statistics/bootstrap/
     validation: docs/development/validations/stage_2/S2P15-T18.md
-    state: IMPLEMENTED_SOURCE_AUDIT_FORMAT_SMOKE_PASS_FORMAL_RUN_GATED
+    state: FINAL_FORMAL_RUN_RECONCILIATION_VERIFY_PASS_STATISTICAL_EVIDENCE_ONLY_FINAL_GATE_PENDING
   state: PLANNED
 - rule_id: FILL-FIRST-NONZERO-PROTECT
   rule_status: FROZEN
