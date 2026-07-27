@@ -86,6 +86,7 @@ SELECTION_SCHEMA = pa.schema(
 MATCH_SCHEMA = pa.schema(
     [
         pa.field("source_episode_id", pa.string(), nullable=False),
+        pa.field("source_h2_path_hash", pa.string(), nullable=False),
         pa.field("status", pa.string(), nullable=False),
         pa.field("placebo_event_candidate_id", pa.string()),
         pa.field("placebo_control_candidate_ids", pa.list_(pa.string()), nullable=False),
@@ -152,7 +153,7 @@ def _selection_files(root: Path) -> tuple[Path, ...]:
     return tuple(sorted(files))
 
 
-def _prepared_episode_index(path: Path) -> dict[tuple[str, str, str], dict[str, Any]]:
+def _prepared_episode_index(path: Path) -> dict[tuple[str, str, str, str], dict[str, Any]]:
     columns = [
         "market_episode_id",
         "classification_row_hash",
@@ -165,7 +166,7 @@ def _prepared_episode_index(path: Path) -> dict[tuple[str, str, str], dict[str, 
         "activity_count_60s",
         "key_level_distance_bps",
     ]
-    result: dict[tuple[str, str, str], dict[str, Any]] = {}
+    result: dict[tuple[str, str, str, str], dict[str, Any]] = {}
     parquet = pq.ParquetFile(path)
     for batch in parquet.iter_batches(batch_size=32_768, columns=columns):
         for row in batch.to_pylist():
@@ -173,6 +174,7 @@ def _prepared_episode_index(path: Path) -> dict[tuple[str, str, str], dict[str, 
                 continue
             key = (
                 str(row["market_episode_id"]),
+                str(row["classification_row_hash"]),
                 str(row["parameter_set_id"]),
                 str(row["time_combination_id"]),
             )
@@ -306,9 +308,16 @@ def produce_blind_selections(
         candidates = _candidate_pool(matched_rows)
         used_placebo_event_ids: set[str] = set()
         selections: list[BlindPlaceboSelection] = []
-        for row in sorted(matched_rows, key=lambda item: str(item["market_episode_id"])):
+        for row in sorted(
+            matched_rows,
+            key=lambda item: (
+                str(item["market_episode_id"]),
+                str(item["classification_row_hash"]),
+            ),
+        ):
             key = (
                 str(row["market_episode_id"]),
+                str(row["classification_row_hash"]),
                 str(row["parameter_set_id"]),
                 str(row["time_combination_id"]),
             )
@@ -454,19 +463,21 @@ def _create_outcome_index(
     ):
         raise ValueError("T16 outcome index count drift")
     database.execute(
-        "CREATE TABLE real_matches(episode_id TEXT PRIMARY KEY, output_hash TEXT NOT NULL, "
-        "matrix_json TEXT NOT NULL)"
+        "CREATE TABLE real_matches(episode_id TEXT NOT NULL, path_hash TEXT NOT NULL, "
+        "output_hash TEXT NOT NULL, matrix_json TEXT NOT NULL, "
+        "PRIMARY KEY(episode_id,path_hash))"
     )
     parquet = pq.ParquetFile(binding.match_path)
     for batch in parquet.iter_batches(
         batch_size=4096,
-        columns=["market_episode_id", "output_hash", "matrix_json"],
+        columns=["market_episode_id", "source_h2_path_hash", "output_hash", "matrix_json"],
     ):
         database.executemany(
-            "INSERT INTO real_matches VALUES(?,?,?)",
+            "INSERT INTO real_matches VALUES(?,?,?,?)",
             [
                 (
                     str(row["market_episode_id"]),
+                    str(row["source_h2_path_hash"]),
                     str(row["output_hash"]),
                     str(row["matrix_json"]),
                 )
@@ -489,15 +500,20 @@ def _outcome(
 
 
 def _real_matrix(
-    database: sqlite3.Connection, episode_id: str
+    database: sqlite3.Connection, episode_id: str, path_hash: str
 ) -> tuple[str, tuple[OutcomeCell, ...], tuple[str, ...]]:
     row = database.execute(
-        "SELECT output_hash,matrix_json FROM real_matches WHERE episode_id=?", (episode_id,)
+        "SELECT output_hash,matrix_json FROM real_matches WHERE episode_id=? AND path_hash=?",
+        (episode_id, path_hash),
     ).fetchone()
     if row is None:
-        raise ValueError(f"real T16 matrix missing for episode {episode_id}")
+        raise ValueError(f"real T16 matrix missing for episode/path {episode_id}/{path_hash}")
     payload = json.loads(str(row[1]))
-    if not isinstance(payload, dict) or payload.get("market_episode_id") != episode_id:
+    if (
+        not isinstance(payload, dict)
+        or payload.get("market_episode_id") != episode_id
+        or payload.get("source_h2_path_hash") != path_hash
+    ):
         raise ValueError("real T16 outcome binding mismatch")
     event = tuple(OutcomeCell.model_validate(item) for item in payload["event_outcomes"])
     controls = tuple(str(value) for value in payload["control_candidate_ids"])
@@ -574,7 +590,9 @@ def attach_outcomes_and_summarize(
             matches: list[PlaceboMatchMatrix] = []
             for selection in selections:
                 real_hash, real_event, real_control_ids = _real_matrix(
-                    database, selection.source_episode_id
+                    database,
+                    selection.source_episode_id,
+                    selection.source_h2_path_hash,
                 )
                 real_controls = tuple(_outcome(database, item)[1] for item in real_control_ids)
                 if selection.status == "MATCHED":
@@ -590,6 +608,7 @@ def attach_outcomes_and_summarize(
                     match = PlaceboMatchMatrix.seal(
                         {
                             "source_episode_id": selection.source_episode_id,
+                            "source_h2_path_hash": selection.source_h2_path_hash,
                             "source_real_matrix_hash": real_hash,
                             "selection_hash": selection.selection_hash,
                             "status": selection.status,
@@ -613,6 +632,7 @@ def attach_outcomes_and_summarize(
                     match = PlaceboMatchMatrix.seal(
                         {
                             "source_episode_id": selection.source_episode_id,
+                            "source_h2_path_hash": selection.source_h2_path_hash,
                             "source_real_matrix_hash": real_hash,
                             "selection_hash": selection.selection_hash,
                             "status": selection.status,
@@ -629,6 +649,7 @@ def attach_outcomes_and_summarize(
             match_rows = [
                 {
                     "source_episode_id": item.source_episode_id,
+                    "source_h2_path_hash": item.source_h2_path_hash,
                     "status": item.status,
                     "placebo_event_candidate_id": item.placebo_event_candidate_id,
                     "placebo_control_candidate_ids": list(item.placebo_control_candidate_ids),
@@ -967,16 +988,13 @@ def _validate_formal_prefix(
     if len(matching) != 1:
         raise ValueError("approved superseded T17 Authority Hash does not match")
     if not existing_runs:
-        if len(existing_authorities) != 1 or supersedes_run is not None:
+        if supersedes_run is not None:
             raise ValueError("formal T17 successor prefix is inconsistent")
         return
-    if (
-        len(existing_runs) != 1
-        or not isinstance(supersedes_run, str)
-        or existing_runs[0].name != supersedes_run
-    ):
+    matching_runs = tuple(path for path in existing_runs if path.name == supersedes_run)
+    if not isinstance(supersedes_run, str) or len(matching_runs) != 1:
         raise ValueError("approved superseded T17 Run does not match")
-    run_root = existing_runs[0]
+    run_root = matching_runs[0]
     contract_path = run_root / "run-contract.json"
     contract = read_json(contract_path)
     if (
@@ -989,11 +1007,46 @@ def _validate_formal_prefix(
         or contract.get("status") != "UNPUBLISHED"
     ):
         raise ValueError("superseded T17 Run contract is invalid")
-    material_files = tuple(
-        path for path in run_root.rglob("*") if path.is_file() and not path.name.startswith("._")
-    )
-    if material_files != (contract_path,):
-        raise ValueError("superseded T17 Run advanced beyond the approved empty prefix")
+    material_files = {
+        path.relative_to(run_root)
+        for path in run_root.rglob("*")
+        if path.is_file() and not path.name.startswith("._")
+    }
+    approved_state = approval.get("superseded_run_state", "EMPTY_RUN")
+    if approved_state == "EMPTY_RUN":
+        if material_files != {Path("run-contract.json")}:
+            raise ValueError("superseded T17 Run advanced beyond the approved empty prefix")
+    elif approved_state == "AUDIT_ONLY":
+        if material_files != {Path("run-contract.json"), Path("checkpoint.json")}:
+            raise ValueError("superseded T17 Run advanced beyond the approved Audit-only prefix")
+        checkpoint = read_json(run_root / "checkpoint.json")
+        if (
+            canonical_hash(
+                {key: value for key, value in checkpoint.items() if key != "progress_hash"}
+            )
+            != checkpoint.get("progress_hash")
+            or checkpoint.get("run_id") != supersedes_run
+            or checkpoint.get("phase") != "AUDIT"
+            or checkpoint.get("processed_units") != 1
+            or checkpoint.get("total_units") != 1
+            or checkpoint.get("percent") != "100.000000"
+            or checkpoint.get("status") != "IN_PROGRESS"
+        ):
+            raise ValueError("superseded T17 Audit-only checkpoint is invalid")
+    else:
+        raise ValueError("approved superseded T17 Run state is unsupported")
+    for prior_run in existing_runs:
+        if prior_run == run_root:
+            continue
+        forbidden = tuple(
+            path
+            for path in prior_run.rglob("*")
+            if path.is_file()
+            and not path.name.startswith("._")
+            and path.name not in {"run-contract.json", "checkpoint.json"}
+        )
+        if forbidden:
+            raise ValueError("an earlier T17 Run contains production material")
 
 
 def run_formal(

@@ -870,7 +870,7 @@
       });
       byId("v14FlowGrid").innerHTML = cards.map(flowCard).join("");
       const percent = Math.max(0, Math.min(100, Number(plan.progress_percent) || 0));
-      byId("v14FlowSummary").textContent = `${plan.status || "BLOCKED"} · ${plan.phase || "AUDIT"} ${plan.subphase || ""} · ${percent.toFixed(2)}% · ${number(plan.processed_units)} / ${number(plan.total_units)} · ETA ${compactDuration(plan.eta_seconds)} · 心跳 ${plan.heartbeat_at ? dateTime(plan.heartbeat_at) : "—"} · 5秒自动刷新`;
+      byId("v14FlowSummary").textContent = `${plan.status || "BLOCKED"} · ${plan.reason_code || "UNKNOWN_REASON"} · ${plan.phase || "AUDIT"} ${plan.subphase || ""} · ${percent.toFixed(2)}% · ${number(plan.processed_units)} / ${number(plan.total_units)} · ETA ${compactDuration(plan.eta_seconds)} · 心跳 ${plan.heartbeat_at ? dateTime(plan.heartbeat_at) : "—"} · 5秒自动刷新`;
       const counts = plan.source_counts || {};
       byId("v14Evidence").textContent = `${plan.evidence_label || "H2 historical placebo evidence"} · source T16 ${plan.source_t16_status || "CHECKING"} ${plan.source_t16_verify_hash || "—"} · eligible ${number(counts.eligible)} · slots ${number(counts.matched)} · source unmatched ${number(counts.unmatched)} · controls ${number(counts.controls)} · approval ${number(plan.approval_count)} · Authority ${number(plan.authority_count)} · Run ${number(plan.run_count)} · matched ${number(plan.placebo_matched)} · unmatched ${number(plan.placebo_unmatched)} · summaries ${number(plan.summary_row_count)} · ${plan.research_status || "DESCRIPTIVE_ONLY_CLUSTERING_BOOTSTRAP_PENDING"} · Stage 3 ${plan.stage3_locked ? "LOCKED" : "UNEXPECTED_UNLOCK"}`;
       byId("v14Evidence").classList.toggle("bad", !plan.stage3_locked || plan.status === "FAILED");

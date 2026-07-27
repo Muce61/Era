@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import re
@@ -38,6 +39,20 @@ from era100x.research.stage_2.baselines.placebo.governance import (
     audit_t16_source as audit_placebo_t16_source,
     load_policy as load_placebo_policy,
 )
+
+
+def _exclusive_lock_is_held(path: Path) -> bool:
+    """Read-only process liveness check for a flock-backed task lock."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a+b") as handle:
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    return False
+
 
 DEFAULT_ROOT = Path("/Volumes/FuckingLife/era100x_stage2")
 REPOSITORY_ROOT = Path(__file__).parents[1]
@@ -1070,18 +1085,30 @@ def _stage2_v14_projection(stage2_root: Path) -> dict[str, Any]:
         phase_rows.append({"name": name, "status": state, "progress_percent": percent})
     authority_without_run = bool(authorities) and not runs
     empty_run_prefix = bool(runs) and not checkpoint and not verify
-    status = "PASS" if verify else ("IN_PROGRESS" if checkpoint else "BLOCKED")
+    run_lock_held = _exclusive_lock_is_held(policy.operations_root / "run.lock")
+    stopped_checkpoint = bool(checkpoint) and not verify and not run_lock_held
+    status = (
+        "PASS"
+        if verify
+        else ("BLOCKED" if stopped_checkpoint else ("IN_PROGRESS" if checkpoint else "BLOCKED"))
+    )
     reason_code = (
         "FORMAL_TASK_VERIFIED_PASS"
         if verify
         else (
-            "RUN_IN_PROGRESS"
-            if checkpoint
+            "PRE_BLIND_PREFIX_FAILED"
+            if stopped_checkpoint
             else (
-                "AUTHORITY_SEALED_WITHOUT_RUN"
-                if authority_without_run
+                "RUN_IN_PROGRESS"
+                if checkpoint
                 else (
-                    "EMPTY_RUN_PREFIX_BLOCKED" if empty_run_prefix else "FORMAL_APPROVAL_REQUIRED"
+                    "AUTHORITY_SEALED_WITHOUT_RUN"
+                    if authority_without_run
+                    else (
+                        "EMPTY_RUN_PREFIX_BLOCKED"
+                        if empty_run_prefix
+                        else "FORMAL_APPROVAL_REQUIRED"
+                    )
                 )
             )
         )

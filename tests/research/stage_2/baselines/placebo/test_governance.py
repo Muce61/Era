@@ -167,6 +167,7 @@ def test_approval_is_bound_to_commit_policy_and_t16_verify(
     payload["supersedes_run_id"] = "stage2-s2p14-t17-failed-prefix"
     payload["superseded_authority_run_count"] = 1
     payload["superseded_run_resume_allowed"] = False
+    payload["superseded_run_state"] = "AUDIT_ONLY"
     payload["approval_hash"] = canonical_hash(
         {key: value for key, value in payload.items() if key != "approval_hash"}
     )
@@ -179,6 +180,15 @@ def test_approval_is_bound_to_commit_policy_and_t16_verify(
             binding=binding,
         )["supersedes_run_id"]
         == "stage2-s2p14-t17-failed-prefix"
+    )
+    assert (
+        validate_approval(
+            path,
+            policy=policy,
+            repository_root=repository,
+            binding=binding,
+        )["superseded_run_state"]
+        == "AUDIT_ONLY"
     )
 
     payload["successor_authority_count"] = 2

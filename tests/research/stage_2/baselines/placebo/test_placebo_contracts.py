@@ -68,6 +68,7 @@ def test_thirty_combinations_share_one_fake_event_and_control_set() -> None:
     matrix = PlaceboMatchMatrix.seal(
         {
             "source_episode_id": _hash(10),
+            "source_h2_path_hash": _hash(15),
             "source_real_matrix_hash": _hash(11),
             "selection_hash": _hash(12),
             "status": "MATCHED",

@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import json
 import shutil
+import sqlite3
+from dataclasses import replace
 from pathlib import Path
 
 import pyarrow as pa  # type: ignore[import-untyped]
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
 import pytest
 
+from era100x.research.stage_2.baselines.conditional.v14_contracts import COMBINATION_ORDER
 from era100x.research.stage_2.baselines.placebo.contracts import (
     RELAXATION_LEVELS,
     S2P14T17Authority,
@@ -18,8 +21,11 @@ from era100x.research.stage_2.baselines.placebo.runner import (
     MATCH_SCHEMA,
     SUMMARY_SCHEMA,
     _catalog,
+    _create_outcome_index,
+    _prepared_episode_index,
     _progress_percent,
     _progress_writer,
+    _real_matrix,
     _utc_parts,
     _validate_formal_prefix,
     produce_blind_selections,
@@ -136,6 +142,7 @@ def test_verify_recomputes_catalog_and_reconciliation(
             [
                 {
                     "source_episode_id": "1" * 64,
+                    "source_h2_path_hash": "5" * 64,
                     "status": "MATCHED",
                     "placebo_event_candidate_id": "2" * 64,
                     "placebo_control_candidate_ids": ["3" * 64] * 5,
@@ -207,6 +214,118 @@ def test_verify_recomputes_catalog_and_reconciliation(
     match_path.write_bytes(match_path.read_bytes() + b"tamper")
     with pytest.raises(ValueError, match="Hash drift"):
         verify_run(run_root, binding=_binding(tmp_path))
+
+
+def test_prepared_episode_identity_keeps_price_and_flow_paths(tmp_path: Path) -> None:
+    path = tmp_path / "prepared.parquet"
+    common = {
+        "market_episode_id": "1" * 64,
+        "parameter_set_id": "G1-PRIMARY-V1",
+        "time_combination_id": "T2",
+        "anchor_ns": 1_700_000_000_000_000_000,
+        "episode_status": "ELIGIBLE",
+        "high_timeframe_trend_state": "ABOVE_EMA20",
+        "volatility_rms_bps": "1.0",
+        "activity_count_60s": 10,
+        "key_level_distance_bps": "2.0",
+    }
+    pq.write_table(
+        pa.Table.from_pylist(
+            [
+                {**common, "classification_row_hash": "2" * 64},
+                {**common, "classification_row_hash": "3" * 64},
+            ]
+        ),
+        path,
+    )
+
+    index = _prepared_episode_index(path)
+
+    assert len(index) == 2
+    assert (
+        "1" * 64,
+        "2" * 64,
+        "G1-PRIMARY-V1",
+        "T2",
+    ) in index
+    assert (
+        "1" * 64,
+        "3" * 64,
+        "G1-PRIMARY-V1",
+        "T2",
+    ) in index
+
+
+def test_real_matrix_identity_includes_h2_path_hash() -> None:
+    database = sqlite3.connect(":memory:")
+    database.execute(
+        "CREATE TABLE real_matches(episode_id TEXT NOT NULL, path_hash TEXT NOT NULL, "
+        "output_hash TEXT NOT NULL, matrix_json TEXT NOT NULL, "
+        "PRIMARY KEY(episode_id,path_hash))"
+    )
+    episode_id = "1" * 64
+    cells = [
+        {
+            "combination_id": combination,
+            "label": "EXPIRED",
+            "label_reason": "HORIZON_EXPIRED_WITHOUT_TOUCH",
+            "strict_target_first": 0,
+        }
+        for combination in COMBINATION_ORDER
+    ]
+    for ordinal, path_hash in enumerate(("2" * 64, "3" * 64), start=1):
+        payload = {
+            "market_episode_id": episode_id,
+            "source_h2_path_hash": path_hash,
+            "event_outcomes": cells,
+            "control_candidate_ids": [f"{value:064x}" for value in range(5)],
+        }
+        database.execute(
+            "INSERT INTO real_matches VALUES(?,?,?,?)",
+            (episode_id, path_hash, f"{ordinal:064x}", json.dumps(payload)),
+        )
+
+    first = _real_matrix(database, episode_id, "2" * 64)
+    second = _real_matrix(database, episode_id, "3" * 64)
+
+    assert first[0] != second[0]
+    with pytest.raises(ValueError, match="episode/path"):
+        _real_matrix(database, episode_id, "4" * 64)
+
+
+def test_outcome_index_accepts_composite_real_path_identity(tmp_path: Path) -> None:
+    binding = replace(_binding(tmp_path), counts={**_binding(tmp_path).counts, "controls": 1})
+    pq.write_table(
+        pa.Table.from_pylist(
+            [
+                {
+                    "control_candidate_id": "1" * 64,
+                    "control_outcome_matrix_id": "2" * 64,
+                    "outcomes_json": "[]",
+                }
+            ]
+        ),
+        binding.outcome_path,
+    )
+    pq.write_table(
+        pa.Table.from_pylist(
+            [
+                {
+                    "market_episode_id": "3" * 64,
+                    "source_h2_path_hash": "4" * 64,
+                    "output_hash": "5" * 64,
+                    "matrix_json": "{}",
+                }
+            ]
+        ),
+        binding.match_path,
+    )
+
+    database = _create_outcome_index(binding, tmp_path / "index.sqlite", progress=None)
+
+    assert database.execute("SELECT COUNT(*) FROM outcomes").fetchone()[0] == 1
+    assert database.execute("SELECT COUNT(*) FROM real_matches").fetchone()[0] == 1
+    database.close()
 
 
 def test_successor_requires_exactly_one_approved_authority_only_prefix(tmp_path: Path) -> None:
@@ -283,5 +402,42 @@ def test_successor_requires_exactly_one_approved_authority_only_prefix(tmp_path:
             approval={
                 "supersedes_authority_hash": authority.authority_hash,
                 "supersedes_run_id": run_root.name,
+            },
+        )
+
+    checkpoint = {
+        "schema_name": "s2p14-t17-progress",
+        "schema_version": "1.0",
+        "run_id": run_root.name,
+        "status": "IN_PROGRESS",
+        "phase": "AUDIT",
+        "processed_units": 1,
+        "total_units": 1,
+        "percent": "100.000000",
+        "elapsed_seconds": 0,
+        "heartbeat_at": "2026-07-27T06:56:16+00:00",
+    }
+    checkpoint["progress_hash"] = canonical_hash(checkpoint)
+    _write(run_root / "checkpoint.json", checkpoint)
+    _validate_formal_prefix(
+        existing_authorities=(authority_path,),
+        existing_runs=(run_root,),
+        approval={
+            "supersedes_authority_hash": authority.authority_hash,
+            "supersedes_run_id": run_root.name,
+            "superseded_run_state": "AUDIT_ONLY",
+        },
+    )
+
+    (run_root / "work").mkdir()
+    _write(run_root / "work/selection.json", {"status": "PARTIAL"})
+    with pytest.raises(ValueError, match="Audit-only prefix"):
+        _validate_formal_prefix(
+            existing_authorities=(authority_path,),
+            existing_runs=(run_root,),
+            approval={
+                "supersedes_authority_hash": authority.authority_hash,
+                "supersedes_run_id": run_root.name,
+                "superseded_run_state": "AUDIT_ONLY",
             },
         )

@@ -4,14 +4,15 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.4 — T17 IMPLEMENTATION AUTHORIZED
 Current Task: S2P14-T17 v1.0 — placebo signal
-Status: FORMAL_PRE_RUN_BLOCKED / SUCCESSOR_APPROVAL_REQUIRED
+Status: FORMAL_AUDIT_PREFIX_BLOCKED / PATH_IDENTITY_FIX_VALIDATING
 ```
 
 Plan v1.4 is approved only for the S2P14-T17 same-stratum non-event placebo. It binds the final
 formal T16 Verify Hash below and keeps Plan v1.3, policy v2 and every T16 object read-only. T17 code,
-tests, source audit and read-only UI are authorized. The implementation gate passed Ruff, strict
-mypy, strict Traceability, governance validation and 786 repository tests; browser inspection
-confirmed the automatic T17 projection, exact T16 counts, five-second refresh and Stage 3 lock.
+tests, source audit and read-only UI are authorized. The latest correction gate passed Ruff,
+strict mypy, strict Traceability, governance validation and 793 repository tests; browser
+inspection confirmed the stopped-prefix projection, exact T16 counts, five-second refresh and
+Stage 3 lock.
 A formal Authority/Run remains forbidden until the final clean commit receives a commit-bound
 human approval. T18–T21 are not authorized and Stage 3 remains locked.
 
@@ -32,6 +33,20 @@ UNPUBLISHED run contract; it has no checkpoint, blind selection, outcome, summar
 Verify. Progress percentages are now fixed Decimal-derived strings, and the recovery gate accepts
 only an approval naming this exact Authority and empty Run. Another clean commit and explicit
 successor approval are required before continuation.
+
+The next approved successor at `90ac911048a5dbf67d56894de0d579f6a109b950` sealed Authority
+`2cc5d55da5d95e4086ce29a562762dceae8bdbb2844bd7f51e363e2046d06610` and reserved Run
+`stage2-s2p14-t17-20260727T065616Z-2cc5d55da5d9`. Its source Audit checkpoint passed, but blind
+selection stopped before writing its first group because the prepared-Episode index treated two
+different H2 classification paths under one MarketEpisode as duplicates. The Run contains only
+its validated run contract and Hash-valid Audit checkpoint; it has no blind-selection file,
+outcome read, summary, publication or Verify. A read-only scan confirmed all 413,837 eligible
+prepared paths and all 413,837 real-match matrices are unique when identity includes
+`classification_row_hash` / `source_h2_path_hash`. The correction carries that path identity
+through selection, real-matrix lookup and final output. The UI now reports a stopped checkpoint
+with a free process lock as `PRE_BLIND_PREFIX_FAILED`, not `IN_PROGRESS`. Continuation remains
+forbidden until the correction passes the complete quality gate and receives a new commit-bound
+approval naming this exact `AUDIT_ONLY` prefix.
 
 The final formal successor `fa92072063be8455fab814c1e9f302f2b06392a999820a53bd430e7282f57579`
 completed T11–T16 at commit `555c2a543a9cb3fdf1cb8c79c644792933de2260`. Every Task handoff,

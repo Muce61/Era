@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 from collections.abc import Sequence
 from pathlib import Path
@@ -19,6 +20,17 @@ from .runner import resume_formal, run_formal, verify_run
 DEFAULT_POLICY = Path("configs/governance/stage2_active_policy_v3.json")
 
 
+def _run_lock_is_held(path: Path) -> bool:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a+b") as handle:
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    return False
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="S2P14-T17 historical placebo evidence")
     parser.add_argument("--repository-root", type=Path, default=Path.cwd())
@@ -33,6 +45,10 @@ def _parser() -> argparse.ArgumentParser:
     approval.add_argument("--approved-at")
     approval.add_argument("--supersedes-authority")
     approval.add_argument("--supersedes-run")
+    approval.add_argument(
+        "--superseded-run-state",
+        choices=("EMPTY_RUN", "AUDIT_ONLY"),
+    )
     run = subparsers.add_parser("run")
     run.add_argument("--approval", type=Path, required=True)
     resume = subparsers.add_parser("resume")
@@ -75,8 +91,11 @@ def _status(policy: Any, repository_root: Path) -> dict[str, Any]:
             else ("BLOCKED", "AUTHORITY_SEALED_WITHOUT_RUN")
         )
     if active_run:
-        status = str(active_run.get("status", "IN_PROGRESS"))
-        reason = str(active_run.get("phase", "RUN_IN_PROGRESS"))
+        if _run_lock_is_held(policy.operations_root / "run.lock"):
+            status = str(active_run.get("status", "IN_PROGRESS"))
+            reason = str(active_run.get("phase", "RUN_IN_PROGRESS"))
+        else:
+            status, reason = "BLOCKED", "PRE_BLIND_PREFIX_FAILED"
     return {
         "schema_name": "s2p14-t17-status",
         "stage_plan_version": "1.4",
@@ -127,6 +146,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             approved_at=arguments.approved_at,
             supersedes_authority_hash=arguments.supersedes_authority,
             supersedes_run_id=arguments.supersedes_run,
+            superseded_run_state=arguments.superseded_run_state,
         )
         result = {"status": "PASS", "approval_path": str(path)}
     elif arguments.command == "run":

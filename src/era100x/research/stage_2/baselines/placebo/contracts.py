@@ -228,6 +228,7 @@ class S2P14T17Authority(StrictEventModel):
 class PlaceboMatchMatrix(StrictEventModel):
     schema_name: Literal["s2p14-t17-placebo-match-matrix"] = "s2p14-t17-placebo-match-matrix"
     source_episode_id: str = Field(pattern=SHA256_PATTERN)
+    source_h2_path_hash: str = Field(pattern=SHA256_PATTERN)
     source_real_matrix_hash: str = Field(pattern=SHA256_PATTERN)
     selection_hash: str = Field(pattern=SHA256_PATTERN)
     status: Literal[

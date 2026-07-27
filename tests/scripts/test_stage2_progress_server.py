@@ -1728,6 +1728,7 @@ def test_stage2_v14_projection_is_evidence_driven_and_reports_live_progress(
     monkeypatch.setattr(MODULE, "load_placebo_policy", lambda *_args, **_kwargs: policy)
     monkeypatch.setattr(MODULE, "audit_placebo_t16_source", lambda *_args, **_kwargs: binding)
     monkeypatch.setattr(MODULE, "_repository_commit", lambda: "abc123")
+    monkeypatch.setattr(MODULE, "_exclusive_lock_is_held", lambda _path: True)
 
     blocked = _stage2_v14_projection(tmp_path)
     assert blocked["status"] == "BLOCKED"
@@ -1766,6 +1767,11 @@ def test_stage2_v14_projection_is_evidence_driven_and_reports_live_progress(
     running = _stage2_v14_projection(tmp_path)
     assert running["status"] == "IN_PROGRESS"
     assert running["progress_percent"] == 25.0
+
+    monkeypatch.setattr(MODULE, "_exclusive_lock_is_held", lambda _path: False)
+    stopped = _stage2_v14_projection(tmp_path)
+    assert stopped["status"] == "BLOCKED"
+    assert stopped["reason_code"] == "PRE_BLIND_PREFIX_FAILED"
     assert running["processed_units"] == 114
     assert (
         next(item for item in running["phases"] if item["name"] == "BLIND_SELECTION")["status"]

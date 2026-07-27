@@ -327,6 +327,7 @@ def record_approval(
     approved_at: str | None = None,
     supersedes_authority_hash: str | None = None,
     supersedes_run_id: str | None = None,
+    superseded_run_state: str | None = None,
 ) -> Path:
     if not repository_clean(repository_root):
         raise ValueError("formal T17 approval requires a clean repository")
@@ -352,6 +353,10 @@ def record_approval(
     }
     if supersedes_run_id is not None and supersedes_authority_hash is None:
         raise ValueError("superseded T17 Run requires its Authority Hash")
+    if superseded_run_state not in {None, "EMPTY_RUN", "AUDIT_ONLY"}:
+        raise ValueError("superseded T17 Run state is invalid")
+    if superseded_run_state is not None and supersedes_run_id is None:
+        raise ValueError("superseded T17 Run state requires a Run ID")
     if supersedes_authority_hash is not None:
         if len(supersedes_authority_hash) != 64 or any(
             character not in "0123456789abcdef" for character in supersedes_authority_hash
@@ -375,6 +380,7 @@ def record_approval(
             {
                 "supersedes_run_id": supersedes_run_id,
                 "superseded_run_resume_allowed": False,
+                "superseded_run_state": superseded_run_state or "EMPTY_RUN",
             }
         )
     payload["approval_hash"] = canonical_hash(payload)
@@ -407,6 +413,7 @@ def validate_approval(
         and "/" not in supersedes_run
         and ".." not in supersedes_run
         and approval.get("superseded_run_resume_allowed") is False
+        and approval.get("superseded_run_state", "EMPTY_RUN") in {"EMPTY_RUN", "AUDIT_ONLY"}
     )
     if (
         not self_hash_matches(approval, "approval_hash")
