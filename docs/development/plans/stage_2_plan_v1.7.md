@@ -5,7 +5,7 @@
 - plan_id: `stage_2_plan_v1.7`
 - stage_id: `S2`
 - plan_version: `1.7`
-- status: APPROVED / IMPLEMENTATION AUTHORIZED / FORMAL RUN GATED
+- status: CLOSED AT S2P17-T20 / FORMAL ENGINEERING AND VERIFY PASS / RESEARCH NO-GO
 - approved_by: Muce
 - approved_at: 2026-07-27
 - source_commit: `4092f83b19b4ded3c1c2dfda49bbd20b9de40aa8`

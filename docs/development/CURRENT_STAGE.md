@@ -2,19 +2,26 @@
 
 ```text
 Current Stage: Stage 2
-Current Plan: stage_2_plan_v1.7 — IMPLEMENTATION AUTHORIZED / FORMAL RUN GATED
+Current Plan: stage_2_plan_v1.7 — CLOSED AT T20
 Current Task: S2P17-T20 v1.0 — final evidence acceptance
-Status: IMPLEMENTATION AND QUALITY GATE PASS / CLEAN-COMMIT FORMAT SMOKE PENDING / FORMAL RUN GATED
+Status: FORMAL ENGINEERING PASS / RECONCILIATION PASS / VERIFY PASS / STAGE2_NO_GO_CURRENT_EVIDENCE
 ```
 
-Plan v1.7 authorizes only S2P17-T20. It validates the immutable formal T11/T16/T17/T18/T19
-chain, preserves the complete gate and parameter landscape, and selects six real event-card
-identities before reading their outcomes. It does not recompute Trades, paths, outcomes,
-bootstrap, FDR or research gates. The expected current-evidence closure is
-`STAGE2_NO_GO_CURRENT_EVIDENCE`, while lifecycle evidence remains
-`INCONCLUSIVE_SOURCE_GAP_CENSORING`; both must be derived from the formal T19 evidence.
-Authority and Run remain forbidden until the final clean commit passes a real format smoke and
-receives a matching human approval. T21 is not authorized and Stage 3 remains locked.
+Plan v1.7 authorized only S2P17-T20. Formal Run
+`stage2-s2p17-t20-20260727T154959Z-ed51e7cb220b` completed under Authority
+`ed51e7cb220b22d0bbc2dff862967af635a1219523f5b0927a6fae5c58758423`. Catalog, Manifest,
+reconciliation, final decision and independent Verify Hashes are respectively
+`a362a2b99f471bd1acf2230b00b0136af6f5907c63bbd7854e88fd9654299e15`,
+`b31e9e2f8b5f943d791381b63e2cb673c9f60d0e36a9785095b395207b92ff9f`,
+`dd8f0fc90b6af67ee0baf17c7e9a0b44fdab554a15dc624cbd50b49c322cdb68`,
+`f550c21b0869a17f436bff3d119b6666f6ca345e7c9d3538f90531d0499f50af` and
+`86167e6ba6537d637b1e1614de182b9434286f7d6e95d9702afa0d92805ace59`.
+The Run reconciled 28 gate rows, 3,420 parameter-landscape rows, 14 frequency/waiting rows and
+six result-blind real event cards. Engineering, publication, reconciliation and Verify are PASS.
+The research conclusion is `STAGE2_NO_GO_CURRENT_EVIDENCE`; BTC H2 Primary is
+`PRIMARY_FAILED`, ETH is `PRIMARY_FAILED`, and both lifecycle projections remain
+`INCONCLUSIVE_SOURCE_GAP_CENSORING`. This is not Stage 2 research PASS. T21 was not executed and
+Stage 3 remains locked.
 
 Plan v1.6 authorized only S2P16-T19. It reads the immutable formal T11, T16, T17 and T18
 evidence, projects the pre-registered H2 F1–F10 and H3 lifecycle gates, and never recomputes

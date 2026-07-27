@@ -5,7 +5,7 @@
 - task_id: S2P17-T20
 - task_version: 1.0
 - stage_plan_version: 1.7
-- status: APPROVED / IMPLEMENTATION AUTHORIZED / FORMAL RUN GATED
+- status: FINAL FORMAL ENGINEERING / RECONCILIATION / VERIFY PASS / RESEARCH NO-GO
 - approved_by: Muce
 - approved_at: 2026-07-27
 - dependencies: verified formal S2P13-T11, S2P13-T16, S2P14-T17, S2P15-T18 and S2P16-T19
