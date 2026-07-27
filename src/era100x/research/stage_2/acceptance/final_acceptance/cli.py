@@ -61,6 +61,21 @@ def _lock_is_held(path: Path) -> bool:
     return False
 
 
+def _sealed_run_authorization(policy: Any, contract: dict[str, Any]) -> dict[str, Any]:
+    """Read authorization identity from the immutable Authority bound by a Run."""
+
+    authority_hash = contract.get("authority_hash")
+    if not isinstance(authority_hash, str) or not authority_hash:
+        return {}
+    path = policy.evidence_root / "authorities" / f"authority-{authority_hash}.json"
+    if not path.is_file() or path.is_symlink() or path.name.startswith("._"):
+        return {}
+    authority = read_canonical_json(path)
+    if authority.get("authority_hash") != authority_hash:
+        raise ValueError("formal T20 Run Authority identity drift")
+    return authority
+
+
 def status_payload(policy: Any, repository_root: Path) -> dict[str, Any]:
     sources = audit_sources(policy, repository_root=repository_root, full_hash_scan=False)
     commit = subprocess.check_output(
@@ -111,11 +126,13 @@ def status_payload(policy: Any, repository_root: Path) -> dict[str, Any]:
     contract: dict[str, Any] = {}
     verify: dict[str, Any] = {}
     decision: dict[str, Any] = {}
+    sealed_authorization: dict[str, Any] = {}
     if runs:
         if (runs[-1] / "checkpoint.json").is_file():
             checkpoint = read_canonical_json(runs[-1] / "checkpoint.json")
         if (runs[-1] / "run-contract.json").is_file():
             contract = read_canonical_json(runs[-1] / "run-contract.json")
+            sealed_authorization = _sealed_run_authorization(policy, contract)
         verify_files = tuple(
             path
             for path in (runs[-1] / "verify").glob("*.json")
@@ -149,6 +166,10 @@ def status_payload(policy: Any, repository_root: Path) -> dict[str, Any]:
     source_lifecycle = source_cards.get("lifecycle")
     lifecycle = source_lifecycle if isinstance(source_lifecycle, dict) else {}
     source_recommendation = str(source_cards.get("overall_recommendation", "UNAVAILABLE"))
+    sealed_smoke_hash = sealed_authorization.get("format_smoke_hash")
+    sealed_approval_hash = sealed_authorization.get("approval_hash")
+    display_smoke_count = 1 if isinstance(sealed_smoke_hash, str) else len(smokes)
+    display_approval_count = 1 if isinstance(sealed_approval_hash, str) else len(approvals)
     return {
         "schema_name": "s2p17-t20-status",
         "schema_version": "1.0",
@@ -165,9 +186,19 @@ def status_payload(policy: Any, repository_root: Path) -> dict[str, Any]:
         "source_t17_verify_hash": sources.upstreams.upstreams.t17.verify_hash,
         "source_t18_verify_hash": sources.upstreams.t18.verify_hash,
         "source_t19_verify_hash": sources.t19.verify_hash,
-        "format_smoke_count": len(smokes),
-        "latest_format_smoke_hash": smokes[-1].stem if smokes else None,
-        "approval_count": len(approvals),
+        "format_smoke_count": display_smoke_count,
+        "latest_format_smoke_hash": (
+            sealed_smoke_hash
+            if isinstance(sealed_smoke_hash, str)
+            else (smokes[-1].stem if smokes else None)
+        ),
+        "approval_count": display_approval_count,
+        "selected_approval_hash": (
+            sealed_approval_hash if isinstance(sealed_approval_hash, str) else None
+        ),
+        "authorization_projection_origin": (
+            "SEALED_RUN_AUTHORITY" if sealed_authorization else "CURRENT_COMMIT_GATE"
+        ),
         "authority_count": len(authorities),
         "run_count": len(runs),
         "run_id": contract.get("run_id"),

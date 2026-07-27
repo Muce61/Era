@@ -1593,7 +1593,15 @@ def _stage2_v16_projection(stage2_root: Path) -> dict[str, Any]:
     verified = status.get("status") == "PASS"
     phases: list[dict[str, Any]] = []
     for index, name in enumerate(phase_names):
-        if verified or index < current_index:
+        if verified:
+            state = "PASS"
+            processed = (
+                int(checkpoint.get("processed_units") or checkpoint.get("total_units") or 1)
+                if index == current_index
+                else 1
+            )
+            percent = 100.0
+        elif index < current_index:
             state, processed, percent = "PASS", 1, 100.0
         elif name == "AUDIT":
             state, processed, percent = "PASS", 1, 100.0
@@ -1672,7 +1680,15 @@ def _stage2_v17_projection(stage2_root: Path) -> dict[str, Any]:
     verified = status.get("status") == "PASS"
     phases: list[dict[str, Any]] = []
     for index, name in enumerate(phase_names):
-        if verified or index < current_index:
+        if verified:
+            state = "PASS"
+            processed = (
+                int(checkpoint.get("processed_units") or checkpoint.get("total_units") or 1)
+                if index == current_index
+                else 1
+            )
+            percent = 100.0
+        elif index < current_index:
             state, processed, percent = "PASS", 1, 100.0
         elif name == "AUDIT":
             state, processed, percent = "PASS", 1, 100.0

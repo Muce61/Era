@@ -1984,6 +1984,40 @@ def test_stage2_v17_projection_exposes_nine_evidence_driven_phases(
     assert result["observer_repo_commit"] == "abc123"
 
 
+def test_stage2_v17_verified_phase_uses_checkpoint_counts(tmp_path: Path, monkeypatch) -> None:
+    policy = type("Policy", (), {})()
+    monkeypatch.setattr(MODULE, "load_final_acceptance_policy", lambda *_args, **_kwargs: policy)
+    monkeypatch.setattr(
+        MODULE,
+        "final_acceptance_status",
+        lambda *_args, **_kwargs: {
+            "status": "PASS",
+            "reason_code": "FORMAL_TASK_VERIFIED_PASS",
+            "format_smoke_count": 1,
+            "active_run": {
+                "status": "PASS",
+                "phase": "VERIFY",
+                "processed_units": 9,
+                "total_units": 9,
+                "percent": "100.000000",
+            },
+            "run_code_commit": "run123",
+            "decision": {},
+            "source_decision": {},
+            "stage3_locked": True,
+        },
+    )
+    monkeypatch.setattr(MODULE, "_repository_commit", lambda: "abc123")
+
+    result = _stage2_v17_projection(tmp_path)
+
+    assert result["phases"][-1]["status"] == "PASS"
+    assert result["phases"][-1]["processed_units"] == 9
+    assert result["phases"][-1]["total_units"] == 9
+    assert result["processed_units"] == 9
+    assert result["total_units"] == 9
+
+
 def test_projection_reads_historical_approval_without_authorizing_new_run(
     tmp_path: Path,
     monkeypatch,
