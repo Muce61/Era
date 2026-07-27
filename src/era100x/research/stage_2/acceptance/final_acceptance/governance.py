@@ -310,10 +310,13 @@ def validate_approval(
         raise ValueError("T20 approval binding drift")
     smoke_hash = str(approval["format_smoke_hash"])
     smoke_path = policy.operations_root / "format-smokes" / f"{smoke_hash}.json"
-    verify_canonical_json_file(smoke_path, expected_hash=smoke_hash)
+    verify_canonical_json_file(smoke_path)
     smoke = read_canonical_json(smoke_path)
     if (
-        smoke.get("code_commit") != approval["code_commit"]
+        smoke.get("format_smoke_hash") != smoke_hash
+        or not _self_hash(smoke, "format_smoke_hash")
+        or smoke.get("status") != "PASS"
+        or smoke.get("code_commit") != approval["code_commit"]
         or smoke.get("policy_hash") != policy.policy_hash
         or smoke.get("source_t19_verify_hash") != sources.t19.verify_hash
     ):
