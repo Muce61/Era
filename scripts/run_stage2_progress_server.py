@@ -1624,7 +1624,7 @@ def _stage2_v16_projection(stage2_root: Path) -> dict[str, Any]:
         **status,
         "schema_name": "s2p16-t19-ui-projection",
         "observer_repo_commit": _repository_commit(),
-        "run_code_commit": checkpoint.get("code_commit"),
+        "run_code_commit": status.get("run_code_commit"),
         "phase": current_phase,
         "subphase": checkpoint.get("subphase"),
         "progress_percent": 100.0 if verified else current["progress_percent"],

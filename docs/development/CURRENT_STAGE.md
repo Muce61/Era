@@ -2,18 +2,24 @@
 
 ```text
 Current Stage: Stage 2
-Current Plan: stage_2_plan_v1.6 — AUTHORIZED ONLY FOR T19 IMPLEMENTATION
+Current Plan: stage_2_plan_v1.6 — CLOSED AT T19
 Current Task: S2P16-T19 v1.0 — evidence synthesis and gate projection
-Status: IMPLEMENTATION / FORMAT SMOKE PASS ON PRE-COMMIT CODE / FORMAL AUTHORITY AND RUN FORBIDDEN
+Status: FORMAL ENGINEERING PASS / RECONCILIATION PASS / VERIFY PASS / NO_GO_CURRENT_EVIDENCE
 ```
 
 Plan v1.6 authorizes only S2P16-T19. It reads the immutable formal T11, T16, T17 and T18
 evidence, projects the pre-registered H2 F1–F10 and H3 lifecycle gates, and never recomputes
-Trades, outcomes, bootstrap, CI or FDR. The first real read-only format smoke found BTC Primary
-`PRIMARY_FAILED`, both lifecycle instruments `INCONCLUSIVE_SOURCE_GAP_CENSORING`, and the overall
-recommendation `NO_GO_CURRENT_EVIDENCE`; these are implementation-smoke observations, not a
-formal T19 Run. A clean final commit, current format-smoke receipt and external commit-bound human
-approval are still required before Authority or Run creation. T20/T21 remain unauthorized and
+Trades, outcomes, bootstrap, CI or FDR. Formal Run
+`stage2-s2p16-t19-20260727T134851Z-b515924314e5` completed under Authority
+`b515924314e512db1606e1cd11571c962efe10fae5209f821a17d9a3fab73f5a`.
+Catalog, Manifest, reconciliation and independent Verify Hashes are respectively
+`4dfbc022f1219921f23bb695c39733dc82324e41984ac11a9ad5994e223aed96`,
+`f85ee05d368cc4d0d56b2e2c10c1d46561df6be90140aeb2a577c244373aa00d`,
+`1374f7d846f04737194100f2eb1ad5f746954b91260fd6d8e61511b3072c3068` and
+`a272924b834d7f687020ae3ec3bb30e7b639d1fb367b810de40807746dcdabef`.
+The formal result is BTC Primary `PRIMARY_FAILED`, ETH `PRIMARY_FAILED`, both lifecycle
+instruments `INCONCLUSIVE_SOURCE_GAP_CENSORING`, and overall `NO_GO_CURRENT_EVIDENCE`.
+Engineering and Verify are PASS; this is not Stage 2 PASS. T20/T21 remain unauthorized and
 Stage 3 remains locked.
 
 Plan v1.5 authorizes only S2P15-T18. The implementation binds the immutable T16 Verify

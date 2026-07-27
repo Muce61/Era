@@ -1925,6 +1925,7 @@ def test_stage2_v16_projection_exposes_nine_live_phases(tmp_path: Path, monkeypa
             "reason_code": "COMMIT_BOUND_APPROVAL_REQUIRED",
             "format_smoke_count": 1,
             "active_run": {},
+            "run_code_commit": "run123",
             "evidence_cards": {},
             "stage3_locked": True,
         },
@@ -1939,6 +1940,7 @@ def test_stage2_v16_projection_exposes_nine_live_phases(tmp_path: Path, monkeypa
     assert result["phases"][0]["status"] == "PASS"
     assert result["phases"][1]["status"] == "PASS"
     assert result["stage3_locked"] is True
+    assert result["run_code_commit"] == "run123"
 
 
 def test_projection_reads_historical_approval_without_authorizing_new_run(

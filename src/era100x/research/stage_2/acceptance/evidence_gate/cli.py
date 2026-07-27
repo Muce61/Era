@@ -93,8 +93,11 @@ def status_payload(policy: Any, repository_root: Path) -> dict[str, Any]:
         )
     )
     active: dict[str, Any] = {}
+    run_contract: dict[str, Any] = {}
     if runs and (runs[-1] / "checkpoint.json").is_file():
         active = read_json(runs[-1] / "checkpoint.json")
+    if runs and (runs[-1] / "run-contract.json").is_file():
+        run_contract = read_json(runs[-1] / "run-contract.json")
     if active:
         status = str(active.get("status", "IN_PROGRESS"))
         reason = (
@@ -131,6 +134,8 @@ def status_payload(policy: Any, repository_root: Path) -> dict[str, Any]:
         "approval_count": len(approvals),
         "authority_count": len(authorities),
         "run_count": len(runs),
+        "run_id": run_contract.get("run_id"),
+        "run_code_commit": run_contract.get("code_commit"),
         "active_run": active,
         "evidence_cards": cards,
         "run_lock_held": _lock_is_held(policy.operations_root / "run.lock"),
