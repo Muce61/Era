@@ -133,7 +133,6 @@ def _project_and_write(
     progress: ProgressCallback | None = None,
 ) -> dict[str, Any]:
     output.mkdir(parents=True, exist_ok=True)
-    started = time.monotonic()
     if progress:
         progress({"phase": "SOURCE_PROJECTION", "processed_units": 0, "total_units": 4})
     result = synthesize_evidence(sources)
@@ -157,7 +156,6 @@ def _project_and_write(
     with report_path.open("x", encoding="utf-8") as handle:
         handle.write(_markdown(cast(dict[str, Any], result["evidence_cards"])))
     reconciliation = cast(dict[str, Any], result["reconciliation"])
-    reconciliation["elapsed_seconds"] = f"{time.monotonic() - started:.6f}"
     reconciliation["reconciliation_hash"] = canonical_hash(reconciliation)
     write_exclusive(reconciliation_path, reconciliation)
     if progress:
