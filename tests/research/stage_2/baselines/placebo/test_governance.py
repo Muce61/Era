@@ -146,6 +146,37 @@ def test_approval_is_bound_to_commit_policy_and_t16_verify(
             binding=binding,
         )
 
+    payload["source_t16_verify_hash"] = binding.verify_hash
+    payload["supersedes_authority_hash"] = "9" * 64
+    payload["superseded_authority_run_count"] = 0
+    payload["successor_authority_count"] = 1
+    payload["approval_hash"] = canonical_hash(
+        {key: value for key, value in payload.items() if key != "approval_hash"}
+    )
+    _write(path, payload)
+    assert (
+        validate_approval(
+            path,
+            policy=policy,
+            repository_root=repository,
+            binding=binding,
+        )["supersedes_authority_hash"]
+        == "9" * 64
+    )
+
+    payload["successor_authority_count"] = 2
+    payload["approval_hash"] = canonical_hash(
+        {key: value for key, value in payload.items() if key != "approval_hash"}
+    )
+    _write(path, payload)
+    with pytest.raises(ValueError, match="invalid or stale"):
+        validate_approval(
+            path,
+            policy=policy,
+            repository_root=repository,
+            binding=binding,
+        )
+
 
 def test_policy_type_cannot_authorize_plan_v13_evidence(tmp_path: Path) -> None:
     repository, policy_path = _policy_file(tmp_path)

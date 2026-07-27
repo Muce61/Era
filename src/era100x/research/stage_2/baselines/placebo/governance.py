@@ -325,6 +325,7 @@ def record_approval(
     approved_by: str,
     approval_source: str,
     approved_at: str | None = None,
+    supersedes_authority_hash: str | None = None,
 ) -> Path:
     if not repository_clean(repository_root):
         raise ValueError("formal T17 approval requires a clean repository")
@@ -348,6 +349,18 @@ def record_approval(
         "run_count": 1,
         "stage3_locked": True,
     }
+    if supersedes_authority_hash is not None:
+        if len(supersedes_authority_hash) != 64 or any(
+            character not in "0123456789abcdef" for character in supersedes_authority_hash
+        ):
+            raise ValueError("superseded T17 Authority Hash is invalid")
+        payload.update(
+            {
+                "supersedes_authority_hash": supersedes_authority_hash,
+                "superseded_authority_run_count": 0,
+                "successor_authority_count": 1,
+            }
+        )
     payload["approval_hash"] = canonical_hash(payload)
     path = policy.operations_root / "approvals" / f"approval-{payload['approval_hash']}.json"
     return write_exclusive(path, payload)
@@ -361,6 +374,14 @@ def validate_approval(
     binding: T16Binding,
 ) -> dict[str, Any]:
     approval = read_json(path)
+    supersedes = approval.get("supersedes_authority_hash")
+    successor_fields_valid = supersedes is None or (
+        isinstance(supersedes, str)
+        and len(supersedes) == 64
+        and all(character in "0123456789abcdef" for character in supersedes)
+        and approval.get("superseded_authority_run_count") == 0
+        and approval.get("successor_authority_count") == 1
+    )
     if (
         not self_hash_matches(approval, "approval_hash")
         or approval.get("schema_name") != APPROVAL_SCHEMA
@@ -372,6 +393,7 @@ def validate_approval(
         or approval.get("authority_count") != 1
         or approval.get("run_count") != 1
         or approval.get("stage3_locked") is not True
+        or not successor_fields_valid
     ):
         raise ValueError("formal T17 approval is invalid or stale")
     return approval

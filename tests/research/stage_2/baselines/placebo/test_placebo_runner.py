@@ -8,12 +8,17 @@ import pyarrow as pa  # type: ignore[import-untyped]
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
 import pytest
 
-from era100x.research.stage_2.baselines.placebo.contracts import canonical_hash
+from era100x.research.stage_2.baselines.placebo.contracts import (
+    RELAXATION_LEVELS,
+    S2P14T17Authority,
+    canonical_hash,
+)
 from era100x.research.stage_2.baselines.placebo.governance import T16Binding
 from era100x.research.stage_2.baselines.placebo.runner import (
     MATCH_SCHEMA,
     SUMMARY_SCHEMA,
     _catalog,
+    _validate_formal_prefix,
     produce_blind_selections,
     verify_run,
 )
@@ -171,3 +176,46 @@ def test_verify_recomputes_catalog_and_reconciliation(
     match_path.write_bytes(match_path.read_bytes() + b"tamper")
     with pytest.raises(ValueError, match="Hash drift"):
         verify_run(run_root, binding=_binding(tmp_path))
+
+
+def test_successor_requires_exactly_one_approved_authority_only_prefix(tmp_path: Path) -> None:
+    authority = S2P14T17Authority.seal(
+        {
+            "code_commit": "1" * 40,
+            "policy_hash": "2" * 64,
+            "approval_hash": "3" * 64,
+            "preregistration_hash": "4" * 64,
+            "source_t16_receipt_hash": "5" * 64,
+            "source_t16_authority_hash": "6" * 64,
+            "source_t16_binning_hash": "7" * 64,
+            "source_t16_manifest_hash": "8" * 64,
+            "source_t16_catalog_hash": "9" * 64,
+            "source_t16_snapshot_id": "a" * 64,
+            "source_t16_verify_hash": "b" * 64,
+            "source_counts_hash": "c" * 64,
+            "exact_fields": ("instrument", "evaluation_fold"),
+            "relaxation_order": RELAXATION_LEVELS,
+        }
+    )
+    authority_path = tmp_path / f"authority-{authority.authority_hash}.json"
+    authority_path.write_text(authority.model_dump_json())
+    approval = {"supersedes_authority_hash": authority.authority_hash}
+
+    _validate_formal_prefix(
+        existing_authorities=(authority_path,),
+        existing_runs=(),
+        approval=approval,
+    )
+
+    with pytest.raises(ValueError, match="Hash does not match"):
+        _validate_formal_prefix(
+            existing_authorities=(authority_path,),
+            existing_runs=(),
+            approval={"supersedes_authority_hash": "d" * 64},
+        )
+    with pytest.raises(ValueError, match="Run already exists"):
+        _validate_formal_prefix(
+            existing_authorities=(authority_path,),
+            existing_runs=(tmp_path / "stage2-s2p14-t17-existing",),
+            approval=approval,
+        )

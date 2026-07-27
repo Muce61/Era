@@ -20,8 +20,9 @@ The first commit-bound formal attempt at `272e22644864ab07738846350d5815ec306454
 creation because the strict Python reader rejected JSON arrays for two frozen tuple fields. The
 Authority remains append-only; no Run, selection, outcome, summary or publication exists. The
 reader now uses Pydantic's strict JSON path, which preserves tuple validation while accepting
-canonical JSON arrays. A new clean commit and explicit unique-successor approval are required
-before any further formal write.
+canonical JSON arrays. The recovery gate accepts only an approval that names this exact failed
+Authority, proves it has no Run, and authorizes one successor Authority/Run. A new clean commit and
+explicit unique-successor approval are required before any further formal write.
 
 The final formal successor `fa92072063be8455fab814c1e9f302f2b06392a999820a53bd430e7282f57579`
 completed T11–T16 at commit `555c2a543a9cb3fdf1cb8c79c644792933de2260`. Every Task handoff,

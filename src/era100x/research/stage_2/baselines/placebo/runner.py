@@ -934,6 +934,28 @@ def _promote_result_metadata(results_root: Path) -> None:
             shutil.move(str(source), str(destination))
 
 
+def _validate_formal_prefix(
+    *,
+    existing_authorities: tuple[Path, ...],
+    existing_runs: tuple[Path, ...],
+    approval: dict[str, Any],
+) -> None:
+    """Allow only a specifically approved Authority-only failed prefix."""
+
+    supersedes = approval.get("supersedes_authority_hash")
+    if existing_runs:
+        raise ValueError("formal T17 successor Run already exists")
+    if not existing_authorities:
+        if supersedes is not None:
+            raise ValueError("approved superseded T17 Authority does not exist")
+        return
+    if len(existing_authorities) != 1 or not isinstance(supersedes, str):
+        raise ValueError("formal T17 successor already exists")
+    previous = S2P14T17Authority.model_validate_json(existing_authorities[0].read_text())
+    if previous.authority_hash != supersedes:
+        raise ValueError("approved superseded T17 Authority Hash does not match")
+
+
 def run_formal(
     *,
     policy: PlaceboPolicy,
@@ -959,8 +981,11 @@ def run_formal(
         authorities = policy.evidence_root / "authorities"
         existing_authorities = tuple(authorities.glob("authority-*.json"))
         existing_runs = tuple((policy.evidence_root / "runs").glob("stage2-s2p14-t17-*"))
-        if existing_authorities or existing_runs:
-            raise ValueError("formal T17 successor already exists")
+        _validate_formal_prefix(
+            existing_authorities=existing_authorities,
+            existing_runs=existing_runs,
+            approval=approval,
+        )
         authority = freeze_authority(
             policy=policy,
             approval=approval,
