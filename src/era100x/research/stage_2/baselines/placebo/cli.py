@@ -32,6 +32,7 @@ def _parser() -> argparse.ArgumentParser:
     approval.add_argument("--approval-source", required=True)
     approval.add_argument("--approved-at")
     approval.add_argument("--supersedes-authority")
+    approval.add_argument("--supersedes-run")
     run = subparsers.add_parser("run")
     run.add_argument("--approval", type=Path, required=True)
     resume = subparsers.add_parser("resume")
@@ -125,6 +126,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             approval_source=arguments.approval_source,
             approved_at=arguments.approved_at,
             supersedes_authority_hash=arguments.supersedes_authority,
+            supersedes_run_id=arguments.supersedes_run,
         )
         result = {"status": "PASS", "approval_path": str(path)}
     elif arguments.command == "run":

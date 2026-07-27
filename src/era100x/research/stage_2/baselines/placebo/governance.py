@@ -326,6 +326,7 @@ def record_approval(
     approval_source: str,
     approved_at: str | None = None,
     supersedes_authority_hash: str | None = None,
+    supersedes_run_id: str | None = None,
 ) -> Path:
     if not repository_clean(repository_root):
         raise ValueError("formal T17 approval requires a clean repository")
@@ -349,6 +350,8 @@ def record_approval(
         "run_count": 1,
         "stage3_locked": True,
     }
+    if supersedes_run_id is not None and supersedes_authority_hash is None:
+        raise ValueError("superseded T17 Run requires its Authority Hash")
     if supersedes_authority_hash is not None:
         if len(supersedes_authority_hash) != 64 or any(
             character not in "0123456789abcdef" for character in supersedes_authority_hash
@@ -357,8 +360,21 @@ def record_approval(
         payload.update(
             {
                 "supersedes_authority_hash": supersedes_authority_hash,
-                "superseded_authority_run_count": 0,
+                "superseded_authority_run_count": 1 if supersedes_run_id is not None else 0,
                 "successor_authority_count": 1,
+            }
+        )
+    if supersedes_run_id is not None:
+        if (
+            not supersedes_run_id.startswith("stage2-s2p14-t17-")
+            or "/" in supersedes_run_id
+            or ".." in supersedes_run_id
+        ):
+            raise ValueError("superseded T17 Run ID is invalid")
+        payload.update(
+            {
+                "supersedes_run_id": supersedes_run_id,
+                "superseded_run_resume_allowed": False,
             }
         )
     payload["approval_hash"] = canonical_hash(payload)
@@ -375,12 +391,22 @@ def validate_approval(
 ) -> dict[str, Any]:
     approval = read_json(path)
     supersedes = approval.get("supersedes_authority_hash")
+    supersedes_run = approval.get("supersedes_run_id")
     successor_fields_valid = supersedes is None or (
         isinstance(supersedes, str)
         and len(supersedes) == 64
         and all(character in "0123456789abcdef" for character in supersedes)
-        and approval.get("superseded_authority_run_count") == 0
+        and approval.get("superseded_authority_run_count")
+        == (1 if supersedes_run is not None else 0)
         and approval.get("successor_authority_count") == 1
+    )
+    successor_run_fields_valid = supersedes_run is None or (
+        isinstance(supersedes, str)
+        and isinstance(supersedes_run, str)
+        and supersedes_run.startswith("stage2-s2p14-t17-")
+        and "/" not in supersedes_run
+        and ".." not in supersedes_run
+        and approval.get("superseded_run_resume_allowed") is False
     )
     if (
         not self_hash_matches(approval, "approval_hash")
@@ -394,6 +420,7 @@ def validate_approval(
         or approval.get("run_count") != 1
         or approval.get("stage3_locked") is not True
         or not successor_fields_valid
+        or not successor_run_fields_valid
     ):
         raise ValueError("formal T17 approval is invalid or stale")
     return approval

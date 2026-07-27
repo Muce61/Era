@@ -93,6 +93,15 @@ MATCH_SCHEMA = pa.schema(
         pa.field("matrix_json", pa.string(), nullable=False),
     ]
 )
+
+
+def _progress_percent(processed: int, total: int) -> str:
+    if total <= 0:
+        return "0.000000"
+    value = (Decimal(processed) * Decimal(100) / Decimal(total)).quantize(Decimal("0.000001"))
+    return format(value, "f")
+
+
 SUMMARY_SCHEMA = pa.schema(
     [
         pa.field("instrument", pa.string(), nullable=False),
@@ -123,7 +132,7 @@ def _candidate(payload: dict[str, Any]) -> PlaceboCandidate:
 
 
 def _utc_parts(timestamp_ns: int) -> tuple[int, int, int]:
-    instant = datetime.fromtimestamp(timestamp_ns / NS, UTC)
+    instant = datetime.fromtimestamp(timestamp_ns // NS, UTC)
     return instant.year, (instant.month - 1) // 3 + 1, instant.hour // 4
 
 
@@ -368,7 +377,7 @@ def produce_blind_selections(
                     "phase": "BLIND_SELECTION",
                     "processed_units": index,
                     "total_units": len(selection_files),
-                    "percent": index * 100 / len(selection_files),
+                    "percent": _progress_percent(index, len(selection_files)),
                     "heartbeat_at": datetime.now(UTC).isoformat(),
                 }
             )
@@ -434,7 +443,7 @@ def _create_outcome_index(
                         "subphase": "INDEX_T16_OUTCOMES",
                         "processed_units": processed,
                         "total_units": binding.counts["controls"],
-                        "percent": processed * 100 / binding.counts["controls"],
+                        "percent": _progress_percent(processed, binding.counts["controls"]),
                         "heartbeat_at": datetime.now(UTC).isoformat(),
                     }
                 )
@@ -718,7 +727,7 @@ def attach_outcomes_and_summarize(
                         "subphase": "GROUPS",
                         "processed_units": group_index,
                         "total_units": len(files),
-                        "percent": group_index * 100 / len(files),
+                        "percent": _progress_percent(group_index, len(files)),
                         "heartbeat_at": datetime.now(UTC).isoformat(),
                     }
                 )
@@ -940,20 +949,51 @@ def _validate_formal_prefix(
     existing_runs: tuple[Path, ...],
     approval: dict[str, Any],
 ) -> None:
-    """Allow only a specifically approved Authority-only failed prefix."""
+    """Allow only one specifically approved pre-production failed prefix."""
 
     supersedes = approval.get("supersedes_authority_hash")
-    if existing_runs:
-        raise ValueError("formal T17 successor Run already exists")
+    supersedes_run = approval.get("supersedes_run_id")
     if not existing_authorities:
-        if supersedes is not None:
+        if supersedes is not None or supersedes_run is not None:
             raise ValueError("approved superseded T17 Authority does not exist")
         return
-    if len(existing_authorities) != 1 or not isinstance(supersedes, str):
+    if not isinstance(supersedes, str):
         raise ValueError("formal T17 successor already exists")
-    previous = S2P14T17Authority.model_validate_json(existing_authorities[0].read_text())
-    if previous.authority_hash != supersedes:
+    matching = tuple(
+        path
+        for path in existing_authorities
+        if S2P14T17Authority.model_validate_json(path.read_text()).authority_hash == supersedes
+    )
+    if len(matching) != 1:
         raise ValueError("approved superseded T17 Authority Hash does not match")
+    if not existing_runs:
+        if len(existing_authorities) != 1 or supersedes_run is not None:
+            raise ValueError("formal T17 successor prefix is inconsistent")
+        return
+    if (
+        len(existing_runs) != 1
+        or not isinstance(supersedes_run, str)
+        or existing_runs[0].name != supersedes_run
+    ):
+        raise ValueError("approved superseded T17 Run does not match")
+    run_root = existing_runs[0]
+    contract_path = run_root / "run-contract.json"
+    contract = read_json(contract_path)
+    if (
+        canonical_hash(
+            {key: value for key, value in contract.items() if key != "run_contract_hash"}
+        )
+        != contract.get("run_contract_hash")
+        or contract.get("authority_hash") != supersedes
+        or contract.get("run_id") != supersedes_run
+        or contract.get("status") != "UNPUBLISHED"
+    ):
+        raise ValueError("superseded T17 Run contract is invalid")
+    material_files = tuple(
+        path for path in run_root.rglob("*") if path.is_file() and not path.name.startswith("._")
+    )
+    if material_files != (contract_path,):
+        raise ValueError("superseded T17 Run advanced beyond the approved empty prefix")
 
 
 def run_formal(
@@ -1023,7 +1063,7 @@ def run_formal(
                 "phase": "AUDIT",
                 "processed_units": 1,
                 "total_units": 1,
-                "percent": 100.0,
+                "percent": "100.000000",
                 "heartbeat_at": datetime.now(UTC).isoformat(),
             }
         )
@@ -1056,7 +1096,7 @@ def run_formal(
                 "phase": "VERIFY",
                 "processed_units": 1,
                 "total_units": 1,
-                "percent": 100.0,
+                "percent": "100.000000",
                 "heartbeat_at": datetime.now(UTC).isoformat(),
                 "status": "PASS",
             }
@@ -1156,7 +1196,7 @@ def resume_formal(
             "phase": "VERIFY",
             "processed_units": 1,
             "total_units": 1,
-            "percent": 100.0,
+            "percent": "100.000000",
             "heartbeat_at": datetime.now(UTC).isoformat(),
             "status": "PASS",
         }

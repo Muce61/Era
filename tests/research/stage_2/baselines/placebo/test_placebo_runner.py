@@ -18,6 +18,9 @@ from era100x.research.stage_2.baselines.placebo.runner import (
     MATCH_SCHEMA,
     SUMMARY_SCHEMA,
     _catalog,
+    _progress_percent,
+    _progress_writer,
+    _utc_parts,
     _validate_formal_prefix,
     produce_blind_selections,
     verify_run,
@@ -89,6 +92,34 @@ def test_resume_accepts_only_a_hash_valid_outcome_blind_seal(
     _write(root / "selection-seal.json", seal)
     with pytest.raises(ValueError, match="seal is invalid"):
         produce_blind_selections(binding=_binding(tmp_path), output_root=root)
+
+
+def test_progress_receipt_never_uses_binary_float(tmp_path: Path) -> None:
+    path = tmp_path / "checkpoint.json"
+    update = _progress_writer(path, "stage2-s2p14-t17-fixture")
+
+    update(
+        {
+            "phase": "GROUP_MATCHING",
+            "processed_units": 1,
+            "total_units": 3,
+            "percent": _progress_percent(1, 3),
+        }
+    )
+
+    payload = json.loads(path.read_text())
+    assert payload["percent"] == "33.333333"
+    assert not any(isinstance(value, float) for value in payload.values())
+    assert payload["progress_hash"] == canonical_hash(
+        {key: value for key, value in payload.items() if key != "progress_hash"}
+    )
+
+
+def test_utc_grouping_does_not_round_nanoseconds_across_boundary() -> None:
+    midnight_ns = 1_704_067_200_000_000_000  # 2024-01-01T00:00:00Z
+
+    assert _utc_parts(midnight_ns - 1) == (2023, 4, 5)
+    assert _utc_parts(midnight_ns) == (2024, 1, 0)
 
 
 def test_verify_recomputes_catalog_and_reconciliation(
@@ -213,9 +244,44 @@ def test_successor_requires_exactly_one_approved_authority_only_prefix(tmp_path:
             existing_runs=(),
             approval={"supersedes_authority_hash": "d" * 64},
         )
-    with pytest.raises(ValueError, match="Run already exists"):
+    run_root = tmp_path / "stage2-s2p14-t17-existing"
+    run_root.mkdir()
+    contract = {
+        "schema_name": "s2p14-t17-run-contract",
+        "schema_version": "1.0",
+        "run_id": run_root.name,
+        "authority_hash": authority.authority_hash,
+        "approval_hash": "e" * 64,
+        "code_commit": "1" * 40,
+        "policy_hash": "2" * 64,
+        "source_t16_verify_hash": "b" * 64,
+        "status": "UNPUBLISHED",
+    }
+    contract["run_contract_hash"] = canonical_hash(contract)
+    _write(run_root / "run-contract.json", contract)
+    _validate_formal_prefix(
+        existing_authorities=(authority_path,),
+        existing_runs=(run_root,),
+        approval={
+            "supersedes_authority_hash": authority.authority_hash,
+            "supersedes_run_id": run_root.name,
+        },
+    )
+
+    with pytest.raises(ValueError, match="Run does not match"):
         _validate_formal_prefix(
             existing_authorities=(authority_path,),
-            existing_runs=(tmp_path / "stage2-s2p14-t17-existing",),
+            existing_runs=(run_root,),
             approval=approval,
+        )
+
+    _write(run_root / "checkpoint.json", {"phase": "AUDIT"})
+    with pytest.raises(ValueError, match="advanced beyond"):
+        _validate_formal_prefix(
+            existing_authorities=(authority_path,),
+            existing_runs=(run_root,),
+            approval={
+                "supersedes_authority_hash": authority.authority_hash,
+                "supersedes_run_id": run_root.name,
+            },
         )

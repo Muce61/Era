@@ -24,6 +24,15 @@ canonical JSON arrays. The recovery gate accepts only an approval that names thi
 Authority, proves it has no Run, and authorizes one successor Authority/Run. A new clean commit and
 explicit unique-successor approval are required before any further formal write.
 
+The approved successor at `ab38ccb13e2aea962e7e87d6b9235b1aba6b6db1` sealed Authority
+`75fdc5abc76e587b50aa9c9ada9a690ab7dea7e7f4bd01f5ac60e942517181ca` and reserved Run
+`stage2-s2p14-t17-20260727T061156Z-75fdc5abc76e`, then stopped while hashing its first checkpoint:
+the progress percentage used a forbidden binary float. The Run contains only its validated
+UNPUBLISHED run contract; it has no checkpoint, blind selection, outcome, summary, publication or
+Verify. Progress percentages are now fixed Decimal-derived strings, and the recovery gate accepts
+only an approval naming this exact Authority and empty Run. Another clean commit and explicit
+successor approval are required before continuation.
+
 The final formal successor `fa92072063be8455fab814c1e9f302f2b06392a999820a53bd430e7282f57579`
 completed T11–T16 at commit `555c2a543a9cb3fdf1cb8c79c644792933de2260`. Every Task handoff,
 Catalog, Manifest, reconciliation and independent Verify passed. T16 published 532,708 H2 paths,
