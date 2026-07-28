@@ -148,7 +148,9 @@ def test_current_repository_state_blocks_formal_approval(tmp_path: Path) -> None
     state = load_current_development_state()
     result = approval_readiness(state=state, rehearsal_path=None, repository_root=Path.cwd())
     assert result["status"] == "BLOCKED"
-    assert result["blocking_questions"] == []
+    assert result["blocking_questions"] == [
+        "FORMAL_RUN_REQUIRES_CLEAN_COMMIT_AND_SEPARATE_COMMIT_BOUND_HUMAN_APPROVAL"
+    ]
     assert result["reason_code"] == "S2_V13_PLAN_CLOSED"
 
 

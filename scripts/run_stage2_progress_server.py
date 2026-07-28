@@ -59,6 +59,9 @@ from era100x.research.stage_2.acceptance.final_acceptance.cli import (
 from era100x.research.stage_2.acceptance.final_acceptance.governance import (
     load_policy as load_final_acceptance_policy,
 )
+from era100x.research.stage_2.lifecycle.governance import (
+    load_policy as load_lifecycle_repair_policy,
+)
 
 
 def _exclusive_lock_is_held(path: Path) -> bool:
@@ -1768,6 +1771,118 @@ def _stage2_v17_projection(stage2_root: Path) -> dict[str, Any]:
     }
 
 
+def _stage2_v18_projection(stage2_root: Path) -> dict[str, Any]:
+    """Project Plan v1.8 from machine governance and checked local evidence."""
+
+    del stage2_root
+    policy = load_lifecycle_repair_policy(
+        REPOSITORY_ROOT / "configs/governance/stage2_active_policy_v7.json",
+        repository_root=REPOSITORY_ROOT,
+    )
+    state = load_current_development_state()
+    performance_path = (
+        REPOSITORY_ROOT
+        / "configs/research/stage_2/s2p18_t11_t16_performance_v1.json"
+    )
+    performance = json.loads(performance_path.read_text(encoding="utf-8"))
+    claimed_hash = str(performance.get("performance_hash") or "")
+    calculated_hash = hashlib.sha256(
+        json.dumps(
+            {
+                key: value
+                for key, value in performance.items()
+                if key != "performance_hash"
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+    if claimed_hash != calculated_hash:
+        raise ValueError("Plan v1.8 performance evidence Hash drift")
+    benchmarks = cast(list[dict[str, Any]], performance.get("benchmarks") or [])
+    t11_benchmarks = [item for item in benchmarks if item.get("task_id") == "S2P18-T11"]
+    t16_benchmarks = [item for item in benchmarks if item.get("task_id") == "S2P18-T16"]
+    source_pass = bool(policy.source_audit_hash)
+    t11_perf_pass = bool(t11_benchmarks) and all(
+        float(item.get("speedup") or 0) >= 2
+        and item.get("semantic_equality") is True
+        for item in t11_benchmarks
+    )
+    t16_perf_pass = bool(t16_benchmarks) and all(
+        float(item.get("speedup") or 0) >= 2
+        and item.get("semantic_equality") is True
+        for item in t16_benchmarks
+    )
+    rss_pass = int(performance.get("observed_max_rss_bytes") or 0) <= int(
+        performance.get("max_rss_bytes_gate") or 0
+    )
+    heartbeat = datetime.fromtimestamp(
+        max(
+            performance_path.stat().st_mtime,
+            (REPOSITORY_ROOT / str(policy.payload["source_audit_path"])).stat().st_mtime,
+        ),
+        tz=UTC,
+    ).isoformat()
+    names = tuple(policy.payload["task_dag"])
+    phases: list[dict[str, Any]] = []
+    for name in names:
+        if name == "S2P18-T11":
+            processed = sum((source_pass, t11_perf_pass, rss_pass))
+            total = 3
+            status = "IN_PROGRESS" if state.current_task == name else "NOT_STARTED"
+            subphase = "IMPLEMENTATION_VALIDATED_FORMAL_RUN_APPROVAL_PENDING"
+        elif name == "S2P18-T16":
+            processed = int(t16_perf_pass)
+            total = 1
+            status = "NOT_STARTED"
+            subphase = "PERFORMANCE_READY_UPSTREAM_FORMAL_VERIFY_PENDING"
+        else:
+            processed, total, status = 0, 1, "NOT_STARTED"
+            subphase = "UPSTREAM_FORMAL_VERIFY_PENDING"
+        phases.append(
+            {
+                "name": name,
+                "status": status,
+                "progress_percent": 100.0 * processed / total,
+                "processed_units": processed,
+                "total_units": total,
+                "elapsed_seconds": 0,
+                "units_per_second": None,
+                "eta_seconds": None,
+                "subphase": subphase,
+                "heartbeat_at": heartbeat,
+                "verify_state": "PENDING",
+                "rss_bytes": performance.get("observed_max_rss_bytes")
+                if name == "S2P18-T11"
+                else None,
+            }
+        )
+    current = phases[0]
+    return {
+        "schema_name": "s2p18-t11-t20-ui-projection",
+        "status": state.stage_status,
+        "reason_code": state.blocking_questions[0],
+        "phase": current["name"],
+        "subphase": current["subphase"],
+        "progress_percent": current["progress_percent"],
+        "processed_units": current["processed_units"],
+        "total_units": current["total_units"],
+        "elapsed_seconds": current["elapsed_seconds"],
+        "rows_per_second": current["units_per_second"],
+        "eta_seconds": current["eta_seconds"],
+        "heartbeat_at": heartbeat,
+        "verify_state": current["verify_state"],
+        "rss_bytes": current["rss_bytes"],
+        "source_audit_hash": policy.source_audit_hash,
+        "performance_hash": claimed_hash,
+        "t11_min_speedup": min(float(item["speedup"]) for item in t11_benchmarks),
+        "t16_min_speedup": min(float(item["speedup"]) for item in t16_benchmarks),
+        "stage3_locked": state.stage3_locked,
+        "formal_run_authorized": False,
+        "phases": phases,
+    }
+
+
 def _execution_observability(run_root: Path) -> dict[str, Any]:
     """Project append-only execution evidence into compact UI counters."""
 
@@ -3351,6 +3466,14 @@ class ProgressHandler(BaseHTTPRequestHandler):
                 )
             except (OSError, ValueError) as exc:
                 self._reply_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})
+        elif path == "/api/v18/status":
+            try:
+                self._reply_json(
+                    HTTPStatus.OK,
+                    {"stage2_plan_v18": _stage2_v18_projection(self.server.stage2_root)},
+                )
+            except (OSError, ValueError) as exc:
+                self._reply_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})
         elif path == "/api/status":
             try:
                 payload = read_progress_status(self.server.run_root)
@@ -3369,6 +3492,7 @@ class ProgressHandler(BaseHTTPRequestHandler):
                 payload["stage2_plan_v15"] = _stage2_v15_projection(self.server.stage2_root)
                 payload["stage2_plan_v16"] = _stage2_v16_projection(self.server.stage2_root)
                 payload["stage2_plan_v17"] = _stage2_v17_projection(self.server.stage2_root)
+                payload["stage2_plan_v18"] = _stage2_v18_projection(self.server.stage2_root)
                 self._reply_json(HTTPStatus.OK, payload)
             except (OSError, ValueError) as exc:
                 self._reply_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})

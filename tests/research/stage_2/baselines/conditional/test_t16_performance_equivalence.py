@@ -36,6 +36,10 @@ def _reader_for_overlay(path: Path, digest: str) -> H2ControlReader:
     reader._cache_hits = 0  # type: ignore[attr-defined]
     reader._cache_misses = 0  # type: ignore[attr-defined]
     reader._bytes_read = 0  # type: ignore[attr-defined]
+    reader._partition_reads = 0  # type: ignore[attr-defined]
+    reader._range_queries = 0  # type: ignore[attr-defined]
+    reader._materialized_trade_rows = 0  # type: ignore[attr-defined]
+    reader._materialized_rows_avoided = 0  # type: ignore[attr-defined]
     return reader
 
 
@@ -76,6 +80,10 @@ def test_h2_row_group_is_decoded_once_into_immutable_typed_cache(tmp_path: Path)
         "cache_hits": 1,
         "cache_misses": 1,
         "bytes_read": path.stat().st_size,
+        "partition_reads": 1,
+        "range_queries": 0,
+        "materialized_trade_rows": 0,
+        "materialized_rows_avoided": 0,
     }
 
 
@@ -157,6 +165,8 @@ def test_optimized_h2_window_preserves_frozen_rows_gaps_and_source_hash(tmp_path
         (timestamps[2], 12, "c", Decimal("102")),
     )
     assert gaps == ()
+    assert reader.metrics()["materialized_trade_rows"] == 3
+    assert reader.metrics()["range_queries"] == 1
     assert source_hash == canonical_hash(
         {
             "instrument": "BTCUSDT",

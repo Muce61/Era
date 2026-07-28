@@ -2508,17 +2508,17 @@ rules:
   validation_paths:
   - docs/development/validations/stage_2/S2P17-T20.md
   stage_2_governance:
-    current_plan_version: '1.7'
+    current_plan_version: '1.8'
     current_plan_status: CLOSED_AT_T20
-    current_task: S2P17-T20
+    current_task: S2P18-T11
     current_task_status: FORMAL_ENGINEERING_RECONCILIATION_VERIFY_PASS
-    current_stage_status: BLOCKED
+    current_stage_status: IN_PROGRESS
     current_research_decision: STAGE2_NO_GO_CURRENT_EVIDENCE
-    current_policy: configs/governance/stage2_active_policy_v6.json
+    current_policy: configs/governance/stage2_active_policy_v7.json
     current_machine_state: configs/governance/current_development_state.json
     current_validation: docs/development/validations/stage_2/S2P17-T20.md
     completed_successor_tasks: [S2P13-T16, S2P14-T17, S2P15-T18, S2P16-T19, S2P17-T20]
-    next_task_status: T21_NOT_EXECUTED_NOT_APPROVED
+    next_task_status: S2P18_FORMAL_RUN_GATED_PENDING_CLEAN_COMMIT_APPROVAL
     stage3_locked: true
     historical_s2_t15_status: STOPPED_FAILED_UNPUBLISHED
     historical_s2_t15_successor: S2P13-T16

@@ -1,0 +1,62 @@
+{
+  "schema_name": "stage2-plan-v18-repair-preregistration",
+  "schema_version": "1.0",
+  "stage_plan_version": "1.8",
+  "base_commit": "29bc5492eb187e934175867311f1efde1af9c876",
+  "historical_decision": "STAGE2_NO_GO_CURRENT_EVIDENCE",
+  "historical_h2_primary": "PRIMARY_FAILED",
+  "historical_lifecycle": "INCONCLUSIVE_SOURCE_GAP_CENSORING",
+  "source_audit_path": "configs/research/stage_2/s2p18_t11_source_audit_v1.json",
+  "source_audit_hash": "48d7f421d16172322a0628a927865bc69599a35b212b9e0d4ac7085bc9e03319",
+  "lifecycle_tracks": [
+    "PURE_TRADES_COMPARATOR",
+    "CONTRACT_PRICE_OHLC_PRIMARY"
+  ],
+  "contract_price_role": "COARSE_BOUNDARY_EVIDENCE_NOT_EXECUTION",
+  "gap_rules": {
+    "after_terminal": "PRESERVE_TERMINAL",
+    "neither_boundary": "GAP_NON_DECISIVE",
+    "target_only": "COARSE_TARGET_BOUNDARY_CROSSING",
+    "stop_only": "COARSE_STOP_BOUNDARY_CROSSING",
+    "both": "AMBIGUOUS",
+    "intrasecond_state_order": "INCONCLUSIVE_INTRASECOND_ORDER",
+    "contract_price_missing_or_hash_drift": "FAILED_UNPUBLISHED",
+    "max_horizon": "RIGHT_CENSORED"
+  },
+  "h2_primary_unchanged": {
+    "instrument": "BTCUSDT",
+    "time_combination": "T2",
+    "target_bp": 20,
+    "stop_bp": 25,
+    "ambiguous": "FAILURE"
+  },
+  "t16_contract_unchanged": {
+    "matrix_cells": 30,
+    "matching": "EXISTING_FROZEN_CONTRACT",
+    "quintile_fit": "TRAIN_ONLY",
+    "seed": "EXISTING_FIXED_SEED",
+    "cluster_unit": "EXISTING_PREREGISTERED_UNIT"
+  },
+  "performance_gates": {
+    "t11_min_speedup": "2.0",
+    "t16_min_speedup": "2.0",
+    "max_rss_bytes": 3221225472,
+    "cold_and_warm_cache_required": true,
+    "semantic_equivalence_required": true
+  },
+  "task_dag": {
+    "S2P18-T11": [],
+    "S2P18-T12": ["S2P18-T11"],
+    "S2P18-T13": ["S2P18-T12"],
+    "S2P18-T14": ["S2P18-T12"],
+    "S2P18-T15": ["S2P18-T14"],
+    "S2P18-T16": ["S2P18-T11", "S2P18-T13", "S2P18-T15"],
+    "S2P18-T17": ["S2P18-T16"],
+    "S2P18-T18": ["S2P18-T16", "S2P18-T17"],
+    "S2P18-T19": ["S2P18-T11", "S2P18-T16", "S2P18-T17", "S2P18-T18"],
+    "S2P18-T20": ["S2P18-T19"]
+  },
+  "formal_run_status": "BLOCKED_PENDING_CLEAN_COMMIT_AND_SEPARATE_HUMAN_APPROVAL",
+  "stage3_locked": true,
+  "preregistration_hash": "be372eac69afc741a2a305b102e80fdc30e3ee18c0a756a63e5fbc7d11b8db07"
+}

@@ -182,7 +182,61 @@ def test_control_outcomes_batch_updates_and_report_fine_grained_progress(tmp_pat
         "subphase": "CONTROL_OUTCOMES",
         "processed_units": 2,
         "total_units": 2,
+        "physical_outcome_cache_hits": 0,
+        "physical_outcome_cache_misses": 2,
         "cache_hits": 7,
         "cache_misses": 2,
         "bytes_read": 123,
     }
+
+
+def test_physical_control_outcome_is_classified_once_for_reused_anchor(tmp_path: Path) -> None:
+    first = _candidate_payload(Decimal("100"))
+    second_payload = {**first, "control_anchor_id": "9" * 64}
+    second_payload["control_entry_price"] = Decimal(str(second_payload["control_entry_price"]))
+    second = V14ControlCandidate.seal(second_payload).model_dump(mode="json")
+    assert first["control_candidate_id"] != second["control_candidate_id"]
+    selection = tmp_path / "selection.parquet"
+    encoded = json.dumps(
+        [first, second],
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    pq.write_table(pa.table({"selected_candidates_json": [encoded]}), selection)
+    database = sqlite3.connect(":memory:")
+
+    class Reader:
+        calls = 0
+
+        def read_window(
+            self, *, instrument: str, start_ns: int, end_ns: int
+        ) -> tuple[tuple[object, ...], tuple[object, ...], str]:
+            self.calls += 1
+            return (), (), "8" * 64
+
+        def metrics(self) -> dict[str, int]:
+            return {"cache_hits": 0, "cache_misses": 0, "bytes_read": 0}
+
+    reader = Reader()
+    progress: list[dict[str, object]] = []
+    try:
+        assert _ingest_candidates(database, (selection,)) == 2
+        count, _, _ = _produce_control_outcomes(
+            database,
+            reader=reader,  # type: ignore[arg-type]
+            output_path=tmp_path / "outcomes.parquet",
+            total_count=2,
+            progress_callback=progress.append,
+        )
+        matrix_ids = database.execute(
+            "SELECT matrix_id FROM candidates ORDER BY control_candidate_id"
+        ).fetchall()
+    finally:
+        database.close()
+
+    assert count == 2
+    assert reader.calls == 1
+    assert len({row[0] for row in matrix_ids}) == 2
+    assert progress[-1]["physical_outcome_cache_hits"] == 1
+    assert progress[-1]["physical_outcome_cache_misses"] == 1

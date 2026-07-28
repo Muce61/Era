@@ -4,17 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from era100x.foundation.governance import GovernanceBlockedError
+from era100x.foundation.governance import (
+    GovernanceBlockedError,
+    require_operation_allowed,
+)
 from era100x.research.stage_2.baselines.conditional.binning_run import (
     freeze_binning_snapshots,
 )
-from era100x.research.stage_2.baselines.conditional.context_receipt_supplement import (
-    build_context_receipt_supplement,
-)
 from era100x.research.stage_2.baselines.conditional.full_run import freeze_authority, preflight
-from era100x.research.stage_2.baselines.conditional.receipt_supplement import (
-    build_receipt_distribution_supplement,
-)
 from era100x.research.stage_2.baselines.conditional.successor_policy import (
     require_final_successor_creation_state,
     require_final_successor_resume_state,
@@ -24,7 +21,9 @@ from era100x.research.stage_2.baselines.conditional.successor_policy import (
 def _assert_blocked(error: pytest.ExceptionInfo[GovernanceBlockedError], operation: str) -> None:
     assert error.value.reason_code == "GOVERNANCE_OPERATION_NOT_AUTHORIZED"
     assert error.value.operation == operation
-    assert error.value.blocking_questions == ()
+    assert error.value.blocking_questions == (
+        "FORMAL_RUN_REQUIRES_CLEAN_COMMIT_AND_SEPARATE_COMMIT_BOUND_HUMAN_APPROVAL",
+    )
 
 
 def test_direct_authority_freeze_is_blocked_before_reading_an_audit() -> None:
@@ -55,16 +54,14 @@ def test_direct_bin_freeze_is_blocked_before_reading_inputs() -> None:
     _assert_blocked(error, "FREEZE_BINS")
 
 
-def test_direct_receiver_supplement_build_is_blocked_before_source_reads() -> None:
-    with pytest.raises(GovernanceBlockedError) as error:
-        build_receipt_distribution_supplement()
-    _assert_blocked(error, "BUILD_AUDIT_SUPPLEMENT")
+def test_direct_receiver_supplement_build_is_now_authorized() -> None:
+    state = require_operation_allowed("BUILD_AUDIT_SUPPLEMENT")
+    assert "BUILD_AUDIT_SUPPLEMENT" in state.allowed_operations
 
 
-def test_direct_context_supplement_build_is_blocked_before_source_reads() -> None:
-    with pytest.raises(GovernanceBlockedError) as error:
-        build_context_receipt_supplement()
-    _assert_blocked(error, "BUILD_AUDIT_SUPPLEMENT")
+def test_direct_context_supplement_build_is_now_authorized() -> None:
+    state = require_operation_allowed("BUILD_AUDIT_SUPPLEMENT")
+    assert "BUILD_AUDIT_SUPPLEMENT" in state.allowed_operations
 
 
 def test_direct_new_run_is_blocked_before_inspecting_run_directories(tmp_path: Path) -> None:

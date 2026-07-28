@@ -98,7 +98,7 @@ Stage 2 H3 price proxy, and CR-2026-038 binds the accepted historical funding so
 S2P13-T17～T21 were not executed; any continuation requires a new approved plan/version and Stage 3
 remains locked.
 
-## Stage 2 Plans v1.4–v1.7 successor DAG and current closure
+## Stage 2 Plans v1.4–v1.8 successor DAG and current repair
 
 Each later Plan used a new namespaced Task identity and separately approved machine Policy:
 
@@ -108,13 +108,18 @@ verified S2P13-T16
   → Plan v1.5 / S2P15-T18 cluster bootstrap
   → Plan v1.6 / S2P16-T19 evidence gate
   → Plan v1.7 / S2P17-T20 final evidence acceptance
+  → Plan v1.8 / S2P18-T11–T20 lifecycle repair successor
 ```
 
 Legacy Plan v1.2 `S2-T15` remains `STOPPED_FAILED_UNPUBLISHED`; it is immutable historical
 evidence and does not block its `S2P13-T16` successor. The successor relationship replaces the
 capability identity only and never promotes the failed legacy Run into a formal result.
 
-T17 through T20 passed their engineering, publication, reconciliation and independent Verify
-gates. T20 closed the research decision as `STAGE2_NO_GO_CURRENT_EVIDENCE`: BTC and ETH Primary
-failed, while both lifecycle projections remain `INCONCLUSIVE_SOURCE_GAP_CENSORING`. T21 was not
-executed. Stage 2 is `BLOCKED`, not research PASS, and Stage 3 remains locked.
+T17 through T20 passed their historical engineering, publication, reconciliation and independent
+Verify gates. T20 closed that evidence chain as `STAGE2_NO_GO_CURRENT_EVIDENCE`: BTC and ETH
+Primary failed, while lifecycle remained `INCONCLUSIVE_SOURCE_GAP_CENSORING`.
+
+Plan v1.8 reopens implementation only. Its internal DAG is T11→T12→T13/T14→T15→T16→T17→T18→
+T19→T20, with T11 also feeding T16 and T19. No downstream task unlocks before its producers,
+Catalog, Manifest and Verify pass. Formal execution is gated by clean-commit approval. Stage 2 is
+`IN_PROGRESS`, not research PASS, and Stage 3 remains locked.

@@ -14,24 +14,26 @@ from era100x.foundation.governance import (
 )
 
 
-def test_repository_current_state_is_t20_closed_no_go_and_hash_valid() -> None:
+def test_repository_current_state_is_plan_v18_implementation_gated_and_hash_valid() -> None:
     state = load_current_development_state()
 
     assert state.schema_version == "1.3"
     assert state.current_stage == "S2"
-    assert state.current_plan == "stage_2_plan_v1.7"
-    assert state.current_task == "S2P17-T20"
+    assert state.current_plan == "stage_2_plan_v1.8"
+    assert state.current_task == "S2P18-T11"
     assert state.current_task_version == "1.0"
-    assert state.task_status == "FORMAL_ENGINEERING_PASS_RECONCILIATION_PASS_VERIFY_PASS"
-    assert state.stage_status == "BLOCKED"
+    assert state.task_status == "IMPLEMENTATION_VALIDATION_IN_PROGRESS_FORMAL_RUN_GATED"
+    assert state.stage_status == "IN_PROGRESS"
     assert state.research_decision == "STAGE2_NO_GO_CURRENT_EVIDENCE"
-    assert state.current_policy_path == "configs/governance/stage2_active_policy_v6.json"
+    assert state.current_policy_path == "configs/governance/stage2_active_policy_v7.json"
     assert state.formal_successor_result_exists is True
     assert state.stage3_locked is True
     assert state.srp_execution_status == "FRAMEWORK_IMPLEMENTED_FORMAL_OUTPUT_FORBIDDEN"
-    assert state.approved_execution_limit == "S2P17-T20"
-    assert state.formal_run_receipt_required is False
-    assert state.blocking_questions == ()
+    assert state.approved_execution_limit == "S2P18-T20"
+    assert state.formal_run_receipt_required is True
+    assert state.blocking_questions == (
+        "FORMAL_RUN_REQUIRES_CLEAN_COMMIT_AND_SEPARATE_COMMIT_BOUND_HUMAN_APPROVAL",
+    )
     assert "S2-T15" in state.sealed_tasks
     assert len(state.historical_task_states) == 1
     historical = state.historical_task_states[0]
@@ -54,6 +56,8 @@ def test_repository_current_state_is_t20_closed_no_go_and_hash_valid() -> None:
         "READ_ONLY_AUDIT",
         "VERIFY_EXISTING_EVIDENCE",
         "READ_ONLY_UI",
+        "BUILD_AUDIT_SUPPLEMENT",
+        "RUN_SEVEN_DAY_REHEARSAL",
     ],
 )
 def test_current_state_allows_only_scoped_audit_operations(operation: str) -> None:
@@ -64,9 +68,7 @@ def test_current_state_allows_only_scoped_audit_operations(operation: str) -> No
 @pytest.mark.parametrize(
     "operation",
     [
-        "BUILD_AUDIT_SUPPLEMENT",
         "BUILD_FUNDING_AUDIT_SUPPLEMENT",
-        "RUN_SEVEN_DAY_REHEARSAL",
         "FREEZE_AUTHORITY",
         "FREEZE_BINS",
         "PREFLIGHT",
@@ -81,7 +83,9 @@ def test_current_state_blocks_every_write_or_run_operation(operation: str) -> No
 
     assert error.value.reason_code == "GOVERNANCE_OPERATION_NOT_AUTHORIZED"
     assert error.value.operation == operation
-    assert error.value.blocking_questions == ()
+    assert error.value.blocking_questions == (
+        "FORMAL_RUN_REQUIRES_CLEAN_COMMIT_AND_SEPARATE_COMMIT_BOUND_HUMAN_APPROVAL",
+    )
 
 
 def test_state_hash_drift_fails_closed(tmp_path: Path) -> None:
@@ -107,7 +111,7 @@ def test_resealed_state_can_be_loaded_but_does_not_change_repository_authority(
     assert state.task_status == "IN_PROGRESS"
     assert (
         load_current_development_state().task_status
-        == "FORMAL_ENGINEERING_PASS_RECONCILIATION_PASS_VERIFY_PASS"
+        == "IMPLEMENTATION_VALIDATION_IN_PROGRESS_FORMAL_RUN_GATED"
     )
 
 

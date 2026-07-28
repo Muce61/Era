@@ -55,10 +55,29 @@ def _days(start_ns: int, end_ns: int) -> tuple[date, ...]:
 
 @dataclass(frozen=True, slots=True)
 class _CachedH2RowGroup:
-    """One verified row group decoded once into immutable typed columns."""
+    """One verified row group decoded once into immutable primitive columns."""
 
     timestamps: tuple[int, ...]
-    trades: tuple[H2Trade, ...]
+    venue_trade_ids: tuple[int, ...]
+    canonical_trade_ids: tuple[str, ...]
+    prices: tuple[Any, ...]
+
+    def slice(self, first: int, last: int) -> tuple[H2Trade, ...]:
+        return tuple(
+            H2Trade(
+                ts_event_ns=self.timestamps[index],
+                venue_trade_id=self.venue_trade_ids[index],
+                canonical_trade_id=self.canonical_trade_ids[index],
+                price=self.prices[index],
+            )
+            for index in range(first, last)
+        )
+
+    @property
+    def trades(self) -> tuple[H2Trade, ...]:
+        """Compatibility surface for directed equivalence tests, not the hot path."""
+
+        return self.slice(0, len(self.timestamps))
 
 
 class H2ControlReader:
@@ -78,6 +97,10 @@ class H2ControlReader:
         self._cache_hits = 0
         self._cache_misses = 0
         self._bytes_read = 0
+        self._partition_reads = 0
+        self._range_queries = 0
+        self._materialized_trade_rows = 0
+        self._materialized_rows_avoided = 0
 
     def metrics(self) -> dict[str, int]:
         """Return non-evidentiary reader counters for progress reporting."""
@@ -86,6 +109,10 @@ class H2ControlReader:
             "cache_hits": self._cache_hits,
             "cache_misses": self._cache_misses,
             "bytes_read": self._bytes_read,
+            "partition_reads": self._partition_reads,
+            "range_queries": self._range_queries,
+            "materialized_trade_rows": self._materialized_trade_rows,
+            "materialized_rows_avoided": self._materialized_rows_avoided,
         }
 
     def _group_rows(self, group: H2RowGroup) -> _CachedH2RowGroup:
@@ -96,6 +123,7 @@ class H2ControlReader:
             self._cache_hits += 1
             return cached
         self._cache_misses += 1
+        self._partition_reads += 1
         overlay = self._overlays.get(group.source_relative_path)
         path = (
             _safe_relative(STAGE1_PUBLISHED_ROOT, group.source_relative_path)
@@ -121,32 +149,27 @@ class H2ControlReader:
         venue_trade_ids = tuple(int(value) for value in table["venue_trade_id"].to_pylist())
         canonical_trade_ids = tuple(str(value) for value in table["canonical_trade_id"].to_pylist())
         prices = tuple(table["price"].to_pylist())
-        trades = tuple(
-            H2Trade(
-                ts_event_ns=timestamp,
-                venue_trade_id=venue_trade_id,
-                canonical_trade_id=canonical_trade_id,
-                price=price,
-            )
-            for timestamp, venue_trade_id, canonical_trade_id, price in zip(
-                timestamps,
-                venue_trade_ids,
-                canonical_trade_ids,
-                prices,
-                strict=True,
-            )
-        )
         previous_key: tuple[int, int, str] | None = None
-        for trade in trades:
+        for timestamp, venue_trade_id, canonical_trade_id in zip(
+            timestamps,
+            venue_trade_ids,
+            canonical_trade_ids,
+            strict=True,
+        ):
             current_key = (
-                trade.ts_event_ns,
-                trade.venue_trade_id,
-                trade.canonical_trade_id,
+                timestamp,
+                venue_trade_id,
+                canonical_trade_id,
             )
             if previous_key is not None and current_key < previous_key:
                 raise ValueError("H2 control row group violates frozen stable order")
             previous_key = current_key
-        rows = _CachedH2RowGroup(timestamps=timestamps, trades=trades)
+        rows = _CachedH2RowGroup(
+            timestamps=timestamps,
+            venue_trade_ids=venue_trade_ids,
+            canonical_trade_ids=canonical_trade_ids,
+            prices=prices,
+        )
         self._cache[key] = rows
         while len(self._cache) > 8:
             self._cache.popitem(last=False)
@@ -171,7 +194,10 @@ class H2ControlReader:
             rows = self._group_rows(group)
             first = bisect_left(rows.timestamps, start_ns)
             last = bisect_left(rows.timestamps, end_ns)
-            selected_trades = rows.trades[first:last]
+            self._range_queries += 1
+            self._materialized_trade_rows += last - first
+            self._materialized_rows_avoided += len(rows.timestamps) - (last - first)
+            selected_trades = rows.slice(first, last)
             for trade in selected_trades:
                 current_key = (
                     trade.ts_event_ns,

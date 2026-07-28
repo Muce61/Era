@@ -21,12 +21,31 @@ class ContractPricePoint:
     event_ts_ns: int
     available_at_ns: int
     close: Decimal
+    open: Decimal | None = None
+    high: Decimal | None = None
+    low: Decimal | None = None
+    volume: Decimal | None = None
+    source_file_sha256: str | None = None
 
     def __post_init__(self) -> None:
         if self.event_ts_ns < 0 or self.available_at_ns < 0 or self.close <= 0:
             raise ValueError("invalid Contract Price point")
         if self.available_at_ns > self.event_ts_ns + NANOSECONDS_PER_SECOND:
             raise ValueError("Contract Price is not causally available")
+        values = (self.open, self.high, self.low)
+        if any(value is not None and value <= 0 for value in values):
+            raise ValueError("Contract Price OHLC must be positive")
+        if any(value is not None for value in values) and any(value is None for value in values):
+            raise ValueError("Contract Price OHLC must be all present or all absent")
+        if self.high is not None and self.low is not None and self.open is not None:
+            if self.high < max(self.open, self.low, self.close):
+                raise ValueError("Contract Price high violates OHLC bounds")
+            if self.low > min(self.open, self.high, self.close):
+                raise ValueError("Contract Price low violates OHLC bounds")
+        if self.source_file_sha256 is not None and len(self.source_file_sha256) != 64:
+            raise ValueError("Contract Price source file hash is invalid")
+        if self.volume is not None and self.volume < 0:
+            raise ValueError("Contract Price volume cannot be negative")
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,6 +138,7 @@ def assemble_lifecycle_observations(
     observations = [
         LifecycleObservation(
             ts_event_ns=point.event_ts_ns,
+            available_at_ns=point.available_at_ns,
             price_source=PriceObservationSource.CONTRACT_PRICE_1S,
             venue_trade_id=ordinal,
             canonical_trade_id=f"contract-price-{point.event_ts_ns}",

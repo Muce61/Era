@@ -3,8 +3,10 @@
 This document preserves the historical operator contract for Stage 2 Plan v1.3.
 `configs/governance/stage2_active_policy_v2.json` is the immutable Plan v1.3 policy; v3 through v6
 are the separately approved Plan v1.4 through v1.7 policies. The current repository-wide operation
-authority is `configs/governance/current_development_state.json`, which points to v6/T20 and permits
-read-only audit, existing-evidence verification and read-only UI only. Runtime history comes from
+authority is `configs/governance/current_development_state.json`, which points to Policy v7 /
+Plan v1.8. It permits read-only work, append-only source audit supplements and isolated seven-day
+rehearsal. Authority, preflight, formal Run, resume and publication remain blocked until a clean
+commit and separate commit-bound human approval. Runtime history comes from
 append-only approval receipts, Authorities, checkpoints, task receipts, Manifests, Catalogs and
 Verify records. Historical governance files remain readable evidence but cannot authorize a new
 run.

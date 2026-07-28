@@ -13,6 +13,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, cast
 from collections.abc import Callable, Iterator
+from collections import OrderedDict
 
 import pyarrow as pa  # type: ignore[import-untyped]
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
@@ -21,7 +22,7 @@ from .h2_control_reader import H2ControlReader
 from .outcomes import (
     H2_COVERAGE_CONTRACT_ID,
     HORIZONS_SECONDS,
-    build_control_outcome_matrix,
+    classify_h2_cells_fast,
 )
 from .v14_contracts import (
     COMBINATION_ORDER,
@@ -198,6 +199,11 @@ def _produce_control_outcomes(
     gap_matrix_count = 0
     gap_cell_count = 0
     updates: list[tuple[str, str, str, str, str]] = []
+    physical_cache: OrderedDict[
+        tuple[str, int, str, str], tuple[tuple[OutcomeCell, ...], str]
+    ] = OrderedDict()
+    physical_cache_hits = 0
+    physical_cache_misses = 0
     last_progress_at = time.monotonic()
 
     def report_progress(*, force: bool = False) -> None:
@@ -213,6 +219,8 @@ def _produce_control_outcomes(
                 "subphase": "CONTROL_OUTCOMES",
                 "processed_units": count,
                 "total_units": total_count,
+                "physical_outcome_cache_hits": physical_cache_hits,
+                "physical_outcome_cache_misses": physical_cache_misses,
                 **reader.metrics(),
             }
         )
@@ -222,25 +230,49 @@ def _produce_control_outcomes(
         cursor = database.execute(
             """
             SELECT control_candidate_id,instrument,anchor_ns,timing_id,reference_price
-            FROM candidates ORDER BY instrument,anchor_ns,timing_id,control_candidate_id
+            FROM candidates
+            ORDER BY instrument,anchor_ns,timing_id,reference_price,control_candidate_id
             """
         )
         for candidate_id, instrument, anchor_ns, timing_id, reference_price in cursor:
-            horizon = HORIZONS_SECONDS[str(timing_id)]
-            trades, source_gaps, source_path_hash = reader.read_window(
-                instrument=str(instrument),
-                start_ns=int(anchor_ns),
-                end_ns=int(anchor_ns) + horizon * 1_000_000_000,
+            physical_key = (
+                str(instrument),
+                int(anchor_ns),
+                str(timing_id),
+                str(reference_price),
             )
-            matrix = build_control_outcome_matrix(
-                control_candidate_id=str(candidate_id),
-                time_combination_id=str(timing_id),
-                reference_price=Decimal(str(reference_price)),
-                trades=trades,
-                anchor_ns=int(anchor_ns),
-                source_path_hash=source_path_hash,
-                source_partition_bound=True,
-                source_gaps=source_gaps,
+            cached = physical_cache.get(physical_key)
+            if cached is None:
+                physical_cache_misses += 1
+                horizon = HORIZONS_SECONDS[str(timing_id)]
+                trades, source_gaps, source_path_hash = reader.read_window(
+                    instrument=str(instrument),
+                    start_ns=int(anchor_ns),
+                    end_ns=int(anchor_ns) + horizon * 1_000_000_000,
+                )
+                outcomes = classify_h2_cells_fast(
+                    trades,
+                    anchor_ns=int(anchor_ns),
+                    reference_price=Decimal(str(reference_price)),
+                    time_combination_id=str(timing_id),
+                    source_partition_bound=True,
+                    source_gaps=source_gaps,
+                )
+                physical_cache[physical_key] = (outcomes, source_path_hash)
+                while len(physical_cache) > 100_000:
+                    physical_cache.popitem(last=False)
+            else:
+                physical_cache_hits += 1
+                physical_cache.move_to_end(physical_key)
+                outcomes, source_path_hash = cached
+            matrix = ControlOutcomeMatrix.seal(
+                {
+                    "control_candidate_id": str(candidate_id),
+                    "time_combination_id": str(timing_id),
+                    "reference_price": Decimal(str(reference_price)),
+                    "outcomes": outcomes,
+                    "source_path_hash": source_path_hash,
+                }
             )
             outcomes_json = _json([cell.model_dump(mode="json") for cell in matrix.outcomes])
             matrix_gap_cells = sum(
@@ -305,10 +337,19 @@ def _produce_control_outcomes(
 
 
 def _outcome_lookup(
-    database: sqlite3.Connection, candidate_ids: set[str]
+    database: sqlite3.Connection,
+    candidate_ids: set[str],
+    *,
+    cache: OrderedDict[str, ControlOutcomeMatrix] | None = None,
 ) -> dict[str, ControlOutcomeMatrix]:
     result: dict[str, ControlOutcomeMatrix] = {}
-    values = sorted(candidate_ids)
+    if cache is not None:
+        for candidate_id in candidate_ids:
+            cached = cache.get(candidate_id)
+            if cached is not None:
+                cache.move_to_end(candidate_id)
+                result[candidate_id] = cached
+    values = sorted(candidate_ids.difference(result))
     for offset in range(0, len(values), 900):
         chunk = values[offset : offset + 900]
         placeholders = ",".join("?" for _ in chunk)
@@ -324,6 +365,10 @@ def _outcome_lookup(
             if matrix.control_outcome_matrix_id != str(matrix_id):
                 raise ValueError("control matrix lookup identity drift")
             result[str(candidate_id)] = matrix
+            if cache is not None:
+                cache[str(candidate_id)] = matrix
+                while len(cache) > 200_000:
+                    cache.popitem(last=False)
     if set(result) != candidate_ids:
         raise ValueError("control outcome lookup is incomplete")
     return result
@@ -345,6 +390,7 @@ def _attach_matches(
     event_gap_cell_count = 0
     matched_event_gap_matrix_count = 0
     control_gap_assignment_count = 0
+    decoded_matrix_cache: OrderedDict[str, ControlOutcomeMatrix] = OrderedDict()
     try:
         for file_index, path in enumerate(files, start=1):
             source_rows = cast(list[dict[str, Any]], pq.read_table(path).to_pylist())
@@ -353,7 +399,15 @@ def _attach_matches(
                 for row in source_rows
                 for candidate_id in row["control_candidate_ids"]
             }
-            lookup = _outcome_lookup(database, candidate_ids) if candidate_ids else {}
+            lookup = (
+                _outcome_lookup(
+                    database,
+                    candidate_ids,
+                    cache=decoded_matrix_cache,
+                )
+                if candidate_ids
+                else {}
+            )
             output_rows: list[dict[str, Any]] = []
             per_cell_event = [0] * 30
             per_cell_baseline = [Decimal(0)] * 30
@@ -499,6 +553,7 @@ def _attach_matches(
                         "subphase": "ATTACH_MATCHES",
                         "processed_units": file_index,
                         "total_units": len(files),
+                        "decoded_matrix_cache_size": len(decoded_matrix_cache),
                     }
                 )
     finally:

@@ -2,10 +2,23 @@
 
 ```text
 Current Stage: Stage 2
-Current Plan: stage_2_plan_v1.7 — CLOSED AT T20
-Current Task: S2P17-T20 v1.0 — final evidence acceptance
-Status: FORMAL ENGINEERING PASS / RECONCILIATION PASS / VERIFY PASS / STAGE2_NO_GO_CURRENT_EVIDENCE
+Current Plan: stage_2_plan_v1.8 — LIFECYCLE REPAIR IMPLEMENTATION
+Current Task: S2P18-T11 v1.0 — dual-track lifecycle and performance gate
+Status: IMPLEMENTATION VALIDATION IN PROGRESS / FORMAL RUN GATED / STAGE2_NO_GO_CURRENT_EVIDENCE
 ```
+
+Plan v1.8 reopens Stage 2 only for the approved lifecycle evidence repair and an append-only
+S2P18-T11–T20 successor chain. Source audit, implementation, isolated seven-day rehearsal and
+performance validation are authorized. Formal Authority/Run, publication and resume remain blocked
+until a clean commit exists and Muce grants a separate approval bound to that commit. Historical
+Plan v1.7 evidence remains immutable: BTC/ETH H2 Primary remain `PRIMARY_FAILED`, lifecycle remains
+`INCONCLUSIVE_SOURCE_GAP_CENSORING`, and the research decision remains
+`STAGE2_NO_GO_CURRENT_EVIDENCE`. Stage 3 remains locked.
+
+The machine authority is `configs/governance/current_development_state.json` schema v1.3 bound to
+`configs/governance/stage2_active_policy_v7.json`. The current source audit is
+`configs/research/stage_2/s2p18_t11_source_audit_v1.json`; it binds distinct Binance Trades and
+aggTrades archive families and forbids zero-volume forward-filled seconds as gap recovery.
 
 Plan v1.7 authorized only S2P17-T20. Formal Run
 `stage2-s2p17-t20-20260727T154959Z-ed51e7cb220b` completed under Authority
@@ -23,12 +36,8 @@ The research conclusion is `STAGE2_NO_GO_CURRENT_EVIDENCE`; BTC H2 Primary is
 `INCONCLUSIVE_SOURCE_GAP_CENSORING`. This is not Stage 2 research PASS. T21 was not executed and
 Stage 3 remains locked.
 
-The synchronized machine authority is
-`configs/governance/current_development_state.json` schema v1.3, bound to
-`configs/governance/stage2_active_policy_v6.json`. It permits only read-only audit,
-existing-evidence verification and read-only UI. `STAGE_REGISTRY.md` records Stage 2 as
-`BLOCKED / STAGE2_NO_GO_CURRENT_EVIDENCE`; no prose marker or historical Policy can authorize a
-new write or advance Stage 3.
+Policy v6 is now an immutable historical closure Policy and cannot authorize Plan v1.8 work or a
+new formal Run.
 
 Plan v1.2 `S2-T15` remains `STOPPED_FAILED_UNPUBLISHED` with no formal result. It is an immutable
 historical Task identity, not the current Stage 2 Task and not a dependency blocker for T20.

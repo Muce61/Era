@@ -47,6 +47,7 @@ class CensorReason(StrEnum):
     MAX_HORIZON_CENSORED = "MAX_HORIZON_CENSORED"
     SOURCE_GAP_CENSORED = "SOURCE_GAP_CENSORED"
     DATA_END_CENSORED = "DATA_END_CENSORED"
+    INCONCLUSIVE_INTRASECOND_ORDER = "INCONCLUSIVE_INTRASECOND_ORDER"
 
 
 class FundingTrack(StrEnum):
@@ -58,7 +59,22 @@ class FundingTrack(StrEnum):
 
 class PriceObservationSource(StrEnum):
     CONTRACT_PRICE_1S = "CONTRACT_PRICE_1S"
+    CONTRACT_PRICE_1S_OHLC_BOUNDARY = "CONTRACT_PRICE_1S_OHLC_BOUNDARY"
     CANONICAL_TRADE = "CANONICAL_TRADE"
+
+
+class LifecycleTrack(StrEnum):
+    PURE_TRADES_COMPARATOR = "PURE_TRADES_COMPARATOR"
+    CONTRACT_PRICE_OHLC_PRIMARY = "CONTRACT_PRICE_OHLC_PRIMARY"
+
+
+class BoundaryClassification(StrEnum):
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+    GAP_NON_DECISIVE = "GAP_NON_DECISIVE"
+    COARSE_TARGET_BOUNDARY_CROSSING = "COARSE_TARGET_BOUNDARY_CROSSING"
+    COARSE_STOP_BOUNDARY_CROSSING = "COARSE_STOP_BOUNDARY_CROSSING"
+    AMBIGUOUS = "AMBIGUOUS"
+    INCONCLUSIVE_INTRASECOND_ORDER = "INCONCLUSIVE_INTRASECOND_ORDER"
 
 
 class OptionalExitModelStatus(StrEnum):
@@ -121,18 +137,45 @@ class LifecycleObservation:
     canonical_trade_id: str
     price: Decimal
     cumulative_funding: Decimal = Decimal("0")
+    available_at_ns: int | None = None
+    source_gap_id: str | None = None
+    contract_price_partition_hash: str | None = None
+    boundary_classification: BoundaryClassification = BoundaryClassification.NOT_APPLICABLE
+    intrasecond_order_known: bool = True
+    synthetic_execution: bool = False
 
     def __post_init__(self) -> None:
         if self.ts_event_ns < 0 or self.venue_trade_id < 0:
             raise ValueError("observation identity cannot be negative")
         if not self.canonical_trade_id or self.price <= 0:
             raise ValueError("observation requires identity and positive price")
+        if self.available_at_ns is not None and self.available_at_ns < self.ts_event_ns:
+            raise ValueError("observation cannot be available before its event time")
+        if self.synthetic_execution:
+            raise ValueError("historical lifecycle observations cannot claim synthetic execution")
+        if self.price_source is PriceObservationSource.CONTRACT_PRICE_1S_OHLC_BOUNDARY:
+            if (
+                self.available_at_ns is None
+                or not self.source_gap_id
+                or not self.contract_price_partition_hash
+                or self.boundary_classification
+                in {
+                    BoundaryClassification.NOT_APPLICABLE,
+                    BoundaryClassification.GAP_NON_DECISIVE,
+                }
+                or self.intrasecond_order_known
+            ):
+                raise ValueError("OHLC boundary evidence requires explicit coarse gap lineage")
 
     @property
     def stable_order_key(self) -> tuple[int, int, int, str]:
-        source_priority = 0 if self.price_source is PriceObservationSource.CONTRACT_PRICE_1S else 1
+        source_priority = {
+            PriceObservationSource.CONTRACT_PRICE_1S: 0,
+            PriceObservationSource.CANONICAL_TRADE: 1,
+            PriceObservationSource.CONTRACT_PRICE_1S_OHLC_BOUNDARY: 2,
+        }[self.price_source]
         return (
-            self.ts_event_ns,
+            self.available_at_ns if self.available_at_ns is not None else self.ts_event_ns,
             source_priority,
             self.venue_trade_id,
             self.canonical_trade_id,
@@ -171,6 +214,16 @@ class LifecyclePairResult:
     structure_exit_model: OptionalExitModelStatus
     historical_mark_price_claim: bool
     output_hash: str
+    lifecycle_track: LifecycleTrack = LifecycleTrack.PURE_TRADES_COMPARATOR
+    observation_source: str = "CANONICAL_TRADES_AND_CONTRACT_PRICE_CLOSE"
+    source_gap_id: str | None = None
+    contract_price_partition_hash: str | None = None
+    boundary_classification: BoundaryClassification = BoundaryClassification.NOT_APPLICABLE
+    decision_available_at_ns: int | None = None
+    intrasecond_order_known: bool = True
+    synthetic_execution: bool = False
+    censoring_reason: str | None = None
+    terminal_reason: str | None = None
 
     def computed_hash(self) -> str:
         payload = {key: value for key, value in asdict(self).items() if key != "output_hash"}

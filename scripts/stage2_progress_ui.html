@@ -303,6 +303,7 @@
           <li id="s2p15t18Item" class="task-item active"><button id="s2p15t18Button" class="task-button" aria-current="step" data-task="Plan v1.5 Cluster Bootstrap：按来源事件UTC周聚类，输出真实、安慰剂及配对差的CI与FDR统计证据。"><span id="s2p15t18Node" class="node">18</span><span class="task-code">S2P15-T18</span><span class="task-name">Cluster Bootstrap</span><span id="s2p15t18State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
           <li id="s2p16t19Item" class="task-item"><button id="s2p16t19Button" class="task-button" data-task="Plan v1.6 Evidence Gate：只读综合 T11/T16/T17/T18，并执行预注册的 H2 与 H3 门槛。"><span id="s2p16t19Node" class="node">19</span><span class="task-code">S2P16-T19</span><span class="task-name">Evidence Gate</span><span id="s2p16t19State" class="task-state">CHECKING</span></button></li>
           <li id="s2p17t20Item" class="task-item active"><button id="s2p17t20Button" class="task-button" aria-current="step" data-task="Plan v1.7 Final Acceptance：验证完整证据链、盲选真实事件卡并收口当前 Stage 2 NO-GO。"><span id="s2p17t20Node" class="node">20</span><span class="task-code">S2P17-T20</span><span class="task-name">Final Acceptance</span><span id="s2p17t20State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
+          <li id="s2p18t11Item" class="task-item active"><button id="s2p18t11Button" class="task-button" aria-current="step" data-task="Plan v1.8：生命周期双轨来源修复、T11/T16 等价加速和 successor 正式链准备。"><span id="s2p18t11Node" class="node">11</span><span class="task-code">S2P18-T11</span><span class="task-name">Lifecycle Repair</span><span id="s2p18t11State" class="task-state">CHECKING</span><span class="active-dot"></span></button></li>
         </ol>
         <div id="taskHint" class="task-hint">选择节点查看职责。</div>
       </aside>
@@ -390,6 +391,18 @@
             <div class="research-card fail"><span>Stage 2 结论</span><strong id="v17Overall">PENDING</strong></div>
           </div>
           <span id="v17Evidence" class="live-evidence">H2/H3 historical final acceptance evidence · Stage 3 LOCKED</span>
+        </section>
+
+        <section class="live-flow" aria-labelledby="v18FlowTitle">
+          <div class="live-flow-head"><strong id="v18FlowTitle">Plan v1.8 · S2P18-T11–T20 Lifecycle Repair Successor</strong><span id="v18FlowSummary">正在读取来源审计、性能证据与正式执行门…</span></div>
+          <div id="v18FlowGrid" class="flow-grid" aria-live="polite"></div>
+          <div class="research-cards">
+            <div class="research-card"><span>来源审计</span><strong id="v18Source">CHECKING</strong></div>
+            <div class="research-card"><span>T11 最低加速</span><strong id="v18T11">CHECKING</strong></div>
+            <div class="research-card"><span>T16 最低加速</span><strong id="v18T16">CHECKING</strong></div>
+            <div class="research-card fail"><span>正式 Run</span><strong id="v18Formal">BLOCKED</strong></div>
+          </div>
+          <span id="v18Evidence" class="live-evidence">Implementation evidence only · historical NO-GO preserved · Stage 3 LOCKED</span>
         </section>
 
         <section class="authority">
@@ -1159,12 +1172,52 @@
       return plan;
     }
 
+    function renderV18Flow(status) {
+      const plan = status.stage2_plan_v18 || {};
+      const cards = (plan.phases || []).map(item => {
+        const raw = String(item.status || "NOT_STARTED");
+        return {
+          name:item.name,
+          icon:item.name === "S2P18-T11" ? "fa-gauge-high" : item.name === "S2P18-T20" ? "fa-shield-halved" : "fa-box-archive",
+          state:raw === "PASS" ? "pass" : raw === "IN_PROGRESS" ? "running" : raw === "FAILED" || raw === "BLOCKED" ? "failed" : "pending",
+          detail:[
+            `${raw} · ${Number(item.progress_percent || 0).toFixed(2)}%`,
+            `${number(item.processed_units)} / ${number(item.total_units)}`,
+            `耗时 ${elapsedDuration(item.elapsed_seconds)}`,
+            item.units_per_second ? `吞吐 ${Number(item.units_per_second).toFixed(2)} units/s` : null,
+            item.eta_seconds ? `ETA ${compactDuration(item.eta_seconds)}` : null,
+            item.subphase ? `当前 ${item.subphase}` : null,
+            item.heartbeat_at ? `心跳 ${dateTime(item.heartbeat_at)}` : null,
+            item.verify_state ? `Verify ${item.verify_state}` : null,
+            item.rss_bytes ? `RSS ${compactBytes(item.rss_bytes)}` : null
+          ].filter(Boolean).join(" · "),
+          progress:Math.max(0, Math.min(100, Number(item.progress_percent) || 0))
+        };
+      });
+      byId("v18FlowGrid").innerHTML = cards.map(flowCard).join("");
+      byId("v18FlowSummary").textContent = `${plan.status || "BLOCKED"} · ${plan.reason_code || "UNKNOWN_REASON"} · ${plan.phase || "S2P18-T11"} · ${Number(plan.progress_percent || 0).toFixed(2)}% · ${number(plan.processed_units)} / ${number(plan.total_units)} · ETA ${compactDuration(plan.eta_seconds)} · 心跳 ${plan.heartbeat_at ? dateTime(plan.heartbeat_at) : "—"} · 5秒自动刷新`;
+      byId("v18Source").textContent = plan.source_audit_hash ? "PASS" : "MISSING";
+      byId("v18T11").textContent = plan.t11_min_speedup ? `${Number(plan.t11_min_speedup).toFixed(3)}×` : "PENDING";
+      byId("v18T16").textContent = plan.t16_min_speedup ? `${Number(plan.t16_min_speedup).toFixed(3)}×` : "PENDING";
+      byId("v18Formal").textContent = plan.formal_run_authorized ? "AUTHORIZED" : "BLOCKED";
+      byId("v18Evidence").textContent = `source ${plan.source_audit_hash || "—"} · performance ${plan.performance_hash || "—"} · RSS ${compactBytes(plan.rss_bytes)} · Verify ${plan.verify_state || "PENDING"} · formal Run ${plan.formal_run_authorized ? "AUTHORIZED" : "BLOCKED"} · Stage 3 ${plan.stage3_locked ? "LOCKED" : "UNEXPECTED_UNLOCK"}`;
+      byId("v18Evidence").classList.toggle("bad", !plan.stage3_locked || plan.formal_run_authorized);
+      const failed = plan.status === "FAILED";
+      byId("s2p18t11Item").classList.toggle("failed", failed);
+      byId("s2p18t11Node").innerHTML = failed ? '<i class="fa-solid fa-xmark"></i>' : "11";
+      byId("s2p18t11State").textContent = plan.status || "CHECKING";
+      byId("taskProgressTag").className = "tag progress";
+      byId("taskProgressTag").innerHTML = `S2P18-T11 v1.0<b>${escapeHtml(plan.status || "CHECKING")}</b>`;
+      return plan;
+    }
+
     let legacyRefreshInFlight = false;
     let lastV13Status = null;
     let lastV14Status = null;
     let lastV15Status = null;
     let lastV16Status = null;
     let lastV17Status = null;
+    let lastV18Status = null;
     let legacyRailPassedCount = 17;
 
     async function refreshV13() {
@@ -1235,6 +1288,20 @@
         byId("v17FlowSummary").textContent = "BLOCKED · Plan v1.7 状态接口不可用";
         byId("v17Evidence").textContent = "状态读取失败；不得把 CHECKING 当作 PASS。";
         byId("v17Evidence").classList.add("bad");
+      }
+    }
+
+    async function refreshV18() {
+      try {
+        const response = await fetch("/api/v18/status", {cache:"no-store"});
+        if (!response.ok) throw new Error("v1.8 status unavailable");
+        const status = await response.json();
+        lastV18Status = status;
+        renderV18Flow(status);
+      } catch (error) {
+        byId("v18FlowSummary").textContent = "BLOCKED · Plan v1.8 状态接口不可用";
+        byId("v18Evidence").textContent = "状态读取失败；不得把 CHECKING 当作 PASS。";
+        byId("v18Evidence").classList.add("bad");
       }
     }
 
@@ -1430,6 +1497,7 @@
         if (lastV15Status) renderV15Flow(lastV15Status);
         if (lastV16Status) renderV16Flow(lastV16Status);
         if (lastV17Status) renderV17Flow(lastV17Status);
+        if (lastV18Status) renderV18Flow(lastV18Status);
       }
     }
     refreshV13();
@@ -1437,18 +1505,21 @@
     refreshV15();
     refreshV16();
     refreshV17();
+    refreshV18();
     refresh();
     setInterval(refreshV13, 5000);
     setInterval(refreshV14, 5000);
     setInterval(refreshV15, 5000);
     setInterval(refreshV16, 5000);
     setInterval(refreshV17, 5000);
+    setInterval(refreshV18, 5000);
     setInterval(() => {
       if (lastV13Status) renderV13Flow(lastV13Status);
       if (lastV14Status) renderV14Flow(lastV14Status);
       if (lastV15Status) renderV15Flow(lastV15Status);
       if (lastV16Status) renderV16Flow(lastV16Status);
       if (lastV17Status) renderV17Flow(lastV17Status);
+      if (lastV18Status) renderV18Flow(lastV18Status);
     }, 1000);
     setInterval(refresh, 30000);
   </script>

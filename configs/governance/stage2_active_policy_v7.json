@@ -1,0 +1,71 @@
+{
+  "schema_name": "stage2-active-policy-v7",
+  "schema_version": "7.0",
+  "stage": "S2",
+  "stage_plan_version": "1.8",
+  "execution_limit": "S2P18-T20",
+  "stage3_locked": true,
+  "code_commit_mode": "CURRENT_CLEAN_HEAD_FOR_FORMAL_RUN",
+  "formal_run_authorization": "SEPARATE_COMMIT_BOUND_APPROVAL_REQUIRED",
+  "contract_paths": [
+    "docs/spec/system_manual_v1.3.5_final.md",
+    "docs/development/plans/stage_2_plan_v1.8.md",
+    "docs/development/changes/CR-2026-050.md",
+    "docs/development/decisions/ADR-S2-026-lifecycle-gap-recovery-and-successor-run.md",
+    "docs/development/tasks/stage_2/S2P18-T11-lifecycle-repair.md",
+    "docs/development/tasks/stage_2/S2P18-T12-path-extraction.md",
+    "docs/development/tasks/stage_2/S2P18-T13-path-metrics.md",
+    "docs/development/tasks/stage_2/S2P18-T14-first-passage.md",
+    "docs/development/tasks/stage_2/S2P18-T15-ambiguity.md",
+    "docs/development/tasks/stage_2/S2P18-T16-conditional-baseline.md",
+    "docs/development/tasks/stage_2/S2P18-T17-placebo.md",
+    "docs/development/tasks/stage_2/S2P18-T18-cluster-bootstrap.md",
+    "docs/development/tasks/stage_2/S2P18-T19-evidence-gate.md",
+    "docs/development/tasks/stage_2/S2P18-T20-final-acceptance.md",
+    "configs/research/stage_2/s2p18_t11_t20_repair_v1.json"
+  ],
+  "preregistration_path": "configs/research/stage_2/s2p18_t11_t20_repair_v1.json",
+  "source_audit_path": "configs/research/stage_2/s2p18_t11_source_audit_v1.json",
+  "source_audit_hash": "48d7f421d16172322a0628a927865bc69599a35b212b9e0d4ac7085bc9e03319",
+  "task_dag": {
+    "S2P18-T11": [],
+    "S2P18-T12": ["S2P18-T11"],
+    "S2P18-T13": ["S2P18-T12"],
+    "S2P18-T14": ["S2P18-T12"],
+    "S2P18-T15": ["S2P18-T14"],
+    "S2P18-T16": ["S2P18-T11", "S2P18-T13", "S2P18-T15"],
+    "S2P18-T17": ["S2P18-T16"],
+    "S2P18-T18": ["S2P18-T16", "S2P18-T17"],
+    "S2P18-T19": ["S2P18-T11", "S2P18-T16", "S2P18-T17", "S2P18-T18"],
+    "S2P18-T20": ["S2P18-T19"]
+  },
+  "allowed_operations": [
+    "READ_ONLY_AUDIT",
+    "VERIFY_EXISTING_EVIDENCE",
+    "READ_ONLY_UI",
+    "BUILD_AUDIT_SUPPLEMENT",
+    "RUN_SEVEN_DAY_REHEARSAL"
+  ],
+  "blocked_operations": [
+    "BUILD_FUNDING_AUDIT_SUPPLEMENT",
+    "FREEZE_AUTHORITY",
+    "FREEZE_BINS",
+    "PREFLIGHT",
+    "RUN",
+    "RESUME",
+    "PUBLISH"
+  ],
+  "required_gates": [
+    "SOURCE_AUDIT_PASS",
+    "SEMANTIC_EQUIVALENCE_PASS",
+    "T11_SPEEDUP_GTE_2X",
+    "T16_SPEEDUP_GTE_2X",
+    "RSS_LTE_3_GIB",
+    "CLEAN_COMMIT",
+    "SEPARATE_COMMIT_BOUND_HUMAN_APPROVAL",
+    "AUTHORITY_BEFORE_RUN",
+    "UNIQUE_RUN_LOCK",
+    "FULL_RECONCILIATION",
+    "FULL_VERIFY"
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "schema_name": "stage2-plan-v18-performance-evidence",
+  "schema_version": "1.0",
+  "status": "PASS",
+  "formal_run_executed": false,
+  "max_rss_bytes_gate": 3221225472,
+  "observed_max_rss_bytes": 2875785216,
+  "benchmarks": [
+    {
+      "task_id": "S2P18-T11",
+      "corpus": "250000_POINTS_200_RANGE_QUERIES",
+      "baseline_seconds": "0.006278",
+      "optimized_seconds": "0.001233",
+      "speedup": "5.090",
+      "semantic_equality": true
+    },
+    {
+      "task_id": "S2P18-T11",
+      "corpus": "20_REAL_OVERLAPPING_BTC_EPISODES_600S_COMPLETE",
+      "baseline_seconds": "6.902750",
+      "optimized_seconds": "3.172270",
+      "speedup": "2.175970",
+      "semantic_equality": true
+    },
+    {
+      "task_id": "S2P18-T16",
+      "corpus": "20000_SYNTHETIC_TRADES_FROZEN_30_CELL",
+      "baseline_seconds": "0.023187",
+      "optimized_seconds": "0.011008",
+      "speedup": "2.106460",
+      "semantic_equality": true
+    }
+  ],
+  "rehearsal": {
+    "scope": "ONE_REAL_SEVEN_DAY_BTC_EPISODE_PLUS_ADJACENT_EPISODE",
+    "cold_first_episode_seconds": "12.102",
+    "warm_adjacent_episode_seconds": "0.022916",
+    "historical_execution_claim": false
+  },
+  "performance_hash": "31f59ad6e63c6df253a0c025b82b4f8e1f656c941bc535a790d0d19013112edd"
+}

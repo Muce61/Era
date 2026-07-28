@@ -15,6 +15,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 from array import array
 from bisect import bisect_left, bisect_right
 from collections import Counter
@@ -79,14 +80,26 @@ from era100x.research.stage_2.lifecycle import (
     SourceCoverage,
     assemble_lifecycle_observations,
     evaluate_lifecycle_pair,
+    evaluate_dual_track_lifecycle,
     replay_single_position_admission,
 )
+from era100x.research.stage_2.lifecycle.engine import funding_for_track
+from era100x.research.stage_2.lifecycle.governance import load_source_audit
+from era100x.research.stage_2.lifecycle.models import (
+    BPS,
+    PRIMARY_LANDMARK_SECONDS,
+    TICKET_EQUITY,
+    USABLE_MARGIN,
+)
+from era100x.research.stage_2.lifecycle.range_index import DecimalTimeRangeIndex
 from era100x.research.stage_2.metrics.path.full_run import (
     _is_v2_stably_ordered,
     _reference_prices,
 )
 from era100x.research.stage_2.paths.extraction.full_run import _episode_tables
+from era100x.research.stage_2.paths.extraction.models import PathGap
 from era100x.research.stage_2.runtime_v2.catalog import CatalogReaderV2
+from era100x.research.stage_2.runtime_v2.memory import process_current_rss_bytes
 
 from .orchestrator import REHEARSAL_SCHEMA, TASKS, TaskHandoff, current_commit
 from .producer_contracts import ExecutionScope, UpstreamArtifact
@@ -625,6 +638,56 @@ def _verified_trade_day(instrument: str, owner_date: date) -> _VerifiedTradeDay:
     )
 
 
+@lru_cache(maxsize=8)
+def _verified_trade_range_day(
+    instrument: str, owner_date: date
+) -> DecimalTimeRangeIndex:
+    """Build one reusable price-crossing index per verified Trade day."""
+
+    day = _verified_trade_day(instrument, owner_date)
+    return DecimalTimeRangeIndex.build(
+        tuple(int(value) for value in day.timestamps_ns),
+        tuple(Decimal(value) for value in day.table["price"].to_pylist()),
+    )
+
+
+@lru_cache(maxsize=16)
+def _verified_trade_gaps_day(instrument: str, owner_date: date) -> tuple[PathGap, ...]:
+    day = _verified_trade_day(instrument, owner_date)
+    timestamps = day.table["ts_event_ns"].to_pylist()
+    venue_ids = day.table["venue_trade_id"].to_pylist()
+    gaps: list[PathGap] = []
+    for left_index in range(len(venue_ids) - 1):
+        right_index = left_index + 1
+        left_id = int(venue_ids[left_index])
+        right_id = int(venue_ids[right_index])
+        if right_id > left_id + 1:
+            gaps.append(
+                PathGap(
+                    evidence_level="H2",
+                    reason_code="H2_VENUE_TRADE_ID_GAP",
+                    preceding_ts_event_ns=int(timestamps[left_index]),
+                    following_ts_event_ns=int(timestamps[right_index]),
+                    missing_count=right_id - left_id - 1,
+                    preceding_venue_trade_id=left_id,
+                    following_venue_trade_id=right_id,
+                )
+            )
+        elif right_id < left_id:
+            gaps.append(
+                PathGap(
+                    evidence_level="H2",
+                    reason_code="H2_VENUE_TRADE_ID_REVERSAL",
+                    preceding_ts_event_ns=int(timestamps[left_index]),
+                    following_ts_event_ns=int(timestamps[right_index]),
+                    missing_count=left_id - right_id,
+                    preceding_venue_trade_id=left_id,
+                    following_venue_trade_id=right_id,
+                )
+            )
+    return tuple(gaps)
+
+
 def _verified_trade_metadata(
     *, instrument: str, start_ns: int, end_ns: int
 ) -> tuple[tuple[str, ...], tuple[dict[str, Any], ...]]:
@@ -793,6 +856,15 @@ def _contract_prices(
                 event_ts_ns=int(item["event_ts_ns"]),
                 available_at_ns=int(item["available_at_ns"]),
                 close=Decimal(item["close"]),
+                open=Decimal(item["open"]) if item.get("open") is not None else None,
+                high=Decimal(item["high"]) if item.get("high") is not None else None,
+                low=Decimal(item["low"]) if item.get("low") is not None else None,
+                volume=Decimal(item["volume"]) if item.get("volume") is not None else None,
+                source_file_sha256=(
+                    str(item["source_file_sha256"])
+                    if item.get("source_file_sha256") is not None
+                    else None
+                ),
             )
             for item in selected.to_pylist()
         )
@@ -809,6 +881,11 @@ class _ContractPriceDay:
     table: Any
 
 
+@dataclass(frozen=True, slots=True)
+class _ContractPriceRangeDay:
+    close: DecimalTimeRangeIndex
+
+
 @lru_cache(maxsize=16)
 def _contract_price_day(
     reader: FixedT10Reader, instrument: str, owner_date: date
@@ -821,13 +898,391 @@ def _contract_price_day(
         instrument=instrument,
         variant="FOUNDATION",
         owner_date=owner_date,
-        columns=["event_ts_ns", "available_at_ns", "close"],
+        columns=[
+            "event_ts_ns",
+            "available_at_ns",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "source_file_sha256",
+        ],
     )
     timestamp_array = array("q", table["event_ts_ns"].to_pylist())
     timestamps = memoryview(timestamp_array).toreadonly()
     if any(right <= left for left, right in zip(timestamps, timestamps[1:], strict=False)):
         raise ValueError("Contract Price day violates unique timestamp order")
     return _ContractPriceDay(timestamps_ns=timestamps, table=table)
+
+
+@lru_cache(maxsize=8)
+def _contract_price_range_day(
+    reader: FixedT10Reader, instrument: str, owner_date: date
+) -> _ContractPriceRangeDay:
+    day = _contract_price_day(reader, instrument, owner_date)
+    timestamps = tuple(int(value) for value in day.timestamps_ns)
+    return _ContractPriceRangeDay(
+        close=DecimalTimeRangeIndex.build(
+            timestamps,
+            tuple(Decimal(value) for value in day.table["close"].to_pylist()),
+        ),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class _IndexedHit:
+    owner_date: date
+    row_index: int
+    timestamp_ns: int
+    price: Decimal
+
+
+def _scope_days(start_ns: int, end_ns: int) -> tuple[date, ...]:
+    current = _date_from_ns(start_ns)
+    last = _date_from_ns(end_ns - 1)
+    days: list[date] = []
+    while current <= last:
+        days.append(current)
+        current += timedelta(days=1)
+    return tuple(days)
+
+
+def _first_trade_indexed(
+    *,
+    instrument: str,
+    start_ns: int,
+    end_ns: int,
+    threshold: Decimal,
+    upward: bool,
+) -> _IndexedHit | None:
+    for owner_date in _scope_days(start_ns, end_ns):
+        index = _verified_trade_range_day(instrument, owner_date)
+        match = (
+            index.first_ge(start_ns, end_ns, threshold)
+            if upward
+            else index.first_le(start_ns, end_ns, threshold)
+        )
+        if match is not None:
+            timestamp, price, row_index = match
+            return _IndexedHit(owner_date, row_index, timestamp, price)
+    return None
+
+
+def _first_contract_indexed(
+    *,
+    reader: FixedT10Reader,
+    instrument: str,
+    start_ns: int,
+    end_ns: int,
+    threshold: Decimal,
+) -> _IndexedHit | None:
+    for owner_date in _scope_days(start_ns, end_ns):
+        index = _contract_price_range_day(reader, instrument, owner_date).close
+        match = index.first_le(start_ns, end_ns, threshold)
+        if match is not None:
+            timestamp, price, row_index = match
+            return _IndexedHit(owner_date, row_index, timestamp, price)
+    return None
+
+
+def _max_contract_indexed(
+    *,
+    reader: FixedT10Reader,
+    instrument: str,
+    start_ns: int,
+    end_ns: int,
+) -> _IndexedHit | None:
+    best: _IndexedHit | None = None
+    for owner_date in _scope_days(start_ns, end_ns):
+        index = _contract_price_range_day(reader, instrument, owner_date).close
+        match = index.range_max(start_ns, end_ns)
+        if match is None:
+            continue
+        timestamp, price = match
+        row_index = bisect_left(index.timestamps_ns, timestamp)
+        candidate = _IndexedHit(owner_date, row_index, timestamp, price)
+        if best is None or candidate.price > best.price or (
+            candidate.price == best.price and candidate.timestamp_ns < best.timestamp_ns
+        ):
+            best = candidate
+    return best
+
+
+def _contract_point_at(
+    reader: FixedT10Reader,
+    *,
+    instrument: str,
+    owner_date: date,
+    row_index: int,
+) -> ContractPricePoint:
+    row = (
+        _contract_price_day(reader, instrument, owner_date)
+        .table.slice(row_index, 1)
+        .to_pylist()[0]
+    )
+    return ContractPricePoint(
+        event_ts_ns=int(row["event_ts_ns"]),
+        available_at_ns=int(row["available_at_ns"]),
+        close=Decimal(row["close"]),
+        open=Decimal(row["open"]),
+        high=Decimal(row["high"]),
+        low=Decimal(row["low"]),
+        volume=Decimal(row["volume"]),
+        source_file_sha256=str(row["source_file_sha256"]),
+    )
+
+
+def _contract_point_for_timestamp(
+    reader: FixedT10Reader,
+    *,
+    instrument: str,
+    timestamp_ns: int,
+) -> ContractPricePoint:
+    owner_date = _date_from_ns(timestamp_ns)
+    day = _contract_price_day(reader, instrument, owner_date)
+    row_index = bisect_left(day.timestamps_ns, timestamp_ns)
+    if row_index >= len(day.timestamps_ns) or day.timestamps_ns[row_index] != timestamp_ns:
+        raise ValueError("CONTRACT_PRICE_GAP_SECOND_UNAVAILABLE")
+    return _contract_point_at(
+        reader,
+        instrument=instrument,
+        owner_date=owner_date,
+        row_index=row_index,
+    )
+
+
+def _last_contract_point(
+    reader: FixedT10Reader,
+    *,
+    instrument: str,
+    timestamp_ns: int,
+) -> ContractPricePoint:
+    for owner_date in reversed(_scope_days(timestamp_ns - DAY_NS, timestamp_ns + 1)):
+        index = _contract_price_range_day(reader, instrument, owner_date).close
+        match = index.last_at_or_before(timestamp_ns)
+        if match is not None:
+            row_index = bisect_right(index.timestamps_ns, timestamp_ns) - 1
+            return _contract_point_at(
+                reader,
+                instrument=instrument,
+                owner_date=owner_date,
+                row_index=row_index,
+            )
+    raise ValueError("funding or landmark has no causal Contract Price")
+
+
+def _trade_point_at(*, instrument: str, hit: _IndexedHit) -> CanonicalTradePoint:
+    row = _verified_trade_day(instrument, hit.owner_date).table.slice(
+        hit.row_index, 1
+    ).to_pylist()[0]
+    return CanonicalTradePoint(
+        ts_event_ns=int(row["ts_event_ns"]),
+        venue_trade_id=int(row["venue_trade_id"]),
+        canonical_trade_id=str(row["canonical_trade_id"]),
+        price=Decimal(row["price"]),
+    )
+
+
+def _indexed_window_gaps(
+    *, instrument: str, start_ns: int, end_ns: int
+) -> tuple[PathGap, ...]:
+    days = _scope_days(start_ns, end_ns)
+    gaps_list = [
+        gap
+        for owner_date in days
+        for gap in _verified_trade_gaps_day(instrument, owner_date)
+        if gap.preceding_ts_event_ns >= start_ns and gap.following_ts_event_ns < end_ns
+    ]
+    for left_date, right_date in zip(days, days[1:], strict=False):
+        left = _verified_trade_day(instrument, left_date).table
+        right = _verified_trade_day(instrument, right_date).table
+        if not left.num_rows or not right.num_rows:
+            continue
+        left_row = left.slice(left.num_rows - 1, 1).to_pylist()[0]
+        right_row = right.slice(0, 1).to_pylist()[0]
+        left_id = int(left_row["venue_trade_id"])
+        right_id = int(right_row["venue_trade_id"])
+        if right_id > left_id + 1:
+            gaps_list.append(
+                PathGap(
+                    evidence_level="H2",
+                    reason_code="H2_VENUE_TRADE_ID_GAP",
+                    preceding_ts_event_ns=int(left_row["ts_event_ns"]),
+                    following_ts_event_ns=int(right_row["ts_event_ns"]),
+                    missing_count=right_id - left_id - 1,
+                    preceding_venue_trade_id=left_id,
+                    following_venue_trade_id=right_id,
+                )
+            )
+        elif right_id < left_id:
+            gaps_list.append(
+                PathGap(
+                    evidence_level="H2",
+                    reason_code="H2_VENUE_TRADE_ID_REVERSAL",
+                    preceding_ts_event_ns=int(left_row["ts_event_ns"]),
+                    following_ts_event_ns=int(right_row["ts_event_ns"]),
+                    missing_count=left_id - right_id,
+                    preceding_venue_trade_id=left_id,
+                    following_venue_trade_id=right_id,
+                )
+            )
+    gaps = tuple(gaps_list)
+    return tuple(
+        sorted(
+            gaps,
+            key=lambda gap: (
+                gap.preceding_ts_event_ns,
+                gap.following_ts_event_ns,
+                gap.preceding_venue_trade_id or -1,
+            ),
+        )
+    )
+
+
+def _indexed_lifecycle_inputs(
+    *,
+    reader: FixedT10Reader,
+    instrument: str,
+    start_ns: int,
+    end_ns: int,
+    entry_price: Decimal,
+    funding: tuple[tuple[int, Decimal], ...],
+    funding_track: FundingTrack,
+    scenario: CostScenario,
+    stop_bps: Decimal,
+) -> tuple[
+    tuple[ContractPricePoint, ...],
+    tuple[CanonicalTradePoint, ...],
+    tuple[PathGap, ...],
+]:
+    """Reduce one seven-day path to the exact extrema/crossings needed by the scalar engine."""
+
+    landmark_ns = start_ns + PRIMARY_LANDMARK_SECONDS * NS
+    quantity = USABLE_MARGIN * Decimal("100") / entry_price
+    notional = USABLE_MARGIN * Decimal("100")
+    cost = notional * scenario.total_cost_bps / BPS
+    stop_price = entry_price * (Decimal(1) - stop_bps / BPS)
+    contract_points: dict[int, ContractPricePoint] = {}
+    trade_points: dict[tuple[int, int, str], CanonicalTradePoint] = {}
+
+    cumulative_actual = Decimal(0)
+    funding_states: list[tuple[int, Decimal]] = [(start_ns, cumulative_actual)]
+    for settlement_ns, signed_rate in funding:
+        valuation = _last_contract_point(
+            reader,
+            instrument=instrument,
+            timestamp_ns=settlement_ns,
+        )
+        contract_points[valuation.event_ts_ns] = valuation
+        cumulative_actual += quantity * valuation.close * signed_rate
+        funding_states.append((settlement_ns, cumulative_actual))
+    funding_states.append((end_ns, cumulative_actual))
+
+    for (segment_start, segment_funding), (segment_end, _) in zip(
+        funding_states,
+        funding_states[1:],
+        strict=False,
+    ):
+        activation_start = max(start_ns, segment_start)
+        activation_end = min(landmark_ns + 1, segment_end)
+        if activation_start < activation_end:
+            maximum = _max_contract_indexed(
+                reader=reader,
+                instrument=instrument,
+                start_ns=activation_start,
+                end_ns=activation_end,
+            )
+            if maximum is not None:
+                point = _contract_point_at(
+                    reader,
+                    instrument=instrument,
+                    owner_date=maximum.owner_date,
+                    row_index=maximum.row_index,
+                )
+                contract_points[point.event_ts_ns] = point
+
+        continuation_start = max(landmark_ns, segment_start)
+        continuation_end = min(end_ns, segment_end)
+        if continuation_start >= continuation_end:
+            continue
+        transformed_funding = funding_for_track(segment_funding, funding_track)
+        target_price = entry_price * (
+            Decimal(1) + (TICKET_EQUITY + cost + transformed_funding) / notional
+        )
+        liquidation_price = entry_price * (
+            Decimal(1) + (-USABLE_MARGIN + cost + transformed_funding) / notional
+        )
+        for upward, threshold in ((True, target_price), (False, stop_price)):
+            hit = _first_trade_indexed(
+                instrument=instrument,
+                start_ns=continuation_start,
+                end_ns=continuation_end,
+                threshold=threshold,
+                upward=upward,
+            )
+            if hit is not None:
+                trade_point = _trade_point_at(instrument=instrument, hit=hit)
+                trade_points[
+                    (
+                        trade_point.ts_event_ns,
+                        trade_point.venue_trade_id,
+                        trade_point.canonical_trade_id,
+                    )
+                ] = trade_point
+        liquidation = _first_contract_indexed(
+            reader=reader,
+            instrument=instrument,
+            start_ns=continuation_start,
+            end_ns=continuation_end,
+            threshold=liquidation_price,
+        )
+        if liquidation is not None:
+            contract_point = _contract_point_at(
+                reader,
+                instrument=instrument,
+                owner_date=liquidation.owner_date,
+                row_index=liquidation.row_index,
+            )
+            contract_points[contract_point.event_ts_ns] = contract_point
+
+    landmark = _last_contract_point(
+        reader,
+        instrument=instrument,
+        timestamp_ns=landmark_ns,
+    )
+    contract_points[landmark.event_ts_ns] = landmark
+    gaps = _indexed_window_gaps(
+        instrument=instrument,
+        start_ns=start_ns,
+        end_ns=end_ns,
+    )
+    for gap in gaps:
+        first_second = (gap.preceding_ts_event_ns // NS) * NS
+        last_second = (gap.following_ts_event_ns // NS) * NS
+        second = first_second
+        while second <= last_second:
+            point = _contract_point_for_timestamp(
+                reader,
+                instrument=instrument,
+                timestamp_ns=second,
+            )
+            contract_points[point.event_ts_ns] = point
+            second += NS
+    return (
+        tuple(sorted(contract_points.values(), key=lambda item: item.event_ts_ns)),
+        tuple(
+            sorted(
+                trade_points.values(),
+                key=lambda item: (
+                    item.ts_event_ns,
+                    item.venue_trade_id,
+                    item.canonical_trade_id,
+                ),
+            )
+        ),
+        gaps,
+    )
 
 
 def _lifecycle_probe(
@@ -927,6 +1382,139 @@ def _lifecycle_probe(
         "strict_consumer_readback": "PASS",
         "historical_execution_claim": False,
     }, tuple(results)
+
+
+def _lifecycle_probe_v18(
+    *,
+    reader: FixedT10Reader,
+    row: dict[str, Any],
+    acceptance: dict[str, Any],
+    source_audit_hash: str,
+    funding_index: _FundingIndex | None = None,
+) -> tuple[dict[str, Any], tuple[LifecyclePairResult, ...]]:
+    """Produce separate immutable-Trade and Contract Price OHLC lifecycle tracks."""
+
+    if len(source_audit_hash) != 64:
+        raise ValueError("T11 successor Contract Price source audit is not bound")
+    instrument = str(row["instrument"])
+    start_ns = int(row["window_start_ns"])
+    requested_end_ns = start_ns + 7 * DAY_NS
+    end_ns, source_coverage = _bounded_lifecycle_source_end(
+        instrument=instrument,
+        start_ns=start_ns,
+    )
+    partition_hashes, declared_day_gaps = _verified_trade_metadata(
+        instrument=instrument,
+        start_ns=start_ns,
+        end_ns=end_ns,
+    )
+    funding = _funding_rows(
+        funding_index if funding_index is not None else acceptance,
+        instrument=instrument,
+        start_ns=start_ns,
+        end_ns=end_ns,
+    )
+    scenario = CostScenario(
+        scenario_id="PRIMARY_9BP_FEE_2BP_SLIPPAGE_250MS_100PCT",
+        round_trip_fee_bps=Decimal(9),
+        total_slippage_bps=Decimal(2),
+        latency_ms=250,
+        initial_fill_ratio=Decimal(1),
+    )
+    dual_results = []
+    sparse_contract_count = 0
+    sparse_trade_count = 0
+    exact_gaps: tuple[PathGap, ...] | None = None
+    for track in FundingTrack:
+        prices, trades, track_gaps = _indexed_lifecycle_inputs(
+            reader=reader,
+            instrument=instrument,
+            start_ns=start_ns,
+            end_ns=end_ns,
+            entry_price=Decimal(row["reference_price"]),
+            funding=funding,
+            funding_track=track,
+            scenario=scenario,
+            stop_bps=Decimal(25),
+        )
+        if exact_gaps is None:
+            exact_gaps = track_gaps
+        elif exact_gaps != track_gaps:
+            raise ValueError("funding tracks cannot change source-gap identity")
+        partition_hash_by_second = {
+            point.event_ts_ns: cast(str, point.source_file_sha256) for point in prices
+        }
+        if len(partition_hash_by_second) != len(prices) or any(
+            value is None for value in partition_hash_by_second.values()
+        ):
+            raise ValueError("Contract Price partition lineage is incomplete")
+        sparse_contract_count += len(prices)
+        sparse_trade_count += len(trades)
+        dual_results.append(
+            evaluate_dual_track_lifecycle(
+            market_episode_id=str(row["market_episode_id"]),
+            instrument=instrument,
+            entry_ts_ns=start_ns,
+            entry_price=Decimal(row["reference_price"]),
+            contract_prices=prices,
+            trades=tuple(
+                CanonicalTradePoint(
+                    ts_event_ns=trade.ts_event_ns,
+                    venue_trade_id=trade.venue_trade_id,
+                    canonical_trade_id=trade.canonical_trade_id,
+                    price=trade.price,
+                )
+                for trade in trades
+            ),
+            funding=tuple(
+                FundingSettlement(settlement_ts_ns=timestamp_ns, signed_rate=rate)
+                for timestamp_ns, rate in funding
+            ),
+            source_gaps=exact_gaps,
+            partition_hash_by_second=partition_hash_by_second,
+            source_coverage=source_coverage,
+            scenario=scenario,
+            funding_track=track,
+            historical_funding_source_bound=True,
+            stop_bps=Decimal(25),
+            )
+        )
+    if exact_gaps is None:
+        raise AssertionError("lifecycle funding tracks are empty")
+    primary_track_results = tuple(
+        item.contract_price_ohlc_primary for item in dual_results
+    )
+    return {
+        "instrument": instrument,
+        "market_episode_id": row["market_episode_id"],
+        "source_t10_snapshot_id": row["source_t10_snapshot_id"],
+        "entry_ts_ns": start_ns,
+        "requested_observation_end_ns": requested_end_ns,
+        "available_observation_end_ns": end_ns,
+        "entry_reference_price": row["reference_price"],
+        "contract_price_observation_count": sparse_contract_count,
+        "trade_observation_count": sparse_trade_count,
+        "path_engine": "INDEXED_RANGE_EXTREMA_V1",
+        "full_path_materialization": False,
+        "stage1_partition_hashes": partition_hashes,
+        "declared_day_gap_metadata": declared_day_gaps,
+        "window_local_source_gaps": exact_gaps,
+        "window_local_source_gap_count": len(exact_gaps),
+        "source_coverage": source_coverage.value,
+        "funding_settlement_count": len(funding),
+        "funding_acceptance_hash": acceptance["acceptance_hash"],
+        "contract_price_source_audit_hash": source_audit_hash,
+        "pure_trades_comparator": tuple(
+            item.pure_trades_comparator for item in dual_results
+        ),
+        "contract_price_ohlc_primary": primary_track_results,
+        "gap_boundary_decisions": tuple(
+            decision for item in dual_results for decision in item.gap_decisions
+        ),
+        "strict_consumer_readback": "PASS",
+        "historical_execution_claim": False,
+        "synthetic_execution": False,
+    }, primary_track_results
 
 
 def _event_cells(row: dict[str, Any]) -> tuple[OutcomeCell, ...]:
@@ -1152,6 +1740,105 @@ def produce_scoped_lifecycle(
             "ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_HASH"
         ),
         "row_count": len(lifecycle) * len(FundingTrack),
+    }
+
+
+def produce_scoped_lifecycle_v18(
+    *,
+    start_date: date,
+    end_date_exclusive: date,
+    source_audit_path: Path,
+    source_audit_hash: str,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> dict[str, Any]:
+    """Execute the approved Plan v1.8 dual-track lifecycle core."""
+
+    load_source_audit(source_audit_path, expected_hash=source_audit_hash)
+    rows = _selected_t10_rows(
+        start_date=start_date,
+        end_date_exclusive=end_date_exclusive,
+    )
+    reader = FixedT10Reader(T10_SNAPSHOT, expected_snapshot_id=T10_SNAPSHOT_ID)
+    acceptance = _read_json(FUNDING_ACCEPTANCE)
+    funding_index = _FundingIndex.from_acceptance(acceptance)
+    lifecycle: list[dict[str, Any]] = []
+    admission: list[Any] = []
+    total_units = sum(len(rows[instrument]) for instrument in ("BTCUSDT", "ETHUSDT"))
+    completed_units = 0
+    started_at = time.monotonic()
+    for instrument in ("BTCUSDT", "ETHUSDT"):
+        instrument_results: list[LifecyclePairResult] = []
+        entry_by_episode: dict[str, int] = {}
+        for row in rows[instrument]:
+            probe, results = _lifecycle_probe_v18(
+                reader=reader,
+                row=row,
+                acceptance=acceptance,
+                source_audit_hash=source_audit_hash,
+                funding_index=funding_index,
+            )
+            lifecycle.append(probe)
+            primary = next(
+                item
+                for item in results
+                if item.funding_track is FundingTrack.PRIMARY_HISTORICAL_ACTUAL
+            )
+            instrument_results.append(primary)
+            entry_by_episode[primary.market_episode_id] = int(row["window_start_ns"])
+            completed_units += 1
+            if progress_callback is not None:
+                elapsed = max(time.monotonic() - started_at, 1e-9)
+                throughput = completed_units / elapsed
+                remaining = total_units - completed_units
+                progress_callback(
+                    {
+                        "completed_units": completed_units,
+                        "total_units": total_units,
+                        "percentage": format(
+                            Decimal(completed_units) * Decimal(100) / Decimal(total_units),
+                            "f",
+                        ),
+                        "elapsed_seconds": format(Decimal(str(elapsed)), "f"),
+                        "throughput_units_per_second": format(
+                            Decimal(str(throughput)), "f"
+                        ),
+                        "eta_seconds": (
+                            format(Decimal(str(remaining / throughput)), "f")
+                            if throughput
+                            else None
+                        ),
+                        "row_count": completed_units * len(FundingTrack) * 2,
+                        "current_instrument": instrument,
+                        "current_date": _date_from_ns(
+                            int(row["window_start_ns"])
+                        ).isoformat(),
+                        "phase": "LIFECYCLE",
+                        "subphase": "DUAL_TRACK_EPISODE_REPLAY",
+                        "processed_units": completed_units,
+                        "verify_state": "PENDING",
+                        "rss_bytes": process_current_rss_bytes(),
+                    }
+                )
+        admission.extend(
+            replay_single_position_admission(
+                tuple(instrument_results),
+                entry_ts_ns_by_episode=entry_by_episode,
+            )
+        )
+    return {
+        "task_id": "S2P18-T11",
+        "lifecycle": lifecycle,
+        "single_position_admission": admission,
+        "funding_source": "HISTORICAL_ACTUAL_PLUS_PREREGISTERED_STRESS",
+        "source_t10_snapshot_id": T10_SNAPSHOT_ID,
+        "contract_price_source_audit_hash": source_audit_hash,
+        "lifecycle_tracks": [
+            "PURE_TRADES_COMPARATOR",
+            "CONTRACT_PRICE_OHLC_PRIMARY",
+        ],
+        "row_count": len(lifecycle) * len(FundingTrack) * 2,
+        "historical_execution_claim": False,
+        "stage3_locked": True,
     }
 
 
