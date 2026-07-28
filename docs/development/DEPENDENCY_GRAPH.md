@@ -42,7 +42,10 @@ S2-T01～T19 PASS → T20
 
 S2-T19 is the first preregistration capability and has no dependency on another Stage 2 Task. S2-T01～T09 own fixture capability only; S2-T10 exclusively owns full candidate generation. The graph must remain acyclic and all Stage 2 Task references must resolve before approval.
 
-Current approval state: Plan v1.2 remains APPROVED. S2-T19 and S2-T01～S2-T14 are PASSED. S2-T15 is STOPPED with no formal published research result; only its approved read-only audit/verification scope may continue. OQ-S2-009/010/011 are resolved. The independent final-code seven-day execution gate remains pending. S2-T16～S2-T18 and S2-T20 remain DRAFT_NOT_APPROVED, Groups 2～4 remain unexecuted, and Stage 3 remains locked. SRP-S2-001 and the proposed variable-length lifecycle study add no executable edge to this DAG.
+Historical Plan v1.2 closure state: S2-T19 and S2-T01～S2-T14 were PASSED while S2-T15 stopped
+without a formal published research result. Its successor work did not reuse or mutate that
+failed chain. OQ-S2-009/010/011 were subsequently resolved. This paragraph preserves the Plan
+v1.2 boundary and is not the current Stage 2 operation projection.
 
 CR-2026-014 advances only the internal S2-T10 execution version to v1.12. Its bounded sequence is
 `processing-day cache → deterministic month workers → Foundation/Group-1 publication → exact Run-A
@@ -94,3 +97,20 @@ import a Stage 3 rule. OQ-S2-009/010/011 are resolved. Contract Price/Trades rem
 Stage 2 H3 price proxy, and CR-2026-038 binds the accepted historical funding source.
 S2P13-T17～T21 were not executed; any continuation requires a new approved plan/version and Stage 3
 remains locked.
+
+## Stage 2 Plans v1.4–v1.7 successor DAG and current closure
+
+Each later Plan used a new namespaced Task identity and separately approved machine Policy:
+
+```text
+verified S2P13-T16
+  → Plan v1.4 / S2P14-T17 placebo
+  → Plan v1.5 / S2P15-T18 cluster bootstrap
+  → Plan v1.6 / S2P16-T19 evidence gate
+  → Plan v1.7 / S2P17-T20 final evidence acceptance
+```
+
+T17 through T20 passed their engineering, publication, reconciliation and independent Verify
+gates. T20 closed the research decision as `STAGE2_NO_GO_CURRENT_EVIDENCE`: BTC and ETH Primary
+failed, while both lifecycle projections remain `INCONCLUSIVE_SOURCE_GAP_CENSORING`. T21 was not
+executed. Stage 2 is `BLOCKED`, not research PASS, and Stage 3 remains locked.

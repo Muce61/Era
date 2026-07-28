@@ -39,6 +39,9 @@ _REQUIRED_FIELDS: Final[frozenset[str]] = frozenset(
         "current_task",
         "current_task_version",
         "task_status",
+        "stage_status",
+        "research_decision",
+        "current_policy_path",
         "formal_successor_result_exists",
         "stage3_locked",
         "srp_execution_status",
@@ -123,6 +126,9 @@ class CurrentDevelopmentState:
     current_task: str
     current_task_version: str
     task_status: str
+    stage_status: str
+    research_decision: str
+    current_policy_path: str
     formal_successor_result_exists: bool
     stage3_locked: bool
     srp_execution_status: str
@@ -144,6 +150,9 @@ class CurrentDevelopmentState:
             "current_task": self.current_task,
             "current_task_version": self.current_task_version,
             "task_status": self.task_status,
+            "stage_status": self.stage_status,
+            "research_decision": self.research_decision,
+            "current_policy_path": self.current_policy_path,
             "formal_successor_result_exists": self.formal_successor_result_exists,
             "stage3_locked": self.stage3_locked,
             "srp_execution_status": self.srp_execution_status,
@@ -200,6 +209,9 @@ def load_current_development_state(
         current_task=_required_string(payload, "current_task"),
         current_task_version=_required_string(payload, "current_task_version"),
         task_status=_required_string(payload, "task_status"),
+        stage_status=_required_string(payload, "stage_status"),
+        research_decision=_required_string(payload, "research_decision"),
+        current_policy_path=_required_string(payload, "current_policy_path"),
         formal_successor_result_exists=_required_bool(payload, "formal_successor_result_exists"),
         stage3_locked=_required_bool(payload, "stage3_locked"),
         srp_execution_status=_required_string(payload, "srp_execution_status"),
@@ -212,7 +224,7 @@ def load_current_development_state(
         source_records=_string_tuple(payload, "source_records"),
         state_hash=_required_string(payload, "state_hash"),
     )
-    if state.schema_name != "era-current-development-state" or state.schema_version != "1.1":
+    if state.schema_name != "era-current-development-state" or state.schema_version != "1.2":
         raise ValueError("unsupported current governance state schema")
     if set(state.allowed_operations).intersection(state.blocked_operations):
         raise ValueError("governance operations cannot be both allowed and blocked")
@@ -224,6 +236,9 @@ def load_current_development_state(
         record_path = Path(record)
         if record_path.is_absolute() or ".." in record_path.parts:
             raise ValueError(f"unsafe governance source record path: {record}")
+    policy_path = Path(state.current_policy_path)
+    if policy_path.is_absolute() or ".." in policy_path.parts:
+        raise ValueError("unsafe current governance policy path")
     return state
 
 

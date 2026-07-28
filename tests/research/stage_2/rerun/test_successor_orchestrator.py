@@ -40,12 +40,15 @@ def _state(tmp_path: Path, *, blocked: bool) -> Path:
     ]
     payload: dict[str, object] = {
         "schema_name": "era-current-development-state",
-        "schema_version": "1.1",
+        "schema_version": "1.2",
         "current_stage": "S2",
         "current_plan": "stage_2_plan_v1.3",
         "current_task": "S2P13-T11",
         "current_task_version": "1.0",
         "task_status": "READY_FOR_FORMAL_RUN",
+        "stage_status": "IN_PROGRESS",
+        "research_decision": "PENDING",
+        "current_policy_path": "configs/governance/stage2_active_policy_v2.json",
         "formal_successor_result_exists": False,
         "stage3_locked": True,
         "srp_execution_status": "FORMAL_TASK_ACTIVE",
@@ -146,7 +149,7 @@ def test_current_repository_state_blocks_formal_approval(tmp_path: Path) -> None
     result = approval_readiness(state=state, rehearsal_path=None, repository_root=Path.cwd())
     assert result["status"] == "BLOCKED"
     assert result["blocking_questions"] == []
-    assert result["reason_code"] == "S2_V13_WRITE_OPERATIONS_NOT_AUTHORIZED"
+    assert result["reason_code"] == "S2_V13_PLAN_CLOSED"
 
 
 def test_chain_preflights_all_tasks_before_first_run(

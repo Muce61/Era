@@ -14,19 +14,23 @@ from era100x.foundation.governance import (
 )
 
 
-def test_repository_current_state_is_v13_implementation_gated_and_hash_valid() -> None:
+def test_repository_current_state_is_t20_closed_no_go_and_hash_valid() -> None:
     state = load_current_development_state()
 
     assert state.current_stage == "S2"
-    assert state.current_plan == "stage_2_plan_v1.3"
-    assert state.current_task == "S2P13-T11"
+    assert state.current_plan == "stage_2_plan_v1.7"
+    assert state.current_task == "S2P17-T20"
     assert state.current_task_version == "1.0"
-    assert state.task_status == "IMPLEMENTATION_IN_PROGRESS"
-    assert state.formal_successor_result_exists is False
+    assert state.task_status == "FORMAL_ENGINEERING_PASS_RECONCILIATION_PASS_VERIFY_PASS"
+    assert state.stage_status == "BLOCKED"
+    assert state.research_decision == "STAGE2_NO_GO_CURRENT_EVIDENCE"
+    assert state.current_policy_path == "configs/governance/stage2_active_policy_v6.json"
+    assert state.formal_successor_result_exists is True
     assert state.stage3_locked is True
     assert state.srp_execution_status == "FRAMEWORK_IMPLEMENTED_FORMAL_OUTPUT_FORBIDDEN"
-    assert state.approved_execution_limit == "S2P13-T16"
-    assert state.formal_run_receipt_required is True
+    assert state.approved_execution_limit == "S2P17-T20"
+    assert state.formal_run_receipt_required is False
+    assert state.blocking_questions == ()
     assert state.state_hash == state.computed_hash()
 
 
@@ -36,8 +40,6 @@ def test_repository_current_state_is_v13_implementation_gated_and_hash_valid() -
         "READ_ONLY_AUDIT",
         "VERIFY_EXISTING_EVIDENCE",
         "READ_ONLY_UI",
-        "BUILD_FUNDING_AUDIT_SUPPLEMENT",
-        "RUN_SEVEN_DAY_REHEARSAL",
     ],
 )
 def test_current_state_allows_only_scoped_audit_operations(operation: str) -> None:
@@ -49,6 +51,8 @@ def test_current_state_allows_only_scoped_audit_operations(operation: str) -> No
     "operation",
     [
         "BUILD_AUDIT_SUPPLEMENT",
+        "BUILD_FUNDING_AUDIT_SUPPLEMENT",
+        "RUN_SEVEN_DAY_REHEARSAL",
         "FREEZE_AUTHORITY",
         "FREEZE_BINS",
         "PREFLIGHT",
@@ -87,7 +91,10 @@ def test_resealed_state_can_be_loaded_but_does_not_change_repository_authority(
 
     state = load_current_development_state(path)
     assert state.task_status == "IN_PROGRESS"
-    assert load_current_development_state().task_status == "IMPLEMENTATION_IN_PROGRESS"
+    assert (
+        load_current_development_state().task_status
+        == "FORMAL_ENGINEERING_PASS_RECONCILIATION_PASS_VERIFY_PASS"
+    )
 
 
 def test_unknown_operation_is_rejected() -> None:

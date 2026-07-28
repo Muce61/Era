@@ -74,3 +74,16 @@ PUBLISH
 source-document projections and guard presence at every approved T15 write entry point. Directed tests
 also prove that read-only operations pass while every current write/run operation raises before side
 effects.
+
+## Current projection addendum — 2026-07-28
+
+The original T15 stopped-state context above remains historical evidence. Plans v1.3 through v1.7
+were later separately approved and completed through S2P17-T20. The current machine authority now
+records T20 engineering, publication, reconciliation and Verify PASS together with the research
+decision `STAGE2_NO_GO_CURRENT_EVIDENCE`. It permits only read-only audit, verification of existing
+evidence and read-only UI. It blocks every supplement, rehearsal, Authority, bin, preflight, Run,
+resume and publication operation. T21 was not executed and Stage 3 remains locked.
+
+The strict governance checker now validates all immutable Stage 2 policies v2 through v6 and
+requires the machine state, `CURRENT_STAGE.md` and `STAGE_REGISTRY.md` to agree on Plan v1.7/T20,
+the NO-GO research decision and the Stage 3 lock.

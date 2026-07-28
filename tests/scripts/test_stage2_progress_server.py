@@ -1352,6 +1352,7 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
             "State",
             (),
             {
+                "current_plan": "stage_2_plan_v1.3",
                 "task_status": "IMPLEMENTATION_IN_PROGRESS",
                 "current_task": "S2P13-T11",
                 "blocking_questions": ("OQ-S2-009",),
@@ -1403,6 +1404,54 @@ def test_stage2_v13_projection_is_evidence_driven_and_stage3_locked(
     )
     accepted = _stage2_v13_projection(tmp_path / "stage2")
     assert accepted["remaining_input_blockers"] == []
+
+
+def test_stage2_v13_projection_does_not_leak_current_t20_identity(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repository_root = tmp_path / "repository"
+    repository_root.mkdir()
+    monkeypatch.setattr(MODULE, "REPOSITORY_ROOT", repository_root)
+    monkeypatch.setattr(MODULE, "CANONICAL_REPOSITORY_ROOT", repository_root)
+    monkeypatch.setattr(MODULE, "_repository_commit", lambda: "abc123")
+    monkeypatch.setattr(
+        MODULE,
+        "_funding_evidence_projection",
+        lambda root: {"status": "PASS", "full_history_accepted": True},
+    )
+    monkeypatch.setattr(
+        MODULE,
+        "load_current_development_state",
+        lambda: type(
+            "State",
+            (),
+            {
+                "current_plan": "stage_2_plan_v1.7",
+                "task_status": "FORMAL_ENGINEERING_PASS_RECONCILIATION_PASS_VERIFY_PASS",
+                "current_task": "S2P17-T20",
+                "blocking_questions": (),
+                "srp_execution_status": "FRAMEWORK_IMPLEMENTED_FORMAL_OUTPUT_FORBIDDEN",
+                "formal_successor_result_exists": True,
+                "stage3_locked": True,
+                "approved_execution_limit": "S2P17-T20",
+            },
+        )(),
+    )
+
+    result = _stage2_v13_projection(tmp_path / "stage2")
+
+    assert result["status"] == "CLOSED"
+    assert result["current_task"] == "S2P13-T16"
+    assert result["task_status"] == "PLAN_CLOSED"
+    assert result["approved_execution_limit"] == "S2P13-T16"
+    assert result["blocking_questions"] == []
+    assert result["formal_successor_result_exists"] is True
+    assert result["stage3_locked"] is True
+    assert all(
+        task["reason_code"] == "PLAN_V13_CLOSED_CURRENT_PROJECTION_ADVANCED"
+        for task in result["tasks"].values()
+    )
 
     live_progress = _sealed(
         {

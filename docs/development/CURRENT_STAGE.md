@@ -23,6 +23,13 @@ The research conclusion is `STAGE2_NO_GO_CURRENT_EVIDENCE`; BTC H2 Primary is
 `INCONCLUSIVE_SOURCE_GAP_CENSORING`. This is not Stage 2 research PASS. T21 was not executed and
 Stage 3 remains locked.
 
+The synchronized machine authority is
+`configs/governance/current_development_state.json` schema v1.2, bound to
+`configs/governance/stage2_active_policy_v6.json`. It permits only read-only audit,
+existing-evidence verification and read-only UI. `STAGE_REGISTRY.md` records Stage 2 as
+`BLOCKED / STAGE2_NO_GO_CURRENT_EVIDENCE`; no prose marker or historical Policy can authorize a
+new write or advance Stage 3.
+
 Plan v1.6 authorized only S2P16-T19. It reads the immutable formal T11, T16, T17 and T18
 evidence, projects the pre-registered H2 F1–F10 and H3 lifecycle gates, and never recomputes
 Trades, outcomes, bootstrap, CI or FDR. Formal Run

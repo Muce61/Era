@@ -535,21 +535,27 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         checkpoint.get("schema_name") == "stage2-plan-v13-successor-checkpoint-v1"
         and checkpoint.get("stage_plan_version") == "1.3"
     )
+    state_is_v13 = state.current_plan == "stage_2_plan_v1.3"
+    current_v13_task = state.current_task if state_is_v13 else None
     default_status = (
-        "IN_PROGRESS" if state.task_status == "IMPLEMENTATION_IN_PROGRESS" else "BLOCKED"
+        "IN_PROGRESS"
+        if state_is_v13 and state.task_status == "IMPLEMENTATION_IN_PROGRESS"
+        else "BLOCKED"
     )
     tasks: dict[str, Any] = {
         task: {
             "status": (
                 default_status
-                if task == state.current_task
+                if task == current_v13_task
                 else "BLOCKED"
-                if state.blocking_questions or pending_execution_gates
+                if not state_is_v13 or state.blocking_questions or pending_execution_gates
                 else "NOT_STARTED"
             ),
             "reason_code": (
                 "IMPLEMENTATION_IN_PROGRESS"
-                if task == state.current_task
+                if task == current_v13_task
+                else "PLAN_V13_CLOSED_CURRENT_PROJECTION_ADVANCED"
+                if not state_is_v13
                 else (
                     "WAITING_FOR_GOVERNANCE"
                     if state.blocking_questions
@@ -610,6 +616,14 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         if rehearsal_progress_valid
         else default_status
     )
+    if (
+        not state_is_v13
+        and not checkpoint_valid
+        and not rehearsal_pass
+        and not rehearsal_pending
+        and not rehearsal_progress_valid
+    ):
+        status = "CLOSED"
     if stale_server:
         status = "STALE_SERVER"
     funding_evidence = _funding_evidence_projection(stage2_root)
@@ -814,11 +828,24 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         [] if execution_gate_status in {"PASS", "WAIVED"} else ["FINAL_CODE_7_DAY_REHEARSAL"]
     )
     projected_current_task = (
-        rehearsal_progress.get("current_task") if rehearsal_progress_valid else state.current_task
+        rehearsal_progress.get("current_task")
+        if rehearsal_progress_valid
+        else state.current_task
+        if state_is_v13
+        else "S2P13-T16"
     )
-    projected_task_status = state.task_status
-    projected_formal_result_exists = state.formal_successor_result_exists
-    projected_reason_code = str(checkpoint.get("reason_code", "S2_V13_IMPLEMENTATION_GATED"))
+    projected_task_status = state.task_status if state_is_v13 else "PLAN_CLOSED"
+    projected_formal_result_exists = state.formal_successor_result_exists if state_is_v13 else True
+    projected_reason_code = str(
+        checkpoint.get(
+            "reason_code",
+            (
+                "S2_V13_IMPLEMENTATION_GATED"
+                if state_is_v13
+                else "PLAN_V13_CLOSED_CURRENT_PROJECTION_ADVANCED"
+            ),
+        )
+    )
     formal_chain_status = str(lightweight_chain_checkpoint.get("status", "NOT_STARTED"))
     formal_chain_current_task = lightweight_chain_checkpoint.get("current_task")
     if not stale_server and formal_chain_status == "COMPLETE":
@@ -901,7 +928,7 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         "server_stale": stale_server,
         "current_task": projected_current_task,
         "task_status": projected_task_status,
-        "blocking_questions": list(state.blocking_questions),
+        "blocking_questions": list(state.blocking_questions) if state_is_v13 else [],
         "execution_gates": {"FINAL_CODE_7_DAY_REHEARSAL": execution_gate_status},
         "rehearsal_status": (
             "PASS"
@@ -937,7 +964,9 @@ def _stage2_v13_projection(stage2_root: Path) -> dict[str, Any]:
         "srp_execution_status": state.srp_execution_status,
         "formal_successor_result_exists": projected_formal_result_exists,
         "stage3_locked": state.stage3_locked,
-        "approved_execution_limit": state.approved_execution_limit,
+        "approved_execution_limit": (
+            state.approved_execution_limit if state_is_v13 else "S2P13-T16"
+        ),
         "checkpoint_present": checkpoint_valid,
         "tasks": tasks,
         "rehearsal_report_valid": rehearsal_report_valid,

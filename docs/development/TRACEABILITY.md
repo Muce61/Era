@@ -1,9 +1,11 @@
 # Specification Traceability
 
-> Stage 2 Plan v1.3 operations use
-> `configs/governance/stage2_active_policy_v2.json` plus append-only runtime receipts as the
-> machine gate. Historical prose records below remain traceability evidence and are not runtime
-> authorization inputs. See `docs/development/STAGE2_OPERATIONS.md`.
+> Current Stage 2 operation permission comes from
+> `configs/governance/current_development_state.json`, which binds Plan v1.7/T20 to
+> `configs/governance/stage2_active_policy_v6.json`, records
+> `STAGE2_NO_GO_CURRENT_EVIDENCE`, and keeps Stage 3 locked. Policies v2 through v5 and their
+> append-only runtime receipts remain immutable per-Plan evidence, not current authorization.
+> See `docs/development/STAGE2_OPERATIONS.md`.
 
 Model: formal rule → Stage → Task → implementation → tests → validation → current validity. The machine-readable complete catalogue is [`traceability/rules.yaml`](traceability/rules.yaml); every implementation/test path is explicitly PLANNED, not implemented.
 

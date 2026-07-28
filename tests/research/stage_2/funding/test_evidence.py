@@ -18,6 +18,13 @@ from era100x.research.stage_2.funding.evidence import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _approved_historical_funding_task(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep evidence unit tests independent from the repository's current task gate."""
+
+    monkeypatch.setattr(evidence, "require_operation_allowed", lambda operation: None)
+
+
 def _archive(instrument: str, rate: str) -> tuple[bytes, bytes]:
     csv_bytes = (
         "calc_time,funding_interval_hours,last_funding_rate\n"

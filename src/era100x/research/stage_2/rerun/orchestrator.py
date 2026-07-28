@@ -111,8 +111,11 @@ def approval_readiness(
         "blocking_questions": list(state.blocking_questions),
         "formal_run_created": False,
     }
-    if state.current_plan != "stage_2_plan_v1.3" or state.stage3_locked is not True:
+    if state.stage3_locked is not True:
         result["reason_code"] = "S2_V13_STATE_CONTRACT_DRIFT"
+        return result
+    if state.current_plan != "stage_2_plan_v1.3":
+        result["reason_code"] = "S2_V13_PLAN_CLOSED"
         return result
     if state.blocking_questions:
         return result
