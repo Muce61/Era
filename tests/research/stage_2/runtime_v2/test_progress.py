@@ -225,7 +225,8 @@ def test_read_only_web_endpoints(tmp_path: Path) -> None:
             assert "Path Extraction" in page
             assert "Path Metrics" in page
             assert "18 / 19 PASSED" in page
-            assert "S2-T15<b>CHECKING</b>" in page
+            assert "Plan v1.2 historical · STOPPED_FAILED_UNPUBLISHED" in page
+            assert "Successor · S2P13-T16" in page
             assert "S2-T15<b>PASSED</b>" not in page
             assert "S2-T11 v1.2" not in page
             assert "证据轨道" in page

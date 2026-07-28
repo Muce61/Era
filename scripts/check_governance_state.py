@@ -32,6 +32,9 @@ TRACEABILITY_PATH = ROOT / "docs/development/traceability/rules.yaml"
 DEPENDENCY_GRAPH_PATH = ROOT / "docs/development/DEPENDENCY_GRAPH.md"
 OPERATIONS_PATH = ROOT / "docs/development/STAGE2_OPERATIONS.md"
 SRP_PATH = ROOT / "docs/development/special_research_points/SRP-S2-001.md"
+S2T15_TASK_PATH = ROOT / "docs/development/tasks/stage_2/S2-T15-task.md"
+S2T15_VALIDATION_PATH = ROOT / "docs/development/validations/stage_2/S2-T15.md"
+STAGE2_UI_PATH = ROOT / "scripts/stage2_progress_ui.html"
 CURRENT_POLICY_PATH = ROOT / "configs/governance/stage2_active_policy_v6.json"
 
 READ_ONLY_OPERATIONS = (
@@ -56,6 +59,7 @@ SEALED_STAGE2_TASKS = {
     "S2-T12",
     "S2-T13",
     "S2-T14",
+    "S2-T15",
     "S2P13-T11",
     "S2P13-T12",
     "S2P13-T13",
@@ -66,6 +70,18 @@ SEALED_STAGE2_TASKS = {
     "S2P15-T18",
     "S2P16-T19",
     "S2P17-T20",
+}
+EXPECTED_HISTORICAL_TASK_STATE = {
+    "stage_plan_version": "1.2",
+    "task_id": "S2-T15",
+    "task_version": "1.4",
+    "terminal_status": "STOPPED_FAILED_UNPUBLISHED",
+    "formal_result_exists": False,
+    "evidence_disposition": "IMMUTABLE_HISTORICAL_ONLY",
+    "successor_stage_plan_version": "1.3",
+    "successor_task_id": "S2P13-T16",
+    "successor_relationship": "CAPABILITY_REPLACEMENT_NOT_RESULT_PROMOTION",
+    "authority_scope": "HISTORICAL_ONLY_NO_EXECUTION_AUTHORITY",
 }
 POLICY_LOADERS: tuple[tuple[int, Callable[..., Any], str, str], ...] = (
     (2, load_v2_policy, "1.3", "S2P13-T16"),
@@ -112,6 +128,7 @@ def _validate_current_state(
         return
 
     expected_scalars = {
+        "schema_version": "1.3",
         "current_stage": "S2",
         "current_plan": "stage_2_plan_v1.7",
         "current_task": "S2P17-T20",
@@ -139,6 +156,11 @@ def _validate_current_state(
         errors.append("closed T20 state cannot retain a synthetic blocking question")
     if set(state.sealed_tasks) != SEALED_STAGE2_TASKS:
         errors.append("closed Stage 2 sealed task set drift")
+    historical_task_states = [
+        historical_state.to_payload() for historical_state in state.historical_task_states
+    ]
+    if historical_task_states != [EXPECTED_HISTORICAL_TASK_STATE]:
+        errors.append("historical S2-T15 terminal lineage drift")
     if (ROOT / state.current_policy_path).resolve() != CURRENT_POLICY_PATH.resolve():
         errors.append("current machine governance does not point to the v6/T20 policy")
 
@@ -160,6 +182,9 @@ def _validate_projections(
         dependency_graph = DEPENDENCY_GRAPH_PATH.read_text(encoding="utf-8")
         operations = OPERATIONS_PATH.read_text(encoding="utf-8")
         special_research_point = SRP_PATH.read_text(encoding="utf-8")
+        s2_t15_task = S2T15_TASK_PATH.read_text(encoding="utf-8")
+        s2_t15_validation = S2T15_VALIDATION_PATH.read_text(encoding="utf-8")
+        stage2_ui = STAGE2_UI_PATH.read_text(encoding="utf-8")
     except OSError as exc:
         errors.append(f"governance projection unreadable: {exc}")
         return
@@ -171,6 +196,8 @@ def _validate_projections(
         "STAGE2_NO_GO_CURRENT_EVIDENCE",
         "T21 was not executed",
         "Stage 3 remains locked",
+        "S2-T15` remains `STOPPED_FAILED_UNPUBLISHED`",
+        "S2P13-T16",
     )
     for marker in current_markers:
         if marker not in current_stage:
@@ -182,6 +209,8 @@ def _validate_projections(
         "S2P17-T20 passed engineering, publication, reconciliation and independent Verify",
         "This is not Stage 2 research PASS",
         "T21 was not executed and Stage 3 remains locked",
+        "S2-T15 remains historical `STOPPED_FAILED_UNPUBLISHED`",
+        "S2P13-T16",
     )
     for marker in registry_markers:
         if marker not in registry:
@@ -197,6 +226,8 @@ def _validate_projections(
         "current_policy: configs/governance/stage2_active_policy_v6.json",
         "next_task_status: T21_NOT_EXECUTED_NOT_APPROVED",
         "stage3_locked: true",
+        "historical_s2_t15_status: STOPPED_FAILED_UNPUBLISHED",
+        "historical_s2_t15_successor: S2P13-T16",
     )
     for marker in traceability_markers:
         if marker not in traceability:
@@ -207,6 +238,8 @@ def _validate_projections(
         "STAGE2_NO_GO_CURRENT_EVIDENCE",
         "Stage 2 is `BLOCKED`, not research PASS",
         "Stage 3 remains locked",
+        "S2-T15` remains `STOPPED_FAILED_UNPUBLISHED`",
+        "does not block its `S2P13-T16` successor",
     )
     for marker in dependency_markers:
         if marker not in dependency_graph:
@@ -217,6 +250,8 @@ def _validate_projections(
         "v6/T20",
         "STAGE2_NO_GO_CURRENT_EVIDENCE",
         "T21 was not executed and Stage 3 remains locked",
+        "S2-T15` is the immutable Plan v1.2",
+        "S2P13-T16",
     )
     for marker in operations_markers:
         if marker not in operations:
@@ -234,12 +269,62 @@ def _validate_projections(
         if marker not in special_research_point:
             errors.append(f"Stage 2 SRP current projection missing: {marker}")
 
+    task_markers = (
+        "projection_scope: HISTORICAL_PLAN_V1_2_TERMINAL",
+        "successor_task_id: S2P13-T16",
+        "STOPPED_FAILED_UNPUBLISHED",
+        "not the current Stage 2 Task",
+        "scoped to its Plan v1.2 terminal snapshot",
+    )
+    for marker in task_markers:
+        if marker not in s2_t15_task:
+            errors.append(f"historical S2-T15 Task projection missing: {marker}")
+
+    validation_markers = (
+        "Plan v1.2 terminal conclusion",
+        "STOPPED_FAILED_UNPUBLISHED",
+        "S2P13-T16",
+        "does not block the current T20 closure",
+    )
+    for marker in validation_markers:
+        if marker not in s2_t15_validation:
+            errors.append(f"historical S2-T15 Validation projection missing: {marker}")
+    if "- Current conclusion:" in s2_t15_validation:
+        errors.append("historical S2-T15 Validation still claims a current conclusion")
+    if "Stage 2 is `IN_PROGRESS / S2_T15_STOPPED" in traceability:
+        errors.append("Traceability still presents historical S2-T15 as current Stage 2")
+
+    ui_markers = (
+        "Plan v1.2 historical · STOPPED_FAILED_UNPUBLISHED",
+        "Successor · S2P13-T16",
+        "not current T20 dependency",
+    )
+    for marker in ui_markers:
+        if marker not in stage2_ui:
+            errors.append(f"Stage 2 UI historical lineage projection missing: {marker}")
+
+
+def _validate_policy_lineage(errors: list[str], policies: dict[int, Any]) -> None:
+    current_policy = policies.get(6)
+    successor_policy = policies.get(2)
+    if current_policy is not None:
+        t20_dependencies = current_policy.payload.get("task_dag", {}).get("S2P17-T20", [])
+        if "S2-T15" in t20_dependencies:
+            errors.append("Policy v6/T20 must not depend on historical S2-T15")
+        if "S2P13-T16" not in t20_dependencies:
+            errors.append("Policy v6/T20 must bind the S2P13-T16 successor")
+    if successor_policy is not None:
+        successor_dag = successor_policy.payload.get("task_dag", {})
+        if "S2P13-T16" not in successor_dag:
+            errors.append("Policy v2 does not contain the declared S2P13-T16 successor")
+
 
 def validate_current_governance_state() -> tuple[list[str], dict[int, Any]]:
     """Check every Stage 2 policy plus the current machine and prose projections."""
 
     errors: list[str] = []
     policies = _validate_policies(errors)
+    _validate_policy_lineage(errors, policies)
     _validate_current_state(errors)
     _validate_projections(errors)
     return errors, policies

@@ -810,10 +810,10 @@
       byId("s2t15Node").innerHTML = passed ? '<i class="fa-solid fa-check"></i>' : failed ? '<i class="fa-solid fa-xmark"></i>' : blocked ? '<i class="fa-solid fa-pause"></i>' : "15";
       byId("s2t15State").textContent = raw;
       byId("taskProgressTag").className = passed ? "tag approved" : "tag progress";
-      byId("taskProgressTag").innerHTML = `S2-T15 v${escapeText(task.task_version || "1.4")}<b>${raw}</b>`;
+      byId("taskProgressTag").innerHTML = `Plan v1.2 historical · STOPPED_FAILED_UNPUBLISHED<b>evidence ${raw}</b>`;
       byId("passedCount").textContent = `${priorPassedCount + (passed ? 1 : 0)} / 18 PASSED`;
       byId("conditionalRunId").textContent = escapeText(task.run_id);
-      byId("conditionalEvidence").textContent = `${raw} · audit ${escapeText(task.audit_status)} · missing receipt distributions ${number(task.missing_distribution_partition_count)} · Authority ${number(task.authority_count)} · H2 paths ${number(task.h2_path_count)} · cells ${number(task.h2_outcome_cell_count)} · ${escapeText(task.research_result)} · Stage 3 LOCKED`;
+      byId("conditionalEvidence").textContent = `Plan v1.2 historical · STOPPED_FAILED_UNPUBLISHED · evidence ${raw} · Successor · S2P13-T16 · not current T20 dependency · audit ${escapeText(task.audit_status)} · Authority ${number(task.authority_count)} · Stage 3 LOCKED`;
       return {task, passed, failed, blocked, running: raw === "IN_PROGRESS"};
     }
 
@@ -1415,24 +1415,10 @@
         }
         if (ambiguityTask.accepted) {
           byId("processNote").textContent = `S2-T15 · ${escapeText(conditionalTask.task.status)} · ${escapeText(conditionalTask.task.reason_code)}`;
-          byId("gateChip").textContent = conditionalTask.passed ? "S2-T15 PASS" : conditionalTask.failed ? "S2-T15 FAILED" : conditionalTask.running ? "S2-T15 RUNNING" : `S2-T15 ${escapeText(conditionalTask.task.status)}`;
-          byId("stageLockNote").textContent = "S2-T15 只展示 H2 historical conditional evidence；Stage 3 始终保持 LOCKED。";
-          if (conditionalTask.passed) {
-            byId("currentConclusion").textContent = "S2-T15 全量 Run、Verify 与 validation 已从真实 append-only 证据自动判定 PASS；研究结论仍是 DESCRIPTIVE_ONLY / PRIMARY_PENDING_T18。";
-            byId("nextAction").innerHTML = "<b>停止并等待人工验收 S2-T15</b>；不得自动开始 S2-T16。";
-          } else if (conditionalTask.failed) {
-            byId("currentConclusion").textContent = `S2-T15 FAILED_UNPUBLISHED：${escapeText(conditionalTask.task.reason_code)}。`;
-            byId("nextAction").innerHTML = "<b>停止自动流程并检查证据</b>；不得生成 PASS，也不得改规则补样本。";
-          } else if (conditionalTask.blocked) {
-            byId("currentConclusion").textContent = `S2-T15 BLOCKED：固定 T10 有 ${number(conditionalTask.task.missing_distribution_partition_count)} 个必需收据缺少字段分布摘要，Authority 和 Run 均未创建。`;
-            byId("nextAction").innerHTML = "<b>等待 OQ-S2-006 的人工输入绑定决定</b>；不得绕过 CatalogReaderV2 或修改密封 T10。";
-          } else if (conditionalTask.running) {
-            byId("currentConclusion").textContent = `S2-T15 当前 Run ${escapeText(conditionalTask.task.run_id)} 正在执行；页面只读，不触发任何写操作。`;
-            byId("nextAction").innerHTML = "<b>继续只读观察</b>；不得从页面触发 run、verify 或发布。";
-          } else {
-            byId("currentConclusion").textContent = `S2-T15 ${escapeText(conditionalTask.task.status)}：上游只读 audit ${escapeText(conditionalTask.task.audit_status)}，Authority ${number(conditionalTask.task.authority_count)}，尚无正式 Run。`;
-            byId("nextAction").innerHTML = "<b>等待 final-code Authority、TRAIN bins 与正式 Run</b>；HTML 不硬编码 PASS。";
-          }
+          byId("gateChip").textContent = "S2-T15 HISTORICAL STOPPED";
+          byId("stageLockNote").textContent = "Plan v1.2 S2-T15 是不可恢复的历史终态；S2P13-T16 是 capability successor，Stage 3 保持 LOCKED。";
+          byId("currentConclusion").textContent = `Plan v1.2 historical · STOPPED_FAILED_UNPUBLISHED · evidence ${escapeText(conditionalTask.task.status)} · Successor · S2P13-T16 · not current T20 dependency。`;
+          byId("nextAction").innerHTML = "<b>历史链禁止恢复或提升为 PASS</b>；当前治理只允许读取和验证既有证据。";
         }
       } catch (error) {
         byId("updatedAt").textContent = "数据更新：不可用";

@@ -9,6 +9,11 @@ append-only approval receipts, Authorities, checkpoints, task receipts, Manifest
 Verify records. Historical governance files remain readable evidence but cannot authorize a new
 run.
 
+Legacy `S2-T15` is the immutable Plan v1.2 `STOPPED_FAILED_UNPUBLISHED` predecessor. Its Plan v1.3
+capability successor is `S2P13-T16`; this mapping grants no result promotion or execution
+authority. Operators must not resume the old failed unpublished chain or treat it as a direct T20
+dependency.
+
 The single operator entrypoint is `scripts/run_stage2.py` with `status`, `rehearse`,
 `record-approval`, `run`, `resume` and `verify`. A formal approval is stored outside Git and binds
 the exact clean commit and Policy Hash. It binds a final-code rehearsal receipt by default.

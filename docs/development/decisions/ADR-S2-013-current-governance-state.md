@@ -87,3 +87,8 @@ resume and publication operation. T21 was not executed and Stage 3 remains locke
 The strict governance checker now validates all immutable Stage 2 policies v2 through v6 and
 requires the machine state, `CURRENT_STAGE.md` and `STAGE_REGISTRY.md` to agree on Plan v1.7/T20,
 the NO-GO research decision and the Stage 3 lock.
+
+Schema v1.3 also records the original Plan v1.2 `S2-T15` as
+`STOPPED_FAILED_UNPUBLISHED / IMMUTABLE_HISTORICAL_ONLY` and maps its capability successor to
+Plan v1.3 `S2P13-T16`. This lineage does not promote the failed predecessor into a result, does not
+authorize its recovery and does not make it a direct dependency of T20.

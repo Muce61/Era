@@ -66,3 +66,31 @@ def test_machine_state_cannot_unlock_stage3(tmp_path: Path) -> None:
     _validate_current_state(errors, state_path=state_path)
 
     assert "current machine governance must keep Stage 3 locked" in errors
+
+
+def test_machine_state_rejects_wrong_historical_successor(tmp_path: Path) -> None:
+    payload = json.loads(DEFAULT_CURRENT_STATE_PATH.read_text(encoding="utf-8"))
+    payload["historical_task_states"][0]["successor_stage_plan_version"] = "1.4"
+    payload["historical_task_states"][0]["successor_task_id"] = "S2P14-T17"
+    payload["state_hash"] = canonical_state_hash(payload)
+    state_path = tmp_path / "wrong-successor.json"
+    state_path.write_text(json.dumps(payload), encoding="utf-8")
+    errors: list[str] = []
+
+    _validate_current_state(errors, state_path=state_path)
+
+    assert "historical S2-T15 terminal lineage drift" in errors
+
+
+def test_machine_state_rejects_legacy_s2_t15_pass_promotion(tmp_path: Path) -> None:
+    payload = json.loads(DEFAULT_CURRENT_STATE_PATH.read_text(encoding="utf-8"))
+    payload["historical_task_states"][0]["terminal_status"] = "PASS"
+    payload["historical_task_states"][0]["formal_result_exists"] = True
+    payload["state_hash"] = canonical_state_hash(payload)
+    state_path = tmp_path / "promoted-predecessor.json"
+    state_path.write_text(json.dumps(payload), encoding="utf-8")
+    errors: list[str] = []
+
+    _validate_current_state(errors, state_path=state_path)
+
+    assert "historical S2-T15 terminal lineage drift" in errors

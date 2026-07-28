@@ -807,14 +807,15 @@ def test_ui_derives_current_task_version_count_and_acceptance_without_hardcoded_
     assert 'task.task_version || "UNKNOWN"' in page
     assert "/ 18 PASSED" in page
     assert "S2-T11 v1.2" not in page
-    assert "S2-T15<b>CHECKING</b>" in page
+    assert "Plan v1.2 historical · STOPPED_FAILED_UNPUBLISHED" in page
+    assert "Successor · S2P13-T16" in page
+    assert "not current T20 dependency" in page
     assert "S2-T15<b>PASSED</b>" not in page
     assert 'tasks["S2-T14"]' in page
     assert 'tasks["S2-T15"]' in page
     assert "VALIDATED · AWAITING HUMAN" in page
     assert "PASSED · HUMAN ACCEPTED" in page
-    assert "等待 OQ-S2-006 的人工输入绑定决定" in page
-    assert "missing receipt distributions" in page
+    assert "历史链禁止恢复或提升为 PASS" in page
     assert 'fetch("/api/v13/status"' in page
     assert "refreshV13();" in page
     assert "setInterval(refreshV13, 5000)" in page
@@ -864,6 +865,16 @@ def test_s2_t15_audit_projects_not_started_without_authority_or_run(tmp_path: Pa
     result = _stage2_conditional_baseline_projection(tmp_path)
 
     assert result["status"] == "NOT_STARTED"
+    assert result["stage_plan_version"] == "1.2"
+    assert result["projection_scope"] == "HISTORICAL_PLAN_V1_2_TERMINAL"
+    assert result["governance_terminal_status"] == "STOPPED_FAILED_UNPUBLISHED"
+    assert result["successor_stage_plan_version"] == "1.3"
+    assert result["successor_task_id"] == "S2P13-T16"
+    assert result["successor_relationship"] == "CAPABILITY_REPLACEMENT_NOT_RESULT_PROMOTION"
+    assert result["authority_scope"] == "HISTORICAL_ONLY_NO_EXECUTION_AUTHORITY"
+    assert result["is_current_task"] is False
+    assert result["is_direct_t20_dependency"] is False
+    assert result["resume_allowed"] is False
     assert result["audit_status"] == "PASS"
     assert result["authority_count"] == 0
     assert result["run_count"] == 0

@@ -5,6 +5,9 @@
 - task_id: S2-T15
 - task_version: 1.4
 - status: STOPPED / READ-ONLY AUDIT ONLY / NO AUTHORITY OR RUN
+- projection_scope: HISTORICAL_PLAN_V1_2_TERMINAL
+- terminal_status: STOPPED_FAILED_UNPUBLISHED
+- successor_task_id: S2P13-T16
 - stage_id: S2
 - stage_plan_version: 1.2
 - created_from_spec_version: V1.3.4
@@ -13,6 +16,12 @@
 - supersedes: task_version 1.3
 - approved_by: Muce
 - approved_at: 2026-07-22T02:25:41Z
+
+This Plan v1.2 identity is immutable historical evidence and is not the current Stage 2 Task.
+`S2P13-T16` is its capability successor without result promotion; the failed unpublished S2-T15
+chain remains non-resumable and does not block the current T20 closure.
+Every later use of “current” or “当前” in this Task is scoped to its Plan v1.2 terminal snapshot
+under CR-2026-034, not to the repository-wide Plan v1.7/T20 projection.
 
 ## 1. 目标
 
@@ -158,10 +167,11 @@ CLI历史合同为`audit`、`freeze-authority`、`freeze-bins`、`preflight`、`
 `configs/governance/current_development_state.json` 只允许 read-only audit 和既有证据 verify。
 任何恢复写模式都需要新的人工批准、state hash、七天 rehearsal、fresh audit 和授权收据。
 
-## 24. CR-2026-034 当前停止覆盖
+## 24. CR-2026-034 Plan v1.2 terminal STOPPED override
 
 本节优先于任何旧的“implementation ready”“final successor”或“clean commit 后可运行”表述。
-当前状态为 STOPPED；`formal_t15_result_exists=false`；Stage 3 locked；SRP not executable。
+At that Plan v1.2 terminal snapshot, status was STOPPED;
+`formal_t15_result_exists=false`; Stage 3 was locked; SRP was not executable.
 机器状态的有效 hash 必须与 CR-2026-034/ADR-S2-013 和本 Task 投影一致。状态未正式变更前，
 任何 Authority、bin、preflight、Run、resume、supplement build 或 publish 调用都必须在副作用
 之前失败。

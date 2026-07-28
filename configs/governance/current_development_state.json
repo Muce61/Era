@@ -1,6 +1,6 @@
 {
   "schema_name": "era-current-development-state",
-  "schema_version": "1.2",
+  "schema_version": "1.3",
   "current_stage": "S2",
   "current_plan": "stage_2_plan_v1.7",
   "current_task": "S2P17-T20",
@@ -37,6 +37,7 @@
     "S2-T12",
     "S2-T13",
     "S2-T14",
+    "S2-T15",
     "S2P13-T11",
     "S2P13-T12",
     "S2P13-T13",
@@ -47,6 +48,20 @@
     "S2P15-T18",
     "S2P16-T19",
     "S2P17-T20"
+  ],
+  "historical_task_states": [
+    {
+      "stage_plan_version": "1.2",
+      "task_id": "S2-T15",
+      "task_version": "1.4",
+      "terminal_status": "STOPPED_FAILED_UNPUBLISHED",
+      "formal_result_exists": false,
+      "evidence_disposition": "IMMUTABLE_HISTORICAL_ONLY",
+      "successor_stage_plan_version": "1.3",
+      "successor_task_id": "S2P13-T16",
+      "successor_relationship": "CAPABILITY_REPLACEMENT_NOT_RESULT_PROMOTION",
+      "authority_scope": "HISTORICAL_ONLY_NO_EXECUTION_AUTHORITY"
+    }
   ],
   "source_records": [
     "configs/governance/stage2_active_policy_v6.json",
@@ -108,5 +123,5 @@
     "docs/development/validations/stage_2/S2P17-T20.md",
     "docs/development/special_research_points/SRP-S2-001.md"
   ],
-  "state_hash": "8613fedd7bf113ac90e5c69d74d97ef9b610d46918e0459e33bf3b27a0d0505d"
+  "state_hash": "ea5ba31e327638930b448dc0bb4036aa89936b00b88529302a9893f8ab6028e6"
 }

@@ -2520,6 +2520,10 @@ rules:
     completed_successor_tasks: [S2P13-T16, S2P14-T17, S2P15-T18, S2P16-T19, S2P17-T20]
     next_task_status: T21_NOT_EXECUTED_NOT_APPROVED
     stage3_locked: true
+    historical_s2_t15_status: STOPPED_FAILED_UNPUBLISHED
+    historical_s2_t15_successor: S2P13-T16
+    historical_s2_t15_relationship: CAPABILITY_REPLACEMENT_NOT_RESULT_PROMOTION
+    historical_s2_t15_authority_scope: HISTORICAL_ONLY_NO_EXECUTION_AUTHORITY
     historical_plan_v12_version: '1.2'
     historical_plan_v12_status: APPROVED
     historical_plan_v12_approved_by: Muce

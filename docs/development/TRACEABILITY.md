@@ -162,9 +162,11 @@ Stage 1 delivery state: **IMPLEMENTED / TESTED / VALIDATED / PASSED**. S1-T01～
 
 `DATA-HISTORICAL-NO-FAKE-EXECUTION` is enforced at the Stage 1 historical boundary by S1-T02/T10/T12/T14 and remains planned for Stage 5 forward-field separation. `STRATEGY-V1-PRICE-ONLY-HISTORICAL` is enforced at the Stage 1 input/source boundary by S1-T03/T09/T10; event behavior remains Stage 2. This does not promote either later behavioral implementation to PASSED.
 
-## Stage 2 Plan v1.2 APPROVED Coverage
+## Historical Stage 2 Plan v1.2 APPROVED Coverage
 
-Stage 2 is `IN_PROGRESS / S2_T15_STOPPED_SRP_S2_001_EXEMPTIONS_APPROVED_NOT_EXECUTABLE`. S2-T19 and S2-T01～S2-T14 are PASSED;
+At the Plan v1.2 terminal boundary, Stage 2 was
+`IN_PROGRESS / S2_T15_STOPPED_SRP_S2_001_EXEMPTIONS_APPROVED_NOT_EXECUTABLE`. S2-T19 and
+S2-T01～S2-T14 were PASSED;
 the fixed Runtime V2 Run is published with Quality/Verify PASS and the exact Run-A comparison
 matches 61,776/61,776 Group-1 partitions with zero differences. S2-T11 v1.3 and CR-2026-021 are
 human-approved. Full-output Run `stage2-s2t11-paths-20260721T023117Z-029707f3c111` published

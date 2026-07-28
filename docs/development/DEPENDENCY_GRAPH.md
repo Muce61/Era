@@ -110,6 +110,10 @@ verified S2P13-T16
   → Plan v1.7 / S2P17-T20 final evidence acceptance
 ```
 
+Legacy Plan v1.2 `S2-T15` remains `STOPPED_FAILED_UNPUBLISHED`; it is immutable historical
+evidence and does not block its `S2P13-T16` successor. The successor relationship replaces the
+capability identity only and never promotes the failed legacy Run into a formal result.
+
 T17 through T20 passed their engineering, publication, reconciliation and independent Verify
 gates. T20 closed the research decision as `STAGE2_NO_GO_CURRENT_EVIDENCE`: BTC and ETH Primary
 failed, while both lifecycle projections remain `INCONCLUSIVE_SOURCE_GAP_CENSORING`. T21 was not

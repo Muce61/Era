@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, cast
-from collections.abc import Mapping
 
 REPOSITORY_ROOT: Final[Path] = Path(__file__).resolve().parents[4]
 DEFAULT_CURRENT_STATE_PATH: Final[Path] = (
@@ -30,7 +30,7 @@ KNOWN_OPERATIONS: Final[frozenset[str]] = frozenset(
         "PUBLISH",
     }
 )
-_REQUIRED_FIELDS: Final[frozenset[str]] = frozenset(
+_BASE_REQUIRED_FIELDS: Final[frozenset[str]] = frozenset(
     {
         "schema_name",
         "schema_version",
@@ -53,6 +53,21 @@ _REQUIRED_FIELDS: Final[frozenset[str]] = frozenset(
         "sealed_tasks",
         "source_records",
         "state_hash",
+    }
+)
+_V13_REQUIRED_FIELDS: Final[frozenset[str]] = _BASE_REQUIRED_FIELDS | {"historical_task_states"}
+_HISTORICAL_TASK_STATE_FIELDS: Final[frozenset[str]] = frozenset(
+    {
+        "stage_plan_version",
+        "task_id",
+        "task_version",
+        "terminal_status",
+        "formal_result_exists",
+        "evidence_disposition",
+        "successor_stage_plan_version",
+        "successor_task_id",
+        "successor_relationship",
+        "authority_scope",
     }
 )
 
@@ -116,6 +131,80 @@ def _required_bool(payload: Mapping[str, object], field: str) -> bool:
 
 
 @dataclass(frozen=True)
+class HistoricalTaskState:
+    """Immutable terminal state and explicit successor for an historical Task identity."""
+
+    stage_plan_version: str
+    task_id: str
+    task_version: str
+    terminal_status: str
+    formal_result_exists: bool
+    evidence_disposition: str
+    successor_stage_plan_version: str
+    successor_task_id: str
+    successor_relationship: str
+    authority_scope: str
+
+    def to_payload(self) -> dict[str, object]:
+        return {
+            "stage_plan_version": self.stage_plan_version,
+            "task_id": self.task_id,
+            "task_version": self.task_version,
+            "terminal_status": self.terminal_status,
+            "formal_result_exists": self.formal_result_exists,
+            "evidence_disposition": self.evidence_disposition,
+            "successor_stage_plan_version": self.successor_stage_plan_version,
+            "successor_task_id": self.successor_task_id,
+            "successor_relationship": self.successor_relationship,
+            "authority_scope": self.authority_scope,
+        }
+
+
+def _historical_task_states(payload: Mapping[str, object]) -> tuple[HistoricalTaskState, ...]:
+    raw_states = payload.get("historical_task_states")
+    if not isinstance(raw_states, list) or not raw_states:
+        raise ValueError("current governance state historical_task_states must be a non-empty list")
+    states: list[HistoricalTaskState] = []
+    identities: set[tuple[str, str]] = set()
+    for index, raw_state in enumerate(raw_states):
+        if not isinstance(raw_state, dict):
+            raise ValueError(f"historical_task_states[{index}] must be an object")
+        state_payload = cast(dict[str, object], raw_state)
+        if set(state_payload) != _HISTORICAL_TASK_STATE_FIELDS:
+            missing = sorted(_HISTORICAL_TASK_STATE_FIELDS.difference(state_payload))
+            extra = sorted(set(state_payload).difference(_HISTORICAL_TASK_STATE_FIELDS))
+            raise ValueError(
+                f"historical_task_states[{index}] fields drift: missing={missing} extra={extra}"
+            )
+        state = HistoricalTaskState(
+            stage_plan_version=_required_string(state_payload, "stage_plan_version"),
+            task_id=_required_string(state_payload, "task_id"),
+            task_version=_required_string(state_payload, "task_version"),
+            terminal_status=_required_string(state_payload, "terminal_status"),
+            formal_result_exists=_required_bool(state_payload, "formal_result_exists"),
+            evidence_disposition=_required_string(state_payload, "evidence_disposition"),
+            successor_stage_plan_version=_required_string(
+                state_payload, "successor_stage_plan_version"
+            ),
+            successor_task_id=_required_string(state_payload, "successor_task_id"),
+            successor_relationship=_required_string(state_payload, "successor_relationship"),
+            authority_scope=_required_string(state_payload, "authority_scope"),
+        )
+        identity = (state.stage_plan_version, state.task_id)
+        if identity in identities:
+            raise ValueError(f"duplicate historical Task identity: {identity}")
+        successor_identity = (
+            state.successor_stage_plan_version,
+            state.successor_task_id,
+        )
+        if identity == successor_identity:
+            raise ValueError(f"historical Task cannot succeed itself: {identity}")
+        identities.add(identity)
+        states.append(state)
+    return tuple(states)
+
+
+@dataclass(frozen=True)
 class CurrentDevelopmentState:
     """The single machine-readable authority for currently permitted repository operations."""
 
@@ -138,11 +227,12 @@ class CurrentDevelopmentState:
     blocked_operations: tuple[str, ...]
     blocking_questions: tuple[str, ...]
     sealed_tasks: tuple[str, ...]
+    historical_task_states: tuple[HistoricalTaskState, ...]
     source_records: tuple[str, ...]
     state_hash: str
 
     def to_payload(self) -> dict[str, object]:
-        return {
+        payload: dict[str, object] = {
             "schema_name": self.schema_name,
             "schema_version": self.schema_version,
             "current_stage": self.current_stage,
@@ -165,6 +255,11 @@ class CurrentDevelopmentState:
             "source_records": list(self.source_records),
             "state_hash": self.state_hash,
         }
+        if self.schema_version == "1.3":
+            payload["historical_task_states"] = [
+                state.to_payload() for state in self.historical_task_states
+            ]
+        return payload
 
     def computed_hash(self) -> str:
         return canonical_state_hash(self.to_payload())
@@ -196,9 +291,11 @@ def load_current_development_state(
     if not isinstance(raw, dict):
         raise ValueError("current governance state must be a JSON object")
     payload = cast(dict[str, object], raw)
-    if set(payload) != _REQUIRED_FIELDS:
-        missing = sorted(_REQUIRED_FIELDS.difference(payload))
-        extra = sorted(set(payload).difference(_REQUIRED_FIELDS))
+    schema_version = _required_string(payload, "schema_version")
+    required_fields = _BASE_REQUIRED_FIELDS if schema_version == "1.2" else _V13_REQUIRED_FIELDS
+    if set(payload) != required_fields:
+        missing = sorted(required_fields.difference(payload))
+        extra = sorted(set(payload).difference(required_fields))
         raise ValueError(f"current governance state fields drift: missing={missing} extra={extra}")
 
     state = CurrentDevelopmentState(
@@ -221,10 +318,16 @@ def load_current_development_state(
         blocked_operations=_string_tuple(payload, "blocked_operations"),
         blocking_questions=_string_tuple(payload, "blocking_questions"),
         sealed_tasks=_string_tuple(payload, "sealed_tasks"),
+        historical_task_states=(
+            () if schema_version == "1.2" else _historical_task_states(payload)
+        ),
         source_records=_string_tuple(payload, "source_records"),
         state_hash=_required_string(payload, "state_hash"),
     )
-    if state.schema_name != "era-current-development-state" or state.schema_version != "1.2":
+    if state.schema_name != "era-current-development-state" or state.schema_version not in {
+        "1.2",
+        "1.3",
+    }:
         raise ValueError("unsupported current governance state schema")
     if set(state.allowed_operations).intersection(state.blocked_operations):
         raise ValueError("governance operations cannot be both allowed and blocked")
@@ -232,6 +335,13 @@ def load_current_development_state(
         raise ValueError("current governance state contains an unknown operation")
     if state.state_hash != state.computed_hash():
         raise ValueError("current governance state hash mismatch")
+    for historical_state in state.historical_task_states:
+        if historical_state.task_id not in state.sealed_tasks:
+            raise ValueError(f"historical predecessor is not sealed: {historical_state.task_id}")
+        if historical_state.successor_task_id not in state.sealed_tasks:
+            raise ValueError(
+                f"historical successor is not sealed: {historical_state.successor_task_id}"
+            )
     for record in state.source_records:
         record_path = Path(record)
         if record_path.is_absolute() or ".." in record_path.parts:
