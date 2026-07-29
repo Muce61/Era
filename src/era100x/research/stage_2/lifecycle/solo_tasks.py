@@ -19,7 +19,7 @@ from era100x.research.stage_2.acceptance.canonical_json import (
     write_canonical_json_exclusive,
 )
 
-from .source_audit import LifecycleSourceAudit
+from .source_audit import LifecycleSourceAudit, validate_source_audit_payload
 from .solo_runtime import TaskExecutionContext
 
 FULL_START: Final = date(2020, 1, 1)
@@ -86,7 +86,7 @@ def validate_full_period_contract_price_inputs(
 ) -> LifecycleSourceAudit:
     """Verify the complete source audit and every bound OHLC partition."""
 
-    audit = LifecycleSourceAudit.model_validate(ctx.inputs_lock.source_audit)
+    audit = validate_source_audit_payload(ctx.inputs_lock.source_audit)
     if (
         audit.status != "PASS"
         or audit.scope_start_date != FULL_START.isoformat()

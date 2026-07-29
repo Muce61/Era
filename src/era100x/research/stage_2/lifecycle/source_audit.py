@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal, Self
+from collections.abc import Mapping
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
@@ -127,6 +128,21 @@ class LifecycleSourceAudit(BaseModel):
         if self.audit_hash != canonical_hash(payload):
             raise ValueError("source audit hash mismatch")
         return self
+
+
+def validate_source_audit_payload(payload: Mapping[str, Any]) -> LifecycleSourceAudit:
+    """Normalize JSON arrays for frozen tuple fields, then retain strict validation."""
+
+    normalized = dict(payload)
+    for field_name in (
+        "audits",
+        "targeted_reverification",
+        "unverified_or_drifted_sources",
+    ):
+        value = normalized.get(field_name)
+        if isinstance(value, list):
+            normalized[field_name] = tuple(value)
+    return LifecycleSourceAudit.model_validate(normalized)
 
 
 def load_source_audit(path: Path, *, expected_hash: str) -> LifecycleSourceAudit:

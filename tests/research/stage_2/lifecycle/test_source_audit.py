@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 import hashlib
+import json
 import os
 from pathlib import Path
 
@@ -11,7 +12,10 @@ import pytest
 from scripts import audit_stage2_lifecycle_source
 
 from era100x.research.stage_2.lifecycle.models import canonical_hash
-from era100x.research.stage_2.lifecycle.source_audit import LifecycleSourceAudit
+from era100x.research.stage_2.lifecycle.source_audit import (
+    LifecycleSourceAudit,
+    validate_source_audit_payload,
+)
 
 
 def _payload() -> dict[str, object]:
@@ -65,6 +69,20 @@ def test_source_audit_passes_without_requiring_a_new_extreme() -> None:
     assert all(
         item.contract_price_extreme_beyond_visible_trades_count == 0 for item in audit.audits
     )
+
+
+def test_source_audit_normalizes_json_arrays_without_relaxing_strict_fields() -> None:
+    payload = json.loads(json.dumps(_payload()))
+
+    audit = validate_source_audit_payload(payload)
+
+    assert isinstance(audit.audits, tuple)
+    assert isinstance(audit.targeted_reverification, tuple)
+    assert isinstance(audit.unverified_or_drifted_sources, tuple)
+
+    payload["historical_execution_claim"] = "false"
+    with pytest.raises(ValueError, match="historical_execution_claim"):
+        validate_source_audit_payload(payload)
 
 
 def test_source_audit_v11_binds_only_the_approved_trade_supplement() -> None:

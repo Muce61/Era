@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -31,8 +32,10 @@ from era100x.research.stage_2.lifecycle.solo_runtime import (
     execute_run,
     freeze_authority,
 )
+from era100x.research.stage_2.lifecycle.source_audit import validate_source_audit_payload
 
 COMMIT = "a" * 40
+REAL_INPUTS_LOCK_ENV = "ERA_STAGE2_V110_REAL_INPUTS_LOCK"
 
 
 def _hash(value: str) -> str:
@@ -254,6 +257,20 @@ def test_inputs_lock_rejects_symlink_and_hash_drift(
     target.write_text("drift\n", encoding="utf-8")
     with pytest.raises(ValueError, match="input Hash drift"):
         load_inputs_lock(lock.path, verify_files=True)
+
+
+def test_real_inputs_lock_source_audit_json_round_trip() -> None:
+    raw_path = os.environ.get(REAL_INPUTS_LOCK_ENV)
+    if raw_path is None:
+        pytest.skip(f"{REAL_INPUTS_LOCK_ENV} is not configured")
+
+    lock = load_inputs_lock(Path(raw_path))
+    audit = validate_source_audit_payload(lock.source_audit)
+
+    assert audit.schema_version == "1.2"
+    assert audit.status == "PASS"
+    assert audit.audit_hash == lock.source_audit["audit_hash"]
+    assert isinstance(audit.audits, tuple)
 
 
 def test_production_validation_rederives_semantic_hashes(
