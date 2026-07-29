@@ -135,7 +135,7 @@ def _validate_current_state(
         "current_plan": "stage_2_plan_v1.8",
         "current_task": "S2P18-T11",
         "current_task_version": "1.0",
-        "task_status": "FORMAL_INFRA_IMPLEMENTED_VALIDATED_FORMAL_RUN_GATED",
+        "task_status": "PRODUCTION_ADAPTERS_IMPLEMENTED_VALIDATED_FORMAL_RUN_GATED",
         "stage_status": "IN_PROGRESS",
         "research_decision": "STAGE2_NO_GO_CURRENT_EVIDENCE",
         "current_policy_path": "configs/governance/stage2_active_policy_v7.json",
@@ -155,7 +155,7 @@ def _validate_current_state(
     if state.blocked_operations != BLOCKED_OPERATIONS:
         errors.append("Plan v1.8 formal operation block drift")
     if state.blocking_questions != (
-        "FORMAL_RUN_REQUIRES_CLEAN_COMMIT_AND_SEPARATE_COMMIT_BOUND_HUMAN_APPROVAL",
+        "FORMAL_RUN_REQUIRES_FULL_PERIOD_SOURCE_AND_INPUT_CATALOGS_CLEAN_COMMIT_ADAPTER_PLAN_AND_SEPARATE_APPROVAL",
     ):
         errors.append("Plan v1.8 formal approval blocker drift")
     if set(state.sealed_tasks) != SEALED_STAGE2_TASKS:
@@ -210,7 +210,7 @@ def _validate_projections(
     registry_markers = (
         "| Stage 2 | 1.8 | IN_PROGRESS |",
         "STAGE2_NO_GO_CURRENT_EVIDENCE",
-        "Formal Run remains gated by a clean commit",
+        "Formal artifacts and Run remain gated by a full-period source audit",
         "This is not Stage 2 research PASS",
         "Stage 3 remains locked",
         "S2-T15 remains historical `STOPPED_FAILED_UNPUBLISHED`",
@@ -228,7 +228,8 @@ def _validate_projections(
         "current_stage_status: IN_PROGRESS",
         "current_research_decision: STAGE2_NO_GO_CURRENT_EVIDENCE",
         "current_policy: configs/governance/stage2_active_policy_v7.json",
-        "next_task_status: S2P18_FORMAL_RUN_GATED_PENDING_CLEAN_COMMIT_APPROVAL",
+        "next_task_status: "
+        "S2P18_FORMAL_ARTIFACTS_GATED_PENDING_FULL_SOURCE_CATALOG_AND_COMMIT_APPROVAL",
         "stage3_locked: true",
         "historical_s2_t15_status: STOPPED_FAILED_UNPUBLISHED",
         "historical_s2_t15_successor: S2P13-T16",

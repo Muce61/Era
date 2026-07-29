@@ -41,10 +41,18 @@ T20 必须分别报告历史 H2、successor H2、两条生命周期轨及性能�
 
 正式链使用 `scripts/run_stage2_v18.py`。批准回执必须同时绑定干净代码 SHA、Policy Hash、
 预注册 Hash、来源审计 Hash 和完整十 Task adapter plan Hash。Authority 在任何 Run ID
-之前冻结十二类命名输入 Hash。每个 producer 由 Authority 绑定其可执行文件 Hash，并须
+之前冻结十二类命名输入的绝对路径、文件 SHA-256 与语义 binding Hash。Contract Price
+输入必须来自覆盖 `[2020-01-01, 2026-07-04)` 的逐分区 Catalog，且逐分区 Hash 在 T11
+消费前重验。每个 producer 由 Authority 绑定其可执行文件 Hash，并须
 输出绑定同一 Authority、代码 SHA、adapter plan 和上游 receipt Hash 的正式 receipt。
 
-Run 使用唯一锁和 append-only checkpoint 链。任一 producer、依赖、输入或 Hash 失败，
+H2 和生命周期的数据流分开：T12–T18 只重跑 canonical Trades H2；Contract Price OHLC
+生命周期轨只从 T11 进入 T19/T20，不得成为 H2 标签。旧实现只允许作为数学引擎被新
+S2P18 envelope 调用，旧 receipt、Authority、Run、任务身份与固定结果计数不得复用。
+
+Run 使用唯一锁和 append-only checkpoint 链。可恢复进程中断保留同一 Run，并以新的
+append-only Task attempt 重试；旧 attempt、checkpoint 与日志不得删除。任一非恢复型
+producer、依赖、输入或 Hash 失败，
 当前 Run 终态为 FAILED 且保持 unpublished；不得原地修成 PASS。十 Task 完成后才允许
 构建总 Catalog/Manifest、创建同卷候选发布、执行完整 Hash Verify，并在 Verify PASS 后
 写入 publication receipt。正式 Run 批准与 adapter plan 都必须在新干净 commit 冻结后

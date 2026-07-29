@@ -7,8 +7,9 @@
 
 ## 合同
 
-冻结 successor First Passage 的 AMBIGUOUS、EXPIRED、右删失与来源缺口投影，并准备 T16
-所需的 30-cell 输入。不得删除 AMBIGUOUS、放宽失败线或改变样本。
+冻结 canonical-Trades-only successor First Passage 的 AMBIGUOUS、EXPIRED 与来源缺口
+投影，并准备 T16 所需的 30-cell 输入。生命周期右删失和 OHLC 边界分类不进入 30-cell
+H2 输入。不得删除 AMBIGUOUS、放宽失败线或改变样本。
 
 ## 验收
 

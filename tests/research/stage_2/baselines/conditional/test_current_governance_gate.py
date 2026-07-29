@@ -22,7 +22,7 @@ def _assert_blocked(error: pytest.ExceptionInfo[GovernanceBlockedError], operati
     assert error.value.reason_code == "GOVERNANCE_OPERATION_NOT_AUTHORIZED"
     assert error.value.operation == operation
     assert error.value.blocking_questions == (
-        "FORMAL_RUN_REQUIRES_CLEAN_COMMIT_AND_SEPARATE_COMMIT_BOUND_HUMAN_APPROVAL",
+        "FORMAL_RUN_REQUIRES_FULL_PERIOD_SOURCE_AND_INPUT_CATALOGS_CLEAN_COMMIT_ADAPTER_PLAN_AND_SEPARATE_APPROVAL",
     )
 
 

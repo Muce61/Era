@@ -25,3 +25,7 @@ def test_plan_v18_ui_exposes_evidence_driven_observability() -> None:
         assert marker in server
     assert 'path == "/api/v18/status"' in server
     assert "formal_run_authorized" in server
+    assert "production_adapter_status" in server
+    assert "source_catalog_count" in server
+    assert "input_catalog_count" in server
+    assert "adapter_plan_count" in server

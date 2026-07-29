@@ -124,7 +124,14 @@ T19→T20, with T11 also feeding T16 and T19. No downstream task unlocks before 
 Catalog, Manifest and Verify pass. Formal execution is gated by clean-commit approval. Stage 2 is
 `IN_PROGRESS`, not research PASS, and Stage 3 remains locked.
 
+ADR-S2-027 splits the dataflow at T11: T12–T18 remain canonical-Trades-only H2, while
+`PURE_TRADES_COMPARATOR` and `CONTRACT_PRICE_OHLC_PRIMARY` lifecycle evidence goes directly from
+T11 to T19/T20. T11 remains a governance dependency of T16 but its OHLC classifications cannot
+become H2 labels.
+
 The formal orchestrator freezes a complete producer adapter plan and its executable Hashes before
 approval. It then enforces `approval → Authority → Run lock → T11…T20 receipts → reconcile →
 candidate publication → full Verify → publication receipt`. An adapter or upstream receipt failure
-terminates the Run unpublished; it cannot skip forward in this DAG.
+terminates the Run unpublished; it cannot skip forward in this DAG. Retryable process interruption
+is the only exception: it preserves the same non-terminal Run, appends a new Task attempt and
+revalidates the frozen Authority, input Catalog and upstream receipts before continuing.

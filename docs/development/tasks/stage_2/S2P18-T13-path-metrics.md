@@ -7,8 +7,9 @@
 
 ## 合同
 
-在 successor 路径证据上重新计算 MFE、MAE 和 Time-to-Activation。必须保留生命周期
-轨道、删失与边界分类；粗粒度 OHLC 不得伪装成秒内成交路径。
+在 canonical-Trades-only successor H2 路径证据上重新计算 MFE、MAE 和
+Time-to-Activation。生命周期轨道、删失与边界分类只作独立报告引用；不得加入 H2
+路径或标签。粗粒度 OHLC 不得伪装成秒内成交路径。
 
 ## 验收
 

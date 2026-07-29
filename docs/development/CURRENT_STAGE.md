@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.8 — LIFECYCLE REPAIR IMPLEMENTATION
 Current Task: S2P18-T11 v1.0 — dual-track lifecycle and performance gate
-Status: FORMAL INFRA IMPLEMENTED AND VALIDATED / FORMAL RUN GATED / STAGE2_NO_GO_CURRENT_EVIDENCE
+Status: PRODUCTION ADAPTERS IMPLEMENTED / FORMAL ARTIFACTS AND RUN GATED / STAGE2_NO_GO_CURRENT_EVIDENCE
 ```
 
 Plan v1.8 reopens Stage 2 only for the approved lifecycle evidence repair and an append-only
@@ -20,11 +20,14 @@ The machine authority is `configs/governance/current_development_state.json` sch
 `configs/research/stage_2/s2p18_t11_source_audit_v1.json`; it binds distinct Binance Trades and
 aggTrades archive families and forbids zero-volume forward-filled seconds as gap recovery.
 
-The v1.8 formal CLI and append-only orchestration are implemented at
-`scripts/run_stage2_v18.py` and `src/era100x/research/stage_2/lifecycle/formal_chain.py`.
-Implementation validation does not authorize a formal Run. A new clean commit, a complete frozen
-producer adapter plan and a separate approval bound to both Hashes remain mandatory before
-Authority creation.
+The v1.8 formal CLI, append-only orchestration, immutable input Catalog and all ten production
+handlers are implemented at `scripts/run_stage2_v18.py`,
+`scripts/run_stage2_v18_task.py` and `src/era100x/research/stage_2/lifecycle/`. The H2 branch
+remains canonical-Trades-only; lifecycle OHLC goes only to T19/T20. Implementation validation does
+not authorize a formal Run. The complete-period source audit/Catalog, a clean-commit-frozen adapter
+plan and a separate approval bound to that commit and those Hashes remain mandatory before
+Authority creation. No adapter plan, approval, Authority or Run was created in this implementation
+turn.
 
 Plan v1.7 authorized only S2P17-T20. Formal Run
 `stage2-s2p17-t20-20260727T154959Z-ed51e7cb220b` completed under Authority

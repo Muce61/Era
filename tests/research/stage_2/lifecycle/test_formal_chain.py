@@ -21,6 +21,10 @@ from era100x.research.stage_2.lifecycle.formal_chain import (
     run_formal_chain,
 )
 from era100x.research.stage_2.lifecycle.governance import LifecycleRepairPolicy
+from era100x.research.stage_2.lifecycle.input_catalog import (
+    load_input_catalog,
+    write_input_catalog,
+)
 
 COMMIT = "a" * 40
 
@@ -50,7 +54,12 @@ def _policy(tmp_path: Path) -> LifecycleRepairPolicy:
     )
 
 
-def _producer(path: Path, *, fail_task: str | None = None) -> None:
+def _producer(
+    path: Path,
+    *,
+    fail_task: str | None = None,
+    retry_task: str | None = None,
+) -> None:
     path.write_text(
         f"""
 import hashlib, json, os
@@ -68,6 +77,10 @@ run_root = Path(os.environ["ERA_S2P18_RUN_ROOT"])
 task_root = Path(os.environ["ERA_S2P18_TASK_ROOT"])
 if task == {fail_task!r}:
     raise SystemExit(17)
+retry_marker = task_root / "retry-marker"
+if task == {retry_task!r} and not retry_marker.exists():
+    retry_marker.write_text("resume\\n")
+    raise SystemExit(75)
 output = task_root / "output.json"
 content = {{"task_id": task, "status": "PASS"}}
 output.write_text(json.dumps(content, sort_keys=True) + "\\n")
@@ -136,9 +149,10 @@ def _authorized(
     monkeypatch: pytest.MonkeyPatch,
     *,
     fail_task: str | None = None,
+    retry_task: str | None = None,
 ) -> tuple[LifecycleRepairPolicy, formal_chain.AdapterPlan, Path, Path, Path]:
     producer = tmp_path / "producer.py"
-    _producer(producer, fail_task=fail_task)
+    _producer(producer, fail_task=fail_task, retry_task=retry_task)
     adapters = load_adapter_plan(_adapter_plan(tmp_path, producer), repository_root=tmp_path)
     policy = _policy(tmp_path)
     monkeypatch.setattr(formal_chain, "repository_clean", lambda _root: True)
@@ -153,16 +167,27 @@ def _authorized(
         approval_source="test approval",
         approved_commit=COMMIT,
     )
+    inputs_root = tmp_path / "inputs"
+    inputs_root.mkdir()
+    input_entries: dict[str, tuple[Path, str]] = {}
+    for key in formal_chain.REQUIRED_INPUT_BINDINGS:
+        evidence = inputs_root / f"{key}.json"
+        evidence.write_text(json.dumps({"role": key}) + "\n", encoding="utf-8")
+        input_entries[key] = (
+            evidence.resolve(),
+            hashlib.sha256(key.encode()).hexdigest(),
+        )
+    input_catalog_path = write_input_catalog(
+        path=evidence_root / "operations/input-catalog.json",
+        entries=input_entries,
+    )
     authority = freeze_authority(
         policy=policy,
         adapter_plan=adapters,
         approval_path=approval,
         repository_root=tmp_path,
         evidence_root=evidence_root,
-        input_bindings={
-            key: hashlib.sha256(key.encode()).hexdigest()
-            for key in formal_chain.REQUIRED_INPUT_BINDINGS
-        },
+        input_catalog=load_input_catalog(input_catalog_path),
     )
     return policy, adapters, approval, authority, evidence_root
 
@@ -214,7 +239,7 @@ def test_failed_task_is_terminal_unpublished_and_preserves_prefix(
     last = read_canonical_json(sorted((run_root / "checkpoints").glob("*.json"))[-1])
     assert last["status"] == "FAILED"
     assert not (run_root / "published/publication.json").exists()
-    assert (run_root / "logs/S2P18-T14.json").is_file()
+    assert (run_root / "logs/S2P18-T14/attempt-0001.json").is_file()
 
 
 def test_adapter_hash_drift_fails_before_approval(
@@ -241,7 +266,7 @@ def test_authority_requires_every_frozen_input_hash(
     monkeypatch.setattr(formal_chain, "repository_clean", lambda _root: True)
     monkeypatch.setattr(formal_chain, "repository_commit", lambda _root: COMMIT)
     evidence_root = tmp_path / "evidence"
-    approval = record_approval(
+    record_approval(
         policy=policy,
         adapter_plan=adapters,
         repository_root=tmp_path,
@@ -250,20 +275,17 @@ def test_authority_requires_every_frozen_input_hash(
         approval_source="test approval",
         approved_commit=COMMIT,
     )
-    incomplete = {
-        key: hashlib.sha256(key.encode()).hexdigest()
-        for key in formal_chain.REQUIRED_INPUT_BINDINGS
-        if key != "historical_t20_verify_hash"
-    }
-
-    with pytest.raises(ValueError, match="input Hash set is incomplete"):
-        freeze_authority(
-            policy=policy,
-            adapter_plan=adapters,
-            approval_path=approval,
-            repository_root=tmp_path,
-            evidence_root=evidence_root,
-            input_bindings=incomplete,
+    source = tmp_path / "only-one.json"
+    source.write_text("{}\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="requires twelve exact roles"):
+        write_input_catalog(
+            path=evidence_root / "operations/input-catalog.json",
+            entries={
+                "btc_stage1_logical_hash": (
+                    source.resolve(),
+                    hashlib.sha256(b"btc").hexdigest(),
+                )
+            },
         )
     assert not (evidence_root / "authorities").exists()
     assert not (evidence_root / "runs").exists()
@@ -275,10 +297,9 @@ def test_one_approval_freezes_only_one_authority_and_one_run(
     policy, adapters, approval, authority, evidence_root = _authorized(
         tmp_path, monkeypatch
     )
-    input_bindings = {
-        key: hashlib.sha256(key.encode()).hexdigest()
-        for key in formal_chain.REQUIRED_INPUT_BINDINGS
-    }
+    input_catalog = load_input_catalog(
+        evidence_root / "operations/input-catalog.json"
+    )
     with pytest.raises(ValueError, match="one approval"):
         freeze_authority(
             policy=policy,
@@ -286,7 +307,7 @@ def test_one_approval_freezes_only_one_authority_and_one_run(
             approval_path=approval,
             repository_root=tmp_path,
             evidence_root=evidence_root,
-            input_bindings=input_bindings,
+            input_catalog=input_catalog,
         )
 
     run_formal_chain(
@@ -307,3 +328,45 @@ def test_one_approval_freezes_only_one_authority_and_one_run(
             evidence_root=evidence_root,
         )
     assert len(tuple((evidence_root / "runs").iterdir())) == 1
+
+
+def test_retryable_task_interruption_resumes_same_run_and_new_log_attempt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    policy, adapters, approval, authority, evidence_root = _authorized(
+        tmp_path,
+        monkeypatch,
+        retry_task="S2P18-T14",
+    )
+    with pytest.raises(
+        formal_chain.RetryableTaskInterruption,
+        match="resumable checkpoint",
+    ):
+        run_formal_chain(
+            policy=policy,
+            adapter_plan=adapters,
+            approval_path=approval,
+            authority_path=authority,
+            repository_root=tmp_path,
+            evidence_root=evidence_root,
+        )
+    run_root = next((evidence_root / "runs").iterdir())
+    interrupted = read_canonical_json(
+        sorted((run_root / "checkpoints").glob("*.json"))[-1]
+    )
+    assert interrupted["status"] == "INTERRUPTED"
+
+    resumed = run_formal_chain(
+        policy=policy,
+        adapter_plan=adapters,
+        approval_path=approval,
+        authority_path=authority,
+        repository_root=tmp_path,
+        evidence_root=evidence_root,
+        resume_run_root=run_root,
+    )
+    assert resumed == run_root
+    assert read_canonical_json(run_root / "published/publication.json")[
+        "stage3_locked"
+    ]
+    assert len(tuple((run_root / "logs/S2P18-T14").glob("attempt-*.json"))) == 2

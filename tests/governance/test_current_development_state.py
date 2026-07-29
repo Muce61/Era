@@ -22,7 +22,10 @@ def test_repository_current_state_is_plan_v18_implementation_gated_and_hash_vali
     assert state.current_plan == "stage_2_plan_v1.8"
     assert state.current_task == "S2P18-T11"
     assert state.current_task_version == "1.0"
-    assert state.task_status == "FORMAL_INFRA_IMPLEMENTED_VALIDATED_FORMAL_RUN_GATED"
+    assert (
+        state.task_status
+        == "PRODUCTION_ADAPTERS_IMPLEMENTED_VALIDATED_FORMAL_RUN_GATED"
+    )
     assert state.stage_status == "IN_PROGRESS"
     assert state.research_decision == "STAGE2_NO_GO_CURRENT_EVIDENCE"
     assert state.current_policy_path == "configs/governance/stage2_active_policy_v7.json"
@@ -32,7 +35,7 @@ def test_repository_current_state_is_plan_v18_implementation_gated_and_hash_vali
     assert state.approved_execution_limit == "S2P18-T20"
     assert state.formal_run_receipt_required is True
     assert state.blocking_questions == (
-        "FORMAL_RUN_REQUIRES_CLEAN_COMMIT_AND_SEPARATE_COMMIT_BOUND_HUMAN_APPROVAL",
+        "FORMAL_RUN_REQUIRES_FULL_PERIOD_SOURCE_AND_INPUT_CATALOGS_CLEAN_COMMIT_ADAPTER_PLAN_AND_SEPARATE_APPROVAL",
     )
     assert "S2-T15" in state.sealed_tasks
     assert len(state.historical_task_states) == 1
@@ -84,7 +87,7 @@ def test_current_state_blocks_every_write_or_run_operation(operation: str) -> No
     assert error.value.reason_code == "GOVERNANCE_OPERATION_NOT_AUTHORIZED"
     assert error.value.operation == operation
     assert error.value.blocking_questions == (
-        "FORMAL_RUN_REQUIRES_CLEAN_COMMIT_AND_SEPARATE_COMMIT_BOUND_HUMAN_APPROVAL",
+        "FORMAL_RUN_REQUIRES_FULL_PERIOD_SOURCE_AND_INPUT_CATALOGS_CLEAN_COMMIT_ADAPTER_PLAN_AND_SEPARATE_APPROVAL",
     )
 
 
@@ -111,7 +114,7 @@ def test_resealed_state_can_be_loaded_but_does_not_change_repository_authority(
     assert state.task_status == "IN_PROGRESS"
     assert (
         load_current_development_state().task_status
-        == "FORMAL_INFRA_IMPLEMENTED_VALIDATED_FORMAL_RUN_GATED"
+        == "PRODUCTION_ADAPTERS_IMPLEMENTED_VALIDATED_FORMAL_RUN_GATED"
     )
 
 

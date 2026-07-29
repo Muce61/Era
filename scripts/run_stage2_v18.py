@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 from pathlib import Path
 
 from era100x.research.stage_2.lifecycle.formal_chain import (
@@ -20,6 +21,17 @@ from era100x.research.stage_2.lifecycle.formal_chain import (
     verify_formal_chain,
 )
 from era100x.research.stage_2.lifecycle.governance import load_policy
+from era100x.research.stage_2.lifecycle.input_catalog import (
+    load_input_catalog,
+    write_input_catalog,
+)
+from era100x.research.stage_2.lifecycle.production import (
+    production_adapter_plan_payload,
+    validate_full_period_contract_price_catalog,
+)
+from era100x.research.stage_2.acceptance.canonical_json import (
+    write_canonical_json_exclusive,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_POLICY = ROOT / "configs/governance/stage2_active_policy_v7.json"
@@ -28,19 +40,14 @@ DEFAULT_EVIDENCE_ROOT = Path(
 )
 
 
-def _inputs(path: Path) -> dict[str, str]:
-    payload = json.loads(path.read_bytes())
-    if not isinstance(payload, dict):
-        raise ValueError("input bindings must be a JSON object")
-    return {str(key): str(value) for key, value in payload.items()}
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "command",
         choices=(
             "status",
+            "freeze-adapter-plan",
+            "freeze-input-catalog",
             "record-approval",
             "freeze-authority",
             "run",
@@ -58,13 +65,51 @@ def main() -> int:
     parser.add_argument("--authority", type=Path)
     parser.add_argument("--run-root", type=Path)
     parser.add_argument("--verify-path", type=Path)
-    parser.add_argument("--input-bindings", type=Path)
+    parser.add_argument("--input-catalog", type=Path)
     parser.add_argument("--approved-by")
     parser.add_argument("--approval-source")
     parser.add_argument("--approved-commit")
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--input-spec", type=Path)
     args = parser.parse_args()
 
     policy = load_policy(args.policy, repository_root=ROOT)
+    if args.command == "freeze-adapter-plan":
+        if args.output is None or args.input_catalog is None:
+            raise ValueError(
+                "freeze-adapter-plan requires --output and --input-catalog"
+            )
+        if subprocess.check_output(
+            ["git", "status", "--porcelain"], cwd=ROOT, text=True
+        ).strip():
+            raise ValueError("adapter plan freeze requires a clean repository")
+        validate_full_period_contract_price_catalog(
+            load_input_catalog(args.input_catalog.resolve())
+        )
+        write_canonical_json_exclusive(
+            args.output,
+            production_adapter_plan_payload(repository_root=ROOT),
+        )
+        print(args.output)
+        return 0
+    if args.command == "freeze-input-catalog":
+        if args.output is None or args.input_spec is None:
+            raise ValueError(
+                "freeze-input-catalog requires --output and --input-spec"
+            )
+        raw = json.loads(args.input_spec.read_bytes())
+        if not isinstance(raw, dict):
+            raise ValueError("input spec must be a role-keyed JSON object")
+        entries: dict[str, tuple[Path, str]] = {}
+        for role, value in raw.items():
+            if not isinstance(value, dict) or set(value) != {"path", "binding_hash"}:
+                raise ValueError(f"invalid input spec entry: {role}")
+            entries[str(role)] = (
+                Path(str(value["path"])).resolve(),
+                str(value["binding_hash"]),
+            )
+        print(write_input_catalog(path=args.output.resolve(), entries=entries))
+        return 0
     if args.command == "status":
         adapters = (
             load_adapter_plan(args.adapter_plan, repository_root=ROOT)
@@ -119,15 +164,15 @@ def main() -> int:
         repository_root=ROOT,
     )
     if args.command == "freeze-authority":
-        if args.input_bindings is None:
-            raise ValueError("freeze-authority requires --input-bindings")
+        if args.input_catalog is None:
+            raise ValueError("freeze-authority requires --input-catalog")
         path = freeze_authority(
             policy=policy,
             adapter_plan=adapters,
             approval_path=args.approval,
             repository_root=ROOT,
             evidence_root=args.evidence_root,
-            input_bindings=_inputs(args.input_bindings),
+            input_catalog=load_input_catalog(args.input_catalog.resolve()),
         )
         print(path)
         return 0

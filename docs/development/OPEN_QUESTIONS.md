@@ -1,5 +1,54 @@
 # Open Questions
 
+## OQ-S2-013 — Plan v1.8 production adapter dataflow and full-scope source binding
+
+- status: RESOLVED BY CR-2026-050 ADDENDUM / ADR-S2-027; IMPLEMENTATION VALIDATION
+  COMPLETE; FORMAL ARTIFACTS AND RUN REMAIN GATED
+- task: S2P18-T11–T20 v1.0
+- discovered_by: post-commit production-adapter audit at
+  `c2e2e573b2631b39575d70f33770d4c96b0057e0`
+- evidence:
+  - the only sealed Plan v1.8 Contract Price source audit covers
+    `[2020-01-01, 2020-01-08)`, while the frozen Stage 2 source period is
+    `[2020-01-01, 2026-07-04)`;
+  - only S2P18-T11 has a real v1.8 producer core. Existing T12–T20 producers and their source
+    auditors hard-code S2P13/S2P14/S2P15/S2P16/S2P17 identities, expected Run IDs, counts and
+    receipt schemas;
+  - the current outer Authority freezes twelve Hash values but no immutable path-to-Hash input
+    Catalog, so a producer cannot resolve and independently verify the exact bound source files;
+  - the approved v1.8 Task text propagates lifecycle tracks through T12–T15 while also requiring
+    T16 H2 semantic identity. Feeding OHLC-recovered boundaries into H2 First Passage would change
+    the H2 estimand; silently ignoring those tracks would contradict the current downstream text;
+  - the outer runner can resume only between Tasks. A producer interruption leaves its staging
+    directory present and the current resume path rejects it before the producer can consume its
+    checkpoint.
+- affected rules/contracts/baselines:
+  `DATA-HISTORICAL-NO-FAKE-EXECUTION`, `RESEARCH-H3-CONDITIONAL-ROUND-PROB`,
+  ADR-S2-004 H2 Primary, CR-2026-050, ADR-S2-026, Plan v1.8 and S2P18-T11–T20. Historical
+  Plan v1.7 evidence remains immutable.
+- decision_required:
+  1. require a full-period Contract Price source Catalog/audit before adapter freeze;
+  2. add an immutable input Catalog carrying exact paths, file/Logical Hashes and roles to the
+     outer Authority;
+  3. keep S2P18-T12–T18 H2 on the canonical-Trades estimand and carry both lifecycle tracks on a
+     separate T11→T19/T20 evidence branch; T11 remains a governance prerequisite but its OHLC
+     boundary classifications are not H2 labels;
+  4. permit new S2P18 producer envelopes to reuse verified mathematical engines only after removing
+     old Task/Run/count constants from their input auditors; old receipts themselves cannot be
+     adopted as new results;
+  5. make per-Task attempts append-only and checkpoint-resumable, with a new Run required after a
+     terminal producer failure.
+- evidence_required: amended CR/ADR/Plan/Task contracts, full-range source audit and Catalog,
+  ten real producer handlers, scalar/legacy equivalence fixtures, interrupted-task resume tests,
+  T16 normalized H2 Hash equality, full fake-chain and bounded real rehearsal.
+- decision: Muce approved the five-part minimum repair on 2026-07-29. The implementation adds the
+  full-period source-audit/Catalog tool, immutable twelve-role input Catalog, canonical-Trades-only
+  H2 branch, ten real S2P18 producer handlers and append-only retryable Task attempts. Directed and
+  repository-wide validation must pass and the implementation must be frozen in a clean commit.
+- remaining_gate: this resolution does not create the full-period source evidence, adapter plan,
+  approval receipt, Authority or Run. Those formal artifacts require the new clean commit and the
+  next separate commit-bound approval.
+
 ## OQ-S2-012 — Lifecycle producer exit-source and occupancy contract
 
 - status: RESOLVED BY CR-2026-042 / ADR-S2-019

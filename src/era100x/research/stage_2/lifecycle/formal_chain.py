@@ -28,9 +28,10 @@ from era100x.research.stage_2.acceptance.canonical_json import (
 )
 
 from .governance import LifecycleRepairPolicy
+from .input_catalog import InputCatalog, REQUIRED_INPUT_BINDINGS, load_input_catalog
 
 APPROVAL_SCHEMA: Final = "s2p18-formal-approval-v1"
-AUTHORITY_SCHEMA: Final = "s2p18-chain-authority-v1"
+AUTHORITY_SCHEMA: Final = "s2p18-chain-authority-v2"
 RUN_SCHEMA: Final = "s2p18-formal-run-v1"
 CHECKPOINT_SCHEMA: Final = "s2p18-chain-checkpoint-v1"
 TASK_RECEIPT_SCHEMA: Final = "s2p18-task-receipt-v1"
@@ -40,22 +41,11 @@ VERIFY_SCHEMA: Final = "s2p18-chain-verify-v1"
 ADAPTER_SCHEMA: Final = "s2p18-task-adapter-plan-v1"
 TASK_ORDER: Final = tuple(f"S2P18-T{number:02d}" for number in range(11, 21))
 RUN_ID = re.compile(r"^stage2-s2p18-\d{8}T\d{6}Z-[0-9a-f]{12}$")
-REQUIRED_INPUT_BINDINGS: Final = frozenset(
-    {
-        "btc_stage1_logical_hash",
-        "eth_stage1_logical_hash",
-        "canonical_trades_catalog_hash",
-        "canonical_trades_verify_hash",
-        "contract_price_catalog_hash",
-        "funding_acceptance_hash",
-        "t10_manifest_hash",
-        "primary_config_hash",
-        "matching_contract_hash",
-        "cluster_contract_hash",
-        "fixed_seed_hash",
-        "historical_t20_verify_hash",
-    }
-)
+RETRYABLE_RETURN_CODES: Final = frozenset({-15, -2, 75, 130, 143})
+
+
+class RetryableTaskInterruption(RuntimeError):
+    """A producer checkpoint may be resumed inside the same non-terminal Run."""
 
 
 def _now() -> str:
@@ -234,7 +224,7 @@ def freeze_authority(
     approval_path: Path,
     repository_root: Path,
     evidence_root: Path,
-    input_bindings: Mapping[str, str],
+    input_catalog: InputCatalog,
 ) -> Path:
     approval = validate_approval(
         approval_path,
@@ -242,11 +232,9 @@ def freeze_authority(
         adapter_plan=adapter_plan,
         repository_root=repository_root,
     )
-    if set(input_bindings) != REQUIRED_INPUT_BINDINGS or any(
-        not key or not re.fullmatch(r"[0-9a-f]{64}", value)
-        for key, value in input_bindings.items()
-    ):
-        raise ValueError("Authority input Hash set is incomplete or malformed")
+    verified_catalog = load_input_catalog(input_catalog.path)
+    if verified_catalog.catalog_hash != input_catalog.catalog_hash:
+        raise ValueError("Authority input Catalog changed after validation")
     for existing in (evidence_root / "authorities").glob("authority-*.json"):
         existing_payload = read_canonical_json(existing)
         if existing_payload.get("approval_hash") == approval["approval_hash"]:
@@ -267,7 +255,9 @@ def freeze_authority(
             task_id: list(adapter.executable_hashes)
             for task_id, adapter in adapter_plan.adapters.items()
         },
-        "input_bindings": dict(sorted(input_bindings.items())),
+        "input_catalog_path": str(verified_catalog.path),
+        "input_catalog_hash": verified_catalog.catalog_hash,
+        "input_bindings": verified_catalog.binding_hashes,
         "task_order": list(TASK_ORDER),
         "task_dag": policy.payload["task_dag"],
         "created_at": _now(),
@@ -296,6 +286,10 @@ def validate_authority(
         repository_root=repository_root,
     )
     raw_inputs = payload.get("input_bindings")
+    catalog_path = Path(str(payload.get("input_catalog_path", "")))
+    if not catalog_path.is_absolute():
+        raise ValueError("formal Authority input Catalog path is not absolute")
+    input_catalog = load_input_catalog(catalog_path)
     expected_executable_hashes = {
         task_id: list(adapter.executable_hashes)
         for task_id, adapter in adapter_plan.adapters.items()
@@ -311,6 +305,8 @@ def validate_authority(
         or payload.get("contract_hashes")
         != dict(sorted(policy.contract_hashes.items()))
         or payload.get("adapter_executable_hashes") != expected_executable_hashes
+        or payload.get("input_catalog_hash") != input_catalog.catalog_hash
+        or raw_inputs != input_catalog.binding_hashes
         or not isinstance(raw_inputs, dict)
         or set(raw_inputs) != REQUIRED_INPUT_BINDINGS
         or any(
@@ -464,9 +460,10 @@ def _execute_task(
     upstream_receipt_hashes: Mapping[str, str],
 ) -> dict[str, Any]:
     task_root = run_root / "staging" / adapter.task_id
-    if task_root.exists():
-        raise ValueError(f"Task staging already exists without accepted receipt: {adapter.task_id}")
-    task_root.mkdir(parents=True)
+    task_root.mkdir(parents=True, exist_ok=True)
+    attempt = (
+        len(tuple((run_root / "logs" / adapter.task_id).glob("attempt-*.json"))) + 1
+    )
     env = os.environ.copy()
     env.update(
         {
@@ -486,6 +483,7 @@ def _execute_task(
                 sort_keys=True,
                 separators=(",", ":"),
             ),
+            "ERA_S2P18_PRODUCER_ATTEMPT": str(attempt),
             "PYTHONPATH": str(repository_root),
         }
     )
@@ -506,9 +504,17 @@ def _execute_task(
     }
     log_payload["log_hash"] = _self_hash(log_payload, "log_hash")
     _write(
-        run_root / "logs" / f"{adapter.task_id}.json", log_payload
+        run_root
+        / "logs"
+        / adapter.task_id
+        / f"attempt-{attempt:04d}.json",
+        log_payload,
     )
     if completed.returncode:
+        if completed.returncode in RETRYABLE_RETURN_CODES:
+            raise RetryableTaskInterruption(
+                f"Task producer interrupted with resumable checkpoint: {adapter.task_id}"
+            )
         raise ValueError(f"Task producer failed: {adapter.task_id}")
     return _task_receipt(
         run_root,
@@ -667,6 +673,21 @@ def run_formal_chain(
                 full_hash_scan=True,
             )
             seal_publication(run_root=run_root, verify_path=verify_path)
+        except RetryableTaskInterruption:
+            _write_checkpoint(
+                run_root,
+                run_id=str(run_contract["run_id"]),
+                authority_hash=str(authority["authority_hash"]),
+                completed_tasks=completed_tasks,
+                current_task=(
+                    TASK_ORDER[len(completed_tasks)]
+                    if len(completed_tasks) < len(TASK_ORDER)
+                    else None
+                ),
+                status="INTERRUPTED",
+                reason_code="RETRYABLE_TASK_INTERRUPTION",
+            )
+            raise
         except BaseException as exc:
             _write_checkpoint(
                 run_root,
@@ -695,31 +716,12 @@ def build_catalog_and_manifest(
         raise ValueError("cannot reconcile an incomplete Run")
     authority = read_canonical_json(authority_path)
     authority_hash = _verified_self_hash(authority, "authority_hash")
-    files: list[dict[str, object]] = []
-    for path in sorted((run_root / "staging").rglob("*")):
-        if path.is_file() and not path.is_symlink() and not path.name.startswith("._"):
-            files.append(
-                {
-                    "relative_path": str(path.relative_to(run_root / "staging")),
-                    "sha256": sha256_file(path),
-                    "size_bytes": path.stat().st_size,
-                }
-            )
-    if not files:
-        raise ValueError("formal Run has no staging outputs")
-    catalog: dict[str, object] = {
-        "schema_name": CATALOG_SCHEMA,
-        "schema_version": "1.0",
-        "run_id": run_root.name,
-        "authority_hash": authority_hash,
-        "files": files,
-    }
-    catalog["catalog_hash"] = _self_hash(catalog, "catalog_hash")
-    catalog_path = _write(run_root / "reconcile" / "catalog.json", catalog)
     authority_code_commit = str(authority["code_commit"])
     adapter_plan_hash = str(authority["adapter_plan_hash"])
     receipts: list[dict[str, Any]] = []
     receipt_by_task: dict[str, dict[str, Any]] = {}
+    files: list[dict[str, object]] = []
+    seen_paths: set[str] = set()
     for task_id in TASK_ORDER:
         dependencies = cast(list[str], authority["task_dag"][task_id])
         receipt = _task_receipt(
@@ -735,6 +737,31 @@ def build_catalog_and_manifest(
         )
         receipts.append(receipt)
         receipt_by_task[task_id] = receipt
+        for item in cast(list[dict[str, object]], receipt["output_files"]):
+            relative = _safe_relative(item["relative_path"])
+            path = run_root / "staging" / task_id / relative
+            catalog_relative = str(Path(task_id) / relative)
+            if catalog_relative in seen_paths:
+                raise ValueError(f"duplicate formal Catalog path: {catalog_relative}")
+            seen_paths.add(catalog_relative)
+            files.append(
+                {
+                    "relative_path": catalog_relative,
+                    "sha256": sha256_file(path),
+                    "size_bytes": path.stat().st_size,
+                }
+            )
+    if not files:
+        raise ValueError("formal Run has no staging outputs")
+    catalog: dict[str, object] = {
+        "schema_name": CATALOG_SCHEMA,
+        "schema_version": "1.0",
+        "run_id": run_root.name,
+        "authority_hash": authority_hash,
+        "files": files,
+    }
+    catalog["catalog_hash"] = _self_hash(catalog, "catalog_hash")
+    catalog_path = _write(run_root / "reconcile" / "catalog.json", catalog)
     manifest: dict[str, object] = {
         "schema_name": MANIFEST_SCHEMA,
         "schema_version": "1.0",

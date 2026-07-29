@@ -1801,7 +1801,7 @@ def _stage2_v18_projection(stage2_root: Path) -> dict[str, Any]:
     benchmarks = cast(list[dict[str, Any]], performance.get("benchmarks") or [])
     t11_benchmarks = [item for item in benchmarks if item.get("task_id") == "S2P18-T11"]
     t16_benchmarks = [item for item in benchmarks if item.get("task_id") == "S2P18-T16"]
-    source_pass = bool(policy.source_audit_hash)
+    rehearsal_source_pass = bool(policy.source_audit_hash)
     t11_perf_pass = bool(t11_benchmarks) and all(
         float(item.get("speedup") or 0) >= 2
         and item.get("semantic_equality") is True
@@ -1818,7 +1818,12 @@ def _stage2_v18_projection(stage2_root: Path) -> dict[str, Any]:
     formal_paths = (
         REPOSITORY_ROOT
         / "src/era100x/research/stage_2/lifecycle/formal_chain.py",
+        REPOSITORY_ROOT
+        / "src/era100x/research/stage_2/lifecycle/input_catalog.py",
+        REPOSITORY_ROOT
+        / "src/era100x/research/stage_2/lifecycle/production.py",
         REPOSITORY_ROOT / "scripts/run_stage2_v18.py",
+        REPOSITORY_ROOT / "scripts/run_stage2_v18_task.py",
         REPOSITORY_ROOT
         / "docs/development/validations/stage_2/S2P18-formal-orchestration.md",
     )
@@ -1835,6 +1840,17 @@ def _stage2_v18_projection(stage2_root: Path) -> dict[str, Any]:
     run_count = len(
         tuple((formal_evidence_root / "runs").glob("stage2-s2p18-*"))
     )
+    source_catalog_count = len(
+        tuple(
+            (formal_evidence_root / "operations/source-catalogs").glob("*.json")
+        )
+    )
+    input_catalog_count = len(
+        tuple((formal_evidence_root / "operations/input-catalogs").glob("*.json"))
+    )
+    adapter_plan_count = len(
+        tuple((formal_evidence_root / "operations/adapter-plans").glob("*.json"))
+    )
     heartbeat = datetime.fromtimestamp(
         max(
             performance_path.stat().st_mtime,
@@ -1846,10 +1862,22 @@ def _stage2_v18_projection(stage2_root: Path) -> dict[str, Any]:
     phases: list[dict[str, Any]] = []
     for name in names:
         if name == "S2P18-T11":
-            processed = sum((source_pass, t11_perf_pass, rss_pass))
-            total = 3
+            processed = sum(
+                (
+                    rehearsal_source_pass,
+                    t11_perf_pass,
+                    rss_pass,
+                    formal_orchestrator_implemented,
+                    source_catalog_count == 1,
+                )
+            )
+            total = 5
             status = "IN_PROGRESS" if state.current_task == name else "NOT_STARTED"
-            subphase = "IMPLEMENTATION_VALIDATED_FORMAL_RUN_APPROVAL_PENDING"
+            subphase = (
+                "FULL_PERIOD_SOURCE_CATALOG_PENDING"
+                if source_catalog_count != 1
+                else "FORMAL_ARTIFACT_FREEZE_PENDING"
+            )
         elif name == "S2P18-T16":
             processed = int(t16_perf_pass)
             total = 1
@@ -1902,8 +1930,14 @@ def _stage2_v18_projection(stage2_root: Path) -> dict[str, Any]:
             "IMPLEMENTED" if formal_orchestrator_implemented else "INCOMPLETE"
         ),
         "adapter_plan_status": (
-            "FROZEN_BY_APPROVAL" if approval_count else "NOT_FROZEN"
+            "FROZEN" if adapter_plan_count == 1 else "NOT_FROZEN"
         ),
+        "production_adapter_status": (
+            "IMPLEMENTED" if formal_orchestrator_implemented else "INCOMPLETE"
+        ),
+        "source_catalog_count": source_catalog_count,
+        "input_catalog_count": input_catalog_count,
+        "adapter_plan_count": adapter_plan_count,
         "approval_count": approval_count,
         "authority_count": authority_count,
         "run_count": run_count,

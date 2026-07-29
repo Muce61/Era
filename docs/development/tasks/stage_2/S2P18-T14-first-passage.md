@@ -8,7 +8,9 @@
 ## 合同
 
 按原冻结 target/stop、T1–T4 和 `AMBIGUOUS=FAILURE` 合同重算 First Passage。
-Contract Price 同秒双边触及不得推断先后；涉及动态状态切换则保持不可判定。
+H2 标签只使用 canonical Trades。Contract Price 同秒边界分类属于独立生命周期轨，
+不得改变 H2 First Passage；该轨同秒双边触及不得推断先后，涉及动态状态切换则保持
+不可判定。
 
 ## 验收
 
