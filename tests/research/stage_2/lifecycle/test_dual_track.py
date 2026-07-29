@@ -74,9 +74,7 @@ def _evaluate(*, high: str, low: str):
         ),
         funding=(),
         source_gaps=(_gap(),),
-        partition_hash_by_second={
-            point.event_ts_ns: "b" * 64 for point in contract_prices
-        },
+        partition_hash_by_second={point.event_ts_ns: "b" * 64 for point in contract_prices},
         source_coverage=SourceCoverage.COMPLETE,
         scenario=SCENARIO,
         funding_track=FundingTrack.PRIMARY_HISTORICAL_ACTUAL,

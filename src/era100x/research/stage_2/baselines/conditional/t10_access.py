@@ -186,17 +186,13 @@ class FixedT10Reader:
             first = bisect_right(starts, fragment.row_offset) - 1
             last = bisect_right(starts, end - 1) - 1
             for ordinal in range(first, last + 1):
-                statistics = parquet.metadata.row_group(ordinal).column(
-                    column_index
-                ).statistics
+                statistics = parquet.metadata.row_group(ordinal).column(column_index).statistics
                 if (
                     statistics is None
                     or not statistics.has_min_max
                     or statistics.min != statistics.max
                 ):
-                    raise ValueError(
-                        f"T10 column is not provably constant from metadata: {column}"
-                    )
+                    raise ValueError(f"T10 column is not provably constant from metadata: {column}")
                 value = statistics.min
                 if isinstance(value, bytes):
                     value = value.decode("utf-8")

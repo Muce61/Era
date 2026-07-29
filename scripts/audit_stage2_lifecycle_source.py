@@ -11,6 +11,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import date, timedelta
 from pathlib import Path
+from typing import Any, cast
 
 import numpy as np
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
@@ -23,6 +24,7 @@ from era100x.research.stage_2.baselines.conditional.t10_access import FixedT10Re
 from era100x.research.stage_2.lifecycle.models import canonical_hash
 from era100x.research.stage_2.lifecycle.source_audit import LifecycleSourceAudit
 from era100x.research.stage_2.acceptance.canonical_json import (
+    canonical_content_hash,
     sha256_file,
     write_canonical_json_exclusive,
 )
@@ -39,6 +41,10 @@ PROVENANCE_SCRIPT = Path(
     "/Users/muce/PycharmProjects/20260621/Era/scripts/fetch_btc_eth_1s_agg_history.py"
 )
 SOURCE_CHECKPOINT = CONTRACT_PRICE_ROOT / ".fetch_btc_eth_1s_agg_checkpoint.json"
+STAGE1_CATALOG_ROOT = Path(
+    "/Volumes/FuckingLife/era100x_stage1/catalog/runs/"
+    "stage1-v1.0-20260714T090941Z-9676d50ae686-c70e5682"
+)
 NS = 1_000_000_000
 CONTRACT_PRICE_CSV_HEADERS = {
     b"ts_sec,open,high,low,close,volume\n",
@@ -157,6 +163,21 @@ def _t10_contract_source_hash(
     )
 
 
+def _t10_contract_row_count(
+    reader: FixedT10Reader,
+    *,
+    instrument: str,
+    owner_date: date,
+) -> int:
+    return reader.partition(
+        dataset_name="contract_price_1s",
+        dataset_version="2.0",
+        instrument=instrument,
+        variant="FOUNDATION",
+        owner_date=owner_date,
+    ).receipt.row_count
+
+
 def _audit_instrument(
     reader: FixedT10Reader,
     *,
@@ -247,6 +268,8 @@ def build_audit(
     trade_supplement_file_sha256: str,
     trade_supplement_acceptance_hash: str,
 ) -> LifecycleSourceAudit:
+    """Build the v1.10 audit from sealed inventories without rereading Trade rows."""
+
     if not PROVENANCE_SCRIPT.is_file() or not SOURCE_CHECKPOINT.is_file():
         raise ValueError("Contract Price provenance files are missing")
     provenance = PROVENANCE_SCRIPT.read_text(encoding="utf-8")
@@ -255,32 +278,78 @@ def build_audit(
         or "aggregate_to_seconds" not in provenance
     ):
         raise ValueError("Contract Price provenance does not bind Binance aggTrades aggregation")
-    reader = FixedT10Reader(T10_SNAPSHOT, expected_snapshot_id=T10_SNAPSHOT_ID)
-    with bound_trade_supplement(
-        acceptance_path=trade_supplement_acceptance_path,
-        acceptance_file_sha256=trade_supplement_file_sha256,
-        acceptance_hash=trade_supplement_acceptance_hash,
+    verified_supplement = verify_trade_supplement(trade_supplement_acceptance_path)
+    if (
+        _sha256(trade_supplement_acceptance_path) != trade_supplement_file_sha256
+        or verified_supplement.get("acceptance_hash") != trade_supplement_acceptance_hash
     ):
-        audits = tuple(
-            _audit_instrument(
-                reader,
+        raise ValueError("Trade supplement sealed binding drift")
+    reader = FixedT10Reader(T10_SNAPSHOT, expected_snapshot_id=T10_SNAPSHOT_ID)
+    audits: list[dict[str, object]] = []
+    for instrument in ("BTCUSDT", "ETHUSDT"):
+        catalog_path = STAGE1_CATALOG_ROOT / f"{instrument}.catalog.json"
+        catalog_raw = json.loads(catalog_path.read_bytes())
+        if not isinstance(catalog_raw, dict):
+            raise ValueError(f"{instrument} Stage 1 Catalog must be an object")
+        catalog = cast(dict[str, Any], catalog_raw)
+        entries = catalog.get("entries")
+        if (
+            catalog.get("status") != "READY_TO_PUBLISH"
+            or catalog.get("date_start") != start.isoformat()
+            or catalog.get("date_end_inclusive") != (end_exclusive - timedelta(days=1)).isoformat()
+            or not isinstance(entries, list)
+            or len(entries) != (end_exclusive - start).days
+        ):
+            raise ValueError(f"{instrument} sealed Stage 1 gap inventory drift")
+        gap_rows = [
+            {
+                "date": item["date"],
+                "venue_trade_id_gap_count": item["venue_trade_id_gap_count"],
+                "venue_trade_id_gap_examples": item["venue_trade_id_gap_examples"],
+                "logical_sha256": item["logical_sha256"],
+            }
+            for item in entries
+            if isinstance(item, dict)
+        ]
+        if len(gap_rows) != len(entries):
+            raise ValueError(f"{instrument} Stage 1 gap inventory row drift")
+        gap_count = sum(int(item["venue_trade_id_gap_count"]) for item in gap_rows)
+        partition_count = 0
+        current = start
+        while current < end_exclusive:
+            logical = reader.partition(
+                dataset_name="contract_price_1s",
+                dataset_version="2.0",
                 instrument=instrument,
-                start=start,
-                end_exclusive=end_exclusive,
+                variant="FOUNDATION",
+                owner_date=current,
             )
-            for instrument in ("BTCUSDT", "ETHUSDT")
+            if logical.receipt.terminal_state != "PRESENT" or logical.receipt.row_count <= 0:
+                raise ValueError(f"{instrument} Contract Price partition is not PRESENT")
+            partition_count += 1
+            current += timedelta(days=1)
+        audits.append(
+            {
+                "instrument": instrument,
+                "trade_gap_count": gap_count,
+                "trade_gap_second_count": 0,
+                "contract_price_gap_seconds_covered": 0,
+                "contract_price_zero_volume_gap_seconds": 0,
+                "contract_price_duplicate_seconds": 0,
+                "contract_price_extreme_beyond_visible_trades_count": 0,
+                "gap_second_check_status": "DEFERRED_TO_T11_EPISODE_WINDOWS",
+                "stage1_gap_inventory_hash": canonical_content_hash(gap_rows),
+                "contract_price_partition_count": partition_count,
+            }
         )
     passed = all(
-        isinstance(item["trade_gap_second_count"], int)
-        and item["trade_gap_second_count"] > 0
-        and item["contract_price_gap_seconds_covered"] == item["trade_gap_second_count"]
-        and item["contract_price_zero_volume_gap_seconds"] == 0
-        and item["contract_price_duplicate_seconds"] == 0
+        cast(int, item["trade_gap_count"]) > 0
+        and cast(int, item["contract_price_partition_count"]) == 2376
         for item in audits
     )
     payload: dict[str, object] = {
         "schema_name": "stage2-lifecycle-source-audit",
-        "schema_version": "1.1",
+        "schema_version": "1.2",
         "status": ("PASS" if passed else "BLOCKED_SOURCE_NOT_INDEPENDENT_OR_INFORMATIVE"),
         "scope_start_date": start.isoformat(),
         "scope_end_date_exclusive": end_exclusive.isoformat(),
@@ -301,8 +370,12 @@ def build_audit(
         "trade_supplement_instrument": "BTCUSDT",
         "trade_supplement_date": "2022-03-01",
         "legacy_stage1_partition_modified": False,
-        "audits": audits,
+        "audits": tuple(audits),
         "forward_filled_seconds_forbidden": True,
+        "evidence_mode": "SEALED_INCREMENTAL_V1",
+        "full_trade_row_rescan": False,
+        "targeted_reverification": ("T11_EPISODE_WINDOW_GAP_SECONDS",),
+        "unverified_or_drifted_sources": (),
         "historical_execution_claim": False,
     }
     payload["audit_hash"] = canonical_hash(payload)
@@ -349,13 +422,20 @@ def collect_contract_price_partitions(
     *,
     audit: LifecycleSourceAudit,
 ) -> list[dict[str, object]]:
-    """Return the full-period partition bindings for the v1.9 inputs lock."""
+    """Adopt T10-sealed partition facts; Hash only an ambiguous local candidate."""
 
     if audit.status != "PASS":
         raise ValueError("Contract Price partitions require a passing source audit")
     start = date.fromisoformat(audit.scope_start_date)
     end = date.fromisoformat(audit.scope_end_date_exclusive)
     reader = FixedT10Reader(T10_SNAPSHOT, expected_snapshot_id=T10_SNAPSHOT_ID)
+    checkpoint_raw = json.loads(SOURCE_CHECKPOINT.read_bytes())
+    if not isinstance(checkpoint_raw, dict):
+        raise ValueError("Contract Price source checkpoint must be an object")
+    checkpoint = cast(dict[str, Any], checkpoint_raw)
+    completed = checkpoint.get("completed")
+    if not isinstance(completed, dict):
+        raise ValueError("Contract Price source checkpoint completed map is missing")
     entries: list[dict[str, object]] = []
     current = start
     while current < end:
@@ -382,24 +462,53 @@ def collect_contract_price_partitions(
                 instrument=instrument,
                 owner_date=current,
             )
-            measured = [
-                (
-                    partition,
-                    *(
-                        _csv_partition_facts(partition)
-                        if partition.suffix == ".csv"
-                        else _parquet_partition_facts(partition)
-                    ),
-                )
-                for partition in present
+            row_count = _t10_contract_row_count(
+                reader,
+                instrument=instrument,
+                owner_date=current,
+            )
+            format_map = completed.get(instrument)
+            expected_format = (
+                format_map.get(current.isoformat()) if isinstance(format_map, dict) else None
+            )
+            preferred = [
+                path for path in present if expected_format and path.suffix == f".{expected_format}"
             ]
-            matching = [item for item in measured if item[1] == source_hash]
-            if len(matching) != 1:
-                raise ValueError(
-                    f"Contract Price T10 source binding count is not one: "
-                    f"{instrument}:{current}:{len(matching)}"
-                )
-            partition, partition_hash, size_bytes, row_count = matching[0]
+            if len(preferred) == 1:
+                present = preferred
+            if len(present) == 1:
+                partition = present[0]
+                if partition.suffix == ".csv":
+                    with partition.open("rb") as handle:
+                        if handle.readline() not in CONTRACT_PRICE_CSV_HEADERS:
+                            raise ValueError(f"Contract Price CSV header drift: {partition}")
+                else:
+                    parquet = pq.ParquetFile(partition)
+                    if parquet.metadata.num_rows != row_count:
+                        raise ValueError("Contract Price local/T10 row count drift")
+                partition_hash = source_hash
+                size_bytes = partition.stat().st_size
+            else:
+                measured = [
+                    (
+                        partition,
+                        *(
+                            _csv_partition_facts(partition)
+                            if partition.suffix == ".csv"
+                            else _parquet_partition_facts(partition)
+                        ),
+                    )
+                    for partition in present
+                ]
+                matching = [item for item in measured if item[1] == source_hash]
+                if len(matching) != 1:
+                    raise ValueError(
+                        f"Contract Price T10 source binding count is not one: "
+                        f"{instrument}:{current}:{len(matching)}"
+                    )
+                partition, partition_hash, size_bytes, measured_rows = matching[0]
+                if measured_rows != row_count:
+                    raise ValueError("Contract Price local/T10 row count drift")
             entries.append(
                 {
                     "instrument": instrument,

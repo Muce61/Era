@@ -2,7 +2,10 @@
 
 ## 状态
 
-`APPROVED / IMPLEMENTED / FORMAL RUN NOT AUTHORIZED`
+`SUPERSEDED_UNEXECUTED / FORMAL RUN NEVER AUTHORIZED`
+
+Plan v1.10 / ADR-S2-029 supersedes this unexecuted runtime. This record remains historical and
+does not authorize `prepare`, Authority or Run creation.
 
 ## 决定
 

@@ -5,7 +5,8 @@
 - plan_id: `stage_2_plan_v1.9`
 - stage_id: `S2`
 - plan_version: `1.9`
-- status: `APPROVED / IMPLEMENTED / PREPARE AND FORMAL RUN NOT EXECUTED`
+- status: `SUPERSEDED_UNEXECUTED / PREPARE AND FORMAL RUN NOT EXECUTED`
+- successor: `stage_2_plan_v1.10`
 - approved_by: `Muce`
 - approved_at: `2026-07-29`
 - migration_adr: `ADR-S2-028`

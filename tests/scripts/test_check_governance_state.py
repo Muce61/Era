@@ -18,9 +18,9 @@ def test_repository_governance_policies_and_projections_are_consistent() -> None
     errors, policies = validate_current_governance_state()
 
     assert errors == []
-    assert set(policies) == {2, 3, 4, 5, 6, 8}
+    assert set(policies) == {2, 3, 4, 5, 6, 9}
     assert policies[6].payload["execution_limit"] == "S2P17-T20"
-    assert policies[8].payload["execution_limit"] == "S2P19-T20"
+    assert policies[9].payload["execution_limit"] == "S2P110-T20"
     assert policies[6].payload["stage3_locked"] is True
 
 
@@ -31,9 +31,9 @@ def test_stale_stage_registry_projection_fails_strict_check(tmp_path: Path) -> N
         "\n".join(
             (
                 "Current Stage: Stage 2",
-                "Current Plan: stage_2_plan_v1.9 — SOLO RUNTIME IMPLEMENTED",
+                "Current Plan: stage_2_plan_v1.10 — SOLO RUNTIME IMPLEMENTED",
                 (
-                    "Current Task: S2P19-T11 v1.0 — production input builder validation "
+                    "Current Task: S2P110-T11 v1.0 — production input builder validation "
                     "and prepare pending"
                 ),
                 "STAGE2_NO_GO_CURRENT_EVIDENCE",

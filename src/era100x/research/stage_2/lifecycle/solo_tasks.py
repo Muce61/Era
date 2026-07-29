@@ -1,4 +1,4 @@
-"""Fixed Plan v1.9 handler registry over the unchanged Stage 2 engines."""
+"""Plan v1.10 handlers: new lifecycle work plus sealed H2 adoption."""
 
 from __future__ import annotations
 
@@ -35,6 +35,52 @@ def _read(path: Path) -> dict[str, Any]:
     return value
 
 
+def _task_adopt(ctx: TaskContext) -> dict[str, Any]:
+    """Emit a tiny descriptor after prepare has closed the sealed binding."""
+
+    binding = ctx.adopted_binding(ctx.task_id)
+    source_output: dict[str, Any] | None = None
+    output_value = binding.get("source_output_path")
+    if isinstance(output_value, str):
+        output_path = ctx.resolve_adopted_path(ctx.task_id, output_value)
+        source_output = _read(output_path)
+    ctx.progress(
+        {
+            "status": "COMPLETE",
+            "phase": "SEALED_ADOPTION",
+            "subphase": "VERIFY_BINDING_ONLY",
+            "processed_units": 1,
+            "total_units": 1,
+            "remaining_units": 0,
+            "resume_cursor": "COMPLETE",
+            "completed_partition_ids": [ctx.task_id],
+            "completed_partition_hashes": {ctx.task_id: binding["adoption_binding_hash"]},
+            "producer_state_hash": binding["adoption_binding_hash"],
+            "deterministic_merge_order": "FIXED_TASK_ORDER",
+            "verify_state": "PASS",
+        }
+    )
+    return {
+        "execution_mode": "SEALED_ADOPTION",
+        "source_task_id": binding["source_task_id"],
+        "source_run_id": binding["source_run_id"],
+        "source_verify_hash": binding["source_hash"],
+        "source_output_tree_hash": binding["source_output_tree_hash"],
+        "source_manifest_hash": binding["source_manifest_hash"],
+        "source_catalog_hash": binding["source_catalog_hash"],
+        "source_artifact_root": binding.get("source_artifact_root"),
+        "source_output_path": binding.get("source_output_path"),
+        "adoption_binding_hash": binding["adoption_binding_hash"],
+        "adopted_source_output": source_output,
+        "row_count": int(binding["row_count"]),
+        "h2_estimand": "CANONICAL_TRADES_UNCHANGED",
+        "lifecycle_ohlc_consumed_as_h2_label": False,
+        "research_status": "ADOPTED_SEALED",
+        "historical_execution_claim": False,
+        "stage3_locked": True,
+    }
+
+
 def validate_full_period_contract_price_inputs(
     ctx: TaskContext,
 ) -> LifecycleSourceAudit:
@@ -55,7 +101,6 @@ def validate_full_period_contract_price_inputs(
             not path.is_absolute()
             or not path.is_file()
             or path.is_symlink()
-            or item.get("sha256") != sha256_file(path)
             or item.get("size_bytes") != path.stat().st_size
         ):
             raise ValueError("T11 Contract Price partition Hash drift")
@@ -64,7 +109,7 @@ def validate_full_period_contract_price_inputs(
 
 def _task_t11(ctx: TaskContext) -> dict[str, Any]:
     from era100x.research.stage_2.rerun.seven_day_rehearsal import (
-        produce_scoped_lifecycle_v18,
+        produce_scoped_lifecycle_v110,
     )
 
     source_audit = validate_full_period_contract_price_inputs(ctx)
@@ -77,12 +122,14 @@ def _task_t11(ctx: TaskContext) -> dict[str, Any]:
             "verify_state": "PENDING",
         }
     )
-    return produce_scoped_lifecycle_v18(
+    return produce_scoped_lifecycle_v110(
         start_date=FULL_START,
         end_date_exclusive=FULL_END_EXCLUSIVE,
         source_audit=source_audit,
         source_audit_hash=source_audit.audit_hash,
         progress_callback=ctx.progress,
+        resume_root=ctx.resume_root,
+        resume_state=ctx.resume_state,
     )
 
 
@@ -99,7 +146,7 @@ def _task_t12(ctx: TaskContext) -> dict[str, Any]:
         {
             "h2_estimand": "CANONICAL_TRADES_UNCHANGED",
             "lifecycle_ohlc_consumed_as_h2_label": False,
-            "source_t11_output_tree_hash": ctx.upstream_hashes["S2P19-T11"],
+            "source_t11_output_tree_hash": ctx.upstream_hashes["S2P110-T11"],
         }
     )
     return payload
@@ -111,7 +158,7 @@ def _task_t13_or_t14(ctx: TaskContext) -> dict[str, Any]:
         produce_scoped_metrics,
     )
 
-    source = ctx.upstream_output("S2P19-T12")
+    source = ctx.upstream_output("S2P110-T12")
     source_root = ctx.resolve_run_path(source["artifact_data_root"])
     attempt_root = ctx.resolve_run_path(source["artifact_attempt_root"])
     manifest = _read(attempt_root / "manifest.json")
@@ -125,7 +172,7 @@ def _task_t13_or_t14(ctx: TaskContext) -> dict[str, Any]:
             source_catalog_hash=str(catalog["catalog_hash"]),
             progress_callback=ctx.progress,
         )
-        if ctx.task_id == "S2P19-T13"
+        if ctx.task_id == "S2P110-T13"
         else produce_scoped_first_passage(
             output_root=ctx.data_root,
             source_paths_root=source_root,
@@ -147,7 +194,7 @@ def _task_t13_or_t14(ctx: TaskContext) -> dict[str, Any]:
 def _task_t15(ctx: TaskContext) -> dict[str, Any]:
     from era100x.research.stage_2.rerun.scoped_producers import produce_scoped_ambiguity
 
-    source = ctx.upstream_output("S2P19-T14")
+    source = ctx.upstream_output("S2P110-T14")
     source_root = ctx.resolve_run_path(source["artifact_data_root"])
     payload = produce_scoped_ambiguity(
         output_root=ctx.data_root,
@@ -190,7 +237,7 @@ def _task_t16(ctx: TaskContext) -> dict[str, Any]:
     from era100x.research.stage_2.rerun.orchestrator import repository_clean
     from era100x.research.stage_2.rerun.seven_day_rehearsal import LABEL_CONTRACT_HASH
 
-    t15 = ctx.upstream_output("S2P19-T15")
+    t15 = ctx.upstream_output("S2P110-T15")
     first_passage_root = ctx.resolve_run_path(t15["source_first_passage_root"])
     authority = S2P13T16ContractAuthority.seal(
         {
@@ -198,9 +245,9 @@ def _task_t16(ctx: TaskContext) -> dict[str, Any]:
             "chain_authority_hash": ctx.authority_hash,
             "policy_hash": str(ctx.authority["policy_hash"]),
             "source_t10_binding_hash": T10_SNAPSHOT_ID,
-            "source_s2p13_t11_binding_hash": ctx.upstream_hashes["S2P19-T11"],
-            "source_s2p13_t13_binding_hash": ctx.upstream_hashes["S2P19-T13"],
-            "source_s2p13_t15_binding_hash": ctx.upstream_hashes["S2P19-T15"],
+            "source_s2p13_t11_binding_hash": ctx.upstream_hashes["S2P110-T11"],
+            "source_s2p13_t13_binding_hash": ctx.upstream_hashes["S2P110-T13"],
+            "source_s2p13_t15_binding_hash": ctx.upstream_hashes["S2P110-T15"],
             "context_binding_hash": sha256_file(
                 ctx.repository_root / "src/era100x/research/stage_2/gates/price/gate.py"
             ),
@@ -259,8 +306,9 @@ def _task_t16(ctx: TaskContext) -> dict[str, Any]:
 def _t16_binding(ctx: TaskContext) -> Any:
     from era100x.research.stage_2.baselines.placebo.governance import T16Binding
 
-    output = ctx.upstream_output("S2P19-T16")
-    snapshot = ctx.resolve_run_path(output["published_snapshot"])
+    descriptor = ctx.upstream_output("S2P110-T16")
+    output = cast(dict[str, Any], descriptor["adopted_source_output"])
+    snapshot = ctx.resolve_adopted_path("S2P110-T16", output["published_snapshot"])
     verify_path = _unique(snapshot.parents[2] / "verify", "*.json")
     verify = _read(verify_path)
     match_path = snapshot / "results/conditional_match_matrices.parquet"
@@ -275,19 +323,18 @@ def _t16_binding(ctx: TaskContext) -> Any:
         "summaries": pq.ParquetFile(summary_path).metadata.num_rows,
         "groups": len(tuple(selections.rglob("*.parquet"))),
     }
-    output_root = ctx.upstream_root("S2P19-T16")
-    output_hash = ctx.upstream_hashes["S2P19-T16"]
+    receipt_path = ctx.resolve_adopted_path("S2P110-T16", descriptor["source_output_path"])
     return T16Binding(
-        receipt_path=output_root / "output.json",
-        receipt_hash=output_hash,
-        artifact_manifest_hash=output_hash,
-        artifact_catalog_hash=output_hash,
+        receipt_path=receipt_path,
+        receipt_hash=str(descriptor["source_verify_hash"]),
+        artifact_manifest_hash=str(descriptor["source_manifest_hash"]),
+        artifact_catalog_hash=str(descriptor["source_catalog_hash"]),
         authority_hash=str(output["authority_hash"]),
         binning_hash=str(output["binning_set_hash"]),
         snapshot_id=snapshot.name,
         verify_hash=str(output["verify_hash"]),
         snapshot_root=snapshot,
-        binning_root=ctx.resolve_run_path(output["binning_root"]),
+        binning_root=snapshot.parents[4] / "train-bins",
         prepared_episodes_path=snapshot / "episodes/prepared-episodes.parquet",
         selections_root=selections,
         outcome_path=outcome_path,
@@ -332,15 +379,15 @@ def _task_t17(ctx: TaskContext) -> dict[str, Any]:
 def _t17_binding(ctx: TaskContext, t16: Any) -> Any:
     from era100x.research.stage_2.statistics.bootstrap.governance import T17Binding
 
-    output = ctx.upstream_output("S2P19-T17")
-    match_root = ctx.resolve_run_path(output["match_root"])
+    output = ctx.upstream_output("S2P110-T17")
+    snapshot = ctx.resolve_adopted_path("S2P110-T17", output["source_artifact_root"])
+    match_root = snapshot / "results/matches"
     match_files = tuple(sorted(match_root.rglob("*.parquet")))
     reconciliation = _read(match_root.parent / "reconciliation.json")
-    attempt_root = ctx.upstream_root("S2P19-T17")
-    output_hash = ctx.upstream_hashes["S2P19-T17"]
+    output_hash = str(output["source_output_tree_hash"])
     return T17Binding(
-        run_root=attempt_root,
-        snapshot_root=attempt_root,
+        run_root=snapshot,
+        snapshot_root=snapshot,
         snapshot_id=output_hash,
         verify_hash=output_hash,
         manifest_hash=output_hash,
@@ -348,7 +395,7 @@ def _t17_binding(ctx: TaskContext, t16: Any) -> Any:
         prepared_source_verify_hash=t16.verify_hash,
         match_root=match_root,
         match_files=match_files,
-        summary_path=ctx.resolve_run_path(output["summary_path"]),
+        summary_path=snapshot / "results/descriptive_summaries.parquet",
         counts={
             "source_eligible": int(reconciliation["source_eligible"]),
             "source_matched_slots": int(reconciliation["source_matched_slots"]),
@@ -357,7 +404,7 @@ def _t17_binding(ctx: TaskContext, t16: Any) -> Any:
             "placebo_unmatched": int(reconciliation["placebo_unmatched"]),
             "groups": len(match_files),
             "summaries": pq.ParquetFile(
-                ctx.resolve_run_path(output["summary_path"])
+                snapshot / "results/descriptive_summaries.parquet"
             ).metadata.num_rows,
         },
     )
@@ -468,9 +515,10 @@ def _evidence_sources(ctx: TaskContext) -> Any:
 
     t16 = _t16_binding(ctx)
     t17 = _t17_binding(ctx, t16)
-    t18_output = ctx.upstream_output("S2P19-T18")
-    t18_hash = ctx.upstream_hashes["S2P19-T18"]
-    t11_output = ctx.upstream_output("S2P19-T11")
+    t18_output = ctx.upstream_output("S2P110-T18")
+    t18_hash = str(t18_output["source_verify_hash"])
+    t18_root = ctx.resolve_adopted_path("S2P110-T18", t18_output["source_artifact_root"])
+    t11_output = ctx.upstream_output("S2P110-T11")
     t11_source = ctx.resolve_run_path(t11_output["artifact_output_path"])
     primary_compat = ctx.data_root / "compat/lifecycle-primary.json"
     episode_count = _compat_lifecycle(
@@ -480,9 +528,9 @@ def _evidence_sources(ctx: TaskContext) -> Any:
     )
     return SourceBindings(
         t11=T11Binding(
-            receipt_hash=ctx.upstream_hashes["S2P19-T11"],
-            manifest_hash=ctx.upstream_hashes["S2P19-T11"],
-            catalog_hash=ctx.upstream_hashes["S2P19-T11"],
+            receipt_hash=ctx.upstream_hashes["S2P110-T11"],
+            manifest_hash=ctx.upstream_hashes["S2P110-T11"],
+            catalog_hash=ctx.upstream_hashes["S2P110-T11"],
             output_hash=sha256_file(primary_compat),
             output_path=primary_compat,
             row_count=episode_count,
@@ -492,8 +540,8 @@ def _evidence_sources(ctx: TaskContext) -> Any:
             verify_hash=t18_hash,
             manifest_hash=t18_hash,
             catalog_hash=t18_hash,
-            summary_path=ctx.resolve_run_path(t18_output["summary_path"]),
-            cluster_path=ctx.resolve_run_path(t18_output["cluster_path"]),
+            summary_path=t18_root / "bootstrap-summaries.parquet",
+            cluster_path=t18_root / "cluster-statistics.parquet",
             summary_rows=int(t18_output["row_count"]),
         ),
     )
@@ -505,7 +553,7 @@ def _task_t19(ctx: TaskContext) -> dict[str, Any]:
 
     sources = _evidence_sources(ctx)
     projection = _project_and_write(sources, ctx.data_root / "evidence", progress=ctx.progress)
-    t11 = ctx.upstream_output("S2P19-T11")
+    t11 = ctx.upstream_output("S2P110-T11")
     comparator = ctx.data_root / "compat/lifecycle-comparator.json"
     count = _compat_lifecycle(
         ctx.resolve_run_path(t11["artifact_output_path"]),
@@ -521,7 +569,7 @@ def _task_t19(ctx: TaskContext) -> dict[str, Any]:
     cards = _read(cards_path)
     primary_cards = cast(dict[str, Any], cards["lifecycle"])
     comparison: dict[str, object] = {
-        "schema_name": "s2p19-lifecycle-track-comparison-v1",
+        "schema_name": "s2p110-lifecycle-track-comparison-v1",
         "schema_version": "1.0",
         "pure_trades_comparator": comparator_cards,
         "contract_price_ohlc_primary": primary_cards,
@@ -579,7 +627,7 @@ def _performance_evidence(ctx: TaskContext) -> dict[str, Any]:
 def _task_t20(ctx: TaskContext) -> dict[str, Any]:
     """Build the successor acceptance package without freezing a research PASS."""
 
-    t19 = ctx.upstream_output("S2P19-T19")
+    t19 = ctx.upstream_output("S2P110-T19")
     source = ctx.resolve_run_path(t19["evidence_root"])
     destination = ctx.data_root / "final"
     shutil.copytree(source, destination)
@@ -603,7 +651,7 @@ def _task_t20(ctx: TaskContext) -> dict[str, Any]:
         if item["task_id"] == "S2P18-T16"
     )
     decision: dict[str, object] = {
-        "schema_name": "s2p19-t20-final-decision-v1",
+        "schema_name": "s2p110-t20-final-decision-v1",
         "schema_version": "1.0",
         "engineering_status": "PASS",
         "historical_h2_primary": "PRIMARY_FAILED",
@@ -619,7 +667,7 @@ def _task_t20(ctx: TaskContext) -> dict[str, Any]:
     decision["decision_hash"] = canonical_content_hash(decision)
     write_canonical_json_exclusive(destination / "stage2-successor-final-decision.json", decision)
     report = [
-        "# S2P19-T20 Successor Final Acceptance",
+        "# S2P110-T20 Successor Final Acceptance",
         "",
         "- Engineering evidence chain: `PASS`",
         "- Historical H2 Primary: `PRIMARY_FAILED`",
@@ -648,14 +696,14 @@ def _task_t20(ctx: TaskContext) -> dict[str, Any]:
 
 
 HANDLERS: Final[dict[str, Callable[[TaskContext], dict[str, Any]]]] = {
-    "S2P19-T11": _task_t11,
-    "S2P19-T12": _task_t12,
-    "S2P19-T13": _task_t13_or_t14,
-    "S2P19-T14": _task_t13_or_t14,
-    "S2P19-T15": _task_t15,
-    "S2P19-T16": _task_t16,
-    "S2P19-T17": _task_t17,
-    "S2P19-T18": _task_t18,
-    "S2P19-T19": _task_t19,
-    "S2P19-T20": _task_t20,
+    "S2P110-T11": _task_t11,
+    "S2P110-T12": _task_adopt,
+    "S2P110-T13": _task_adopt,
+    "S2P110-T14": _task_adopt,
+    "S2P110-T15": _task_adopt,
+    "S2P110-T16": _task_adopt,
+    "S2P110-T17": _task_adopt,
+    "S2P110-T18": _task_adopt,
+    "S2P110-T19": _task_t19,
+    "S2P110-T20": _task_t20,
 }

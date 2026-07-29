@@ -60,7 +60,7 @@ from era100x.research.stage_2.acceptance.final_acceptance.governance import (
     load_policy as load_final_acceptance_policy,
 )
 from era100x.research.stage_2.lifecycle.solo_governance import (
-    TASK_ORDER as S2P19_TASK_ORDER,
+    TASK_ORDER as S2P110_TASK_ORDER,
     load_policy as load_solo_runtime_policy,
 )
 from era100x.research.stage_2.lifecycle.solo_runtime import runtime_status
@@ -1773,79 +1773,65 @@ def _stage2_v17_projection(stage2_root: Path) -> dict[str, Any]:
     }
 
 
-def _stage2_v19_projection(stage2_root: Path) -> dict[str, Any]:
-    """Project Plan v1.9 only from inputs, Authority, events and final Verify."""
+def _stage2_v110_projection(stage2_root: Path) -> dict[str, Any]:
+    """Project Plan v1.10 only from inputs, Authority, events and final Verify."""
 
     load_solo_runtime_policy(
-        REPOSITORY_ROOT / "configs/governance/stage2_active_policy_v8.json",
+        REPOSITORY_ROOT / "configs/governance/stage2_active_policy_v9.json",
         repository_root=REPOSITORY_ROOT,
     )
     state = load_current_development_state()
     performance_path = (
-        REPOSITORY_ROOT
-        / "configs/research/stage_2/s2p18_t11_t16_performance_v1.json"
+        REPOSITORY_ROOT / "configs/research/stage_2/s2p18_t11_t16_performance_v1.json"
     )
     performance = json.loads(performance_path.read_text(encoding="utf-8"))
     claimed_hash = str(performance.get("performance_hash") or "")
     calculated_hash = hashlib.sha256(
         json.dumps(
-            {
-                key: value
-                for key, value in performance.items()
-                if key != "performance_hash"
-            },
+            {key: value for key, value in performance.items() if key != "performance_hash"},
             sort_keys=True,
             separators=(",", ":"),
         ).encode()
     ).hexdigest()
     if claimed_hash != calculated_hash:
-        raise ValueError("Plan v1.9 inherited performance evidence Hash drift")
+        raise ValueError("Plan v1.10 inherited performance evidence Hash drift")
     benchmarks = cast(list[dict[str, Any]], performance.get("benchmarks") or [])
     t11_benchmarks = [item for item in benchmarks if item.get("task_id") == "S2P18-T11"]
     t16_benchmarks = [item for item in benchmarks if item.get("task_id") == "S2P18-T16"]
     t11_perf_pass = bool(t11_benchmarks) and all(
-        float(item.get("speedup") or 0) >= 2
-        and item.get("semantic_equality") is True
+        float(item.get("speedup") or 0) >= 2 and item.get("semantic_equality") is True
         for item in t11_benchmarks
     )
     t16_perf_pass = bool(t16_benchmarks) and all(
-        float(item.get("speedup") or 0) >= 2
-        and item.get("semantic_equality") is True
+        float(item.get("speedup") or 0) >= 2 and item.get("semantic_equality") is True
         for item in t16_benchmarks
     )
     rss_pass = int(performance.get("observed_max_rss_bytes") or 0) <= int(
         performance.get("max_rss_bytes_gate") or 0
     )
     if not (t11_perf_pass and t16_perf_pass and rss_pass):
-        raise ValueError("Plan v1.9 inherited performance gate drift")
+        raise ValueError("Plan v1.10 inherited performance gate drift")
     runtime_paths = (
-        REPOSITORY_ROOT
-        / "src/era100x/research/stage_2/lifecycle/solo_governance.py",
-        REPOSITORY_ROOT
-        / "src/era100x/research/stage_2/lifecycle/solo_inputs.py",
-        REPOSITORY_ROOT
-        / "src/era100x/research/stage_2/lifecycle/solo_runtime.py",
-        REPOSITORY_ROOT
-        / "src/era100x/research/stage_2/lifecycle/solo_tasks.py",
-        REPOSITORY_ROOT / "scripts/run_stage2_v19.py",
-        REPOSITORY_ROOT
-        / "docs/development/tasks/stage_2/S2P19-T11-T20-solo-runtime.md",
+        REPOSITORY_ROOT / "src/era100x/research/stage_2/lifecycle/solo_governance.py",
+        REPOSITORY_ROOT / "src/era100x/research/stage_2/lifecycle/solo_inputs.py",
+        REPOSITORY_ROOT / "src/era100x/research/stage_2/lifecycle/solo_runtime.py",
+        REPOSITORY_ROOT / "src/era100x/research/stage_2/lifecycle/solo_tasks.py",
+        REPOSITORY_ROOT / "scripts/run_stage2_v110.py",
+        REPOSITORY_ROOT / "docs/development/tasks/stage_2/S2P110-T11-T20-sealed-solo-runtime.md",
     )
     solo_runtime_implemented = all(
         path.is_file() and not path.is_symlink() for path in runtime_paths
     )
-    formal_evidence_root = stage2_root / "formal/stage2-plan-v1.9"
+    formal_evidence_root = stage2_root / "formal/stage2-plan-v1.10"
     runtime = runtime_status(formal_evidence_root)
     current_run = cast(dict[str, Any], runtime.get("current_run") or {})
     inputs_lock_count = int(runtime["inputs_lock_count"])
     authority_count = int(runtime["authority_count"])
     run_count = int(runtime["run_count"])
     processed_tasks = int(current_run.get("processed_units") or 0)
-    current_task = str(current_run.get("current_task") or "S2P19-T11")
-    audit_path = (
-        REPOSITORY_ROOT
-        / "configs/research/stage_2/s2p18_t11_source_audit_v1.json"
-    )
+    execution_modes = cast(dict[str, str], current_run.get("task_execution_modes") or {})
+    current_task = str(current_run.get("current_task") or "S2P110-T11")
+    audit_path = REPOSITORY_ROOT / "configs/research/stage_2/s2p18_t11_source_audit_v1.json"
     audit = json.loads(audit_path.read_text(encoding="utf-8"))
     heartbeat = datetime.fromtimestamp(
         max(
@@ -1856,14 +1842,16 @@ def _stage2_v19_projection(stage2_root: Path) -> dict[str, Any]:
     ).isoformat()
     phases: list[dict[str, Any]] = []
     current_index = (
-        S2P19_TASK_ORDER.index(current_task)
-        if current_task in S2P19_TASK_ORDER
-        else min(processed_tasks, len(S2P19_TASK_ORDER) - 1)
+        S2P110_TASK_ORDER.index(current_task)
+        if current_task in S2P110_TASK_ORDER
+        else min(processed_tasks, len(S2P110_TASK_ORDER) - 1)
     )
-    for index, name in enumerate(S2P19_TASK_ORDER):
+    for index, name in enumerate(S2P110_TASK_ORDER):
         if index < processed_tasks:
-            processed, total, task_status = 1, 1, "PASS"
-            subphase = "TASK_COMPLETED_HASH_VERIFIED"
+            processed, total = 1, 1
+            mode = execution_modes.get(name, "EXECUTED_NEW")
+            task_status = "ADOPTED_SEALED" if mode == "SEALED_ADOPTION" else "EXECUTED_NEW"
+            subphase = "TASK_COMPLETED_ROOT_HASH_VERIFIED"
         elif index == current_index and current_run:
             metrics = cast(dict[str, Any], current_run.get("checkpoint_metrics") or {})
             processed = int(metrics.get("processed_units") or 0)
@@ -1889,21 +1877,19 @@ def _stage2_v19_projection(stage2_root: Path) -> dict[str, Any]:
                 "processed_units": processed,
                 "total_units": total,
                 "elapsed_seconds": current_run.get("elapsed_seconds", 0),
-                "units_per_second": current_run.get(
-                    "throughput_tasks_per_second"
-                ),
+                "units_per_second": current_run.get("throughput_tasks_per_second"),
                 "eta_seconds": current_run.get("eta_seconds"),
                 "subphase": subphase,
                 "heartbeat_at": current_run.get("heartbeat_at") or heartbeat,
                 "verify_state": current_run.get("verify_state", "PENDING"),
                 "rss_bytes": performance.get("observed_max_rss_bytes")
-                if name == "S2P19-T11"
+                if name == "S2P110-T11"
                 else None,
             }
         )
     current = phases[current_index]
     return {
-        "schema_name": "s2p19-t11-t20-ui-projection",
+        "schema_name": "s2p110-t11-t20-ui-projection",
         "status": state.stage_status,
         "reason_code": state.blocking_questions[0],
         "phase": current["name"],
@@ -1923,14 +1909,14 @@ def _stage2_v19_projection(stage2_root: Path) -> dict[str, Any]:
         "t16_min_speedup": min(float(item["speedup"]) for item in t16_benchmarks),
         "stage3_locked": state.stage3_locked,
         "formal_run_authorized": inputs_lock_count == 1 and authority_count == 1,
-        "formal_orchestrator_status": (
-            "IMPLEMENTED" if solo_runtime_implemented else "INCOMPLETE"
-        ),
+        "formal_orchestrator_status": ("IMPLEMENTED" if solo_runtime_implemented else "INCOMPLETE"),
         "inputs_lock_count": inputs_lock_count,
-        "event_ledger_status": (
-            "PRESENT" if current_run.get("last_event") else "NOT_STARTED"
-        ),
+        "event_ledger_status": ("PRESENT" if current_run.get("last_event") else "NOT_STARTED"),
         "final_verify_state": current_run.get("verify_state", "PENDING"),
+        "execution_mode_counts": {
+            mode: sum(value == mode for value in execution_modes.values())
+            for mode in ("SEALED_ADOPTION", "EXECUTED_NEW")
+        },
         "authority_count": authority_count,
         "run_count": run_count,
         "phases": phases,
@@ -3520,11 +3506,11 @@ class ProgressHandler(BaseHTTPRequestHandler):
                 )
             except (OSError, ValueError) as exc:
                 self._reply_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})
-        elif path == "/api/v19/status":
+        elif path == "/api/v110/status":
             try:
                 self._reply_json(
                     HTTPStatus.OK,
-                    {"stage2_plan_v19": _stage2_v19_projection(self.server.stage2_root)},
+                    {"stage2_plan_v110": _stage2_v110_projection(self.server.stage2_root)},
                 )
             except (OSError, ValueError) as exc:
                 self._reply_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})
@@ -3546,7 +3532,7 @@ class ProgressHandler(BaseHTTPRequestHandler):
                 payload["stage2_plan_v15"] = _stage2_v15_projection(self.server.stage2_root)
                 payload["stage2_plan_v16"] = _stage2_v16_projection(self.server.stage2_root)
                 payload["stage2_plan_v17"] = _stage2_v17_projection(self.server.stage2_root)
-                payload["stage2_plan_v19"] = _stage2_v19_projection(self.server.stage2_root)
+                payload["stage2_plan_v110"] = _stage2_v110_projection(self.server.stage2_root)
                 self._reply_json(HTTPStatus.OK, payload)
             except (OSError, ValueError) as exc:
                 self._reply_json(HTTPStatus.SERVICE_UNAVAILABLE, {"error": str(exc)})

@@ -1,4 +1,4 @@
-"""Typed source-provenance gate reused by the Plan v1.9 lifecycle successor."""
+"""Typed source-provenance gate reused by the Plan v1.10 lifecycle successor."""
 
 from __future__ import annotations
 
@@ -20,13 +20,19 @@ class InstrumentGapAudit(BaseModel):
     contract_price_zero_volume_gap_seconds: int
     contract_price_duplicate_seconds: int
     contract_price_extreme_beyond_visible_trades_count: int
+    gap_second_check_status: Literal[
+        "FULL_PERIOD_MEASURED",
+        "DEFERRED_TO_T11_EPISODE_WINDOWS",
+    ] = "FULL_PERIOD_MEASURED"
+    stage1_gap_inventory_hash: str | None = None
+    contract_price_partition_count: int | None = None
 
 
 class LifecycleSourceAudit(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
 
     schema_name: Literal["stage2-lifecycle-source-audit"]
-    schema_version: Literal["1.0", "1.1"]
+    schema_version: Literal["1.0", "1.1", "1.2"]
     status: Literal["PASS", "BLOCKED_SOURCE_NOT_INDEPENDENT_OR_INFORMATIVE"]
     scope_start_date: str
     scope_end_date_exclusive: str
@@ -50,6 +56,10 @@ class LifecycleSourceAudit(BaseModel):
     audits: tuple[InstrumentGapAudit, ...]
     forward_filled_seconds_forbidden: bool
     historical_execution_claim: bool
+    evidence_mode: Literal["SEALED_INCREMENTAL_V1"] | None = None
+    full_trade_row_rescan: bool | None = None
+    targeted_reverification: tuple[str, ...] = ()
+    unverified_or_drifted_sources: tuple[str, ...] = ()
     audit_hash: str
 
     @model_validator(mode="after")
@@ -69,7 +79,7 @@ class LifecycleSourceAudit(BaseModel):
             self.trade_supplement_date,
             self.legacy_stage1_partition_modified,
         )
-        if self.schema_version == "1.1":
+        if self.schema_version in {"1.1", "1.2"}:
             if (
                 any(value is None for value in supplement_values)
                 or self.canonical_trade_overlay_mode != "EXACT_KEY_APPEND_ONLY_SUPPLEMENT_V1"
@@ -80,13 +90,31 @@ class LifecycleSourceAudit(BaseModel):
                 raise ValueError("source audit Trade supplement binding drift")
         elif any(value is not None for value in supplement_values):
             raise ValueError("legacy source audit cannot carry a Trade supplement")
-        passed = all(
-            item.trade_gap_second_count > 0
-            and item.contract_price_gap_seconds_covered == item.trade_gap_second_count
-            and item.contract_price_zero_volume_gap_seconds == 0
-            and item.contract_price_duplicate_seconds == 0
-            for item in self.audits
-        )
+        if self.schema_version == "1.2":
+            if (
+                self.evidence_mode != "SEALED_INCREMENTAL_V1"
+                or self.full_trade_row_rescan is not False
+                or self.unverified_or_drifted_sources
+                or any(
+                    item.trade_gap_count <= 0
+                    or item.gap_second_check_status != "DEFERRED_TO_T11_EPISODE_WINDOWS"
+                    or item.stage1_gap_inventory_hash is None
+                    or item.contract_price_partition_count != 2376
+                    for item in self.audits
+                )
+            ):
+                raise ValueError("sealed incremental source audit gate failed")
+            passed = True
+        else:
+            if self.evidence_mode is not None or self.full_trade_row_rescan is not None:
+                raise ValueError("legacy source audit cannot claim sealed incremental evidence")
+            passed = all(
+                item.trade_gap_second_count > 0
+                and item.contract_price_gap_seconds_covered == item.trade_gap_second_count
+                and item.contract_price_zero_volume_gap_seconds == 0
+                and item.contract_price_duplicate_seconds == 0
+                for item in self.audits
+            )
         expected_status = "PASS" if passed else "BLOCKED_SOURCE_NOT_INDEPENDENT_OR_INFORMATIVE"
         if self.status != expected_status:
             raise ValueError("source audit status does not match its measured gates")
@@ -94,6 +122,7 @@ class LifecycleSourceAudit(BaseModel):
             mode="json",
             exclude={"audit_hash"},
             exclude_none=True,
+            exclude_unset=True,
         )
         if self.audit_hash != canonical_hash(payload):
             raise ValueError("source audit hash mismatch")

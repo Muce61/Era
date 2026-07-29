@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import hashlib
 import os
 from pathlib import Path
@@ -47,6 +48,15 @@ def _payload() -> dict[str, object]:
     }
     payload["audit_hash"] = canonical_hash(payload)
     return payload
+
+
+def test_v110_prepare_path_never_materializes_trade_price_columns() -> None:
+    source = inspect.getsource(audit_stage2_lifecycle_source.build_audit)
+    source += inspect.getsource(audit_stage2_lifecycle_source.collect_contract_price_partitions)
+
+    assert "to_pylist" not in source
+    assert "_verified_trade_day" not in source
+    assert "_audit_instrument" not in source
 
 
 def test_source_audit_passes_without_requiring_a_new_extreme() -> None:
@@ -190,6 +200,11 @@ def test_contract_price_catalog_collects_real_csv_layout(tmp_path: Path, monkeyp
         audit_stage2_lifecycle_source,
         "_t10_contract_source_hash",
         lambda _reader, *, instrument, owner_date: expected_hashes[instrument],
+    )
+    monkeypatch.setattr(
+        audit_stage2_lifecycle_source,
+        "_t10_contract_row_count",
+        lambda _reader, *, instrument, owner_date: 1,
     )
 
     partitions = audit_stage2_lifecycle_source.collect_contract_price_partitions(audit=audit)

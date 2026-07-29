@@ -60,11 +60,7 @@ def _target_price(
 def _funding_by_contract_second(
     observations: tuple[LifecycleObservation, ...],
 ) -> tuple[tuple[int, ...], tuple[Decimal, ...]]:
-    rows = tuple(
-        item
-        for item in observations
-        if item.price_source.value == "CONTRACT_PRICE_1S"
-    )
+    rows = tuple(item for item in observations if item.price_source.value == "CONTRACT_PRICE_1S")
     return (
         tuple(item.ts_event_ns for item in rows),
         tuple(item.cumulative_funding for item in rows),
@@ -183,9 +179,7 @@ def _seal_result_metadata(
         ),
         source_gap_id=representative.source_gap_id if representative is not None else None,
         contract_price_partition_hash=(
-            representative.contract_price_partition_hash
-            if representative is not None
-            else None
+            representative.contract_price_partition_hash if representative is not None else None
         ),
         boundary_classification=(
             representative.boundary_classification

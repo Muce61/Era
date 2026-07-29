@@ -1,4 +1,4 @@
-"""Plan v1.9 solo formal runtime.
+"""Plan v1.10 solo formal runtime.
 
 The runtime keeps the non-negotiable research gates while replacing task-local
 governance bundles with one fsynced event ledger and one final verification.
@@ -10,6 +10,7 @@ import fcntl
 import json
 import os
 import re
+import signal
 import subprocess
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
@@ -30,12 +31,14 @@ from era100x.research.stage_2.acceptance.canonical_json import (
 from .solo_governance import TASK_DAG, TASK_ORDER, SoloRuntimePolicy
 from .solo_inputs import InputsLock, load_inputs_lock
 
-AUTHORITY_SCHEMA: Final = "s2p19-run-authority-v1"
-RUN_SCHEMA: Final = "s2p19-run-v1"
-EVENT_SCHEMA: Final = "s2p19-event-v1"
-MANIFEST_SCHEMA: Final = "s2p19-final-manifest-v1"
-VERIFY_SCHEMA: Final = "s2p19-final-verify-v1"
-RUN_ID: Final = re.compile(r"^stage2-s2p19-\d{8}T\d{6}Z-[0-9a-f]{12}$")
+AUTHORITY_SCHEMA: Final = "s2p110-run-authority-v1"
+RUN_SCHEMA: Final = "s2p110-run-v1"
+EVENT_SCHEMA: Final = "s2p110-event-v1"
+CHECKPOINT_SCHEMA: Final = "s2p110-task-checkpoint-v2"
+TASK_FILES_SCHEMA: Final = "s2p110-task-files-v1"
+MANIFEST_SCHEMA: Final = "s2p110-final-manifest-v1"
+VERIFY_SCHEMA: Final = "s2p110-final-verify-v1"
+RUN_ID: Final = re.compile(r"^stage2-s2p110-\d{8}T\d{6}Z-[0-9a-f]{12}$")
 EVENT_TYPES: Final = frozenset(
     {
         "RUN_STARTED",
@@ -57,6 +60,11 @@ TASK_RESULT_FIELDS: Final = (
     "metrics",
     "checkpoint_tip_hash",
     "research_status",
+    "execution_mode",
+    "source_run_id",
+    "source_verify_hash",
+    "source_output_tree_hash",
+    "adoption_binding_hash",
 )
 
 
@@ -130,6 +138,55 @@ def output_tree(root: Path) -> tuple[str, list[dict[str, object]]]:
     return canonical_content_hash(entries), entries
 
 
+def seal_task_files(root: Path) -> tuple[str, list[dict[str, object]], str]:
+    """Hash immutable Task files once and freeze their reusable descriptor."""
+
+    tree_hash, entries = output_tree(root)
+    payload: dict[str, object] = {
+        "schema_name": TASK_FILES_SCHEMA,
+        "schema_version": "1.0",
+        "output_tree_hash": tree_hash,
+        "files": entries,
+    }
+    payload["task_files_hash"] = _self_hash(payload, "task_files_hash")
+    path = root / "task-files.json"
+    write_canonical_json_exclusive(path, payload)
+    return tree_hash, entries, str(payload["task_files_hash"])
+
+
+def read_task_files(
+    root: Path,
+    *,
+    expected_tree_hash: object,
+    verify_contents: bool,
+) -> tuple[dict[str, Any], ...]:
+    """Validate a frozen descriptor; only final Verify rereads file contents."""
+
+    path = root / "task-files.json"
+    payload = read_canonical_json(path)
+    _verified_self_hash(payload, "task_files_hash")
+    files = payload.get("files")
+    if (
+        payload.get("schema_name") != TASK_FILES_SCHEMA
+        or payload.get("output_tree_hash") != expected_tree_hash
+        or not isinstance(files, list)
+        or canonical_content_hash(files) != expected_tree_hash
+    ):
+        raise ValueError("Task files descriptor drift")
+    rows = tuple(cast(dict[str, Any], item) for item in files)
+    if verify_contents:
+        for item in rows:
+            target = root / _safe_relative(item["relative_path"])
+            if (
+                target.is_symlink()
+                or not target.is_file()
+                or sha256_file(target) != item["sha256"]
+                or target.stat().st_size != item["size_bytes"]
+            ):
+                raise ValueError(f"Task output file Hash drift: {target}")
+    return rows
+
+
 @dataclass(frozen=True, slots=True)
 class TaskResult:
     task_id: str
@@ -140,6 +197,11 @@ class TaskResult:
     metrics: dict[str, Any]
     checkpoint_tip_hash: str | None
     research_status: str
+    execution_mode: str
+    source_run_id: str | None
+    source_verify_hash: str | None
+    source_output_tree_hash: str | None
+    adoption_binding_hash: str | None
 
 
 TaskHandler = Callable[["TaskExecutionContext"], dict[str, Any]]
@@ -212,7 +274,7 @@ class EventLedger:
         if self._cache is None:
             self._cache = list(prior)
         self._cache.append(cast(dict[str, Any], payload))
-        return cast(dict[str, Any], payload)
+        return payload
 
 
 class TaskExecutionContext:
@@ -231,7 +293,7 @@ class TaskExecutionContext:
         ledger: EventLedger,
     ) -> None:
         if task_id not in TASK_ORDER:
-            raise ValueError("unknown Plan v1.9 Task identity")
+            raise ValueError("unknown Plan v1.10 Task identity")
         self.task_id = task_id
         self.attempt = attempt
         self.run_root = run_root
@@ -247,8 +309,10 @@ class TaskExecutionContext:
         self.attempt_root = run_root / "tasks" / task_id / f"attempt-{attempt:04d}"
         self.data_root = self.attempt_root / "data"
         self.checkpoints = self.attempt_root / "checkpoints"
+        self.resume_root = run_root / "resume" / task_id
         self._ledger = ledger
         self._checkpoint_tip_hash: str | None = None
+        self.resume_state = self._load_resume_state()
 
     @property
     def checkpoint_tip_hash(self) -> str | None:
@@ -259,9 +323,11 @@ class TaskExecutionContext:
         if event is None or task_id not in TASK_DAG[self.task_id]:
             raise ValueError(f"Task missing declared upstream: {task_id}")
         root = self.run_root / _safe_relative(event["output_root"])
-        tree_hash, _ = output_tree(root)
-        if tree_hash != event["output_tree_hash"]:
-            raise ValueError(f"upstream output tree Hash drift: {task_id}")
+        read_task_files(
+            root,
+            expected_tree_hash=event["output_tree_hash"],
+            verify_contents=False,
+        )
         return root
 
     def upstream_output(self, task_id: str) -> dict[str, Any]:
@@ -279,17 +345,92 @@ class TaskExecutionContext:
             raise ValueError(f"Task output path escapes the Run: {value}") from exc
         return resolved
 
+    def adopted_binding(self, task_id: str) -> dict[str, Any]:
+        matches = [
+            item
+            for item in self.inputs_lock.adopted_task_bindings
+            if item.get("task_id") == task_id
+        ]
+        if len(matches) != 1:
+            raise ValueError(f"sealed adoption binding missing or duplicated: {task_id}")
+        return dict(matches[0])
+
+    def resolve_adopted_path(self, task_id: str, value: object) -> Path:
+        binding = self.adopted_binding(task_id)
+        root_value = binding.get("source_artifact_root")
+        if not isinstance(root_value, str):
+            raise ValueError(f"sealed adoption has no artifact root: {task_id}")
+        root = Path(root_value).resolve()
+        path = Path(str(value))
+        target = path.resolve() if path.is_absolute() else (root / path).resolve()
+        try:
+            target.relative_to(root)
+        except ValueError as exc:
+            raise ValueError(f"adopted path escapes sealed artifact: {task_id}") from exc
+        if target.is_symlink() or not target.exists():
+            raise ValueError(f"adopted path is missing or symlinked: {target}")
+        return target
+
+    def _load_resume_state(self) -> dict[str, Any] | None:
+        interrupted = [
+            event
+            for event in self._ledger.read()
+            if event.get("event_type") == "TASK_INTERRUPTED"
+            and event.get("task_id") == self.task_id
+        ]
+        if not interrupted:
+            return None
+        prior = interrupted[-1]
+        checkpoint_hash = prior.get("checkpoint_tip_hash")
+        if not isinstance(checkpoint_hash, str):
+            raise ValueError("interrupted Task lacks a checkpoint tip")
+        prior_attempt = int(prior["attempt"])
+        root = (
+            self.run_root / "tasks" / self.task_id / f"attempt-{prior_attempt:04d}" / "checkpoints"
+        )
+        matches = []
+        for path in sorted(root.glob("*.json")):
+            payload = read_canonical_json(path)
+            if payload.get("checkpoint_hash") == checkpoint_hash:
+                matches.append(payload)
+        if len(matches) != 1:
+            raise ValueError("interrupted checkpoint tip cannot be uniquely recovered")
+        payload = matches[0]
+        _verified_self_hash(payload, "checkpoint_hash")
+        if (
+            payload.get("schema_name") != CHECKPOINT_SCHEMA
+            or payload.get("authority_hash") != self.authority_hash
+            or payload.get("code_commit") != self.code_commit
+            or payload.get("task_id") != self.task_id
+        ):
+            raise ValueError("checkpoint resume binding drift")
+        return payload
+
     def progress(self, payload: dict[str, Any]) -> None:
         ordinal = len(tuple(self.checkpoints.glob("*.json"))) + 1
         body: dict[str, Any] = {
-            "schema_name": "s2p19-task-checkpoint-v1",
-            "schema_version": "1.0",
+            "schema_name": CHECKPOINT_SCHEMA,
+            "schema_version": "2.0",
             "task_id": self.task_id,
             "attempt": self.attempt,
             "ordinal": ordinal,
             "previous_checkpoint_hash": self._checkpoint_tip_hash,
             "authority_hash": self.authority_hash,
             "code_commit": self.code_commit,
+            "resume_cursor": payload.get("resume_cursor"),
+            "completed_partition_ids": payload.get("completed_partition_ids", []),
+            "completed_partition_hashes": payload.get("completed_partition_hashes", {}),
+            "producer_state_hash": payload.get("producer_state_hash"),
+            "deterministic_merge_order": payload.get(
+                "deterministic_merge_order", "INSTRUMENT_DATE_EPISODE_ID"
+            ),
+            "remaining_units": payload.get(
+                "remaining_units",
+                max(
+                    int(payload.get("total_units", 0)) - int(payload.get("processed_units", 0)),
+                    0,
+                ),
+            ),
             **payload,
         }
         body["checkpoint_hash"] = _self_hash(body, "checkpoint_hash")
@@ -322,6 +463,7 @@ def freeze_authority(
     approval_source: str,
     approved_commit: str,
     approved_inputs_lock_hash: str,
+    approved_adoption_bundle_hash: str | None = None,
     approved_at: str | None = None,
 ) -> Path:
     """Fsync the human-approved Authority before any Run ID may exist."""
@@ -330,18 +472,21 @@ def freeze_authority(
         raise ValueError("formal Authority requires a clean repository")
     if repository_commit(repository_root) != approved_commit:
         raise ValueError("approved commit does not match current clean HEAD")
-    verified_inputs = load_inputs_lock(inputs_lock.path)
+    verified_inputs = load_inputs_lock(inputs_lock.path, verify_files=True)
     if (
         verified_inputs.inputs_lock_hash != inputs_lock.inputs_lock_hash
         or approved_inputs_lock_hash != inputs_lock.inputs_lock_hash
     ):
         raise ValueError("approved inputs lock Hash mismatch")
+    if approved_adoption_bundle_hash != inputs_lock.adoption_bundle_hash:
+        raise ValueError("approved adoption bundle Hash mismatch")
     authorities = evidence_root / "authorities"
     approval_identity = {
         "approved_by": approved_by,
         "approval_source": approval_source,
         "approved_commit": approved_commit,
         "inputs_lock_hash": inputs_lock.inputs_lock_hash,
+        "adoption_bundle_hash": inputs_lock.adoption_bundle_hash,
         "policy_hash": policy.policy_hash,
         "preregistration_hash": policy.preregistration_hash,
         "contract_bundle_hash": policy.contract_bundle_hash,
@@ -356,17 +501,19 @@ def freeze_authority(
     payload: dict[str, object] = {
         "schema_name": AUTHORITY_SCHEMA,
         "schema_version": "1.0",
-        "stage_plan_version": "1.9",
+        "stage_plan_version": "1.10",
         **approval_identity,
         "code_commit": approved_commit,
         "approval_time": approved_at or _now(),
+        "input_content_hash_verification": "PASS_ONCE_BEFORE_AUTHORITY",
+        "input_content_hash_verified_at": _now(),
         "inputs_lock_path": str(inputs_lock.path),
         "preregistration_path": str(policy.payload["preregistration_path"]),
         "contract_hashes": dict(sorted(policy.contract_hashes.items())),
         "task_order": list(TASK_ORDER),
         "task_dag": {task: list(dependencies) for task, dependencies in TASK_DAG.items()},
-        "handler_registry": "FIXED_COMMIT_BOUND_S2P19_T11_T20",
-        "execution_limit": "S2P19-T20",
+        "handler_registry": "FIXED_COMMIT_BOUND_S2P110_T11_T20",
+        "execution_limit": "S2P110-T20",
         "historical_execution_claim": False,
         "stage3_locked": True,
     }
@@ -391,7 +538,7 @@ def validate_authority(
     inputs_lock = load_inputs_lock(inputs_path)
     if (
         payload.get("schema_name") != AUTHORITY_SCHEMA
-        or payload.get("stage_plan_version") != "1.9"
+        or payload.get("stage_plan_version") != "1.10"
         or payload.get("code_commit") != repository_commit(repository_root)
         or payload.get("approved_commit") != repository_commit(repository_root)
         or payload.get("policy_hash") != policy.policy_hash
@@ -399,15 +546,17 @@ def validate_authority(
         or payload.get("contract_bundle_hash") != policy.contract_bundle_hash
         or payload.get("contract_hashes") != dict(sorted(policy.contract_hashes.items()))
         or payload.get("inputs_lock_hash") != inputs_lock.inputs_lock_hash
+        or payload.get("adoption_bundle_hash") != inputs_lock.adoption_bundle_hash
         or payload.get("task_order") != list(TASK_ORDER)
         or payload.get("task_dag")
         != {task: list(dependencies) for task, dependencies in TASK_DAG.items()}
-        or payload.get("execution_limit") != "S2P19-T20"
+        or payload.get("execution_limit") != "S2P110-T20"
         or payload.get("historical_execution_claim") is not False
+        or payload.get("input_content_hash_verification") != "PASS_ONCE_BEFORE_AUTHORITY"
         or payload.get("stage3_locked") is not True
         or not repository_clean(repository_root)
     ):
-        raise ValueError("Plan v1.9 Authority binding drift")
+        raise ValueError("Plan v1.10 Authority binding drift")
     return payload, inputs_lock
 
 
@@ -437,7 +586,7 @@ def unique_run_lock(evidence_root: Path) -> Iterator[None]:
         try:
             fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
-            raise ValueError("Plan v1.9 unique Run lock is held") from exc
+            raise ValueError("Plan v1.10 unique Run lock is held") from exc
         try:
             yield
         finally:
@@ -453,15 +602,15 @@ def _reserve_run(
     if _authority_has_run(evidence_root, authority_hash):
         raise ValueError("one Authority can reserve only one Run")
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    run_id = f"stage2-s2p19-{stamp}-{authority_hash[:12]}"
+    run_id = f"stage2-s2p110-{stamp}-{authority_hash[:12]}"
     if not RUN_ID.fullmatch(run_id):
-        raise AssertionError("generated invalid Plan v1.9 Run ID")
+        raise AssertionError("generated invalid Plan v1.10 Run ID")
     run_root = evidence_root / "runs" / run_id
     payload: dict[str, object] = {
         "schema_name": RUN_SCHEMA,
         "schema_version": "1.0",
         "run_id": run_id,
-        "stage_plan_version": "1.9",
+        "stage_plan_version": "1.10",
         "authority_hash": authority_hash,
         "created_at": _now(),
         "historical_execution_claim": False,
@@ -481,7 +630,7 @@ def _validate_run(run_root: Path, authority_hash: str) -> dict[str, Any]:
         or payload.get("authority_hash") != authority_hash
         or payload.get("stage3_locked") is not True
     ):
-        raise ValueError("Plan v1.9 Run identity drift")
+        raise ValueError("Plan v1.10 Run identity drift")
     _verified_self_hash(payload, "run_hash")
     return payload
 
@@ -504,9 +653,11 @@ def _completed_events(
         if event.get("upstream_task_hashes") != expected_dependencies:
             raise ValueError(f"Task upstream completion drift: {task_id}")
         root = run_root / _safe_relative(event["output_root"])
-        tree_hash, _ = output_tree(root)
-        if tree_hash != event.get("output_tree_hash"):
-            raise ValueError(f"completed Task output Hash drift: {task_id}")
+        read_task_files(
+            root,
+            expected_tree_hash=event.get("output_tree_hash"),
+            verify_contents=False,
+        )
         completed[task_id] = event
     return completed
 
@@ -577,6 +728,22 @@ def _append_attempt_log(
         os.fsync(handle.fileno())
 
 
+@contextmanager
+def _retryable_task_signal_boundary() -> Iterator[None]:
+    """Turn an operator SIGTERM into the same checkpointed path as Ctrl-C."""
+
+    prior = signal.getsignal(signal.SIGTERM)
+
+    def interrupt(_signum: int, _frame: object) -> None:
+        raise KeyboardInterrupt
+
+    signal.signal(signal.SIGTERM, interrupt)
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGTERM, prior)
+
+
 def _execute_task(
     *,
     handler: TaskHandler,
@@ -613,7 +780,33 @@ def _execute_task(
         status="STARTED",
     )
     try:
-        payload = _normalize_handler_payload(handler(ctx))
+        with _retryable_task_signal_boundary():
+            payload = _normalize_handler_payload(handler(ctx))
+    except KeyboardInterrupt as exc:
+        if ctx.checkpoint_tip_hash is None:
+            _append_attempt_log(
+                run_root,
+                task_id=task_id,
+                attempt=attempt,
+                status="FAILED",
+                reason_code="INTERRUPTED_BEFORE_CHECKPOINT",
+            )
+            raise
+        _append_attempt_log(
+            run_root,
+            task_id=task_id,
+            attempt=attempt,
+            status="INTERRUPTED",
+            reason_code="OPERATOR_SIGNAL_AFTER_CHECKPOINT",
+        )
+        ledger.append(
+            "TASK_INTERRUPTED",
+            task_id=task_id,
+            attempt=attempt,
+            checkpoint_tip_hash=ctx.checkpoint_tip_hash,
+            reason_code="OPERATOR_SIGNAL_AFTER_CHECKPOINT",
+        )
+        raise RetryableTaskInterruption("operator interrupted a checkpointed Task") from exc
     except RetryableTaskInterruption:
         _append_attempt_log(
             run_root,
@@ -642,7 +835,7 @@ def _execute_task(
     payload.update(
         {
             "task_id": task_id,
-            "stage_plan_version": "1.9",
+            "stage_plan_version": "1.10",
             "attempt": attempt,
             "historical_execution_claim": False,
             "stage3_locked": True,
@@ -657,7 +850,8 @@ def _execute_task(
         _run_relative_paths(payload, run_root=run_root),
     )
     write_canonical_json_exclusive(output_path, payload)
-    tree_hash, _ = output_tree(ctx.attempt_root)
+    tree_hash, _, task_files_hash = seal_task_files(ctx.attempt_root)
+    execution_mode = str(payload.get("execution_mode", "EXECUTED_NEW"))
     result = TaskResult(
         task_id=task_id,
         attempt=attempt,
@@ -669,6 +863,11 @@ def _execute_task(
         research_status=str(
             payload.get("research_status", payload.get("research_result", "COMPLETE"))
         ),
+        execution_mode=execution_mode,
+        source_run_id=cast(str | None, payload.get("source_run_id")),
+        source_verify_hash=cast(str | None, payload.get("source_verify_hash")),
+        source_output_tree_hash=cast(str | None, payload.get("source_output_tree_hash")),
+        adoption_binding_hash=cast(str | None, payload.get("adoption_binding_hash")),
     )
     _append_attempt_log(
         run_root,
@@ -687,6 +886,12 @@ def _execute_task(
         metrics=result.metrics,
         checkpoint_tip_hash=result.checkpoint_tip_hash,
         research_status=result.research_status,
+        execution_mode=result.execution_mode,
+        source_run_id=result.source_run_id,
+        source_verify_hash=result.source_verify_hash,
+        source_output_tree_hash=result.source_output_tree_hash,
+        adoption_binding_hash=result.adoption_binding_hash,
+        task_files_hash=task_files_hash,
     )
 
 
@@ -714,7 +919,11 @@ def _build_final_manifest(
     output_files: list[dict[str, object]] = []
     for task_id, event in completed.items():
         root = run_root / _safe_relative(event["output_root"])
-        _, entries = output_tree(root)
+        entries = read_task_files(
+            root,
+            expected_tree_hash=event["output_tree_hash"],
+            verify_contents=False,
+        )
         output_files.extend(
             {
                 **entry,
@@ -724,12 +933,12 @@ def _build_final_manifest(
             for entry in entries
         )
     t20 = read_canonical_json(
-        run_root / _safe_relative(completed["S2P19-T20"]["output_root"]) / "output.json"
+        run_root / _safe_relative(completed["S2P110-T20"]["output_root"]) / "output.json"
     )
     payload: dict[str, object] = {
         "schema_name": MANIFEST_SCHEMA,
         "schema_version": "1.0",
-        "stage_plan_version": "1.9",
+        "stage_plan_version": "1.10",
         "experiment_id": run_root.name,
         "strategy_variant": "STAGE2_SUCCESSOR_H2_UNCHANGED_LIFECYCLE_DUAL_TRACK",
         "primary_hypothesis": "BTC_T2_20BP_TARGET_FIRST_VS_25BP_STOP_FIRST_INCREMENTAL_EDGE",
@@ -784,10 +993,17 @@ def _build_final_manifest(
         "contract_bundle_hash": authority["contract_bundle_hash"],
         "inputs_lock_path": str(inputs_lock.path),
         "inputs_lock_hash": inputs_lock.inputs_lock_hash,
+        "adoption_bundle_hash": inputs_lock.adoption_bundle_hash,
+        "adopted_task_bindings": list(inputs_lock.adopted_task_bindings),
+        "evidence_mode": inputs_lock.evidence_mode,
         "input_bindings": inputs_lock.binding_hashes,
         "contract_price_source_audit": inputs_lock.source_audit,
         "task_order": list(TASK_ORDER),
         "task_results": _task_results(completed),
+        "execution_mode_counts": {
+            mode: sum(event["execution_mode"] == mode for event in completed.values())
+            for mode in ("SEALED_ADOPTION", "EXECUTED_NEW")
+        },
         "all_attempts": attempts,
         "output_files": output_files,
         "event_chain_tip_hash": events[-1]["event_hash"],
@@ -804,7 +1020,7 @@ def _build_final_manifest(
     with report.open("xb") as handle:
         handle.write(
             (
-                "# Stage 2 Plan v1.9 Final Report\n\n"
+                "# Stage 2 Plan v1.10 Final Report\n\n"
                 f"- Run: `{run_root.name}`\n"
                 f"- Result: `{payload['result']}`\n"
                 "- Historical H2 Primary: `PRIMARY_FAILED` (unchanged)\n"
@@ -859,10 +1075,17 @@ def _verify_attempt_topology(
                 checkpoint = read_canonical_json(checkpoint_path)
                 checkpoint_hash = _verified_self_hash(checkpoint, "checkpoint_hash")
                 if (
-                    checkpoint.get("task_id") != task_path.name
+                    checkpoint.get("schema_name") != CHECKPOINT_SCHEMA
+                    or checkpoint.get("task_id") != task_path.name
                     or checkpoint.get("attempt") != identity[1]
                     or checkpoint.get("ordinal") != ordinal
                     or checkpoint.get("previous_checkpoint_hash") != previous
+                    or "resume_cursor" not in checkpoint
+                    or not isinstance(checkpoint.get("completed_partition_ids"), list)
+                    or not isinstance(checkpoint.get("completed_partition_hashes"), dict)
+                    or "producer_state_hash" not in checkpoint
+                    or "deterministic_merge_order" not in checkpoint
+                    or "remaining_units" not in checkpoint
                 ):
                     raise ValueError("candidate Task checkpoint chain drift")
                 previous = checkpoint_hash
@@ -929,12 +1152,23 @@ def verify_candidate(
     completed = _completed_events(events, run_root=candidate_root)
     if tuple(completed) != TASK_ORDER:
         raise ValueError("candidate Task DAG is incomplete")
+    for task_id, event in completed.items():
+        root = candidate_root / _safe_relative(event["output_root"])
+        read_task_files(
+            root,
+            expected_tree_hash=event["output_tree_hash"],
+            verify_contents=False,
+        )
+        descriptor = read_canonical_json(root / "task-files.json")
+        if descriptor.get("task_files_hash") != event.get("task_files_hash"):
+            raise ValueError(f"candidate Task descriptor Hash drift: {task_id}")
     manifest = read_canonical_json(candidate_root / "final/final-manifest.json")
     manifest_hash = _verified_self_hash(manifest, "manifest_hash")
     expected_task_results = _task_results(completed)
     if (
         manifest.get("authority_hash") != authority["authority_hash"]
         or manifest.get("inputs_lock_hash") != inputs_lock.inputs_lock_hash
+        or manifest.get("adoption_bundle_hash") != inputs_lock.adoption_bundle_hash
         or manifest.get("task_order") != list(TASK_ORDER)
         or manifest.get("event_chain_tip_hash") != events[-1]["event_hash"]
         or manifest.get("stage3_locked") is not True
@@ -1143,7 +1377,7 @@ def runtime_status(evidence_root: Path) -> dict[str, Any]:
     runs = list(_all_run_roots(evidence_root))
     latest = max(runs, key=lambda path: path.stat().st_mtime_ns) if runs else None
     payload: dict[str, Any] = {
-        "stage_plan_version": "1.9",
+        "stage_plan_version": "1.10",
         "inputs_lock_count": len(locks),
         "authority_count": len(authorities),
         "run_count": len(runs),
@@ -1213,5 +1447,8 @@ def runtime_status(evidence_root: Path) -> dict[str, Any]:
             "subphase", events[-1]["event_type"] if events else "NOT_STARTED"
         ),
         "checkpoint_metrics": checkpoint_metrics,
+        "task_execution_modes": {
+            str(event["task_id"]): str(event["execution_mode"]) for event in completed
+        },
     }
     return payload

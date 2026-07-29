@@ -2,31 +2,32 @@
 
 ```text
 Current Stage: Stage 2
-Current Plan: stage_2_plan_v1.9 — SOLO RUNTIME IMPLEMENTED
-Current Task: S2P19-T11 v1.0 — production input builder validation and prepare pending
-Status: SOLO RUNTIME VALIDATED / PRODUCTION BINDINGS IMPLEMENTED / PREPARE PENDING / FORMAL RUN GATED
+Current Plan: stage_2_plan_v1.10 — SEALED INCREMENTAL RUNTIME
+Current Task: S2P110-T11 v1.0 — sealed adoption validation and prepare pending
+Status: IMPLEMENTATION AND VALIDATION PASS / PREPARE PENDING / FORMAL RUN GATED
 ```
 
-Plan v1.9 replaces the unexecuted v1.8 formal wrapper with the approved S2P19-T11–T20 solo
-runtime. The migration commit may implement and fixture-test the runtime, but real `prepare`,
+Plan v1.10 supersedes unexecuted Plan v1.9 with the approved S2P110-T11–T20 sealed incremental
+runtime. The implementation commit may implement and fixture-test the runtime, but real `prepare`,
 Authority, Run, resume and publication remain blocked until the implementation is frozen in a clean
-commit. After `prepare`, Muce must grant one approval bound to the exact commit and inputs-lock Hash.
+commit. After `prepare`, Muce must grant one approval bound to the exact commit, inputs-lock Hash and adoption bundle Hash.
 Historical
 Plan v1.7 evidence remains immutable: BTC/ETH H2 Primary remain `PRIMARY_FAILED`, lifecycle remains
 `INCONCLUSIVE_SOURCE_GAP_CENSORING`, and the research decision remains
 `STAGE2_NO_GO_CURRENT_EVIDENCE`. Stage 3 remains locked.
 
 The machine authority is `configs/governance/current_development_state.json` schema v1.3 bound to
-`configs/governance/stage2_active_policy_v8.json`. The historical v1.8 source audit is
+`configs/governance/stage2_active_policy_v9.json`. The historical v1.8 source audit is
 `configs/research/stage_2/s2p18_t11_source_audit_v1.json`; it binds distinct Binance Trades and
 aggTrades archive families and forbids zero-volume forward-filled seconds as gap recovery.
 
-The v1.9 entrypoint is `scripts/run_stage2_v19.py` with exactly `status / prepare / run / resume`.
+The v1.10 entrypoint is `scripts/run_stage2_v110.py` with exactly `status / prepare / run / resume`.
 One inputs lock replaces source/input Catalogs; one Authority embeds the human approval; one
 `events.jsonl` Hash chain replaces task receipts and task-local governance bundles. The H2 branch
 remains canonical-Trades-only; lifecycle OHLC goes only to T19/T20. No real inputs lock, Authority
 or Run was created by the architecture migration. The production input builder now derives all
-twelve semantic Hashes from fixed formal evidence and refuses operator-supplied Hashes; this
+twelve semantic Hashes from fixed formal evidence, validates T12–T18 sealed adoption and refuses
+operator-supplied Hashes; this
 implementation still creates no formal evidence until a clean commit runs `prepare`.
 
 Plan v1.7 authorized only S2P17-T20. Formal Run
@@ -45,7 +46,7 @@ The research conclusion is `STAGE2_NO_GO_CURRENT_EVIDENCE`; BTC H2 Primary is
 `INCONCLUSIVE_SOURCE_GAP_CENSORING`. This is not Stage 2 research PASS. T21 was not executed and
 Stage 3 remains locked.
 
-Policy v6 is now an immutable historical closure Policy and cannot authorize Plan v1.9 work or a
+Policy v6 is now an immutable historical closure Policy and cannot authorize Plan v1.10 work or a
 new formal Run.
 
 Plan v1.2 `S2-T15` remains `STOPPED_FAILED_UNPUBLISHED` with no formal result. It is an immutable

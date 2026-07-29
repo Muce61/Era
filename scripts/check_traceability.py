@@ -38,8 +38,7 @@ def _task_ids(root: Path) -> set[str]:
         elif multi:
             task_ids = [item.strip() for item in multi.group(1).split(",")]
             if not task_ids or any(
-                not re.fullmatch(r"S\d+(?:P\d+)?-T\d+", item)
-                for item in task_ids
+                not re.fullmatch(r"S\d+(?:P\d+)?-T\d+", item) for item in task_ids
             ):
                 raise ValueError(f"invalid task_ids metadata: {path.relative_to(root)}")
             ids.extend(task_ids)

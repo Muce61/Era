@@ -1,4 +1,4 @@
-"""Single-file immutable inputs lock for the Plan v1.9 solo runtime."""
+"""Single-file immutable inputs and adoption lock for Plan v1.10."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from era100x.research.stage_2.acceptance.canonical_json import (
     write_canonical_json_exclusive,
 )
 
-INPUTS_LOCK_SCHEMA: Final = "s2p19-inputs-lock-v1"
+INPUTS_LOCK_SCHEMA: Final = "s2p110-inputs-lock-v1"
 REQUIRED_INPUT_BINDINGS: Final = frozenset(
     {
         "btc_stage1_logical_hash",
@@ -83,6 +83,9 @@ class InputsLock:
     source_audit: dict[str, Any]
     partitions: tuple[dict[str, Any], ...]
     bindings: dict[str, InputBinding]
+    adopted_task_bindings: tuple[dict[str, Any], ...]
+    adoption_bundle_hash: str
+    evidence_mode: str
 
     @property
     def binding_hashes(self) -> dict[str, str]:
@@ -109,7 +112,7 @@ def _validate_source_audit(raw: object) -> dict[str, Any]:
     audit = cast(dict[str, Any], raw)
     if (
         audit.get("schema_name") != "stage2-lifecycle-source-audit"
-        or audit.get("schema_version") != "1.1"
+        or audit.get("schema_version") != "1.2"
         or audit.get("status") != "PASS"
         or audit.get("scope_start_date") != SCOPE_START
         or audit.get("scope_end_date_exclusive") != SCOPE_END_EXCLUSIVE
@@ -120,6 +123,9 @@ def _validate_source_audit(raw: object) -> dict[str, Any]:
         or audit.get("trade_supplement_instrument") != "BTCUSDT"
         or audit.get("trade_supplement_date") != "2022-03-01"
         or audit.get("legacy_stage1_partition_modified") is not False
+        or audit.get("evidence_mode") != "SEALED_INCREMENTAL_V1"
+        or audit.get("full_trade_row_rescan") is not False
+        or audit.get("unverified_or_drifted_sources") != []
         or not isinstance(audit.get("trade_supplement_acceptance_path"), str)
         or not Path(str(audit["trade_supplement_acceptance_path"])).is_absolute()
         or not HEX64.fullmatch(str(audit.get("trade_supplement_file_sha256")))
@@ -187,34 +193,83 @@ def _validate_partition_rows(
     return tuple(partitions)
 
 
-def load_inputs_lock(path: Path, *, verify_files: bool = True) -> InputsLock:
+def _validate_adopted_tasks(raw: object) -> tuple[dict[str, Any], ...]:
+    if not isinstance(raw, list):
+        raise ValueError("inputs lock adopted_task_bindings must be a list")
+    rows = tuple(cast(dict[str, Any], row) for row in raw if isinstance(row, dict))
+    expected = {f"S2P110-T{number:02d}" for number in range(12, 19)}
+    required_fields = {
+        "task_id",
+        "source_task_id",
+        "source_kind",
+        "source_path",
+        "source_hash",
+        "source_run_id",
+        "source_output_tree_hash",
+        "row_count",
+        "source_artifact_root",
+        "source_output_path",
+        "source_manifest_hash",
+        "source_catalog_hash",
+        "adoption_binding_hash",
+    }
+    if (
+        len(rows) != 7
+        or {str(row.get("task_id")) for row in rows} != expected
+        or any(
+            set(row) != required_fields
+            or not HEX64.fullmatch(str(row.get("source_hash")))
+            or not HEX64.fullmatch(str(row.get("source_output_tree_hash")))
+            or not HEX64.fullmatch(str(row.get("source_manifest_hash")))
+            or not HEX64.fullmatch(str(row.get("source_catalog_hash")))
+            or not HEX64.fullmatch(str(row.get("adoption_binding_hash")))
+            or row.get("source_kind") not in {"PRODUCTION_TASK_RECEIPT", "FORMAL_VERIFY"}
+            or not Path(str(row.get("source_path", ""))).is_absolute()
+            or not isinstance(row.get("source_run_id"), str)
+            or not isinstance(row.get("row_count"), int)
+            or int(row.get("row_count", 0)) <= 0
+            for row in rows
+        )
+    ):
+        raise ValueError("inputs lock sealed adoption task drift")
+    return rows
+
+
+def load_inputs_lock(path: Path, *, verify_files: bool = False) -> InputsLock:
     """Load and verify the single formal input object and every bound file."""
 
-    _safe_absolute_file(path, label="Plan v1.9 inputs lock")
+    _safe_absolute_file(path, label="Plan v1.10 inputs lock")
     payload = read_canonical_json(path)
     claimed = payload.get("inputs_lock_hash")
     if (
         payload.get("schema_name") != INPUTS_LOCK_SCHEMA
         or payload.get("schema_version") != "1.0"
-        or payload.get("stage_plan_version") != "1.9"
+        or payload.get("stage_plan_version") != "1.10"
         or payload.get("scope_start_date") != SCOPE_START
         or payload.get("scope_end_date_exclusive") != SCOPE_END_EXCLUSIVE
         or not HEX64.fullmatch(str(payload.get("production_binding_rules_hash")))
+        or not HEX64.fullmatch(str(payload.get("adoption_bundle_hash")))
+        or payload.get("evidence_mode") != "SEALED_INCREMENTAL_V1"
+        or payload.get("sealed_source_bindings") != sorted(REQUIRED_INPUT_BINDINGS)
+        or payload.get("full_trade_row_rescan") is not False
+        or payload.get("unverified_or_drifted_sources") != []
         or payload.get("historical_execution_claim") is not False
         or payload.get("stage3_locked") is not True
         or not isinstance(claimed, str)
         or path.name != f"inputs-{claimed}.lock.json"
         or claimed != canonical_content_hash(_without_self_hash(payload))
     ):
-        raise ValueError("Plan v1.9 inputs lock identity or self Hash drift")
+        raise ValueError("Plan v1.10 inputs lock identity or self Hash drift")
     source_audit = _validate_source_audit(payload.get("source_audit"))
+    if payload.get("targeted_reverification") != source_audit["targeted_reverification"]:
+        raise ValueError("Plan v1.10 targeted reverification binding drift")
     partitions = _validate_partition_rows(
         payload.get("contract_price_partitions"),
         verify_files=verify_files,
     )
     entries = payload.get("entries")
     if not isinstance(entries, list):
-        raise ValueError("Plan v1.9 inputs lock entries must be a list")
+        raise ValueError("Plan v1.10 inputs lock entries must be a list")
     bindings: dict[str, InputBinding] = {}
     for raw in cast(list[object], entries):
         if not isinstance(raw, dict) or set(raw) != {
@@ -237,11 +292,11 @@ def load_inputs_lock(path: Path, *, verify_files: bool = True) -> InputsLock:
             or not HEX64.fullmatch(binding_hash)
             or REQUIRED_BINDING_RULES.get(role) != binding_rule
         ):
-            raise ValueError(f"invalid Plan v1.9 input binding: {role}")
+            raise ValueError(f"invalid Plan v1.10 input binding: {role}")
         if verify_files:
             _safe_absolute_file(target, label=f"input binding {role}")
             if sha256_file(target) != expected_sha:
-                raise ValueError(f"Plan v1.9 input Hash drift: {role}")
+                raise ValueError(f"Plan v1.10 input Hash drift: {role}")
         bindings[role] = InputBinding(
             role=role,
             path=target,
@@ -250,7 +305,8 @@ def load_inputs_lock(path: Path, *, verify_files: bool = True) -> InputsLock:
             binding_rule=binding_rule,
         )
     if set(bindings) != REQUIRED_INPUT_BINDINGS:
-        raise ValueError("Plan v1.9 inputs lock requires twelve exact roles")
+        raise ValueError("Plan v1.10 inputs lock requires twelve exact roles")
+    adopted = _validate_adopted_tasks(payload.get("adopted_task_bindings"))
     return InputsLock(
         path=path,
         inputs_lock_hash=claimed,
@@ -258,6 +314,9 @@ def load_inputs_lock(path: Path, *, verify_files: bool = True) -> InputsLock:
         source_audit=source_audit,
         partitions=partitions,
         bindings=bindings,
+        adopted_task_bindings=adopted,
+        adoption_bundle_hash=str(payload["adoption_bundle_hash"]),
+        evidence_mode=str(payload["evidence_mode"]),
     )
 
 
@@ -268,19 +327,26 @@ def write_inputs_lock(
     source_audit: dict[str, Any],
     contract_price_partitions: list[dict[str, Any]],
     production_binding_rules_hash: str,
+    adopted_task_bindings: list[dict[str, object]] | None = None,
+    adoption_bundle_hash: str | None = None,
 ) -> Path:
     """Create the one append-only input lock after all source checks pass."""
 
     if not inputs_root.is_absolute() or any(
         part.is_symlink() for part in (inputs_root, *inputs_root.parents)
     ):
-        raise ValueError("Plan v1.9 inputs root must be absolute and non-symlink")
+        raise ValueError("Plan v1.10 inputs root must be absolute and non-symlink")
     if set(entries) != REQUIRED_INPUT_BINDINGS:
-        raise ValueError("Plan v1.9 inputs lock requires twelve exact roles")
-    if not HEX64.fullmatch(production_binding_rules_hash):
+        raise ValueError("Plan v1.10 inputs lock requires twelve exact roles")
+    if adopted_task_bindings is None or adoption_bundle_hash is None:
+        raise ValueError("Plan v1.10 requires sealed adoption bindings")
+    if not HEX64.fullmatch(production_binding_rules_hash) or not HEX64.fullmatch(
+        adoption_bundle_hash
+    ):
         raise ValueError("production binding rules Hash is invalid")
     _validate_source_audit(source_audit)
-    _validate_partition_rows(contract_price_partitions, verify_files=True)
+    _validate_partition_rows(contract_price_partitions, verify_files=False)
+    adopted = _validate_adopted_tasks(adopted_task_bindings)
     rows: list[dict[str, object]] = []
     for role, (target, binding_hash) in sorted(entries.items()):
         _safe_absolute_file(target, label=f"input binding {role}")
@@ -298,10 +364,17 @@ def write_inputs_lock(
     payload: dict[str, Any] = {
         "schema_name": INPUTS_LOCK_SCHEMA,
         "schema_version": "1.0",
-        "stage_plan_version": "1.9",
+        "stage_plan_version": "1.10",
         "scope_start_date": SCOPE_START,
         "scope_end_date_exclusive": SCOPE_END_EXCLUSIVE,
         "production_binding_rules_hash": production_binding_rules_hash,
+        "evidence_mode": "SEALED_INCREMENTAL_V1",
+        "sealed_source_bindings": sorted(entries),
+        "adopted_task_bindings": list(adopted),
+        "adoption_bundle_hash": adoption_bundle_hash,
+        "targeted_reverification": source_audit["targeted_reverification"],
+        "unverified_or_drifted_sources": [],
+        "full_trade_row_rescan": False,
         "entries": rows,
         "source_audit": source_audit,
         "contract_price_partitions": contract_price_partitions,
@@ -311,10 +384,10 @@ def write_inputs_lock(
     payload["inputs_lock_hash"] = canonical_content_hash(payload)
     path = inputs_root / f"inputs-{payload['inputs_lock_hash']}.lock.json"
     if path.exists():
-        existing = load_inputs_lock(path)
+        existing = load_inputs_lock(path, verify_files=False)
         if existing.inputs_lock_hash != payload["inputs_lock_hash"]:
             raise ValueError("existing inputs lock identity drift")
         return path
     write_canonical_json_exclusive(path, payload)
-    load_inputs_lock(path)
+    load_inputs_lock(path, verify_files=False)
     return path

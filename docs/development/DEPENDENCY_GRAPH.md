@@ -98,7 +98,7 @@ Stage 2 H3 price proxy, and CR-2026-038 binds the accepted historical funding so
 S2P13-T17～T21 were not executed; any continuation requires a new approved plan/version and Stage 3
 remains locked.
 
-## Stage 2 Plans v1.4–v1.9 successor DAG and solo runtime
+## Stage 2 Plans v1.4–v1.10 successor DAG and sealed solo runtime
 
 Each later Plan used a new namespaced Task identity and separately approved machine Policy:
 
@@ -110,6 +110,7 @@ verified S2P13-T16
   → Plan v1.7 / S2P17-T20 final evidence acceptance
   → Plan v1.8 / S2P18-T11–T20 lifecycle repair successor
   → Plan v1.9 / S2P19-T11–T20 solo-runtime successor
+  → Plan v1.10 / S2P110-T11–T20 sealed incremental successor
 ```
 
 Legacy Plan v1.2 `S2-T15` remains `STOPPED_FAILED_UNPUBLISHED`; it is immutable historical
@@ -120,19 +121,20 @@ T17 through T20 passed their historical engineering, publication, reconciliation
 Verify gates. T20 closed that evidence chain as `STAGE2_NO_GO_CURRENT_EVIDENCE`: BTC and ETH
 Primary failed, while lifecycle remained `INCONCLUSIVE_SOURCE_GAP_CENSORING`.
 
-Plan v1.8 was never formally executed and is `SUPERSEDED_UNEXECUTED`. Plan v1.9 preserves its
-T11→T12→T13/T14→T15→T16→T17→T18→T19→T20 research DAG, with T11 also feeding T16 and T19.
-No downstream task unlocks before its upstream completion event and output-tree Hash pass.
-Formal execution is gated by clean commit, full inputs lock and exact commit/input-lock approval.
+Plans v1.8 and v1.9 were never formally executed and are `SUPERSEDED_UNEXECUTED`. Plan v1.10
+executes a new T11 lifecycle track, adopts compatible sealed T12–T18 results without copying or
+recomputing them, and merges both branches at T19. T16 no longer has a non-semantic dependency on
+T11. No downstream task unlocks before its upstream completion event and frozen task-files root
+Hash pass. Formal execution is gated by clean commit, full inputs lock and exact
+commit/input-lock/adoption-bundle approval.
 Stage 2 is `IN_PROGRESS`, not research PASS, and Stage 3 remains locked.
 
 ADR-S2-027 splits the dataflow at T11: T12–T18 remain canonical-Trades-only H2, while
 `PURE_TRADES_COMPARATOR` and `CONTRACT_PRICE_OHLC_PRIMARY` lifecycle evidence goes directly from
-T11 to T19/T20. T11 remains a governance dependency of T16 but its OHLC classifications cannot
-become H2 labels.
+T11 to T19/T20. Its OHLC classifications cannot become H2 labels.
 
-The solo runtime enforces `prepare → inputs lock → approval → Authority → Run lock → T11…T20
-events → final Manifest → candidate → full Verify → atomic publication`. An input, handler,
-upstream-event or output-tree Hash failure terminates the Run unpublished; it cannot skip forward.
-Retryable process interruption is the only exception: it preserves the same non-terminal Run,
-appends a new Task attempt and revalidates Authority, inputs lock and upstream output Hashes.
+The sealed solo runtime enforces `prepare → inputs/adoption lock → approval → Authority → Run lock
+→ T11 new execution + T12–T18 adoption → T19/T20 → final Manifest → candidate → full Verify →
+atomic publication`. An input, handler, upstream-event or task-files Hash failure terminates the
+Run unpublished. Retryable interruption preserves deterministic T11 partition/Episode batches and
+only processes remaining batches after validating the checkpoint and batch Hashes.

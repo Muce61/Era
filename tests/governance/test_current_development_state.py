@@ -14,22 +14,22 @@ from era100x.foundation.governance import (
 )
 
 
-def test_repository_current_state_is_plan_v19_prepare_gated_and_hash_valid() -> None:
+def test_repository_current_state_is_plan_v110_prepare_gated_and_hash_valid() -> None:
     state = load_current_development_state()
 
     assert state.schema_version == "1.3"
     assert state.current_stage == "S2"
-    assert state.current_plan == "stage_2_plan_v1.9"
-    assert state.current_task == "S2P19-T11"
+    assert state.current_plan == "stage_2_plan_v1.10"
+    assert state.current_task == "S2P110-T11"
     assert state.current_task_version == "1.0"
-    assert state.task_status == "SOLO_RUNTIME_IMPLEMENTED_VALIDATED_PREPARE_GATED"
+    assert state.task_status == "SEALED_RUNTIME_IMPLEMENTED_VALIDATED_PREPARE_GATED"
     assert state.stage_status == "IN_PROGRESS"
     assert state.research_decision == "STAGE2_NO_GO_CURRENT_EVIDENCE"
-    assert state.current_policy_path == "configs/governance/stage2_active_policy_v8.json"
+    assert state.current_policy_path == "configs/governance/stage2_active_policy_v9.json"
     assert state.formal_successor_result_exists is True
     assert state.stage3_locked is True
     assert state.srp_execution_status == "SOLO_RUNTIME_PREPARE_ALLOWED_FORMAL_RUN_FORBIDDEN"
-    assert state.approved_execution_limit == "S2P19-T20"
+    assert state.approved_execution_limit == "S2P110-T20"
     assert state.formal_run_receipt_required is False
     assert state.blocking_questions == (
         "FORMAL_RUN_REQUIRES_PREPARE_INPUTS_LOCK_AND_COMMIT_INPUT_LOCK_BOUND_APPROVAL",
@@ -112,7 +112,7 @@ def test_resealed_state_can_be_loaded_but_does_not_change_repository_authority(
     assert state.task_status == "IN_PROGRESS"
     assert (
         load_current_development_state().task_status
-        == "SOLO_RUNTIME_IMPLEMENTED_VALIDATED_PREPARE_GATED"
+        == "SEALED_RUNTIME_IMPLEMENTED_VALIDATED_PREPARE_GATED"
     )
 
 

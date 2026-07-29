@@ -199,9 +199,9 @@ def _produce_control_outcomes(
     gap_matrix_count = 0
     gap_cell_count = 0
     updates: list[tuple[str, str, str, str, str]] = []
-    physical_cache: OrderedDict[
-        tuple[str, int, str, str], tuple[tuple[OutcomeCell, ...], str]
-    ] = OrderedDict()
+    physical_cache: OrderedDict[tuple[str, int, str, str], tuple[tuple[OutcomeCell, ...], str]] = (
+        OrderedDict()
+    )
     physical_cache_hits = 0
     physical_cache_misses = 0
     last_progress_at = time.monotonic()

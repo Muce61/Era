@@ -23,10 +23,7 @@ class DecimalTimeRangeIndex:
     ) -> DecimalTimeRangeIndex:
         if len(timestamps_ns) != len(values) or not values:
             raise ValueError("range index requires aligned non-empty columns")
-        if any(
-            right < left
-            for left, right in zip(timestamps_ns, timestamps_ns[1:], strict=False)
-        ):
+        if any(right < left for left, right in zip(timestamps_ns, timestamps_ns[1:], strict=False)):
             raise ValueError("range index timestamps must be increasing")
         if any(value <= 0 for value in values):
             raise ValueError("range index prices must be positive")

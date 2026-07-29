@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -41,7 +42,7 @@ def _hash(value: str) -> str:
 def _source_audit() -> dict[str, Any]:
     payload: dict[str, Any] = {
         "schema_name": "stage2-lifecycle-source-audit",
-        "schema_version": "1.1",
+        "schema_version": "1.2",
         "status": "PASS",
         "scope_start_date": "2020-01-01",
         "scope_end_date_exclusive": "2026-07-04",
@@ -62,6 +63,10 @@ def _source_audit() -> dict[str, Any]:
         "trade_supplement_instrument": "BTCUSDT",
         "trade_supplement_date": "2022-03-01",
         "legacy_stage1_partition_modified": False,
+        "evidence_mode": "SEALED_INCREMENTAL_V1",
+        "full_trade_row_rescan": False,
+        "targeted_reverification": ["GAP_SECONDS_ONLY"],
+        "unverified_or_drifted_sources": [],
         "audits": [
             {
                 "instrument": instrument,
@@ -79,6 +84,29 @@ def _source_audit() -> dict[str, Any]:
     }
     payload["audit_hash"] = solo_inputs.canonical_content_hash(payload)
     return payload
+
+
+def _adoptions() -> list[dict[str, object]]:
+    return [
+        {
+            "task_id": f"S2P110-T{number:02d}",
+            "source_task_id": f"SOURCE-T{number:02d}",
+            "source_kind": ("PRODUCTION_TASK_RECEIPT" if number <= 16 else "FORMAL_VERIFY"),
+            "source_path": f"/fixture/T{number:02d}.json",
+            "source_hash": _hash(f"source-{number}"),
+            "source_run_id": f"run-{number}",
+            "source_output_tree_hash": _hash(f"tree-{number}"),
+            "row_count": 1,
+            "source_artifact_root": f"/fixture/artifact-{number}",
+            "source_output_path": (
+                f"/fixture/artifact-{number}/output.json" if number <= 16 else None
+            ),
+            "source_manifest_hash": _hash(f"manifest-{number}"),
+            "source_catalog_hash": _hash(f"catalog-{number}"),
+            "adoption_binding_hash": _hash(f"adoption-{number}"),
+        }
+        for number in range(12, 19)
+    ]
 
 
 def _inputs_lock(
@@ -123,6 +151,8 @@ def _inputs_lock(
         source_audit=_source_audit(),
         contract_price_partitions=partitions,
         production_binding_rules_hash=_hash("production-binding-rules"),
+        adopted_task_bindings=_adoptions(),
+        adoption_bundle_hash=_hash("adoption-bundle"),
     )
     return load_inputs_lock(path)
 
@@ -131,7 +161,9 @@ def _policy(tmp_path: Path) -> SoloRuntimePolicy:
     return SoloRuntimePolicy(
         path=tmp_path / "policy.json",
         payload={
-            "preregistration_path": ("configs/research/stage_2/s2p19_t11_t20_solo_runtime_v1.json"),
+            "preregistration_path": (
+                "configs/research/stage_2/s2p110_t11_t20_sealed_runtime_v1.json"
+            ),
             "task_dag": {task: list(dependencies) for task, dependencies in TASK_DAG.items()},
         },
         policy_hash="b" * 64,
@@ -159,6 +191,7 @@ def _authority(
         approval_source="fixture approval",
         approved_commit=COMMIT,
         approved_inputs_lock_hash=inputs_lock.inputs_lock_hash,
+        approved_adoption_bundle_hash=inputs_lock.adoption_bundle_hash,
         approved_at="2026-07-29T00:00:00+00:00",
     )
     return policy, authority, evidence_root
@@ -167,6 +200,7 @@ def _authority(
 def _handlers(
     *,
     interrupt_once: str | None = None,
+    keyboard_interrupt_once: str | None = None,
     fail: str | None = None,
 ) -> dict[str, Any]:
     def handler(ctx: TaskExecutionContext) -> dict[str, Any]:
@@ -187,17 +221,19 @@ def _handlers(
             raise ValueError("fixture terminal failure")
         if ctx.task_id == interrupt_once and ctx.attempt == 1:
             raise RetryableTaskInterruption("fixture interruption")
+        if ctx.task_id == keyboard_interrupt_once and ctx.attempt == 1:
+            raise KeyboardInterrupt
         return {
             "row_count": 1,
             "metrics": {"fixture": 1},
             "research_status": (
                 "STAGE2_NO_GO_CURRENT_EVIDENCE"
-                if ctx.task_id == "S2P19-T20"
+                if ctx.task_id == "S2P110-T20"
                 else "FIXTURE_COMPLETE"
             ),
             **(
                 {"research_decision": "STAGE2_NO_GO_CURRENT_EVIDENCE"}
-                if ctx.task_id == "S2P19-T20"
+                if ctx.task_id == "S2P110-T20"
                 else {}
             ),
         }
@@ -217,7 +253,7 @@ def test_inputs_lock_rejects_symlink_and_hash_drift(
     target = next(iter(lock.bindings.values())).path
     target.write_text("drift\n", encoding="utf-8")
     with pytest.raises(ValueError, match="input Hash drift"):
-        load_inputs_lock(lock.path)
+        load_inputs_lock(lock.path, verify_files=True)
 
 
 def test_production_validation_rederives_semantic_hashes(
@@ -246,9 +282,20 @@ def test_production_validation_rederives_semantic_hashes(
     monkeypatch.setattr(
         production_input_spec,
         "build_production_input_spec",
-        lambda **_kwargs: production_input_spec.ProductionInputSpec(
+        lambda **_kwargs: SimpleNamespace(
             entries=entries,
             rules_hash=lock.production_binding_rules_hash,
+            adoption_bundle=SimpleNamespace(
+                bundle_hash=lock.adoption_bundle_hash,
+                lock_payload=lambda: list(lock.adopted_task_bindings),
+            ),
+            trade_supplement=SimpleNamespace(
+                acceptance_path=Path(str(lock.source_audit["trade_supplement_acceptance_path"])),
+                file_sha256=str(lock.source_audit["trade_supplement_file_sha256"]),
+                acceptance_hash=str(lock.source_audit["trade_supplement_acceptance_hash"]),
+                instrument="BTCUSDT",
+                owner_date="2022-03-01",
+            ),
         ),
     )
     production_input_spec.validate_production_inputs_lock(
@@ -262,9 +309,20 @@ def test_production_validation_rederives_semantic_hashes(
     monkeypatch.setattr(
         production_input_spec,
         "build_production_input_spec",
-        lambda **_kwargs: production_input_spec.ProductionInputSpec(
+        lambda **_kwargs: SimpleNamespace(
             entries=drifted,
             rules_hash=lock.production_binding_rules_hash,
+            adoption_bundle=SimpleNamespace(
+                bundle_hash=lock.adoption_bundle_hash,
+                lock_payload=lambda: list(lock.adopted_task_bindings),
+            ),
+            trade_supplement=SimpleNamespace(
+                acceptance_path=Path(str(lock.source_audit["trade_supplement_acceptance_path"])),
+                file_sha256=str(lock.source_audit["trade_supplement_file_sha256"]),
+                acceptance_hash=str(lock.source_audit["trade_supplement_acceptance_hash"]),
+                instrument="BTCUSDT",
+                owner_date="2022-03-01",
+            ),
         ),
     )
     with pytest.raises(ValueError, match="production semantic binding drift"):
@@ -308,9 +366,36 @@ def test_fake_ten_task_chain_publishes_without_task_governance_bundles(
     assert not tuple(published.rglob("receipt.json"))
     assert not tuple(published.rglob("task-verify.json"))
     assert not tuple(published.rglob("catalog.json"))
-    task_output = read_canonical_json(published / "tasks/S2P19-T11/attempt-0001/output.json")
+    task_output = read_canonical_json(published / "tasks/S2P110-T11/attempt-0001/output.json")
     assert not Path(str(task_output["artifact_attempt_root"])).is_absolute()
     assert (published / str(task_output["artifact_attempt_root"])).is_dir()
+
+
+def test_each_task_output_is_hashed_only_at_completion_and_final_verify(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    policy, authority, evidence_root = _authority(tmp_path, monkeypatch)
+    original = solo_runtime.sha256_file
+    counts: dict[str, int] = {}
+
+    def counted(path: Path) -> str:
+        if path.name == "output.json" and "tasks" in path.parts:
+            key = "/".join(path.parts[-4:])
+            counts[key] = counts.get(key, 0) + 1
+        return original(path)
+
+    monkeypatch.setattr(solo_runtime, "sha256_file", counted)
+    execute_run(
+        policy=policy,
+        authority_path=authority,
+        repository_root=tmp_path,
+        evidence_root=evidence_root,
+        handlers=_handlers(),
+    )
+
+    assert len(counts) == 10
+    assert set(counts.values()) == {2}
 
 
 def test_authority_is_idempotent_before_run_and_rejects_wrong_approval(
@@ -330,6 +415,7 @@ def test_authority_is_idempotent_before_run_and_rejects_wrong_approval(
         "approval_source": "fixture approval",
         "approved_commit": COMMIT,
         "approved_inputs_lock_hash": inputs_lock.inputs_lock_hash,
+        "approved_adoption_bundle_hash": inputs_lock.adoption_bundle_hash,
         "approved_at": "2026-07-29T00:00:00+00:00",
     }
     monkeypatch.setattr(solo_runtime, "repository_clean", lambda _root: False)
@@ -345,6 +431,8 @@ def test_authority_is_idempotent_before_run_and_rejects_wrong_approval(
         freeze_authority(**{**kwargs, "approved_commit": "f" * 40})
     with pytest.raises(ValueError, match="approved inputs lock"):
         freeze_authority(**{**kwargs, "approved_inputs_lock_hash": "0" * 64})
+    with pytest.raises(ValueError, match="approved adoption bundle"):
+        freeze_authority(**{**kwargs, "approved_adoption_bundle_hash": "0" * 64})
     execute_run(
         policy=policy,
         authority_path=first,
@@ -389,7 +477,7 @@ def test_interrupted_task_resumes_in_new_attempt(
             authority_path=authority,
             repository_root=tmp_path,
             evidence_root=evidence_root,
-            handlers=_handlers(interrupt_once="S2P19-T14"),
+            handlers=_handlers(interrupt_once="S2P110-T14"),
         )
     run_root = next((evidence_root / "runs").iterdir())
     published = execute_run(
@@ -397,7 +485,7 @@ def test_interrupted_task_resumes_in_new_attempt(
         authority_path=authority,
         repository_root=tmp_path,
         evidence_root=evidence_root,
-        handlers=_handlers(interrupt_once="S2P19-T14"),
+        handlers=_handlers(interrupt_once="S2P110-T14"),
         resume_run_root=run_root,
     )
 
@@ -408,11 +496,37 @@ def test_interrupted_task_resumes_in_new_attempt(
     t14_attempts = [
         event["attempt"]
         for event in events
-        if event["event_type"] == "TASK_STARTED" and event["task_id"] == "S2P19-T14"
+        if event["event_type"] == "TASK_STARTED" and event["task_id"] == "S2P110-T14"
     ]
     assert t14_attempts == [1, 2]
-    assert (published / "tasks/S2P19-T14/attempt-0001").is_dir()
-    assert (published / "tasks/S2P19-T14/attempt-0002").is_dir()
+    assert (published / "tasks/S2P110-T14/attempt-0001").is_dir()
+    assert (published / "tasks/S2P110-T14/attempt-0002").is_dir()
+
+
+def test_operator_interrupt_after_checkpoint_is_resumable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    policy, authority, evidence_root = _authority(tmp_path, monkeypatch)
+    with pytest.raises(RetryableTaskInterruption, match="operator interrupted"):
+        execute_run(
+            policy=policy,
+            authority_path=authority,
+            repository_root=tmp_path,
+            evidence_root=evidence_root,
+            handlers=_handlers(keyboard_interrupt_once="S2P110-T11"),
+        )
+    run_root = next((evidence_root / "runs").iterdir())
+    published = execute_run(
+        policy=policy,
+        authority_path=authority,
+        repository_root=tmp_path,
+        evidence_root=evidence_root,
+        handlers=_handlers(keyboard_interrupt_once="S2P110-T11"),
+        resume_run_root=run_root,
+    )
+
+    assert published.parent.name == "published"
 
 
 def test_terminal_failure_moves_run_to_failed_and_cannot_resume(
@@ -425,7 +539,7 @@ def test_terminal_failure_moves_run_to_failed_and_cannot_resume(
             authority_path=authority,
             repository_root=tmp_path,
             evidence_root=evidence_root,
-            handlers=_handlers(fail="S2P19-T14"),
+            handlers=_handlers(fail="S2P110-T14"),
         )
     failed = next((evidence_root / "failed").iterdir())
     events = [
@@ -454,10 +568,10 @@ def test_output_hash_drift_on_resume_fails_closed(
             authority_path=authority,
             repository_root=tmp_path,
             evidence_root=evidence_root,
-            handlers=_handlers(interrupt_once="S2P19-T13"),
+            handlers=_handlers(interrupt_once="S2P110-T13"),
         )
     run_root = next((evidence_root / "runs").iterdir())
-    output = run_root / "tasks/S2P19-T11/attempt-0001/output.json"
+    output = run_root / "tasks/S2P110-T11/attempt-0001/output.json"
     output.write_text("{}\n", encoding="utf-8")
     with pytest.raises(ValueError, match="output Hash drift"):
         execute_run(
@@ -465,7 +579,7 @@ def test_output_hash_drift_on_resume_fails_closed(
             authority_path=authority,
             repository_root=tmp_path,
             evidence_root=evidence_root,
-            handlers=_handlers(interrupt_once="S2P19-T13"),
+            handlers=_handlers(interrupt_once="S2P110-T13"),
             resume_run_root=run_root,
         )
     assert next((evidence_root / "failed").iterdir()).is_dir()

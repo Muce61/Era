@@ -103,18 +103,16 @@ def test_gap_path_stops_at_first_coarse_boundary() -> None:
 
 def test_zero_volume_forward_fill_cannot_recover_a_trade_gap() -> None:
     bar = ContractPriceOhlcPoint(
-            event_ts_ns=10 * NS,
-            available_at_ns=11 * NS,
-            open=Decimal("100"),
-            high=Decimal("100"),
-            low=Decimal("100"),
-            close=Decimal("100"),
-            volume=Decimal("0"),
-            partition_hash="a" * 64,
-        )
-    with pytest.raises(
-        ValueError, match="FORWARD_FILLED_CONTRACT_PRICE_CANNOT_RECOVER_TRADE_GAP"
-    ):
+        event_ts_ns=10 * NS,
+        available_at_ns=11 * NS,
+        open=Decimal("100"),
+        high=Decimal("100"),
+        low=Decimal("100"),
+        close=Decimal("100"),
+        volume=Decimal("0"),
+        partition_hash="a" * 64,
+    )
+    with pytest.raises(ValueError, match="FORWARD_FILLED_CONTRACT_PRICE_CANNOT_RECOVER_TRADE_GAP"):
         classify_gap_bar(
             gap=_gap(),
             bar=bar,

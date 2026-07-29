@@ -229,8 +229,7 @@ def evaluate_lifecycle_pair(
         )
         eligible = (
             not gap_before_landmark
-            and
-            landmark_net is not None
+            and landmark_net is not None
             and not activated
             and abs(landmark_net) <= USABLE_MARGIN * PRIMARY_NEAR_ZERO_ROE
         )
@@ -300,8 +299,7 @@ def evaluate_lifecycle_pair(
                 elif net >= TICKET_EQUITY:
                     reason = ExitReason.TICKET_DOUBLE_TARGET
             elif (
-                item.boundary_classification
-                is BoundaryClassification.COARSE_STOP_BOUNDARY_CROSSING
+                item.boundary_classification is BoundaryClassification.COARSE_STOP_BOUNDARY_CROSSING
             ):
                 reason = ExitReason.STOP
             elif (
@@ -334,11 +332,7 @@ def evaluate_lifecycle_pair(
                 item
                 for item in observations
                 if item.price_source is PriceObservationSource.CONTRACT_PRICE_1S_OHLC_BOUNDARY
-                and (
-                    item.available_at_ns
-                    if item.available_at_ns is not None
-                    else item.ts_event_ns
-                )
+                and (item.available_at_ns if item.available_at_ns is not None else item.ts_event_ns)
                 == continued.decision_ts_ns
             ),
             boundary_observation,

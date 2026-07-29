@@ -642,9 +642,7 @@ def _verified_trade_day(instrument: str, owner_date: date) -> _VerifiedTradeDay:
 
 
 @lru_cache(maxsize=8)
-def _verified_trade_range_day(
-    instrument: str, owner_date: date
-) -> DecimalTimeRangeIndex:
+def _verified_trade_range_day(instrument: str, owner_date: date) -> DecimalTimeRangeIndex:
     """Build one reusable price-crossing index per verified Trade day."""
 
     day = _verified_trade_day(instrument, owner_date)
@@ -1005,8 +1003,10 @@ def _max_contract_indexed(
         timestamp, price = match
         row_index = bisect_left(index.timestamps_ns, timestamp)
         candidate = _IndexedHit(owner_date, row_index, timestamp, price)
-        if best is None or candidate.price > best.price or (
-            candidate.price == best.price and candidate.timestamp_ns < best.timestamp_ns
+        if (
+            best is None
+            or candidate.price > best.price
+            or (candidate.price == best.price and candidate.timestamp_ns < best.timestamp_ns)
         ):
             best = candidate
     return best
@@ -1020,9 +1020,7 @@ def _contract_point_at(
     row_index: int,
 ) -> ContractPricePoint:
     row = (
-        _contract_price_day(reader, instrument, owner_date)
-        .table.slice(row_index, 1)
-        .to_pylist()[0]
+        _contract_price_day(reader, instrument, owner_date).table.slice(row_index, 1).to_pylist()[0]
     )
     return ContractPricePoint(
         event_ts_ns=int(row["event_ts_ns"]),
@@ -1076,9 +1074,9 @@ def _last_contract_point(
 
 
 def _trade_point_at(*, instrument: str, hit: _IndexedHit) -> CanonicalTradePoint:
-    row = _verified_trade_day(instrument, hit.owner_date).table.slice(
-        hit.row_index, 1
-    ).to_pylist()[0]
+    row = (
+        _verified_trade_day(instrument, hit.owner_date).table.slice(hit.row_index, 1).to_pylist()[0]
+    )
     return CanonicalTradePoint(
         ts_event_ns=int(row["ts_event_ns"]),
         venue_trade_id=int(row["venue_trade_id"]),
@@ -1087,9 +1085,7 @@ def _trade_point_at(*, instrument: str, hit: _IndexedHit) -> CanonicalTradePoint
     )
 
 
-def _indexed_window_gaps(
-    *, instrument: str, start_ns: int, end_ns: int
-) -> tuple[PathGap, ...]:
+def _indexed_window_gaps(*, instrument: str, start_ns: int, end_ns: int) -> tuple[PathGap, ...]:
     days = _scope_days(start_ns, end_ns)
     gaps_list = [
         gap
@@ -1455,38 +1451,36 @@ def _lifecycle_probe_v18(
         sparse_trade_count += len(trades)
         dual_results.append(
             evaluate_dual_track_lifecycle(
-            market_episode_id=str(row["market_episode_id"]),
-            instrument=instrument,
-            entry_ts_ns=start_ns,
-            entry_price=Decimal(row["reference_price"]),
-            contract_prices=prices,
-            trades=tuple(
-                CanonicalTradePoint(
-                    ts_event_ns=trade.ts_event_ns,
-                    venue_trade_id=trade.venue_trade_id,
-                    canonical_trade_id=trade.canonical_trade_id,
-                    price=trade.price,
-                )
-                for trade in trades
-            ),
-            funding=tuple(
-                FundingSettlement(settlement_ts_ns=timestamp_ns, signed_rate=rate)
-                for timestamp_ns, rate in funding
-            ),
-            source_gaps=exact_gaps,
-            partition_hash_by_second=partition_hash_by_second,
-            source_coverage=source_coverage,
-            scenario=scenario,
-            funding_track=track,
-            historical_funding_source_bound=True,
-            stop_bps=Decimal(25),
+                market_episode_id=str(row["market_episode_id"]),
+                instrument=instrument,
+                entry_ts_ns=start_ns,
+                entry_price=Decimal(row["reference_price"]),
+                contract_prices=prices,
+                trades=tuple(
+                    CanonicalTradePoint(
+                        ts_event_ns=trade.ts_event_ns,
+                        venue_trade_id=trade.venue_trade_id,
+                        canonical_trade_id=trade.canonical_trade_id,
+                        price=trade.price,
+                    )
+                    for trade in trades
+                ),
+                funding=tuple(
+                    FundingSettlement(settlement_ts_ns=timestamp_ns, signed_rate=rate)
+                    for timestamp_ns, rate in funding
+                ),
+                source_gaps=exact_gaps,
+                partition_hash_by_second=partition_hash_by_second,
+                source_coverage=source_coverage,
+                scenario=scenario,
+                funding_track=track,
+                historical_funding_source_bound=True,
+                stop_bps=Decimal(25),
             )
         )
     if exact_gaps is None:
         raise AssertionError("lifecycle funding tracks are empty")
-    primary_track_results = tuple(
-        item.contract_price_ohlc_primary for item in dual_results
-    )
+    primary_track_results = tuple(item.contract_price_ohlc_primary for item in dual_results)
     return {
         "instrument": instrument,
         "market_episode_id": row["market_episode_id"],
@@ -1507,9 +1501,7 @@ def _lifecycle_probe_v18(
         "funding_settlement_count": len(funding),
         "funding_acceptance_hash": acceptance["acceptance_hash"],
         "contract_price_source_audit_hash": source_audit_hash,
-        "pure_trades_comparator": tuple(
-            item.pure_trades_comparator for item in dual_results
-        ),
+        "pure_trades_comparator": tuple(item.pure_trades_comparator for item in dual_results),
         "contract_price_ohlc_primary": primary_track_results,
         "gap_boundary_decisions": tuple(
             decision for item in dual_results for decision in item.gap_decisions
@@ -1815,9 +1807,7 @@ def produce_scoped_lifecycle_v18(
                             "f",
                         ),
                         "elapsed_seconds": format(Decimal(str(elapsed)), "f"),
-                        "throughput_units_per_second": format(
-                            Decimal(str(throughput)), "f"
-                        ),
+                        "throughput_units_per_second": format(Decimal(str(throughput)), "f"),
                         "eta_seconds": (
                             format(Decimal(str(remaining / throughput)), "f")
                             if throughput
@@ -1825,9 +1815,7 @@ def produce_scoped_lifecycle_v18(
                         ),
                         "row_count": completed_units * len(FundingTrack) * 2,
                         "current_instrument": instrument,
-                        "current_date": _date_from_ns(
-                            int(row["window_start_ns"])
-                        ).isoformat(),
+                        "current_date": _date_from_ns(int(row["window_start_ns"])).isoformat(),
                         "phase": "LIFECYCLE",
                         "subphase": "DUAL_TRACK_EPISODE_REPLAY",
                         "processed_units": completed_units,
@@ -1853,6 +1841,214 @@ def produce_scoped_lifecycle_v18(
             "CONTRACT_PRICE_OHLC_PRIMARY",
         ],
         "row_count": len(lifecycle) * len(FundingTrack) * 2,
+        "historical_execution_claim": False,
+        "stage3_locked": True,
+    }
+
+
+def _admission_from_compact(
+    rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    decisions: list[dict[str, Any]] = []
+    for instrument in ("BTCUSDT", "ETHUSDT"):
+        instrument_rows = sorted(
+            (row for row in rows if row["instrument"] == instrument),
+            key=lambda row: (int(row["entry_ts_ns"]), str(row["market_episode_id"])),
+        )
+        for policy_field in ("immediate_exit", "continue_holding"):
+            occupied_until_ns: int | None = None
+            right_censored = False
+            for row in instrument_rows:
+                entry_ts_ns = int(row["entry_ts_ns"])
+                policy = cast(dict[str, Any], row[policy_field])
+                admitted = not (
+                    right_censored
+                    or (occupied_until_ns is not None and entry_ts_ns < occupied_until_ns)
+                )
+                if admitted:
+                    if policy["terminal_state"] == "RIGHT_CENSORED":
+                        occupied_until_ns = entry_ts_ns + 7 * DAY_NS
+                        right_censored = True
+                    elif policy["decision_ts_ns"] is None:
+                        raise ValueError("flat lifecycle result lacks a decision timestamp")
+                    else:
+                        occupied_until_ns = int(policy["decision_ts_ns"])
+                decisions.append(
+                    {
+                        "market_episode_id": row["market_episode_id"],
+                        "policy_id": policy["policy_id"],
+                        "entry_ts_ns": entry_ts_ns,
+                        "admitted": admitted,
+                        "reason": ("ADMITTED" if admitted else "SKIPPED_SINGLE_POSITION_OCCUPIED"),
+                        "occupied_until_ns": occupied_until_ns,
+                    }
+                )
+    return decisions
+
+
+def produce_scoped_lifecycle_v110(
+    *,
+    start_date: date,
+    end_date_exclusive: date,
+    source_audit_hash: str,
+    source_audit: LifecycleSourceAudit,
+    resume_root: Path,
+    resume_state: dict[str, Any] | None = None,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> dict[str, Any]:
+    """Execute T11 in deterministic 64-day-partition resumable batches."""
+
+    if source_audit.status != "PASS" or source_audit.audit_hash != source_audit_hash:
+        raise ValueError("dual-track lifecycle source-audit binding drift")
+    rows = _selected_t10_rows(
+        start_date=start_date,
+        end_date_exclusive=end_date_exclusive,
+    )
+    reader = FixedT10Reader(T10_SNAPSHOT, expected_snapshot_id=T10_SNAPSHOT_ID)
+    acceptance = _read_json(FUNDING_ACCEPTANCE)
+    funding_index = _FundingIndex.from_acceptance(acceptance)
+    groups: list[tuple[str, str, list[dict[str, Any]]]] = []
+    for instrument in ("BTCUSDT", "ETHUSDT"):
+        by_day: dict[str, list[dict[str, Any]]] = {}
+        for row in rows[instrument]:
+            day = _date_from_ns(int(row["window_start_ns"])).isoformat()
+            by_day.setdefault(day, []).append(row)
+        groups.extend((instrument, day, by_day[day]) for day in sorted(by_day))
+    batches = [groups[offset : offset + 64] for offset in range(0, len(groups), 64)]
+    expected_completed = (
+        cast(dict[str, str], resume_state.get("completed_partition_hashes", {}))
+        if resume_state is not None
+        else {}
+    )
+    lifecycle: list[dict[str, Any]] = []
+    compact_results: list[dict[str, Any]] = []
+    completed_hashes: dict[str, str] = {}
+    total_units = sum(len(rows[instrument]) for instrument in ("BTCUSDT", "ETHUSDT"))
+    completed_units = 0
+    started_at = time.monotonic()
+    resume_root.mkdir(parents=True, exist_ok=True)
+    for batch_number, batch in enumerate(batches, start=1):
+        batch_id = f"batch-{batch_number:04d}"
+        batch_path = resume_root / f"{batch_id}.json"
+        batch_payload: dict[str, Any] | None = None
+        if batch_path.is_file():
+            candidate = cast(
+                dict[str, Any],
+                json.loads(batch_path.read_text(encoding="utf-8")),
+            )
+            claimed = str(candidate.get("batch_hash", ""))
+            calculated = hashlib.sha256(
+                strict_json_bytes(
+                    {key: value for key, value in candidate.items() if key != "batch_hash"}
+                )
+            ).hexdigest()
+            if claimed != calculated:
+                raise ValueError("T11 resume batch Hash drift")
+            if batch_id in expected_completed and expected_completed[batch_id] != claimed:
+                raise ValueError("T11 checkpoint-to-batch Hash drift")
+            batch_payload = candidate
+        if batch_payload is None:
+            batch_lifecycle: list[dict[str, Any]] = []
+            batch_compact: list[dict[str, Any]] = []
+            for instrument, _, day_rows in batch:
+                for row in day_rows:
+                    probe, results = _lifecycle_probe_v18(
+                        reader=reader,
+                        row=row,
+                        acceptance=acceptance,
+                        source_audit_hash=source_audit_hash,
+                        funding_index=funding_index,
+                    )
+                    batch_lifecycle.append(probe)
+                    primary = next(
+                        result
+                        for result in results
+                        if result.funding_track is FundingTrack.PRIMARY_HISTORICAL_ACTUAL
+                    )
+                    batch_compact.append(
+                        cast(
+                            dict[str, Any],
+                            strict_json_value(
+                                {
+                                    "instrument": instrument,
+                                    "market_episode_id": primary.market_episode_id,
+                                    "entry_ts_ns": int(row["window_start_ns"]),
+                                    "immediate_exit": primary.immediate_exit,
+                                    "continue_holding": primary.continue_holding,
+                                }
+                            ),
+                        )
+                    )
+            batch_payload = {
+                "schema_name": "s2p110-t11-resume-batch-v1",
+                "schema_version": "1.0",
+                "batch_id": batch_id,
+                "deterministic_merge_order": "INSTRUMENT_DATE_EPISODE_ID",
+                "lifecycle": batch_lifecycle,
+                "compact_primary_results": batch_compact,
+            }
+            batch_payload["batch_hash"] = hashlib.sha256(
+                strict_json_bytes(batch_payload)
+            ).hexdigest()
+            with batch_path.open("xb") as handle:
+                handle.write(strict_json_bytes(batch_payload))
+                handle.flush()
+                os.fsync(handle.fileno())
+        batch_hash = str(batch_payload["batch_hash"])
+        completed_hashes[batch_id] = batch_hash
+        batch_lifecycle_rows = cast(list[dict[str, Any]], batch_payload["lifecycle"])
+        batch_compact_rows = cast(list[dict[str, Any]], batch_payload["compact_primary_results"])
+        lifecycle.extend(batch_lifecycle_rows)
+        compact_results.extend(batch_compact_rows)
+        completed_units += len(batch_compact_rows)
+        if progress_callback is not None:
+            elapsed = max(time.monotonic() - started_at, 1e-9)
+            throughput = completed_units / elapsed
+            remaining = total_units - completed_units
+            progress_callback(
+                {
+                    "completed_units": completed_units,
+                    "total_units": total_units,
+                    "percentage": format(
+                        Decimal(completed_units) * Decimal(100) / Decimal(total_units),
+                        "f",
+                    ),
+                    "elapsed_seconds": format(Decimal(str(elapsed)), "f"),
+                    "throughput_units_per_second": format(Decimal(str(throughput)), "f"),
+                    "eta_seconds": (
+                        format(Decimal(str(remaining / throughput)), "f") if throughput else None
+                    ),
+                    "row_count": completed_units * len(FundingTrack) * 2,
+                    "phase": "LIFECYCLE",
+                    "subphase": "DUAL_TRACK_EPISODE_BATCH",
+                    "processed_units": completed_units,
+                    "remaining_units": remaining,
+                    "resume_cursor": batch_id,
+                    "completed_partition_ids": list(completed_hashes),
+                    "completed_partition_hashes": dict(completed_hashes),
+                    "producer_state_hash": canonical_hash(completed_hashes),
+                    "deterministic_merge_order": "INSTRUMENT_DATE_EPISODE_ID",
+                    "verify_state": "PENDING",
+                    "rss_bytes": process_current_rss_bytes(),
+                }
+            )
+    if set(expected_completed) - set(completed_hashes):
+        raise ValueError("T11 checkpoint references an unknown resume batch")
+    return {
+        "task_id": "S2P110-T11",
+        "lifecycle": lifecycle,
+        "single_position_admission": _admission_from_compact(compact_results),
+        "funding_source": "HISTORICAL_ACTUAL_PLUS_PREREGISTERED_STRESS",
+        "source_t10_snapshot_id": T10_SNAPSHOT_ID,
+        "contract_price_source_audit_hash": source_audit_hash,
+        "lifecycle_tracks": [
+            "PURE_TRADES_COMPARATOR",
+            "CONTRACT_PRICE_OHLC_PRIMARY",
+        ],
+        "resume_batch_count": len(batches),
+        "resume_state_hash": canonical_hash(completed_hashes),
+        "row_count": len(lifecycle) * len(FundingTrack) * 2,
+        "execution_mode": "EXECUTED_NEW",
         "historical_execution_claim": False,
         "stage3_locked": True,
     }

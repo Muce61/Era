@@ -1,4 +1,4 @@
-"""Fail-closed production derivation for all Plan v1.9 input bindings."""
+"""Fail-closed production derivation for Plan v1.10 sealed inputs."""
 
 from __future__ import annotations
 
@@ -24,9 +24,10 @@ from .solo_inputs import (
     SCOPE_START,
     InputsLock,
 )
+from .sealed_adoption import SealedAdoptionBundle, load_sealed_adoption_bundle
 
 RULES_RELATIVE_PATH: Final = Path(
-    "configs/research/stage_2/s2p19_production_input_bindings_v1.json"
+    "configs/research/stage_2/s2p110_production_input_bindings_v1.json"
 )
 EXPECTED_EXACT_MATCH_FIELDS: Final = [
     "instrument",
@@ -48,6 +49,8 @@ EXPECTED_EXACT_MATCH_FIELDS: Final = [
 class ProductionInputSpec:
     entries: dict[str, tuple[Path, str]]
     rules_hash: str
+    adoption_bundle: SealedAdoptionBundle
+    trade_supplement: ProductionTradeSupplement
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,9 +110,9 @@ def _load_rules(repository_root: Path) -> tuple[dict[str, Any], str]:
     rules = _safe_json(path, label="production input binding rules")
     rules_hash = _self_hash(rules, "rules_hash", label="production input binding rules")
     if (
-        rules.get("schema_name") != "s2p19-production-input-binding-rules"
+        rules.get("schema_name") != "s2p110-production-input-binding-rules"
         or rules.get("schema_version") != "1.1"
-        or rules.get("stage_plan_version") != "1.9"
+        or rules.get("stage_plan_version") != "1.10"
         or rules.get("scope_start_date") != SCOPE_START
         or rules.get("scope_end_date_exclusive") != SCOPE_END_EXCLUSIVE
         or rules.get("historical_execution_claim") is not False
@@ -281,7 +284,7 @@ def _contract_price_catalog_hash(
         raise ValueError("Contract Price production partition coverage drift")
     return canonical_content_hash(
         {
-            "schema_name": "s2p19-contract-price-catalog-binding-v1",
+            "schema_name": "s2p110-contract-price-catalog-binding-v1",
             "scope_start_date": SCOPE_START,
             "scope_end_date_exclusive": SCOPE_END_EXCLUSIVE,
             "partition_count": len(normalized),
@@ -421,7 +424,7 @@ def _validate_fixed_seed(
         raise ValueError("fixed seed consumers disagree")
     return canonical_content_hash(
         {
-            "schema_name": "s2p19-four-consumer-fixed-seed-binding-v1",
+            "schema_name": "s2p110-four-consumer-fixed-seed-binding-v1",
             **values,
         }
     )
@@ -451,7 +454,7 @@ def build_production_input_spec(
     repository_root = repository_root.resolve()
     rules, rules_hash = _load_rules(repository_root)
     paths = cast(dict[str, str], rules["paths"])
-    _validate_trade_supplement(rules)
+    trade_supplement = _validate_trade_supplement(rules)
     entries = _validate_stage1(rules)
 
     checkpoint = _external_path(paths["contract_price_source_checkpoint"])
@@ -496,7 +499,16 @@ def build_production_input_spec(
     )
     if set(entries) != REQUIRED_INPUT_BINDINGS:
         raise AssertionError("production input builder did not produce twelve exact roles")
-    return ProductionInputSpec(entries=entries, rules_hash=rules_hash)
+    adoption_bundle = load_sealed_adoption_bundle(
+        repository_root,
+        current_bindings={role: binding_hash for role, (_, binding_hash) in entries.items()},
+    )
+    return ProductionInputSpec(
+        entries=entries,
+        rules_hash=rules_hash,
+        adoption_bundle=adoption_bundle,
+        trade_supplement=trade_supplement,
+    )
 
 
 def validate_production_inputs_lock(
@@ -513,10 +525,14 @@ def validate_production_inputs_lock(
     )
     if inputs_lock.production_binding_rules_hash != expected.rules_hash:
         raise ValueError("inputs lock production binding rules Hash drift")
-    supplement = load_production_trade_supplement(repository_root)
+    if inputs_lock.adoption_bundle_hash != expected.adoption_bundle.bundle_hash:
+        raise ValueError("inputs lock adoption bundle Hash drift")
     audit = inputs_lock.source_audit
+    supplement = expected.trade_supplement
     if (
-        audit.get("schema_version") != "1.1"
+        audit.get("schema_version") != "1.2"
+        or audit.get("evidence_mode") != "SEALED_INCREMENTAL_V1"
+        or audit.get("full_trade_row_rescan") is not False
         or audit.get("canonical_trade_overlay_mode") != "EXACT_KEY_APPEND_ONLY_SUPPLEMENT_V1"
         or audit.get("trade_supplement_acceptance_path") != str(supplement.acceptance_path)
         or audit.get("trade_supplement_file_sha256") != supplement.file_sha256
@@ -526,6 +542,8 @@ def validate_production_inputs_lock(
         or audit.get("legacy_stage1_partition_modified") is not False
     ):
         raise ValueError("inputs lock Trade supplement binding drift")
+    if tuple(expected.adoption_bundle.lock_payload()) != inputs_lock.adopted_task_bindings:
+        raise ValueError("inputs lock sealed adoption bindings drift")
     for role, (path, binding_hash) in expected.entries.items():
         actual = inputs_lock.bindings[role]
         if actual.path != path or actual.binding_hash != binding_hash:

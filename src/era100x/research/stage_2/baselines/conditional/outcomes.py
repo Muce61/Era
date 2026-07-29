@@ -202,9 +202,7 @@ def classify_h2_cells_fast(
     target_prices = tuple(
         reference_price * (Decimal(1) + target / BPS) for target in REGISTERED_TARGET_BPS
     )
-    stop_prices = tuple(
-        reference_price * (Decimal(1) - stop / BPS) for stop in REGISTERED_STOP_BPS
-    )
+    stop_prices = tuple(reference_price * (Decimal(1) - stop / BPS) for stop in REGISTERED_STOP_BPS)
     first_target: list[int | None] = [None] * len(target_prices)
     first_stop: list[int | None] = [None] * len(stop_prices)
     unresolved_targets = len(target_prices)
@@ -233,9 +231,7 @@ def classify_h2_cells_fast(
                 label = "EXPIRED"
                 reason = "HORIZON_EXPIRED_WITHOUT_TOUCH"
                 cutoff_ns = end_ns
-            elif stop_hit is None or (
-                target_hit is not None and target_hit < stop_hit
-            ):
+            elif stop_hit is None or (target_hit is not None and target_hit < stop_hit):
                 label = "TARGET_FIRST"
                 reason = "TARGET_OBSERVED_FIRST"
                 cutoff_ns = window[cast(int, target_hit)].ts_event_ns
