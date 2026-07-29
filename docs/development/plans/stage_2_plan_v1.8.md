@@ -36,3 +36,16 @@ T11 ─────────────────────────�
 
 每个任务必须完成 producer、Catalog、Manifest、Verify、报告和 Hash 对账后才能解锁下游。
 T20 必须分别报告历史 H2、successor H2、两条生命周期轨及性能变化。默认 Stage 3 继续锁定。
+
+## 正式运行编排
+
+正式链使用 `scripts/run_stage2_v18.py`。批准回执必须同时绑定干净代码 SHA、Policy Hash、
+预注册 Hash、来源审计 Hash 和完整十 Task adapter plan Hash。Authority 在任何 Run ID
+之前冻结十二类命名输入 Hash。每个 producer 由 Authority 绑定其可执行文件 Hash，并须
+输出绑定同一 Authority、代码 SHA、adapter plan 和上游 receipt Hash 的正式 receipt。
+
+Run 使用唯一锁和 append-only checkpoint 链。任一 producer、依赖、输入或 Hash 失败，
+当前 Run 终态为 FAILED 且保持 unpublished；不得原地修成 PASS。十 Task 完成后才允许
+构建总 Catalog/Manifest、创建同卷候选发布、执行完整 Hash Verify，并在 Verify PASS 后
+写入 publication receipt。正式 Run 批准与 adapter plan 都必须在新干净 commit 冻结后
+另行记录；本实现提交本身不授权执行。

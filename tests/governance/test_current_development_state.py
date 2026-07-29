@@ -22,7 +22,7 @@ def test_repository_current_state_is_plan_v18_implementation_gated_and_hash_vali
     assert state.current_plan == "stage_2_plan_v1.8"
     assert state.current_task == "S2P18-T11"
     assert state.current_task_version == "1.0"
-    assert state.task_status == "IMPLEMENTATION_VALIDATION_IN_PROGRESS_FORMAL_RUN_GATED"
+    assert state.task_status == "FORMAL_INFRA_IMPLEMENTED_VALIDATED_FORMAL_RUN_GATED"
     assert state.stage_status == "IN_PROGRESS"
     assert state.research_decision == "STAGE2_NO_GO_CURRENT_EVIDENCE"
     assert state.current_policy_path == "configs/governance/stage2_active_policy_v7.json"
@@ -111,7 +111,7 @@ def test_resealed_state_can_be_loaded_but_does_not_change_repository_authority(
     assert state.task_status == "IN_PROGRESS"
     assert (
         load_current_development_state().task_status
-        == "IMPLEMENTATION_VALIDATION_IN_PROGRESS_FORMAL_RUN_GATED"
+        == "FORMAL_INFRA_IMPLEMENTED_VALIDATED_FORMAL_RUN_GATED"
     )
 
 

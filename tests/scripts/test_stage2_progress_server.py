@@ -2196,5 +2196,10 @@ def test_stage2_v18_projection_is_evidence_driven_and_formal_run_blocked() -> No
     assert result["t11_min_speedup"] >= 2
     assert result["t16_min_speedup"] >= 2
     assert result["rss_bytes"] <= 3 * 1024**3
+    assert result["formal_orchestrator_status"] == "IMPLEMENTED"
+    assert result["adapter_plan_status"] == "NOT_FROZEN"
+    assert result["approval_count"] == 0
+    assert result["authority_count"] == 0
+    assert result["run_count"] == 0
     assert result["formal_run_authorized"] is False
     assert result["stage3_locked"] is True

@@ -1774,7 +1774,6 @@ def _stage2_v17_projection(stage2_root: Path) -> dict[str, Any]:
 def _stage2_v18_projection(stage2_root: Path) -> dict[str, Any]:
     """Project Plan v1.8 from machine governance and checked local evidence."""
 
-    del stage2_root
     policy = load_lifecycle_repair_policy(
         REPOSITORY_ROOT / "configs/governance/stage2_active_policy_v7.json",
         repository_root=REPOSITORY_ROOT,
@@ -1815,6 +1814,26 @@ def _stage2_v18_projection(stage2_root: Path) -> dict[str, Any]:
     )
     rss_pass = int(performance.get("observed_max_rss_bytes") or 0) <= int(
         performance.get("max_rss_bytes_gate") or 0
+    )
+    formal_paths = (
+        REPOSITORY_ROOT
+        / "src/era100x/research/stage_2/lifecycle/formal_chain.py",
+        REPOSITORY_ROOT / "scripts/run_stage2_v18.py",
+        REPOSITORY_ROOT
+        / "docs/development/validations/stage_2/S2P18-formal-orchestration.md",
+    )
+    formal_orchestrator_implemented = all(
+        path.is_file() and not path.is_symlink() for path in formal_paths
+    )
+    formal_evidence_root = stage2_root / "formal/stage2-plan-v1.8"
+    approval_count = len(
+        tuple((formal_evidence_root / "operations/approvals").glob("*.json"))
+    )
+    authority_count = len(
+        tuple((formal_evidence_root / "authorities").glob("authority-*.json"))
+    )
+    run_count = len(
+        tuple((formal_evidence_root / "runs").glob("stage2-s2p18-*"))
     )
     heartbeat = datetime.fromtimestamp(
         max(
@@ -1878,7 +1897,16 @@ def _stage2_v18_projection(stage2_root: Path) -> dict[str, Any]:
         "t11_min_speedup": min(float(item["speedup"]) for item in t11_benchmarks),
         "t16_min_speedup": min(float(item["speedup"]) for item in t16_benchmarks),
         "stage3_locked": state.stage3_locked,
-        "formal_run_authorized": False,
+        "formal_run_authorized": approval_count == 1 and authority_count == 1,
+        "formal_orchestrator_status": (
+            "IMPLEMENTED" if formal_orchestrator_implemented else "INCOMPLETE"
+        ),
+        "adapter_plan_status": (
+            "FROZEN_BY_APPROVAL" if approval_count else "NOT_FROZEN"
+        ),
+        "approval_count": approval_count,
+        "authority_count": authority_count,
+        "run_count": run_count,
         "phases": phases,
     }
 

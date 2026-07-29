@@ -22,6 +22,9 @@
     "docs/development/tasks/stage_2/S2P18-T18-cluster-bootstrap.md",
     "docs/development/tasks/stage_2/S2P18-T19-evidence-gate.md",
     "docs/development/tasks/stage_2/S2P18-T20-final-acceptance.md",
+    "docs/development/validations/stage_2/S2P18-formal-orchestration.md",
+    "scripts/run_stage2_v18.py",
+    "src/era100x/research/stage_2/lifecycle/formal_chain.py",
     "configs/research/stage_2/s2p18_t11_t20_repair_v1.json"
   ],
   "preregistration_path": "configs/research/stage_2/s2p18_t11_t20_repair_v1.json",

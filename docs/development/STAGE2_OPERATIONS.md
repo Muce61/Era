@@ -11,6 +11,12 @@ append-only approval receipts, Authorities, checkpoints, task receipts, Manifest
 Verify records. Historical governance files remain readable evidence but cannot authorize a new
 run.
 
+Plan v1.8 uses `scripts/run_stage2_v18.py`. Its formal commands remain unusable without a clean
+commit-bound approval and a complete adapter plan whose ten executable Hashes pass. `run` performs
+the complete DAG and automatic reconcile/candidate-publication/full-Verify/publication sequence;
+any failure remains append-only and unpublished. The current implementation turn must stop after
+freezing code and must not record the next approval itself.
+
 Legacy `S2-T15` is the immutable Plan v1.2 `STOPPED_FAILED_UNPUBLISHED` predecessor. Its Plan v1.3
 capability successor is `S2P13-T16`; this mapping grants no result promotion or execution
 authority. Operators must not resume the old failed unpublished chain or treat it as a direct T20

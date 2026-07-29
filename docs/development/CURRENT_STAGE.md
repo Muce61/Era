@@ -4,7 +4,7 @@
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.8 — LIFECYCLE REPAIR IMPLEMENTATION
 Current Task: S2P18-T11 v1.0 — dual-track lifecycle and performance gate
-Status: IMPLEMENTATION VALIDATION IN PROGRESS / FORMAL RUN GATED / STAGE2_NO_GO_CURRENT_EVIDENCE
+Status: FORMAL INFRA IMPLEMENTED AND VALIDATED / FORMAL RUN GATED / STAGE2_NO_GO_CURRENT_EVIDENCE
 ```
 
 Plan v1.8 reopens Stage 2 only for the approved lifecycle evidence repair and an append-only
@@ -19,6 +19,12 @@ The machine authority is `configs/governance/current_development_state.json` sch
 `configs/governance/stage2_active_policy_v7.json`. The current source audit is
 `configs/research/stage_2/s2p18_t11_source_audit_v1.json`; it binds distinct Binance Trades and
 aggTrades archive families and forbids zero-volume forward-filled seconds as gap recovery.
+
+The v1.8 formal CLI and append-only orchestration are implemented at
+`scripts/run_stage2_v18.py` and `src/era100x/research/stage_2/lifecycle/formal_chain.py`.
+Implementation validation does not authorize a formal Run. A new clean commit, a complete frozen
+producer adapter plan and a separate approval bound to both Hashes remain mandatory before
+Authority creation.
 
 Plan v1.7 authorized only S2P17-T20. Formal Run
 `stage2-s2p17-t20-20260727T154959Z-ed51e7cb220b` completed under Authority

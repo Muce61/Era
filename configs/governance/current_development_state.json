@@ -5,7 +5,7 @@
   "current_plan": "stage_2_plan_v1.8",
   "current_task": "S2P18-T11",
   "current_task_version": "1.0",
-  "task_status": "IMPLEMENTATION_VALIDATION_IN_PROGRESS_FORMAL_RUN_GATED",
+  "task_status": "FORMAL_INFRA_IMPLEMENTED_VALIDATED_FORMAL_RUN_GATED",
   "stage_status": "IN_PROGRESS",
   "research_decision": "STAGE2_NO_GO_CURRENT_EVIDENCE",
   "current_policy_path": "configs/governance/stage2_active_policy_v7.json",
@@ -141,7 +141,10 @@
     "docs/development/validations/stage_2/S2P17-T20.md",
     "docs/development/validations/stage_2/S2P18-T11-source-audit.md",
     "docs/development/validations/stage_2/S2P18-T11-T16-performance.md",
+    "docs/development/validations/stage_2/S2P18-formal-orchestration.md",
+    "scripts/run_stage2_v18.py",
+    "src/era100x/research/stage_2/lifecycle/formal_chain.py",
     "docs/development/special_research_points/SRP-S2-001.md"
   ],
-  "state_hash": "d65583ef612b6f872f657b2d2f2b5253fa78ed53c0b22a3c6167187a71b57311"
+  "state_hash": "90cc8dd69462223c9f6c849db0f5b0cc30de2a364c4144b48586c8aeae3ceb2f"
 }

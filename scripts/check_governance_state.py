@@ -135,7 +135,7 @@ def _validate_current_state(
         "current_plan": "stage_2_plan_v1.8",
         "current_task": "S2P18-T11",
         "current_task_version": "1.0",
-        "task_status": "IMPLEMENTATION_VALIDATION_IN_PROGRESS_FORMAL_RUN_GATED",
+        "task_status": "FORMAL_INFRA_IMPLEMENTED_VALIDATED_FORMAL_RUN_GATED",
         "stage_status": "IN_PROGRESS",
         "research_decision": "STAGE2_NO_GO_CURRENT_EVIDENCE",
         "current_policy_path": "configs/governance/stage2_active_policy_v7.json",

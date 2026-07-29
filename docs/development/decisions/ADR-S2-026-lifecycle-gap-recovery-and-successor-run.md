@@ -20,3 +20,9 @@ OHLC 完整 high/low 只有在 `available_at_ns` 后才可用。若同秒同时�
 这条生命周期主轨不是新的 H2 Primary，也不是成交、滑点或真实收益证据。T16 性能重构
 必须保持现有 H2 结果逐项等价；任何结果漂移先按实现偏差处理。历史
 `PRIMARY_FAILED` 与 `STAGE2_NO_GO_CURRENT_EVIDENCE` 不被覆盖。
+
+正式编排采用外部 producer adapter 合同，而不是把旧 Plan runner 重新命名。adapter
+plan 必须一次绑定十个 Task、固定顺序、argv、执行文件 Hash 与超时。外部 producer
+只有写出绑定当前 Authority、Run、代码 SHA、adapter plan 与已验证上游 receipt Hash
+的 PASS receipt 才能解锁下游。旧 S2P13/S2P14/S2P15/S2P16/S2P17 identity 不能作为
+S2P18 receipt。

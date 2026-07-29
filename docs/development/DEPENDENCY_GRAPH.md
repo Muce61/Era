@@ -123,3 +123,8 @@ Plan v1.8 reopens implementation only. Its internal DAG is T11→T12→T13/T14�
 T19→T20, with T11 also feeding T16 and T19. No downstream task unlocks before its producers,
 Catalog, Manifest and Verify pass. Formal execution is gated by clean-commit approval. Stage 2 is
 `IN_PROGRESS`, not research PASS, and Stage 3 remains locked.
+
+The formal orchestrator freezes a complete producer adapter plan and its executable Hashes before
+approval. It then enforces `approval → Authority → Run lock → T11…T20 receipts → reconcile →
+candidate publication → full Verify → publication receipt`. An adapter or upstream receipt failure
+terminates the Run unpublished; it cannot skip forward in this DAG.
