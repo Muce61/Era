@@ -1,10 +1,10 @@
 # Specification Traceability
 
 > Current Stage 2 operation permission comes from
-> `configs/governance/current_development_state.json`, which binds Plan v1.8/T11–T20 to
-> `configs/governance/stage2_active_policy_v7.json`, retains
+> `configs/governance/current_development_state.json`, which binds Plan v1.9/S2P19-T11–T20 to
+> `configs/governance/stage2_active_policy_v8.json`, retains
 > `STAGE2_NO_GO_CURRENT_EVIDENCE`, and keeps formal execution plus Stage 3 locked pending a clean
-> commit and separate commit-bound approval. Policies v2 through v6 and their
+> commit, full inputs lock and one commit/input-lock-bound approval. Policies v2 through v7 and their
 > append-only runtime receipts remain immutable per-Plan evidence, not current authorization.
 > See `docs/development/STAGE2_OPERATIONS.md`.
 
@@ -334,7 +334,7 @@ run is immutable; its sealed objects require a new-run adoption Manifest and ful
 | BTC/ETH-separated cluster bootstrap | S2P15-T18 v1.0 | T16 real delta, T17 placebo delta and paired real-minus-placebo; UTC-week clusters; 5,000 deterministic PCG64 replicates; percentile CI; null-centered p-value; exploratory BH q<=0.10 | FINAL FORMAL RUN / RECONCILIATION / INDEPENDENT VERIFY PASS / STATISTICAL EVIDENCE ONLY / FINAL GATE PENDING |
 | Evidence synthesis and preregistered gate projection | S2P16-T19 v1.0 | read-only T11/T16/T17/T18 binding; ADR-S2-004 F1-F10; lifecycle §14.2; complete 3,420-row OVERALL parameter landscape; no recomputation or execution claim | FINAL FORMAL RUN / RECONCILIATION / INDEPENDENT VERIFY PASS / NO_GO_CURRENT_EVIDENCE |
 | Final evidence acceptance and current-evidence closure | S2P17-T20 v1.0 | read-only T11/T16/T17/T18/T19 Hash chain; CANONICAL_JSON_CONTENT_V1; six result-blind real evidence cards; no research recomputation | FINAL FORMAL RUN / RECONCILIATION / INDEPENDENT VERIFY PASS / STAGE2_NO_GO_CURRENT_EVIDENCE |
-| Lifecycle dual-track repair and successor chain | S2P18-T11–T20 v1.0 | immutable Trades comparator plus aggTrades-derived Contract Price OHLC coarse boundary track; canonical-Trades-only H2 branch; full-period source Catalog tool; twelve-role immutable input Catalog; ten production adapters; retryable append-only Task attempts; commit-bound Authority-before-Run | PRODUCTION ADAPTERS IMPLEMENTED / FULL-PERIOD SOURCE EVIDENCE NOT YET FROZEN / FORMAL RUN GATED / STAGE 3 LOCKED |
+| Lifecycle dual-track repair and solo successor chain | S2P19-T11–T20 v1.0 | unchanged Trades/OHLC split and H2 contracts; one full-period inputs lock; fixed ten-handler registry; append-only event ledger and Task attempts; commit/input-lock-bound Authority-before-Run; one final Manifest/Verify and atomic publication | SOLO RUNTIME IMPLEMENTED / REAL PREPARE NOT EXECUTED / FORMAL RUN GATED / STAGE 3 LOCKED |
 | Seven-day theoretical lifecycle | Plan v1.3 S2P13-T11 | `stage_2/lifecycle`; Contract Price H3 proxy; 20bp auxiliary; dynamic net ticket-doubling; historical Primary and adverse Stress funding; -8U margin depletion | IMPLEMENTED CORE / DIRECTED TESTS PASS / CR-2026-038 FUNDING ACCEPTANCE REHEARSAL AUTHORIZED |
 | Historical funding acceptance | Plan v1.3 S2P13-T11 | `stage_2/funding`; complete local BTC/ETH history plus seven-day official sample; checksum, append-only acceptance, Manifest/Catalog/Verify, strict read-back | HUMAN ACCEPTED / 7,128+7,128 LOCAL ROWS HASH-BOUND / MONTHLY RECONCILIATION WAIVED / NO LIFECYCLE RUN |
 | Plan v1.3 successor orchestration | S2P13-T11～T16 | CR-2026-041/042/045; `stage_2/rerun`; static/input preflight, exclusive lock, complete source bindings, checkpoint/readback/reconciliation/Verify; T16 SQLite uses local scratch; H2 coverage parity is independently reported | PLAN V1.3 CLOSED AT T16 / FINAL FORMAL CHAIN COMPLETE / T11-T16 VERIFY PASS / PRIMARY PENDING / STAGE 3 LOCKED |

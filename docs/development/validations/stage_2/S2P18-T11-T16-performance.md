@@ -1,7 +1,7 @@
 # S2P18-T11/T16 等价性与性能验证
 
 - date: 2026-07-28
-- status: IMPLEMENTATION_GATE_PASS / FORMAL_RUN_NOT_EXECUTED
+- status: HISTORICAL_IMPLEMENTATION_GATE_PASS / SUPERSEDED_UNEXECUTED
 - machine: current local macOS host
 - workers: single process for fixed benchmark
 - memory_gate: `3,221,225,472` bytes

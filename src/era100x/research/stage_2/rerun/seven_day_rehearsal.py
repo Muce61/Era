@@ -84,7 +84,10 @@ from era100x.research.stage_2.lifecycle import (
     replay_single_position_admission,
 )
 from era100x.research.stage_2.lifecycle.engine import funding_for_track
-from era100x.research.stage_2.lifecycle.governance import load_source_audit
+from era100x.research.stage_2.lifecycle.source_audit import (
+    LifecycleSourceAudit,
+    load_source_audit,
+)
 from era100x.research.stage_2.lifecycle.models import (
     BPS,
     PRIMARY_LANDMARK_SECONDS,
@@ -1747,13 +1750,26 @@ def produce_scoped_lifecycle_v18(
     *,
     start_date: date,
     end_date_exclusive: date,
-    source_audit_path: Path,
     source_audit_hash: str,
+    source_audit_path: Path | None = None,
+    source_audit: LifecycleSourceAudit | None = None,
     progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """Execute the approved Plan v1.8 dual-track lifecycle core."""
 
-    load_source_audit(source_audit_path, expected_hash=source_audit_hash)
+    if (source_audit_path is None) == (source_audit is None):
+        raise ValueError("dual-track lifecycle requires exactly one source-audit input")
+    verified_audit = (
+        load_source_audit(source_audit_path, expected_hash=source_audit_hash)
+        if source_audit_path is not None
+        else source_audit
+    )
+    if (
+        verified_audit is None
+        or verified_audit.status != "PASS"
+        or verified_audit.audit_hash != source_audit_hash
+    ):
+        raise ValueError("dual-track lifecycle source-audit binding drift")
     rows = _selected_t10_rows(
         start_date=start_date,
         end_date_exclusive=end_date_exclusive,
@@ -1826,7 +1842,7 @@ def produce_scoped_lifecycle_v18(
             )
         )
     return {
-        "task_id": "S2P18-T11",
+        "task_id": "S2P19-T11",
         "lifecycle": lifecycle,
         "single_position_admission": admission,
         "funding_source": "HISTORICAL_ACTUAL_PLUS_PREREGISTERED_STRESS",

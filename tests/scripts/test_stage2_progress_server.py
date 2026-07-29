@@ -22,7 +22,7 @@ _stage2_v14_projection = MODULE._stage2_v14_projection
 _stage2_v15_projection = MODULE._stage2_v15_projection
 _stage2_v16_projection = MODULE._stage2_v16_projection
 _stage2_v17_projection = MODULE._stage2_v17_projection
-_stage2_v18_projection = MODULE._stage2_v18_projection
+_stage2_v19_projection = MODULE._stage2_v19_projection
 _json_hash = MODULE._json_hash
 
 T12_RUN_ID = "stage2-s2t12-metrics-20260721T040435Z-abcdef123456"
@@ -2186,19 +2186,19 @@ def test_t16_coverage_projection_rejects_legacy_contract_and_reports_shared_rate
         "control_gap_affected_matrix_rate": "0.02",
         "control_gap_affected_assignment_rate": "0.021",
     }
-def test_stage2_v18_projection_is_evidence_driven_and_formal_run_blocked() -> None:
-    result = _stage2_v18_projection(Path("/unused"))
+def test_stage2_v19_projection_is_evidence_driven_and_formal_run_blocked() -> None:
+    result = _stage2_v19_projection(Path("/unused"))
 
-    assert result["schema_name"] == "s2p18-t11-t20-ui-projection"
-    assert result["phase"] == "S2P18-T11"
+    assert result["schema_name"] == "s2p19-t11-t20-ui-projection"
+    assert result["phase"] == "S2P19-T11"
     assert len(result["phases"]) == 10
     assert result["source_audit_hash"]
     assert result["t11_min_speedup"] >= 2
     assert result["t16_min_speedup"] >= 2
     assert result["rss_bytes"] <= 3 * 1024**3
     assert result["formal_orchestrator_status"] == "IMPLEMENTED"
-    assert result["adapter_plan_status"] == "NOT_FROZEN"
-    assert result["approval_count"] == 0
+    assert result["inputs_lock_count"] == 0
+    assert result["event_ledger_status"] == "NOT_STARTED"
     assert result["authority_count"] == 0
     assert result["run_count"] == 0
     assert result["formal_run_authorized"] is False

@@ -186,10 +186,42 @@ def build_contract_price_catalog(
 ) -> Path:
     """Hash every BTC/ETH daily OHLC partition in the audited formal period."""
 
-    if audit.status != "PASS":
-        raise ValueError("Contract Price Catalog requires a passing source audit")
     if not audit_path.is_absolute() or not audit_path.is_file() or audit_path.is_symlink():
         raise ValueError("source audit path must be an immutable absolute file")
+    entries = collect_contract_price_partitions(audit=audit)
+    expected = (
+        date.fromisoformat(audit.scope_end_date_exclusive)
+        - date.fromisoformat(audit.scope_start_date)
+    ).days * 2
+    if len(entries) != expected:
+        raise AssertionError("Contract Price Catalog partition count drift")
+    payload: dict[str, object] = {
+        "schema_name": "s2p18-contract-price-source-catalog-v1",
+        "schema_version": "1.0",
+        "scope_start_date": audit.scope_start_date,
+        "scope_end_date_exclusive": audit.scope_end_date_exclusive,
+        "source_audit_path": str(audit_path),
+        "source_audit_hash": audit.audit_hash,
+        "source_audit_sha256": sha256_file(audit_path),
+        "partition_count": len(entries),
+        "partitions": entries,
+        "forward_filled_seconds_forbidden": True,
+        "historical_execution_claim": False,
+        "stage3_locked": True,
+    }
+    payload["catalog_hash"] = canonical_hash(payload)
+    write_canonical_json_exclusive(output_path, payload)
+    return output_path
+
+
+def collect_contract_price_partitions(
+    *,
+    audit: LifecycleSourceAudit,
+) -> list[dict[str, object]]:
+    """Return the full-period partition bindings for the v1.9 inputs lock."""
+
+    if audit.status != "PASS":
+        raise ValueError("Contract Price partitions require a passing source audit")
     start = date.fromisoformat(audit.scope_start_date)
     end = date.fromisoformat(audit.scope_end_date_exclusive)
     entries: list[dict[str, object]] = []
@@ -225,24 +257,8 @@ def build_contract_price_catalog(
         current += timedelta(days=1)
     expected = (end - start).days * 2
     if len(entries) != expected:
-        raise AssertionError("Contract Price Catalog partition count drift")
-    payload: dict[str, object] = {
-        "schema_name": "s2p18-contract-price-source-catalog-v1",
-        "schema_version": "1.0",
-        "scope_start_date": audit.scope_start_date,
-        "scope_end_date_exclusive": audit.scope_end_date_exclusive,
-        "source_audit_path": str(audit_path),
-        "source_audit_hash": audit.audit_hash,
-        "source_audit_sha256": sha256_file(audit_path),
-        "partition_count": len(entries),
-        "partitions": entries,
-        "forward_filled_seconds_forbidden": True,
-        "historical_execution_claim": False,
-        "stage3_locked": True,
-    }
-    payload["catalog_hash"] = canonical_hash(payload)
-    write_canonical_json_exclusive(output_path, payload)
-    return output_path
+        raise AssertionError("Contract Price partition count drift")
+    return entries
 
 
 def main() -> int:

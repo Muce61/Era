@@ -2,7 +2,7 @@
 
 ## 状态
 
-APPROVED — 2026-07-29
+SUPERSEDED_UNEXECUTED — 2026-07-29；由 ADR-S2-028 / Plan v1.9 替代
 
 ## 决定
 

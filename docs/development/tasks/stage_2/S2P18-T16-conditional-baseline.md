@@ -2,7 +2,7 @@
 
 - task_id: S2P18-T16
 - version: 1.0
-- status: APPROVED / IMPLEMENTATION AUTHORIZED / FORMAL RUN GATED
+- status: SUPERSEDED_UNEXECUTED / successor `S2P19-T16`
 - dependencies: `S2P18-T11`、`S2P18-T13`、`S2P18-T15` formal Verify PASS
 
 ## 合同

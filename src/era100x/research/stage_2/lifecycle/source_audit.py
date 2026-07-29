@@ -1,7 +1,8 @@
-"""Typed source-provenance gate for the Plan v1.8 lifecycle successor."""
+"""Typed source-provenance gate reused by the Plan v1.9 lifecycle successor."""
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, model_validator
@@ -68,3 +69,14 @@ class LifecycleSourceAudit(BaseModel):
         if self.audit_hash != canonical_hash(payload):
             raise ValueError("source audit hash mismatch")
         return self
+
+
+def load_source_audit(path: Path, *, expected_hash: str) -> LifecycleSourceAudit:
+    """Load one immutable passing audit without granting execution authority."""
+
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("lifecycle source audit must be a regular non-symlink file")
+    audit = LifecycleSourceAudit.model_validate_json(path.read_bytes(), strict=True)
+    if audit.status != "PASS" or audit.audit_hash != expected_hash:
+        raise ValueError("lifecycle source audit is not the expected PASS artifact")
+    return audit

@@ -1,0 +1,72 @@
+{
+  "schema_name": "stage2-plan-v19-solo-runtime-preregistration",
+  "schema_version": "1.0",
+  "stage_plan_version": "1.9",
+  "historical_plan_v18_status": "SUPERSEDED_UNEXECUTED",
+  "historical_decision": "STAGE2_NO_GO_CURRENT_EVIDENCE",
+  "historical_h2_primary": "PRIMARY_FAILED",
+  "historical_lifecycle": "INCONCLUSIVE_SOURCE_GAP_CENSORING",
+  "research_semantics_source": "configs/research/stage_2/s2p18_t11_t20_repair_v1.json",
+  "research_semantics_source_hash": "be372eac69afc741a2a305b102e80fdc30e3ee18c0a756a63e5fbc7d11b8db07",
+  "h2_primary_unchanged": true,
+  "lifecycle_semantics_unchanged": true,
+  "primary_configuration": {
+    "instrument": "BTCUSDT",
+    "time_combination": "T2",
+    "target_bp": 20,
+    "stop_bp": 25,
+    "ambiguous": "FAILURE"
+  },
+  "fixed_contracts": {
+    "matching": "EXISTING_FROZEN_CONTRACT",
+    "matrix_cells": 30,
+    "quintile_fit": "TRAIN_ONLY",
+    "seed": "EXISTING_FIXED_SEED",
+    "cluster_unit": "EXISTING_PREREGISTERED_UNIT"
+  },
+  "lifecycle_tracks": [
+    "PURE_TRADES_COMPARATOR",
+    "CONTRACT_PRICE_OHLC_PRIMARY"
+  ],
+  "contract_price_role": "COARSE_BOUNDARY_EVIDENCE_NOT_EXECUTION",
+  "task_dag": {
+    "S2P19-T11": [],
+    "S2P19-T12": [
+      "S2P19-T11"
+    ],
+    "S2P19-T13": [
+      "S2P19-T12"
+    ],
+    "S2P19-T14": [
+      "S2P19-T12"
+    ],
+    "S2P19-T15": [
+      "S2P19-T14"
+    ],
+    "S2P19-T16": [
+      "S2P19-T11",
+      "S2P19-T13",
+      "S2P19-T15"
+    ],
+    "S2P19-T17": [
+      "S2P19-T16"
+    ],
+    "S2P19-T18": [
+      "S2P19-T16",
+      "S2P19-T17"
+    ],
+    "S2P19-T19": [
+      "S2P19-T11",
+      "S2P19-T16",
+      "S2P19-T17",
+      "S2P19-T18"
+    ],
+    "S2P19-T20": [
+      "S2P19-T19"
+    ]
+  },
+  "formal_run_status": "BLOCKED_PENDING_PREPARE_AND_COMMIT_INPUT_LOCK_APPROVAL",
+  "historical_execution_claim": false,
+  "stage3_locked": true,
+  "preregistration_hash": "e7fdf819c2d630a3e6ad702abcf212b6b21eee7c7dc76510be2a82fcbc53c33e"
+}

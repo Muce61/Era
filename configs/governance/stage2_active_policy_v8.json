@@ -1,0 +1,94 @@
+{
+  "schema_name": "stage2-active-policy-v8",
+  "schema_version": "8.0",
+  "stage": "S2",
+  "stage_plan_version": "1.9",
+  "execution_limit": "S2P19-T20",
+  "stage3_locked": true,
+  "code_commit_mode": "CURRENT_CLEAN_HEAD_FOR_FORMAL_RUN",
+  "formal_run_authorization": "ONE_COMMIT_AND_INPUTS_LOCK_BOUND_HUMAN_APPROVAL",
+  "contract_paths": [
+    "docs/spec/system_manual_v1.3.5_final.md",
+    "docs/development/decisions/ADR-S2-028-plan-v19-solo-runtime.md",
+    "docs/development/plans/stage_2_plan_v1.9.md",
+    "docs/development/tasks/stage_2/S2P19-T11-T20-solo-runtime.md",
+    "scripts/audit_stage2_lifecycle_source.py",
+    "scripts/run_stage2_v19.py",
+    "src/era100x/research/stage_2/lifecycle/solo_governance.py",
+    "src/era100x/research/stage_2/lifecycle/solo_inputs.py",
+    "src/era100x/research/stage_2/lifecycle/solo_runtime.py",
+    "src/era100x/research/stage_2/lifecycle/solo_tasks.py",
+    "configs/research/stage_2/s2p18_t11_t16_performance_v1.json",
+    "configs/research/stage_2/s2p18_t11_t20_repair_v1.json",
+    "configs/research/stage_2/s2p19_t11_t20_solo_runtime_v1.json"
+  ],
+  "preregistration_path": "configs/research/stage_2/s2p19_t11_t20_solo_runtime_v1.json",
+  "task_dag": {
+    "S2P19-T11": [],
+    "S2P19-T12": [
+      "S2P19-T11"
+    ],
+    "S2P19-T13": [
+      "S2P19-T12"
+    ],
+    "S2P19-T14": [
+      "S2P19-T12"
+    ],
+    "S2P19-T15": [
+      "S2P19-T14"
+    ],
+    "S2P19-T16": [
+      "S2P19-T11",
+      "S2P19-T13",
+      "S2P19-T15"
+    ],
+    "S2P19-T17": [
+      "S2P19-T16"
+    ],
+    "S2P19-T18": [
+      "S2P19-T16",
+      "S2P19-T17"
+    ],
+    "S2P19-T19": [
+      "S2P19-T11",
+      "S2P19-T16",
+      "S2P19-T17",
+      "S2P19-T18"
+    ],
+    "S2P19-T20": [
+      "S2P19-T19"
+    ]
+  },
+  "allowed_operations": [
+    "READ_ONLY_AUDIT",
+    "VERIFY_EXISTING_EVIDENCE",
+    "READ_ONLY_UI",
+    "PREPARE_REAL_INPUTS_LOCK",
+    "FREEZE_FORMAL_AUTHORITY",
+    "RUN",
+    "RESUME",
+    "PUBLISH"
+  ],
+  "blocked_operations": [
+    "STAGE3"
+  ],
+  "required_gates": [
+    "FULL_PERIOD_SOURCE_AND_INPUT_LOCK_PASS",
+    "CLEAN_COMMIT",
+    "COMMIT_AND_INPUT_LOCK_BOUND_HUMAN_APPROVAL",
+    "AUTHORITY_BEFORE_RUN",
+    "UNIQUE_RUN_LOCK",
+    "TASK_DAG_AND_CHECKPOINT_PASS",
+    "FINAL_MANIFEST_APPENDIX_J_PASS",
+    "FULL_FINAL_VERIFY_PASS",
+    "ATOMIC_PUBLICATION",
+    "STAGE3_LOCKED"
+  ],
+  "operator_commands": [
+    "status",
+    "prepare",
+    "run",
+    "resume"
+  ],
+  "historical_plan_v18_status": "SUPERSEDED_UNEXECUTED"
+}

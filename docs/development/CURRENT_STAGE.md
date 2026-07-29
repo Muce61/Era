@@ -2,32 +2,30 @@
 
 ```text
 Current Stage: Stage 2
-Current Plan: stage_2_plan_v1.8 — LIFECYCLE REPAIR IMPLEMENTATION
-Current Task: S2P18-T11 v1.0 — dual-track lifecycle and performance gate
-Status: PRODUCTION ADAPTERS IMPLEMENTED / FORMAL ARTIFACTS AND RUN GATED / STAGE2_NO_GO_CURRENT_EVIDENCE
+Current Plan: stage_2_plan_v1.9 — SOLO RUNTIME IMPLEMENTED
+Current Task: S2P19-T11 v1.0 — prepare inputs lock pending
+Status: SOLO RUNTIME VALIDATED / PREPARE AND FORMAL RUN GATED / STAGE2_NO_GO_CURRENT_EVIDENCE
 ```
 
-Plan v1.8 reopens Stage 2 only for the approved lifecycle evidence repair and an append-only
-S2P18-T11–T20 successor chain. Source audit, implementation, isolated seven-day rehearsal and
-performance validation are authorized. Formal Authority/Run, publication and resume remain blocked
-until a clean commit exists and Muce grants a separate approval bound to that commit. Historical
+Plan v1.9 replaces the unexecuted v1.8 formal wrapper with the approved S2P19-T11–T20 solo
+runtime. The migration commit may implement and fixture-test the runtime, but real `prepare`,
+Authority, Run, resume and publication remain blocked until the implementation is frozen in a clean
+commit. After `prepare`, Muce must grant one approval bound to the exact commit and inputs-lock Hash.
+Historical
 Plan v1.7 evidence remains immutable: BTC/ETH H2 Primary remain `PRIMARY_FAILED`, lifecycle remains
 `INCONCLUSIVE_SOURCE_GAP_CENSORING`, and the research decision remains
 `STAGE2_NO_GO_CURRENT_EVIDENCE`. Stage 3 remains locked.
 
 The machine authority is `configs/governance/current_development_state.json` schema v1.3 bound to
-`configs/governance/stage2_active_policy_v7.json`. The current source audit is
+`configs/governance/stage2_active_policy_v8.json`. The historical v1.8 source audit is
 `configs/research/stage_2/s2p18_t11_source_audit_v1.json`; it binds distinct Binance Trades and
 aggTrades archive families and forbids zero-volume forward-filled seconds as gap recovery.
 
-The v1.8 formal CLI, append-only orchestration, immutable input Catalog and all ten production
-handlers are implemented at `scripts/run_stage2_v18.py`,
-`scripts/run_stage2_v18_task.py` and `src/era100x/research/stage_2/lifecycle/`. The H2 branch
-remains canonical-Trades-only; lifecycle OHLC goes only to T19/T20. Implementation validation does
-not authorize a formal Run. The complete-period source audit/Catalog, a clean-commit-frozen adapter
-plan and a separate approval bound to that commit and those Hashes remain mandatory before
-Authority creation. No adapter plan, approval, Authority or Run was created in this implementation
-turn.
+The v1.9 entrypoint is `scripts/run_stage2_v19.py` with exactly `status / prepare / run / resume`.
+One inputs lock replaces source/input Catalogs; one Authority embeds the human approval; one
+`events.jsonl` Hash chain replaces task receipts and task-local governance bundles. The H2 branch
+remains canonical-Trades-only; lifecycle OHLC goes only to T19/T20. No real inputs lock, Authority
+or Run was created by the architecture migration.
 
 Plan v1.7 authorized only S2P17-T20. Formal Run
 `stage2-s2p17-t20-20260727T154959Z-ed51e7cb220b` completed under Authority
@@ -45,7 +43,7 @@ The research conclusion is `STAGE2_NO_GO_CURRENT_EVIDENCE`; BTC H2 Primary is
 `INCONCLUSIVE_SOURCE_GAP_CENSORING`. This is not Stage 2 research PASS. T21 was not executed and
 Stage 3 remains locked.
 
-Policy v6 is now an immutable historical closure Policy and cannot authorize Plan v1.8 work or a
+Policy v6 is now an immutable historical closure Policy and cannot authorize Plan v1.9 work or a
 new formal Run.
 
 Plan v1.2 `S2-T15` remains `STOPPED_FAILED_UNPUBLISHED` with no formal result. It is an immutable

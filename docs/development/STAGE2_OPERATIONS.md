@@ -3,27 +3,22 @@
 This document preserves the historical operator contract for Stage 2 Plan v1.3.
 `configs/governance/stage2_active_policy_v2.json` is the immutable Plan v1.3 policy; v3 through v6
 are the separately approved Plan v1.4 through v1.7 policies. The current repository-wide operation
-authority is `configs/governance/current_development_state.json`, which points to Policy v7 /
-Plan v1.8. It permits read-only work, append-only source audit supplements and isolated seven-day
+authority is `configs/governance/current_development_state.json`, which points to Policy v8 /
+Plan v1.9. It permits read-only work, append-only source audit supplements and isolated seven-day
 rehearsal. Authority, preflight, formal Run, resume and publication remain blocked until a clean
 commit and separate commit-bound human approval. Runtime history comes from
-append-only approval receipts, Authorities, checkpoints, task receipts, Manifests, Catalogs and
-Verify records. Historical governance files remain readable evidence but cannot authorize a new
-run.
+append-only Authorities, events, checkpoints, the final Manifest and final Verify. Historical
+governance files remain readable evidence but cannot authorize a new run.
 
-Plan v1.8 uses `scripts/run_stage2_v18.py`. Its formal commands remain unusable without a clean
-commit-bound approval, a full-period Contract Price source Catalog, the twelve-role immutable input
-Catalog and a complete adapter plan whose ten executable Hashes pass. `run` performs the complete
-DAG and automatic reconcile/candidate-publication/full-Verify/publication sequence. Retryable
-process interruption may append a new attempt for the same Task and Run; every non-retryable
-failure remains append-only and unpublished. The current implementation turn must stop after
-freezing code and must not freeze formal artifacts or record the next approval itself.
+Plan v1.9 uses `scripts/run_stage2_v19.py` with four commands:
+`status / prepare / run / resume`. `prepare` creates the single full-period inputs lock and prints
+the exact commit, Policy, preregistration, contract-bundle and input-lock Hashes. After one human
+approval, `run` fsyncs Authority before creating a Run and automatically executes the DAG, final
+Manifest, candidate Verify and atomic publication. `resume` accepts only `TASK_INTERRUPTED`;
+terminal failure and published Run cannot resume.
 
-下一次单独获批后，v1.8 的前置正式对象使用
-`operations/source-catalogs/`、`operations/input-catalogs/` 与
-`operations/adapter-plans/` 三个 append-only 目录。进度 UI 只从这些可见证据、approval、
-Authority、Run checkpoint 和 Verify 投影状态；目录为空时必须显示 `NOT_FROZEN` 或
-`PENDING`，不能从代码存在性推断正式门已通过。
+进度 UI 只从 inputs lock、Authority、events、checkpoint 和 final Verify 投影状态；对象缺失
+时必须显示 `NOT_FROZEN` 或 `PENDING`，不能从代码存在性推断正式门已通过。
 
 Legacy `S2-T15` is the immutable Plan v1.2 `STOPPED_FAILED_UNPUBLISHED` predecessor. Its Plan v1.3
 capability successor is `S2P13-T16`; this mapping grants no result promotion or execution

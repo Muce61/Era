@@ -2,7 +2,7 @@
 
 - task_id: S2P18-T18
 - version: 1.0
-- status: APPROVED / IMPLEMENTATION CONTRACT FROZEN / FORMAL RUN GATED
+- status: SUPERSEDED_UNEXECUTED / successor `S2P19-T18`
 - dependencies: `S2P18-T16`、`S2P18-T17` formal Verify PASS
 
 ## 合同

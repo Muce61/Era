@@ -18,7 +18,9 @@ from era100x.research.stage_2.acceptance.final_acceptance.governance import (
 from era100x.research.stage_2.baselines.placebo.governance import (
     load_policy as load_v3_policy,
 )
-from era100x.research.stage_2.lifecycle.governance import load_policy as load_v7_policy
+from era100x.research.stage_2.lifecycle.solo_governance import (
+    load_policy as load_v8_policy,
+)
 from era100x.research.stage_2.rerun.lightweight_governance import (
     load_policy as load_v2_policy,
 )
@@ -36,17 +38,18 @@ SRP_PATH = ROOT / "docs/development/special_research_points/SRP-S2-001.md"
 S2T15_TASK_PATH = ROOT / "docs/development/tasks/stage_2/S2-T15-task.md"
 S2T15_VALIDATION_PATH = ROOT / "docs/development/validations/stage_2/S2-T15.md"
 STAGE2_UI_PATH = ROOT / "scripts/stage2_progress_ui.html"
-CURRENT_POLICY_PATH = ROOT / "configs/governance/stage2_active_policy_v7.json"
+CURRENT_POLICY_PATH = ROOT / "configs/governance/stage2_active_policy_v8.json"
 
 READ_ONLY_OPERATIONS = (
     "READ_ONLY_AUDIT",
     "VERIFY_EXISTING_EVIDENCE",
     "READ_ONLY_UI",
-    "BUILD_AUDIT_SUPPLEMENT",
-    "RUN_SEVEN_DAY_REHEARSAL",
+    "PREPARE_REAL_INPUTS_LOCK",
 )
 BLOCKED_OPERATIONS = (
+    "BUILD_AUDIT_SUPPLEMENT",
     "BUILD_FUNDING_AUDIT_SUPPLEMENT",
+    "RUN_SEVEN_DAY_REHEARSAL",
     "FREEZE_AUTHORITY",
     "FREEZE_BINS",
     "PREFLIGHT",
@@ -90,7 +93,7 @@ POLICY_LOADERS: tuple[tuple[int, Callable[..., Any], str, str], ...] = (
     (4, load_v4_policy, "1.5", "S2P15-T18"),
     (5, load_v5_policy, "1.6", "S2P16-T19"),
     (6, load_v6_policy, "1.7", "S2P17-T20"),
-    (7, load_v7_policy, "1.8", "S2P18-T20"),
+    (8, load_v8_policy, "1.9", "S2P19-T20"),
 )
 
 
@@ -132,14 +135,14 @@ def _validate_current_state(
     expected_scalars = {
         "schema_version": "1.3",
         "current_stage": "S2",
-        "current_plan": "stage_2_plan_v1.8",
-        "current_task": "S2P18-T11",
+        "current_plan": "stage_2_plan_v1.9",
+        "current_task": "S2P19-T11",
         "current_task_version": "1.0",
-        "task_status": "PRODUCTION_ADAPTERS_IMPLEMENTED_VALIDATED_FORMAL_RUN_GATED",
+        "task_status": "SOLO_RUNTIME_IMPLEMENTED_VALIDATED_PREPARE_GATED",
         "stage_status": "IN_PROGRESS",
         "research_decision": "STAGE2_NO_GO_CURRENT_EVIDENCE",
-        "current_policy_path": "configs/governance/stage2_active_policy_v7.json",
-        "approved_execution_limit": "S2P18-T20",
+        "current_policy_path": "configs/governance/stage2_active_policy_v8.json",
+        "approved_execution_limit": "S2P19-T20",
     }
     for field, expected in expected_scalars.items():
         if getattr(state, field) != expected:
@@ -148,16 +151,16 @@ def _validate_current_state(
         errors.append("current machine governance must bind the formal T20 result")
     if state.stage3_locked is not True:
         errors.append("current machine governance must keep Stage 3 locked")
-    if state.formal_run_receipt_required is not True:
-        errors.append("Plan v1.8 must require a commit-bound formal Run receipt")
+    if state.formal_run_receipt_required is not False:
+        errors.append("Plan v1.9 must not require the removed per-Run receipt object")
     if state.allowed_operations != READ_ONLY_OPERATIONS:
-        errors.append("Plan v1.8 implementation operations drift")
+        errors.append("Plan v1.9 implementation operations drift")
     if state.blocked_operations != BLOCKED_OPERATIONS:
-        errors.append("Plan v1.8 formal operation block drift")
+        errors.append("Plan v1.9 formal operation block drift")
     if state.blocking_questions != (
-        "FORMAL_RUN_REQUIRES_FULL_PERIOD_SOURCE_AND_INPUT_CATALOGS_CLEAN_COMMIT_ADAPTER_PLAN_AND_SEPARATE_APPROVAL",
+        "FORMAL_RUN_REQUIRES_PREPARE_INPUTS_LOCK_AND_COMMIT_INPUT_LOCK_BOUND_APPROVAL",
     ):
-        errors.append("Plan v1.8 formal approval blocker drift")
+        errors.append("Plan v1.9 formal approval blocker drift")
     if set(state.sealed_tasks) != SEALED_STAGE2_TASKS:
         errors.append("closed Stage 2 sealed task set drift")
     historical_task_states = [
@@ -166,7 +169,7 @@ def _validate_current_state(
     if historical_task_states != [EXPECTED_HISTORICAL_TASK_STATE]:
         errors.append("historical S2-T15 terminal lineage drift")
     if (ROOT / state.current_policy_path).resolve() != CURRENT_POLICY_PATH.resolve():
-        errors.append("current machine governance does not point to the v7/Plan v1.8 policy")
+        errors.append("current machine governance does not point to the v8/Plan v1.9 policy")
 
     for record in state.source_records:
         if not (repository_root / record).is_file():
@@ -195,10 +198,10 @@ def _validate_projections(
 
     current_markers = (
         "Current Stage: Stage 2",
-        "Current Plan: stage_2_plan_v1.8 — LIFECYCLE REPAIR IMPLEMENTATION",
-        "Current Task: S2P18-T11 v1.0 — dual-track lifecycle and performance gate",
+        "Current Plan: stage_2_plan_v1.9 — SOLO RUNTIME IMPLEMENTED",
+        "Current Task: S2P19-T11 v1.0 — prepare inputs lock pending",
         "STAGE2_NO_GO_CURRENT_EVIDENCE",
-        "separate approval bound to that commit",
+        "one approval bound to the exact commit and inputs-lock Hash",
         "Stage 3 remains locked",
         "S2-T15` remains `STOPPED_FAILED_UNPUBLISHED`",
         "S2P13-T16",
@@ -208,9 +211,9 @@ def _validate_projections(
             errors.append(f"CURRENT_STAGE projection missing: {marker}")
 
     registry_markers = (
-        "| Stage 2 | 1.8 | IN_PROGRESS |",
+        "| Stage 2 | 1.9 | IN_PROGRESS |",
         "STAGE2_NO_GO_CURRENT_EVIDENCE",
-        "Formal artifacts and Run remain gated by a full-period source audit",
+        "Formal prepare and Run remain gated by a clean implementation commit",
         "This is not Stage 2 research PASS",
         "Stage 3 remains locked",
         "S2-T15 remains historical `STOPPED_FAILED_UNPUBLISHED`",
@@ -223,13 +226,13 @@ def _validate_projections(
         errors.append("Stage Registry retains the superseded Plan v1.3 current-state projection")
 
     traceability_markers = (
-        "current_plan_version: '1.8'",
-        "current_task: S2P18-T11",
+        "current_plan_version: '1.9'",
+        "current_task: S2P19-T11",
         "current_stage_status: IN_PROGRESS",
         "current_research_decision: STAGE2_NO_GO_CURRENT_EVIDENCE",
-        "current_policy: configs/governance/stage2_active_policy_v7.json",
+        "current_policy: configs/governance/stage2_active_policy_v8.json",
         "next_task_status: "
-        "S2P18_FORMAL_ARTIFACTS_GATED_PENDING_FULL_SOURCE_CATALOG_AND_COMMIT_APPROVAL",
+        "S2P19_PREPARE_GATED_PENDING_CLEAN_IMPLEMENTATION_COMMIT",
         "stage3_locked: true",
         "historical_s2_t15_status: STOPPED_FAILED_UNPUBLISHED",
         "historical_s2_t15_successor: S2P13-T16",
@@ -239,7 +242,7 @@ def _validate_projections(
             errors.append(f"Traceability Stage 2 governance missing: {marker}")
 
     dependency_markers = (
-        "Stage 2 Plans v1.4–v1.8 successor DAG and current repair",
+        "Stage 2 Plans v1.4–v1.9 successor DAG and solo runtime",
         "STAGE2_NO_GO_CURRENT_EVIDENCE",
         "Stage 2 is",
         "Stage 3 remains locked",
@@ -252,7 +255,7 @@ def _validate_projections(
 
     operations_markers = (
         "current_development_state.json",
-        "Policy v7 /",
+        "Policy v8 /",
         "STAGE2_NO_GO_CURRENT_EVIDENCE",
         "Stage 3 remains locked",
         "S2-T15` is the immutable Plan v1.2",
@@ -311,7 +314,7 @@ def _validate_projections(
 
 def _validate_policy_lineage(errors: list[str], policies: dict[int, Any]) -> None:
     historical_t20_policy = policies.get(6)
-    current_policy = policies.get(7)
+    current_policy = policies.get(8)
     successor_policy = policies.get(2)
     if historical_t20_policy is not None:
         t20_dependencies = historical_t20_policy.payload.get("task_dag", {}).get(
@@ -322,13 +325,13 @@ def _validate_policy_lineage(errors: list[str], policies: dict[int, Any]) -> Non
         if "S2P13-T16" not in t20_dependencies:
             errors.append("Policy v6/T20 must bind the S2P13-T16 successor")
     if current_policy is not None:
-        t11_dependencies = current_policy.payload.get("task_dag", {}).get("S2P18-T11")
+        t11_dependencies = current_policy.payload.get("task_dag", {}).get("S2P19-T11")
         if t11_dependencies != []:
-            errors.append("Policy v7 T11 must be the successor DAG root")
+            errors.append("Policy v8 T11 must be the successor DAG root")
         if current_policy.payload.get("formal_run_authorization") != (
-            "SEPARATE_COMMIT_BOUND_APPROVAL_REQUIRED"
+            "ONE_COMMIT_AND_INPUTS_LOCK_BOUND_HUMAN_APPROVAL"
         ):
-            errors.append("Policy v7 must keep formal execution separately gated")
+            errors.append("Policy v8 must keep formal execution separately gated")
     if successor_policy is not None:
         successor_dag = successor_policy.payload.get("task_dag", {})
         if "S2P13-T16" not in successor_dag:
@@ -356,7 +359,7 @@ def main() -> int:
         for error in errors:
             print(f"- {error}")
         return 1
-    current_policy = policies[7]
+    current_policy = policies[8]
     print(
         "Governance policy PASS: "
         f"S2/{current_policy.payload['execution_limit']} "

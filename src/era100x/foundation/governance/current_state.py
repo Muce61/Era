@@ -19,6 +19,7 @@ KNOWN_OPERATIONS: Final[frozenset[str]] = frozenset(
         "READ_ONLY_AUDIT",
         "VERIFY_EXISTING_EVIDENCE",
         "READ_ONLY_UI",
+        "PREPARE_REAL_INPUTS_LOCK",
         "BUILD_AUDIT_SUPPLEMENT",
         "BUILD_FUNDING_AUDIT_SUPPLEMENT",
         "RUN_SEVEN_DAY_REHEARSAL",

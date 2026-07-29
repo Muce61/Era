@@ -2,7 +2,7 @@
 
 - task_id: S2P18-T11
 - version: 1.0
-- status: APPROVED / IMPLEMENTATION AUTHORIZED / FORMAL RUN GATED
+- status: SUPERSEDED_UNEXECUTED / successor `S2P19-T11`
 - dependencies: Stage 1 VALID；T10 历史密封证据；来源审计 PASS
 
 ## 合同

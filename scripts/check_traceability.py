@@ -30,10 +30,21 @@ ALLOWED_STATUSES = {"FROZEN", "BASELINE", "RESEARCH", "DEPRECATED", "BLOCKED_BY_
 def _task_ids(root: Path) -> set[str]:
     ids: list[str] = []
     for path in (root / "docs/development/tasks").glob("stage_*/*.md"):
-        match = re.search(r"^- task_id: (S\d+(?:P\d+)?-T\d+)$", path.read_text(), re.MULTILINE)
-        if not match:
+        content = path.read_text()
+        match = re.search(r"^- task_id: (S\d+(?:P\d+)?-T\d+)$", content, re.MULTILINE)
+        multi = re.search(r"^- task_ids: \[([^\]]+)\]$", content, re.MULTILINE)
+        if match:
+            ids.append(match.group(1))
+        elif multi:
+            task_ids = [item.strip() for item in multi.group(1).split(",")]
+            if not task_ids or any(
+                not re.fullmatch(r"S\d+(?:P\d+)?-T\d+", item)
+                for item in task_ids
+            ):
+                raise ValueError(f"invalid task_ids metadata: {path.relative_to(root)}")
+            ids.extend(task_ids)
+        else:
             raise ValueError(f"missing task_id metadata: {path.relative_to(root)}")
-        ids.append(match.group(1))
     if len(ids) != len(set(ids)):
         raise ValueError("duplicate Task IDs")
     return set(ids)

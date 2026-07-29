@@ -5,7 +5,8 @@
 - plan_id: `stage_2_plan_v1.8`
 - stage_id: `S2`
 - plan_version: `1.8`
-- status: APPROVED / IMPLEMENTATION AUTHORIZED / FORMAL RUN GATED
+- status: `SUPERSEDED_UNEXECUTED`
+- successor: `stage_2_plan_v1.9`
 - approved_by: Muce
 - approved_at: 2026-07-28
 - base_commit: `29bc5492eb187e934175867311f1efde1af9c876`
@@ -13,6 +14,9 @@
 - preregistration: `configs/research/stage_2/s2p18_t11_t20_repair_v1.json`
 
 ## 目标与边界
+
+> 2026-07-29：本 Plan 未执行任何正式 Run，正式运行包装已由 Plan v1.9 替代。本文仅作
+> 历史合同保留，不再构成当前执行入口。
 
 本 Plan 修复生命周期来源缺口的可观测证据链，并对 T11/T16 做结果等价的性能重构。
 它不修改 BTC H2 Primary，不把生命周期改为 H2 Primary，不研究移动止损，不进入

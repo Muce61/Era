@@ -22,7 +22,7 @@ def _assert_blocked(error: pytest.ExceptionInfo[GovernanceBlockedError], operati
     assert error.value.reason_code == "GOVERNANCE_OPERATION_NOT_AUTHORIZED"
     assert error.value.operation == operation
     assert error.value.blocking_questions == (
-        "FORMAL_RUN_REQUIRES_FULL_PERIOD_SOURCE_AND_INPUT_CATALOGS_CLEAN_COMMIT_ADAPTER_PLAN_AND_SEPARATE_APPROVAL",
+        "FORMAL_RUN_REQUIRES_PREPARE_INPUTS_LOCK_AND_COMMIT_INPUT_LOCK_BOUND_APPROVAL",
     )
 
 
@@ -54,14 +54,16 @@ def test_direct_bin_freeze_is_blocked_before_reading_inputs() -> None:
     _assert_blocked(error, "FREEZE_BINS")
 
 
-def test_direct_receiver_supplement_build_is_now_authorized() -> None:
-    state = require_operation_allowed("BUILD_AUDIT_SUPPLEMENT")
-    assert "BUILD_AUDIT_SUPPLEMENT" in state.allowed_operations
+def test_superseded_receiver_supplement_build_is_blocked() -> None:
+    with pytest.raises(GovernanceBlockedError) as error:
+        require_operation_allowed("BUILD_AUDIT_SUPPLEMENT")
+    _assert_blocked(error, "BUILD_AUDIT_SUPPLEMENT")
 
 
-def test_direct_context_supplement_build_is_now_authorized() -> None:
-    state = require_operation_allowed("BUILD_AUDIT_SUPPLEMENT")
-    assert "BUILD_AUDIT_SUPPLEMENT" in state.allowed_operations
+def test_superseded_context_supplement_build_is_blocked() -> None:
+    with pytest.raises(GovernanceBlockedError) as error:
+        require_operation_allowed("BUILD_AUDIT_SUPPLEMENT")
+    _assert_blocked(error, "BUILD_AUDIT_SUPPLEMENT")
 
 
 def test_direct_new_run_is_blocked_before_inspecting_run_directories(tmp_path: Path) -> None:

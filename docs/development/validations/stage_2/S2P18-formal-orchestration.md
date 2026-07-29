@@ -1,6 +1,6 @@
 # S2P18 正式编排实现验证
 
-- status: IMPLEMENTED / FORMAL RUN NOT AUTHORIZED
+- status: SUPERSEDED_UNEXECUTED / FORMAL RUN NEVER EXECUTED
 - approved_scope: infrastructure implementation and clean commit only
 - formal_run_executed: false
 - stage3_locked: true
@@ -42,8 +42,7 @@ fixture 检查编排，不产生研究数据。完整周期来源审计工具在
 - OQ-S2-013 定向合同、input Catalog、完整周期 Catalog fixture、十 adapters 与同 Run
   retryable Task 恢复：37 passed；
 - lifecycle/governance/UI 相关回归：122 passed；
-- 全仓 870 项测试按内存隔离分片全部 PASS（75 + 126 + 253 + 118 + 67 + 223 + 8）；
-- 单进程全仓命令在 91% 后被本机终止且未输出 pytest 终态，因此不将其伪报为 PASS；
+- 单进程全仓测试真实终态：`870 passed in 38.77s`；
 - `.venv/bin/ruff check .`：PASS；
 - `.venv/bin/mypy src scripts`：PASS，283 source files；
 - `scripts/check_governance_state.py --strict`：PASS；

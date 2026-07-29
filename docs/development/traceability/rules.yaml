@@ -2499,26 +2499,41 @@ rules:
   planned_tasks:
   - S2-T20
   - S2P17-T20
+  - S2P19-T11
+  - S2P19-T12
+  - S2P19-T13
+  - S2P19-T14
+  - S2P19-T15
+  - S2P19-T16
+  - S2P19-T17
+  - S2P19-T18
+  - S2P19-T19
+  - S2P19-T20
   implementation_paths:
-  - configs/governance/current_development_state.json (CURRENT Plan v1.7/T20 fail-closed authority)
-  - scripts/check_governance_state.py (STRICT v2-v6 and projection consistency gate)
+  - configs/governance/current_development_state.json (CURRENT Plan v1.9 prepare/formal-run gate)
+  - scripts/check_governance_state.py (STRICT historical and Plan v1.9 projection consistency gate)
+  - scripts/run_stage2_v19.py
+  - src/era100x/foundation/governance/current_state.py
+  - src/era100x/research/stage_2/lifecycle/solo_runtime.py
+  - src/era100x/research/stage_2/lifecycle/solo_tasks.py
   test_paths:
   - tests/governance/test_current_development_state.py
   - tests/scripts/test_check_governance_state.py
   validation_paths:
   - docs/development/validations/stage_2/S2P17-T20.md
+  - docs/development/validations/stage_2/S2P19-solo-runtime-migration.md
   stage_2_governance:
-    current_plan_version: '1.8'
-    current_plan_status: IMPLEMENTATION_IN_PROGRESS_FORMAL_RUN_GATED
-    current_task: S2P18-T11
-    current_task_status: PRODUCTION_ADAPTERS_IMPLEMENTED_VALIDATED_FORMAL_RUN_GATED
+    current_plan_version: '1.9'
+    current_plan_status: SOLO_RUNTIME_IMPLEMENTED_PREPARE_GATED
+    current_task: S2P19-T11
+    current_task_status: SOLO_RUNTIME_IMPLEMENTED_VALIDATED_PREPARE_GATED
     current_stage_status: IN_PROGRESS
     current_research_decision: STAGE2_NO_GO_CURRENT_EVIDENCE
-    current_policy: configs/governance/stage2_active_policy_v7.json
+    current_policy: configs/governance/stage2_active_policy_v8.json
     current_machine_state: configs/governance/current_development_state.json
     current_validation: docs/development/validations/stage_2/S2P17-T20.md
     completed_successor_tasks: [S2P13-T16, S2P14-T17, S2P15-T18, S2P16-T19, S2P17-T20]
-    next_task_status: S2P18_FORMAL_ARTIFACTS_GATED_PENDING_FULL_SOURCE_CATALOG_AND_COMMIT_APPROVAL
+    next_task_status: S2P19_PREPARE_GATED_PENDING_CLEAN_IMPLEMENTATION_COMMIT
     stage3_locked: true
     historical_s2_t15_status: STOPPED_FAILED_UNPUBLISHED
     historical_s2_t15_successor: S2P13-T16
