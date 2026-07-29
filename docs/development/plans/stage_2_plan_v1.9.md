@@ -57,6 +57,29 @@ T11 ─────────────────────────�
 6. 最终 Verify 必须重验输入、Authority、事件链、十 Task、附录 J Manifest、全部输出、
    计数和 Stage 3 锁。
 
+### 十二类 production binding 的唯一推导
+
+`prepare` 不接受操作者提供的 input-spec 或手填 Hash。唯一生产规则由
+`s2p19_production_input_bindings_v1.json` 固定，并由代码重新计算：
+
+| role | 唯一 Hash 来源 |
+|---|---|
+| BTC / ETH Stage 1 Logical Hash | 对应已发布 instrument Catalog 的 `logical_data_hash` |
+| canonical Trades Catalog | Stage 1 Manifest 排除自 Hash 字段后的规范 Hash |
+| canonical Trades Verify | PASS Quality Report 的完整规范 Hash |
+| Contract Price Catalog | `prepare` 实际枚举的完整周期逐日分区清单规范 Hash |
+| funding acceptance | CR-2026-038 acceptance 排除自 Hash 字段后的规范 Hash |
+| T10 Manifest | 密封 T10 Manifest 排除自 Hash 字段后的规范 Hash |
+| Primary config | Group 1 预注册配置声明的 `config_hash` |
+| matching contract | 最终 T16 matching Authority 的自 Hash |
+| cluster contract | 最终 T18 cluster Authority 的自 Hash |
+| fixed seed | matching/placebo/bootstrap/event-card 四个 consumer seed 的联合规范 Hash |
+| historical T20 Verify | Plan v1.7 最终 PASS Verify 的自 Hash |
+
+所有自 Hash 都必须重新计算；所有源文件还要单独记录 SHA-256。输入锁记录每项
+`binding_rule` 和 production rules Hash。创建 Authority 前必须根据输入锁内的分区和当前
+冻结合同重新推导十二项；仅满足“64位字符串格式”不构成有效绑定。
+
 Policy v8 只声明这些操作在满足上述门后具有能力；当前 machine state 在真实 inputs lock
 和精确人工批准出现前仍阻止 Authority、Run、resume 和 publication。
 
@@ -68,6 +91,7 @@ Plan 不执行 Stage 3，不研究移动止损，不把 Contract Price 当成交
 
 ## 当前执行状态
 
-本迁移提交只实现代码、合同和 fixture 验证。不得在同一提交内执行真实 `prepare`、
-创建真实 Authority 或正式 Run。必须先冻结干净实现 commit，再执行 `prepare`，然后等待
-用户针对精确 commit 与 inputs-lock Hash 的新批准。
+solo runtime 迁移提交只实现了代码、合同和 fixture 验证；后续最小修复补齐 production
+input-spec builder 和十二类唯一推导规则。真实 `prepare` 仍必须在该修复的干净 commit
+上执行。生成 inputs lock 后必须停止，等待用户针对精确 commit 与 inputs-lock Hash 的
+新批准；此时仍不得创建 Authority 或正式 Run。

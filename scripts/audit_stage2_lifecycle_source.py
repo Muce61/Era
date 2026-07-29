@@ -35,6 +35,10 @@ PROVENANCE_SCRIPT = Path(
 )
 SOURCE_CHECKPOINT = CONTRACT_PRICE_ROOT / ".fetch_btc_eth_1s_agg_checkpoint.json"
 NS = 1_000_000_000
+CONTRACT_PRICE_CSV_HEADERS = {
+    b"ts_sec,open,high,low,close,volume\n",
+    b"ts_sec,open,high,low,close,volume\r\n",
+}
 
 
 def _sha256(path: Path) -> str:
@@ -43,6 +47,66 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(8 * 1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _csv_partition_facts(path: Path) -> tuple[str, int, int]:
+    """Hash and count one real local aggTrades-derived CSV in a single pass."""
+
+    digest = hashlib.sha256()
+    size_bytes = 0
+    newline_count = 0
+    final_byte = b""
+    with path.open("rb") as handle:
+        header = handle.readline()
+        if header not in CONTRACT_PRICE_CSV_HEADERS:
+            raise ValueError(f"Contract Price CSV header drift: {path}")
+        digest.update(header)
+        size_bytes += len(header)
+        newline_count += 1
+        final_byte = header[-1:]
+        for chunk in iter(lambda: handle.read(8 * 1024 * 1024), b""):
+            digest.update(chunk)
+            size_bytes += len(chunk)
+            newline_count += chunk.count(b"\n")
+            final_byte = chunk[-1:]
+    line_count = newline_count + (1 if final_byte != b"\n" else 0)
+    row_count = line_count - 1
+    if row_count <= 0 or size_bytes != path.stat().st_size:
+        raise ValueError(f"Contract Price CSV is empty or changed while reading: {path}")
+    return digest.hexdigest(), size_bytes, row_count
+
+
+def _parquet_partition_facts(path: Path) -> tuple[str, int, int]:
+    parquet = pq.ParquetFile(path)
+    if set(parquet.schema_arrow.names) != {
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "timestamp",
+    }:
+        raise ValueError(f"Contract Price Parquet schema drift: {path}")
+    row_count = parquet.metadata.num_rows
+    if row_count <= 0:
+        raise ValueError(f"Contract Price Parquet is empty: {path}")
+    return sha256_file(path), path.stat().st_size, row_count
+
+
+def _t10_contract_source_hash(
+    reader: FixedT10Reader,
+    *,
+    instrument: str,
+    owner_date: date,
+) -> str:
+    return reader.constant_partition_column_value(
+        dataset_name="contract_price_1s",
+        dataset_version="2.0",
+        instrument=instrument,
+        variant="FOUNDATION",
+        owner_date=owner_date,
+        column="source_file_sha256",
+    )
 
 
 def _audit_instrument(
@@ -224,34 +288,60 @@ def collect_contract_price_partitions(
         raise ValueError("Contract Price partitions require a passing source audit")
     start = date.fromisoformat(audit.scope_start_date)
     end = date.fromisoformat(audit.scope_end_date_exclusive)
+    reader = FixedT10Reader(T10_SNAPSHOT, expected_snapshot_id=T10_SNAPSHOT_ID)
     entries: list[dict[str, object]] = []
     current = start
     while current < end:
         stamp = current.strftime("%Y%m%d")
         for instrument in ("BTCUSDT", "ETHUSDT"):
-            partition = (
-                CONTRACT_PRICE_ROOT
-                / f"{instrument}_1s_agg"
-                / f"{instrument}_1s_{stamp}.parquet"
+            partition_root = CONTRACT_PRICE_ROOT / f"{instrument}_1s_agg"
+            candidates = (
+                partition_root / f"{instrument}_1s_{stamp}.csv",
+                partition_root / f"{instrument}_1s_{stamp}.parquet",
             )
-            if (
-                not partition.is_file()
-                or partition.is_symlink()
-                or partition.name.startswith("._")
-            ):
+            present = [
+                partition
+                for partition in candidates
+                if partition.is_file()
+                and not partition.is_symlink()
+                and not partition.name.startswith("._")
+            ]
+            if not present:
                 raise ValueError(
                     f"Contract Price formal-period partition is missing: "
                     f"{instrument}:{current}"
                 )
-            metadata = pq.ParquetFile(partition).metadata
+            source_hash = _t10_contract_source_hash(
+                reader,
+                instrument=instrument,
+                owner_date=current,
+            )
+            measured = [
+                (
+                    partition,
+                    *(
+                        _csv_partition_facts(partition)
+                        if partition.suffix == ".csv"
+                        else _parquet_partition_facts(partition)
+                    ),
+                )
+                for partition in present
+            ]
+            matching = [item for item in measured if item[1] == source_hash]
+            if len(matching) != 1:
+                raise ValueError(
+                    f"Contract Price T10 source binding count is not one: "
+                    f"{instrument}:{current}:{len(matching)}"
+                )
+            partition, partition_hash, size_bytes, row_count = matching[0]
             entries.append(
                 {
                     "instrument": instrument,
                     "date": current.isoformat(),
                     "path": str(partition),
-                    "sha256": sha256_file(partition),
-                    "size_bytes": partition.stat().st_size,
-                    "row_count": metadata.num_rows,
+                    "sha256": partition_hash,
+                    "size_bytes": size_bytes,
+                    "row_count": row_count,
                 }
             )
         current += timedelta(days=1)

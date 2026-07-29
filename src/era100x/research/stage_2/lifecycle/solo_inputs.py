@@ -32,6 +32,20 @@ REQUIRED_INPUT_BINDINGS: Final = frozenset(
         "historical_t20_verify_hash",
     }
 )
+REQUIRED_BINDING_RULES: Final = {
+    "btc_stage1_logical_hash": "STAGE1_INSTRUMENT_LOGICAL_DATA_HASH_V1",
+    "eth_stage1_logical_hash": "STAGE1_INSTRUMENT_LOGICAL_DATA_HASH_V1",
+    "canonical_trades_catalog_hash": "STAGE1_MANIFEST_SELF_HASH_V1",
+    "canonical_trades_verify_hash": "STAGE1_QUALITY_REPORT_CANONICAL_HASH_V1",
+    "contract_price_catalog_hash": "FULL_PERIOD_PARTITION_CATALOG_CANONICAL_HASH_V1",
+    "funding_acceptance_hash": "FUNDING_ACCEPTANCE_SELF_HASH_V1",
+    "t10_manifest_hash": "T10_MANIFEST_SELF_HASH_V1",
+    "primary_config_hash": "GROUP1_DECLARED_CONFIG_HASH_V1",
+    "matching_contract_hash": "T16_AUTHORITY_SELF_HASH_V1",
+    "cluster_contract_hash": "T18_AUTHORITY_SELF_HASH_V1",
+    "fixed_seed_hash": "FOUR_CONSUMER_FIXED_SEED_CANONICAL_HASH_V1",
+    "historical_t20_verify_hash": "T20_VERIFY_SELF_HASH_V1",
+}
 HEX64: Final = re.compile(r"^[0-9a-f]{64}$")
 SCOPE_START: Final = "2020-01-01"
 SCOPE_END_EXCLUSIVE: Final = "2026-07-04"
@@ -58,12 +72,14 @@ class InputBinding:
     path: Path
     sha256: str
     binding_hash: str
+    binding_rule: str
 
 
 @dataclass(frozen=True, slots=True)
 class InputsLock:
     path: Path
     inputs_lock_hash: str
+    production_binding_rules_hash: str
     source_audit: dict[str, Any]
     partitions: tuple[dict[str, Any], ...]
     bindings: dict[str, InputBinding]
@@ -174,6 +190,7 @@ def load_inputs_lock(path: Path, *, verify_files: bool = True) -> InputsLock:
         or payload.get("stage_plan_version") != "1.9"
         or payload.get("scope_start_date") != SCOPE_START
         or payload.get("scope_end_date_exclusive") != SCOPE_END_EXCLUSIVE
+        or not HEX64.fullmatch(str(payload.get("production_binding_rules_hash")))
         or payload.get("historical_execution_claim") is not False
         or payload.get("stage3_locked") is not True
         or not isinstance(claimed, str)
@@ -196,17 +213,20 @@ def load_inputs_lock(path: Path, *, verify_files: bool = True) -> InputsLock:
             "path",
             "sha256",
             "binding_hash",
+            "binding_rule",
         }:
             raise ValueError("Plan v1.9 inputs lock entry fields drift")
         role = str(raw["role"])
         target = Path(str(raw["path"]))
         expected_sha = str(raw["sha256"])
         binding_hash = str(raw["binding_hash"])
+        binding_rule = str(raw["binding_rule"])
         if (
             role in bindings
             or role not in REQUIRED_INPUT_BINDINGS
             or not HEX64.fullmatch(expected_sha)
             or not HEX64.fullmatch(binding_hash)
+            or REQUIRED_BINDING_RULES.get(role) != binding_rule
         ):
             raise ValueError(f"invalid Plan v1.9 input binding: {role}")
         if verify_files:
@@ -218,12 +238,14 @@ def load_inputs_lock(path: Path, *, verify_files: bool = True) -> InputsLock:
             path=target,
             sha256=expected_sha,
             binding_hash=binding_hash,
+            binding_rule=binding_rule,
         )
     if set(bindings) != REQUIRED_INPUT_BINDINGS:
         raise ValueError("Plan v1.9 inputs lock requires twelve exact roles")
     return InputsLock(
         path=path,
         inputs_lock_hash=claimed,
+        production_binding_rules_hash=str(payload["production_binding_rules_hash"]),
         source_audit=source_audit,
         partitions=partitions,
         bindings=bindings,
@@ -236,6 +258,7 @@ def write_inputs_lock(
     entries: dict[str, tuple[Path, str]],
     source_audit: dict[str, Any],
     contract_price_partitions: list[dict[str, Any]],
+    production_binding_rules_hash: str,
 ) -> Path:
     """Create the one append-only input lock after all source checks pass."""
 
@@ -245,6 +268,8 @@ def write_inputs_lock(
         raise ValueError("Plan v1.9 inputs root must be absolute and non-symlink")
     if set(entries) != REQUIRED_INPUT_BINDINGS:
         raise ValueError("Plan v1.9 inputs lock requires twelve exact roles")
+    if not HEX64.fullmatch(production_binding_rules_hash):
+        raise ValueError("production binding rules Hash is invalid")
     _validate_source_audit(source_audit)
     _validate_partition_rows(contract_price_partitions, verify_files=True)
     rows: list[dict[str, object]] = []
@@ -258,6 +283,7 @@ def write_inputs_lock(
                 "path": str(target),
                 "sha256": sha256_file(target),
                 "binding_hash": binding_hash,
+                "binding_rule": REQUIRED_BINDING_RULES[role],
             }
         )
     payload: dict[str, Any] = {
@@ -266,6 +292,7 @@ def write_inputs_lock(
         "stage_plan_version": "1.9",
         "scope_start_date": SCOPE_START,
         "scope_end_date_exclusive": SCOPE_END_EXCLUSIVE,
+        "production_binding_rules_hash": production_binding_rules_hash,
         "entries": rows,
         "source_audit": source_audit,
         "contract_price_partitions": contract_price_partitions,

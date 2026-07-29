@@ -199,7 +199,10 @@ def _validate_projections(
     current_markers = (
         "Current Stage: Stage 2",
         "Current Plan: stage_2_plan_v1.9 — SOLO RUNTIME IMPLEMENTED",
-        "Current Task: S2P19-T11 v1.0 — prepare inputs lock pending",
+        (
+            "Current Task: S2P19-T11 v1.0 — production input builder validation "
+            "and prepare pending"
+        ),
         "STAGE2_NO_GO_CURRENT_EVIDENCE",
         "one approval bound to the exact commit and inputs-lock Hash",
         "Stage 3 remains locked",

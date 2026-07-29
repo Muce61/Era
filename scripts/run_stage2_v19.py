@@ -14,6 +14,10 @@ from audit_stage2_lifecycle_source import (
     collect_contract_price_partitions,
 )
 from era100x.research.stage_2.lifecycle.solo_governance import load_policy
+from era100x.research.stage_2.lifecycle.production_input_spec import (
+    build_production_input_spec,
+    validate_production_inputs_lock,
+)
 from era100x.research.stage_2.lifecycle.solo_inputs import (
     load_inputs_lock,
     write_inputs_lock,
@@ -34,27 +38,11 @@ START = date(2020, 1, 1)
 END_EXCLUSIVE = date(2026, 7, 4)
 
 
-def _read_input_spec(path: Path) -> dict[str, tuple[Path, str]]:
-    raw = json.loads(path.read_bytes())
-    if not isinstance(raw, dict):
-        raise ValueError("input spec must be a role-keyed JSON object")
-    entries: dict[str, tuple[Path, str]] = {}
-    for role, value in raw.items():
-        if not isinstance(value, dict) or set(value) != {"path", "binding_hash"}:
-            raise ValueError(f"invalid input spec entry: {role}")
-        target = Path(str(value["path"]))
-        if not target.is_absolute():
-            raise ValueError(f"input spec path must be absolute: {role}")
-        entries[str(role)] = (target, str(value["binding_hash"]))
-    return entries
-
-
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("status", "prepare", "run", "resume"))
     parser.add_argument("--policy", type=Path, default=DEFAULT_POLICY)
     parser.add_argument("--evidence-root", type=Path, default=DEFAULT_EVIDENCE_ROOT)
-    parser.add_argument("--input-spec", type=Path)
     parser.add_argument("--inputs-lock", type=Path)
     parser.add_argument("--authority", type=Path)
     parser.add_argument("--run-root", type=Path)
@@ -83,20 +71,25 @@ def main() -> int:
         print(json.dumps(payload, ensure_ascii=False, sort_keys=True))
         return 0
     if args.command == "prepare":
-        if args.input_spec is None:
-            raise ValueError("prepare requires --input-spec")
         if not repository_clean(ROOT):
             raise ValueError("prepare requires a clean implementation commit")
         audit = build_audit(start=START, end_exclusive=END_EXCLUSIVE)
         if audit.status != "PASS":
             raise ValueError("prepare source audit did not PASS")
+        partitions = collect_contract_price_partitions(audit=audit)
+        production_spec = build_production_input_spec(
+            repository_root=ROOT,
+            contract_price_partitions=partitions,
+        )
         lock_path = write_inputs_lock(
             inputs_root=evidence_root / "inputs",
-            entries=_read_input_spec(args.input_spec),
+            entries=production_spec.entries,
             source_audit=audit.model_dump(mode="json"),
-            contract_price_partitions=collect_contract_price_partitions(audit=audit),
+            contract_price_partitions=partitions,
+            production_binding_rules_hash=production_spec.rules_hash,
         )
         lock = load_inputs_lock(lock_path)
+        validate_production_inputs_lock(inputs_lock=lock, repository_root=ROOT)
         print(
             json.dumps(
                 {
@@ -129,6 +122,7 @@ def main() -> int:
                 "and exact inputs-lock Hash"
             )
         inputs_lock = load_inputs_lock(args.inputs_lock.resolve())
+        validate_production_inputs_lock(inputs_lock=inputs_lock, repository_root=ROOT)
         authority_path = freeze_authority(
             policy=policy,
             inputs_lock=inputs_lock,

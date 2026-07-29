@@ -8,7 +8,11 @@ from typing import Any
 import pytest
 
 from era100x.research.stage_2.acceptance.canonical_json import read_canonical_json
-from era100x.research.stage_2.lifecycle import solo_inputs, solo_runtime
+from era100x.research.stage_2.lifecycle import (
+    production_input_spec,
+    solo_inputs,
+    solo_runtime,
+)
 from era100x.research.stage_2.lifecycle.solo_governance import (
     TASK_DAG,
     TASK_ORDER,
@@ -111,6 +115,7 @@ def _inputs_lock(
         entries=entries,
         source_audit=_source_audit(),
         contract_price_partitions=partitions,
+        production_binding_rules_hash=_hash("production-binding-rules"),
     )
     return load_inputs_lock(path)
 
@@ -206,6 +211,45 @@ def test_inputs_lock_rejects_symlink_and_hash_drift(
     target.write_text("drift\n", encoding="utf-8")
     with pytest.raises(ValueError, match="input Hash drift"):
         load_inputs_lock(lock.path)
+
+
+def test_production_validation_rederives_semantic_hashes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    lock = _inputs_lock(tmp_path, monkeypatch)
+    entries = {
+        role: (binding.path, binding.binding_hash)
+        for role, binding in lock.bindings.items()
+    }
+    monkeypatch.setattr(
+        production_input_spec,
+        "build_production_input_spec",
+        lambda **_kwargs: production_input_spec.ProductionInputSpec(
+            entries=entries,
+            rules_hash=lock.production_binding_rules_hash,
+        ),
+    )
+    production_input_spec.validate_production_inputs_lock(
+        inputs_lock=lock,
+        repository_root=tmp_path,
+    )
+
+    drifted = dict(entries)
+    path, _ = drifted["fixed_seed_hash"]
+    drifted["fixed_seed_hash"] = (path, "f" * 64)
+    monkeypatch.setattr(
+        production_input_spec,
+        "build_production_input_spec",
+        lambda **_kwargs: production_input_spec.ProductionInputSpec(
+            entries=drifted,
+            rules_hash=lock.production_binding_rules_hash,
+        ),
+    )
+    with pytest.raises(ValueError, match="production semantic binding drift"):
+        production_input_spec.validate_production_inputs_lock(
+            inputs_lock=lock,
+            repository_root=tmp_path,
+        )
 
 
 def test_fake_ten_task_chain_publishes_without_task_governance_bundles(

@@ -148,6 +148,65 @@ class FixedT10Reader:
             raise ValueError("T10 logical partition row count drift")
         return table
 
+    def constant_partition_column_value(
+        self,
+        *,
+        dataset_name: str,
+        dataset_version: str,
+        instrument: str,
+        variant: str,
+        owner_date: date,
+        column: str,
+    ) -> str:
+        """Prove a string column is constant from Parquet row-group statistics."""
+
+        logical = self.partition(
+            dataset_name=dataset_name,
+            dataset_version=dataset_version,
+            instrument=instrument,
+            variant=variant,
+            owner_date=owner_date,
+        )
+        if logical.receipt.terminal_state != "PRESENT" or not logical.fragments:
+            raise ValueError("constant-column lookup requires a PRESENT T10 partition")
+        values: set[str] = set()
+        for fragment in logical.fragments:
+            artifact = self._artifacts[fragment.artifact.object_sha256]
+            parquet = pq.ParquetFile(self._artifact_path(artifact))
+            try:
+                column_index = parquet.schema_arrow.names.index(column)
+            except ValueError as exc:
+                raise ValueError(f"T10 constant column is missing: {column}") from exc
+            starts: list[int] = []
+            total = 0
+            for ordinal in range(parquet.num_row_groups):
+                starts.append(total)
+                total += parquet.metadata.row_group(ordinal).num_rows
+            end = fragment.row_offset + fragment.row_count
+            first = bisect_right(starts, fragment.row_offset) - 1
+            last = bisect_right(starts, end - 1) - 1
+            for ordinal in range(first, last + 1):
+                statistics = parquet.metadata.row_group(ordinal).column(
+                    column_index
+                ).statistics
+                if (
+                    statistics is None
+                    or not statistics.has_min_max
+                    or statistics.min != statistics.max
+                ):
+                    raise ValueError(
+                        f"T10 column is not provably constant from metadata: {column}"
+                    )
+                value = statistics.min
+                if isinstance(value, bytes):
+                    value = value.decode("utf-8")
+                if not isinstance(value, str):
+                    raise ValueError(f"T10 constant column is not text: {column}")
+                values.add(value)
+        if len(values) != 1:
+            raise ValueError(f"T10 column has multiple partition values: {column}")
+        return next(iter(values))
+
     def _read_fragment(self, fragment: FragmentV2, *, columns: list[str] | None) -> pa.Table:
         artifact = self._artifacts[fragment.artifact.object_sha256]
         path = self._artifact_path(artifact)

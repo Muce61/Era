@@ -32,7 +32,10 @@ def test_stale_stage_registry_projection_fails_strict_check(tmp_path: Path) -> N
             (
                 "Current Stage: Stage 2",
                 "Current Plan: stage_2_plan_v1.9 — SOLO RUNTIME IMPLEMENTED",
-                "Current Task: S2P19-T11 v1.0 — prepare inputs lock pending",
+                (
+                    "Current Task: S2P19-T11 v1.0 — production input builder validation "
+                    "and prepare pending"
+                ),
                 "STAGE2_NO_GO_CURRENT_EVIDENCE",
                 "T21 was not executed",
                 "Stage 3 remains locked",

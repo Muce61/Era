@@ -26,6 +26,12 @@
 - checkpoint tip Hash；
 - research status。
 
+正式 inputs lock 之前必须由固定 production builder 从历史密封证据和当前预注册配置
+自动推导十二类 binding。禁止外部 input-spec、手填 semantic Hash 或仅做 HEX64 格式
+检查。每个 entry 同时保存源文件 SHA-256、semantic binding Hash 和固定 rule ID；在
+Authority 创建前必须重新推导并逐项相等。Contract Price Catalog binding 必须覆盖
+`[2020-01-01, 2026-07-04)` 的 BTC/ETH 全部逐日分区；四处固定 seed 必须一致。
+
 ## Task 语义
 
 | Task | 研究责任 | 数据边界 |

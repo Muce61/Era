@@ -3,8 +3,8 @@
 ```text
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.9 — SOLO RUNTIME IMPLEMENTED
-Current Task: S2P19-T11 v1.0 — prepare inputs lock pending
-Status: SOLO RUNTIME VALIDATED / PREPARE AND FORMAL RUN GATED / STAGE2_NO_GO_CURRENT_EVIDENCE
+Current Task: S2P19-T11 v1.0 — production input builder validation and prepare pending
+Status: SOLO RUNTIME VALIDATED / PRODUCTION BINDINGS IMPLEMENTED / PREPARE PENDING / FORMAL RUN GATED
 ```
 
 Plan v1.9 replaces the unexecuted v1.8 formal wrapper with the approved S2P19-T11–T20 solo
@@ -25,7 +25,9 @@ The v1.9 entrypoint is `scripts/run_stage2_v19.py` with exactly `status / prepar
 One inputs lock replaces source/input Catalogs; one Authority embeds the human approval; one
 `events.jsonl` Hash chain replaces task receipts and task-local governance bundles. The H2 branch
 remains canonical-Trades-only; lifecycle OHLC goes only to T19/T20. No real inputs lock, Authority
-or Run was created by the architecture migration.
+or Run was created by the architecture migration. The production input builder now derives all
+twelve semantic Hashes from fixed formal evidence and refuses operator-supplied Hashes; this
+implementation still creates no formal evidence until a clean commit runs `prepare`.
 
 Plan v1.7 authorized only S2P17-T20. Formal Run
 `stage2-s2p17-t20-20260727T154959Z-ed51e7cb220b` completed under Authority

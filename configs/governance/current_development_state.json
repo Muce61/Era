@@ -73,6 +73,7 @@
     "configs/research/stage_2/s2p18_t11_t16_performance_v1.json",
     "configs/research/stage_2/s2p18_t11_t20_repair_v1.json",
     "configs/research/stage_2/s2p19_t11_t20_solo_runtime_v1.json",
+    "configs/research/stage_2/s2p19_production_input_bindings_v1.json",
     "configs/research/stage_2/s2p17_t20_final_acceptance_v1.json",
     "docs/development/CURRENT_STAGE.md",
     "docs/development/STAGE_REGISTRY.md",
@@ -150,14 +151,17 @@
     "docs/development/validations/stage_2/S2P18-T11-T16-performance.md",
     "docs/development/validations/stage_2/S2P18-formal-orchestration.md",
     "docs/development/validations/stage_2/S2P19-solo-runtime-migration.md",
+    "docs/development/validations/stage_2/S2P19-production-input-bindings.md",
     "scripts/audit_stage2_lifecycle_source.py",
     "scripts/run_stage2_v19.py",
     "src/era100x/foundation/governance/current_state.py",
+    "src/era100x/research/stage_2/baselines/conditional/t10_access.py",
     "src/era100x/research/stage_2/lifecycle/solo_governance.py",
     "src/era100x/research/stage_2/lifecycle/solo_inputs.py",
+    "src/era100x/research/stage_2/lifecycle/production_input_spec.py",
     "src/era100x/research/stage_2/lifecycle/solo_runtime.py",
     "src/era100x/research/stage_2/lifecycle/solo_tasks.py",
     "docs/development/special_research_points/SRP-S2-001.md"
   ],
-  "state_hash": "af0beaaae7f018c7c05658578a80ff61e64c2e5b4c58c6029b94e4a29619ebb1"
+  "state_hash": "fbbff44b533e41749e853f6185fe345d733bcddc4b54bdd02468dc50559fafe2"
 }

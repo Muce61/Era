@@ -116,6 +116,26 @@ def test_fragment_aware_reader_reads_only_exact_logical_slice(tmp_path: Path) ->
         "fragment_count": 1,
         "logical_partition_count": 1,
     }
+    assert (
+        reader.constant_partition_column_value(
+            dataset_name="sample",
+            dataset_version="1.0",
+            instrument="BTCUSDT",
+            variant="FOUNDATION",
+            owner_date=date(2024, 1, 1),
+            column="instrument",
+        )
+        == "BTCUSDT"
+    )
+    with pytest.raises(ValueError, match="not provably constant"):
+        reader.constant_partition_column_value(
+            dataset_name="sample",
+            dataset_version="1.0",
+            instrument="BTCUSDT",
+            variant="FOUNDATION",
+            owner_date=date(2024, 1, 1),
+            column="value",
+        )
 
 
 def test_physical_dataset_requires_complete_object_tiling(tmp_path: Path) -> None:

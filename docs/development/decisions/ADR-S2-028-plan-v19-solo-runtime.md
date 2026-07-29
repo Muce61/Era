@@ -14,6 +14,11 @@ Plan v1.9 采用四个入口：`status / prepare / run / resume`。`prepare` 把
 精确代码 commit 和 inputs-lock Hash；`run` 必须先 fsync `run-authority.json`，然后才可
 创建 Run ID。
 
+`prepare` 的十二类 binding 必须由 commit-bound production builder 自动推导，不再接受
+操作员提供的 input-spec。规则文件固定每个正式证据路径、字段和推导算法；输入锁记录
+rule ID 与 rules Hash。Authority 创建前再次从源证据重算，任一字段、源文件、
+Contract Price 分区或四处固定 seed 漂移均失败关闭。
+
 十个 Task 不再重复产生 Catalog、Manifest、Verify 和 Receipt。每次 attempt 只保留输出、
 checkpoint 和日志；完成事实写入一个 fsync 的 `events.jsonl` Hash 链。全链完成后只生成
 一次附录 J `final-manifest.json` 和一次 `final-verify.json`。Run 目录依次从 `runs/` 原子

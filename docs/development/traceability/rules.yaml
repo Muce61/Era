@@ -2514,14 +2514,19 @@ rules:
   - scripts/check_governance_state.py (STRICT historical and Plan v1.9 projection consistency gate)
   - scripts/run_stage2_v19.py
   - src/era100x/foundation/governance/current_state.py
+  - src/era100x/research/stage_2/baselines/conditional/t10_access.py
+  - src/era100x/research/stage_2/lifecycle/production_input_spec.py
+  - src/era100x/research/stage_2/lifecycle/solo_inputs.py
   - src/era100x/research/stage_2/lifecycle/solo_runtime.py
   - src/era100x/research/stage_2/lifecycle/solo_tasks.py
+  - configs/research/stage_2/s2p19_production_input_bindings_v1.json
   test_paths:
   - tests/governance/test_current_development_state.py
   - tests/scripts/test_check_governance_state.py
   validation_paths:
   - docs/development/validations/stage_2/S2P17-T20.md
   - docs/development/validations/stage_2/S2P19-solo-runtime-migration.md
+  - docs/development/validations/stage_2/S2P19-production-input-bindings.md
   stage_2_governance:
     current_plan_version: '1.9'
     current_plan_status: SOLO_RUNTIME_IMPLEMENTED_PREPARE_GATED
