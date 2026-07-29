@@ -109,12 +109,21 @@ def _validate_source_audit(raw: object) -> dict[str, Any]:
     audit = cast(dict[str, Any], raw)
     if (
         audit.get("schema_name") != "stage2-lifecycle-source-audit"
+        or audit.get("schema_version") != "1.1"
         or audit.get("status") != "PASS"
         or audit.get("scope_start_date") != SCOPE_START
         or audit.get("scope_end_date_exclusive") != SCOPE_END_EXCLUSIVE
         or audit.get("source_relationship") != "DISTINCT_BINANCE_ARCHIVE_FAMILIES"
         or audit.get("forward_filled_seconds_forbidden") is not True
         or audit.get("historical_execution_claim") is not False
+        or audit.get("canonical_trade_overlay_mode") != "EXACT_KEY_APPEND_ONLY_SUPPLEMENT_V1"
+        or audit.get("trade_supplement_instrument") != "BTCUSDT"
+        or audit.get("trade_supplement_date") != "2022-03-01"
+        or audit.get("legacy_stage1_partition_modified") is not False
+        or not isinstance(audit.get("trade_supplement_acceptance_path"), str)
+        or not Path(str(audit["trade_supplement_acceptance_path"])).is_absolute()
+        or not HEX64.fullmatch(str(audit.get("trade_supplement_file_sha256")))
+        or not HEX64.fullmatch(str(audit.get("trade_supplement_acceptance_hash")))
         or audit.get("audit_hash")
         != canonical_content_hash(
             {key: value for key, value in audit.items() if key != "audit_hash"}

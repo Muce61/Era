@@ -80,6 +80,13 @@ T11 ─────────────────────────�
 `binding_rule` 和 production rules Hash。创建 Authority 前必须根据输入锁内的分区和当前
 冻结合同重新推导十二项；仅满足“64位字符串格式”不构成有效绑定。
 
+`BTCUSDT/2022-03-01` 必须通过 CR-2026-043 / ADR-S2-020 的唯一 exact-key supplement
+读取。`prepare` 必须重新验证官方 ZIP checksum、supplement Acceptance/Manifest/Catalog、
+原 sealed receipt 的 byte/logical/count 相等性，并把 Acceptance 路径、文件 SHA、
+Acceptance Hash 和 exact key 写入自哈希 source audit；不得增加第十三类 role、覆盖损坏
+的 Stage 1 文件或把 overlay 放宽到其他日期。`run/resume` 只能从已批准 inputs lock
+恢复同一绑定。
+
 Policy v8 只声明这些操作在满足上述门后具有能力；当前 machine state 在真实 inputs lock
 和精确人工批准出现前仍阻止 Authority、Run、resume 和 publication。
 

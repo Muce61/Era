@@ -26,7 +26,7 @@ class LifecycleSourceAudit(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
 
     schema_name: Literal["stage2-lifecycle-source-audit"]
-    schema_version: Literal["1.0"]
+    schema_version: Literal["1.0", "1.1"]
     status: Literal["PASS", "BLOCKED_SOURCE_NOT_INDEPENDENT_OR_INFORMATIVE"]
     scope_start_date: str
     scope_end_date_exclusive: str
@@ -40,6 +40,13 @@ class LifecycleSourceAudit(BaseModel):
     provenance_script_sha256: str
     source_checkpoint_path: str
     source_checkpoint_sha256: str
+    canonical_trade_overlay_mode: Literal["EXACT_KEY_APPEND_ONLY_SUPPLEMENT_V1"] | None = None
+    trade_supplement_acceptance_path: str | None = None
+    trade_supplement_file_sha256: str | None = None
+    trade_supplement_acceptance_hash: str | None = None
+    trade_supplement_instrument: Literal["BTCUSDT", "ETHUSDT"] | None = None
+    trade_supplement_date: str | None = None
+    legacy_stage1_partition_modified: bool | None = None
     audits: tuple[InstrumentGapAudit, ...]
     forward_filled_seconds_forbidden: bool
     historical_execution_claim: bool
@@ -53,6 +60,26 @@ class LifecycleSourceAudit(BaseModel):
             raise ValueError("zero-volume forward-filled seconds must remain forbidden")
         if {item.instrument for item in self.audits} != {"BTCUSDT", "ETHUSDT"}:
             raise ValueError("source audit must keep BTC and ETH separate and complete")
+        supplement_values = (
+            self.canonical_trade_overlay_mode,
+            self.trade_supplement_acceptance_path,
+            self.trade_supplement_file_sha256,
+            self.trade_supplement_acceptance_hash,
+            self.trade_supplement_instrument,
+            self.trade_supplement_date,
+            self.legacy_stage1_partition_modified,
+        )
+        if self.schema_version == "1.1":
+            if (
+                any(value is None for value in supplement_values)
+                or self.canonical_trade_overlay_mode != "EXACT_KEY_APPEND_ONLY_SUPPLEMENT_V1"
+                or self.trade_supplement_instrument != "BTCUSDT"
+                or self.trade_supplement_date != "2022-03-01"
+                or self.legacy_stage1_partition_modified is not False
+            ):
+                raise ValueError("source audit Trade supplement binding drift")
+        elif any(value is not None for value in supplement_values):
+            raise ValueError("legacy source audit cannot carry a Trade supplement")
         passed = all(
             item.trade_gap_second_count > 0
             and item.contract_price_gap_seconds_covered == item.trade_gap_second_count
@@ -60,12 +87,14 @@ class LifecycleSourceAudit(BaseModel):
             and item.contract_price_duplicate_seconds == 0
             for item in self.audits
         )
-        expected_status = (
-            "PASS" if passed else "BLOCKED_SOURCE_NOT_INDEPENDENT_OR_INFORMATIVE"
-        )
+        expected_status = "PASS" if passed else "BLOCKED_SOURCE_NOT_INDEPENDENT_OR_INFORMATIVE"
         if self.status != expected_status:
             raise ValueError("source audit status does not match its measured gates")
-        payload = self.model_dump(mode="json", exclude={"audit_hash"})
+        payload = self.model_dump(
+            mode="json",
+            exclude={"audit_hash"},
+            exclude_none=True,
+        )
         if self.audit_hash != canonical_hash(payload):
             raise ValueError("source audit hash mismatch")
         return self

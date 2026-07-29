@@ -10,12 +10,15 @@ from pathlib import Path
 from typing import Any
 
 from audit_stage2_lifecycle_source import (
+    bound_trade_supplement,
     build_audit,
     collect_contract_price_partitions,
 )
+from era100x.research.stage_2.acceptance.canonical_json import read_canonical_json
 from era100x.research.stage_2.lifecycle.solo_governance import load_policy
 from era100x.research.stage_2.lifecycle.production_input_spec import (
     build_production_input_spec,
+    load_production_trade_supplement,
     validate_production_inputs_lock,
 )
 from era100x.research.stage_2.lifecycle.solo_inputs import (
@@ -36,6 +39,17 @@ DEFAULT_POLICY = ROOT / "configs/governance/stage2_active_policy_v8.json"
 DEFAULT_EVIDENCE_ROOT = Path("/Volumes/FuckingLife/era100x_stage2/formal/stage2-plan-v1.9")
 START = date(2020, 1, 1)
 END_EXCLUSIVE = date(2026, 7, 4)
+
+
+def _supplement_binding(source_audit: dict[str, Any]) -> dict[str, str]:
+    values = {
+        "acceptance_path": str(source_audit.get("trade_supplement_acceptance_path", "")),
+        "file_sha256": str(source_audit.get("trade_supplement_file_sha256", "")),
+        "acceptance_hash": str(source_audit.get("trade_supplement_acceptance_hash", "")),
+    }
+    if not all(values.values()):
+        raise ValueError("inputs lock Trade supplement binding is incomplete")
+    return values
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -73,7 +87,14 @@ def main() -> int:
     if args.command == "prepare":
         if not repository_clean(ROOT):
             raise ValueError("prepare requires a clean implementation commit")
-        audit = build_audit(start=START, end_exclusive=END_EXCLUSIVE)
+        production_supplement = load_production_trade_supplement(ROOT)
+        audit = build_audit(
+            start=START,
+            end_exclusive=END_EXCLUSIVE,
+            trade_supplement_acceptance_path=production_supplement.acceptance_path,
+            trade_supplement_file_sha256=production_supplement.file_sha256,
+            trade_supplement_acceptance_hash=production_supplement.acceptance_hash,
+        )
         if audit.status != "PASS":
             raise ValueError("prepare source audit did not PASS")
         partitions = collect_contract_price_partitions(audit=audit)
@@ -133,25 +154,40 @@ def main() -> int:
             approved_commit=str(args.approved_commit),
             approved_inputs_lock_hash=str(args.approved_input_lock_hash),
         )
-        published = execute_run(
-            policy=policy,
-            authority_path=authority_path,
-            repository_root=ROOT,
-            evidence_root=evidence_root,
-            handlers=HANDLERS,
-        )
+        run_supplement = _supplement_binding(inputs_lock.source_audit)
+        with bound_trade_supplement(
+            acceptance_path=Path(run_supplement["acceptance_path"]),
+            acceptance_file_sha256=run_supplement["file_sha256"],
+            acceptance_hash=run_supplement["acceptance_hash"],
+        ):
+            published = execute_run(
+                policy=policy,
+                authority_path=authority_path,
+                repository_root=ROOT,
+                evidence_root=evidence_root,
+                handlers=HANDLERS,
+            )
         print(published)
         return 0
     if args.authority is None or args.run_root is None:
         raise ValueError("resume requires --authority and --run-root")
-    published = execute_run(
-        policy=policy,
-        authority_path=args.authority.resolve(),
-        repository_root=ROOT,
-        evidence_root=evidence_root,
-        handlers=HANDLERS,
-        resume_run_root=args.run_root.resolve(),
-    )
+    authority = read_canonical_json(args.authority.resolve())
+    inputs_lock = load_inputs_lock(Path(str(authority["inputs_lock_path"])))
+    validate_production_inputs_lock(inputs_lock=inputs_lock, repository_root=ROOT)
+    resume_supplement = _supplement_binding(inputs_lock.source_audit)
+    with bound_trade_supplement(
+        acceptance_path=Path(resume_supplement["acceptance_path"]),
+        acceptance_file_sha256=resume_supplement["file_sha256"],
+        acceptance_hash=resume_supplement["acceptance_hash"],
+    ):
+        published = execute_run(
+            policy=policy,
+            authority_path=args.authority.resolve(),
+            repository_root=ROOT,
+            evidence_root=evidence_root,
+            handlers=HANDLERS,
+            resume_run_root=args.run_root.resolve(),
+        )
     print(published)
     return 0
 

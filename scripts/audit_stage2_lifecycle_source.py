@@ -6,6 +6,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -27,7 +30,9 @@ from era100x.research.stage_2.rerun.seven_day_rehearsal import (
     STAGE1_ROOT,
     _contract_price_day,
     _verified_trade_day,
+    _verified_trade_receipt_day,
 )
+from era100x.research.stage_2.rerun.trade_supplement import verify_trade_supplement
 
 CONTRACT_PRICE_ROOT = Path("/Users/muce/1m_data/klines_data_usdm_1s_agg")
 PROVENANCE_SCRIPT = Path(
@@ -39,6 +44,8 @@ CONTRACT_PRICE_CSV_HEADERS = {
     b"ts_sec,open,high,low,close,volume\n",
     b"ts_sec,open,high,low,close,volume\r\n",
 }
+TRADE_SUPPLEMENT_PATH_ENV = "ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_PATH"
+TRADE_SUPPLEMENT_HASH_ENV = "ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_HASH"
 
 
 def _sha256(path: Path) -> str:
@@ -47,6 +54,47 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(8 * 1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+@contextmanager
+def bound_trade_supplement(
+    *,
+    acceptance_path: Path,
+    acceptance_file_sha256: str,
+    acceptance_hash: str,
+) -> Iterator[None]:
+    """Bind one verified exact-key overlay for audit or formal task execution."""
+
+    verified = verify_trade_supplement(acceptance_path)
+    if (
+        not acceptance_path.is_absolute()
+        or acceptance_path.is_symlink()
+        or _sha256(acceptance_path) != acceptance_file_sha256
+        or verified.get("acceptance_hash") != acceptance_hash
+        or verified.get("instrument") != "BTCUSDT"
+        or verified.get("date") != "2022-03-01"
+        or verified.get("legacy_partition_modified") is not False
+    ):
+        raise ValueError("Trade supplement execution binding drift")
+    previous_path = os.environ.get(TRADE_SUPPLEMENT_PATH_ENV)
+    previous_hash = os.environ.get(TRADE_SUPPLEMENT_HASH_ENV)
+    _verified_trade_day.cache_clear()
+    _verified_trade_receipt_day.cache_clear()
+    os.environ[TRADE_SUPPLEMENT_PATH_ENV] = str(acceptance_path)
+    os.environ[TRADE_SUPPLEMENT_HASH_ENV] = acceptance_file_sha256
+    try:
+        yield
+    finally:
+        _verified_trade_day.cache_clear()
+        _verified_trade_receipt_day.cache_clear()
+        if previous_path is None:
+            os.environ.pop(TRADE_SUPPLEMENT_PATH_ENV, None)
+        else:
+            os.environ[TRADE_SUPPLEMENT_PATH_ENV] = previous_path
+        if previous_hash is None:
+            os.environ.pop(TRADE_SUPPLEMENT_HASH_ENV, None)
+        else:
+            os.environ[TRADE_SUPPLEMENT_HASH_ENV] = previous_hash
 
 
 def _csv_partition_facts(path: Path) -> tuple[str, int, int]:
@@ -143,10 +191,13 @@ def _audit_instrument(
         gap_seconds.update(day_gap_seconds)
 
         contract = _contract_price_day(reader, instrument, current).table
-        contract_seconds = np.asarray(
-            contract["event_ts_ns"].to_numpy(zero_copy_only=False),
-            dtype=np.int64,
-        ) // NS
+        contract_seconds = (
+            np.asarray(
+                contract["event_ts_ns"].to_numpy(zero_copy_only=False),
+                dtype=np.int64,
+            )
+            // NS
+        )
         duplicate_seconds += len(contract_seconds) - len(np.unique(contract_seconds))
         contract_rows = {
             int(second): (
@@ -173,8 +224,7 @@ def _audit_instrument(
                 zero_volume_seconds.add(second)
             visible = prices[trade_seconds == second]
             if visible.size and (
-                high > float(visible.max()) + 1e-12
-                or low < float(visible.min()) - 1e-12
+                high > float(visible.max()) + 1e-12 or low < float(visible.min()) - 1e-12
             ):
                 extra_extreme_seconds.add(second)
         current += timedelta(days=1)
@@ -189,7 +239,14 @@ def _audit_instrument(
     }
 
 
-def build_audit(*, start: date, end_exclusive: date) -> LifecycleSourceAudit:
+def build_audit(
+    *,
+    start: date,
+    end_exclusive: date,
+    trade_supplement_acceptance_path: Path,
+    trade_supplement_file_sha256: str,
+    trade_supplement_acceptance_hash: str,
+) -> LifecycleSourceAudit:
     if not PROVENANCE_SCRIPT.is_file() or not SOURCE_CHECKPOINT.is_file():
         raise ValueError("Contract Price provenance files are missing")
     provenance = PROVENANCE_SCRIPT.read_text(encoding="utf-8")
@@ -199,15 +256,20 @@ def build_audit(*, start: date, end_exclusive: date) -> LifecycleSourceAudit:
     ):
         raise ValueError("Contract Price provenance does not bind Binance aggTrades aggregation")
     reader = FixedT10Reader(T10_SNAPSHOT, expected_snapshot_id=T10_SNAPSHOT_ID)
-    audits = tuple(
-        _audit_instrument(
-            reader,
-            instrument=instrument,
-            start=start,
-            end_exclusive=end_exclusive,
+    with bound_trade_supplement(
+        acceptance_path=trade_supplement_acceptance_path,
+        acceptance_file_sha256=trade_supplement_file_sha256,
+        acceptance_hash=trade_supplement_acceptance_hash,
+    ):
+        audits = tuple(
+            _audit_instrument(
+                reader,
+                instrument=instrument,
+                start=start,
+                end_exclusive=end_exclusive,
+            )
+            for instrument in ("BTCUSDT", "ETHUSDT")
         )
-        for instrument in ("BTCUSDT", "ETHUSDT")
-    )
     passed = all(
         isinstance(item["trade_gap_second_count"], int)
         and item["trade_gap_second_count"] > 0
@@ -218,10 +280,8 @@ def build_audit(*, start: date, end_exclusive: date) -> LifecycleSourceAudit:
     )
     payload: dict[str, object] = {
         "schema_name": "stage2-lifecycle-source-audit",
-        "schema_version": "1.0",
-        "status": (
-            "PASS" if passed else "BLOCKED_SOURCE_NOT_INDEPENDENT_OR_INFORMATIVE"
-        ),
+        "schema_version": "1.1",
+        "status": ("PASS" if passed else "BLOCKED_SOURCE_NOT_INDEPENDENT_OR_INFORMATIVE"),
         "scope_start_date": start.isoformat(),
         "scope_end_date_exclusive": end_exclusive.isoformat(),
         "contract_price_source_family": "BINANCE_USDM_AGGTRADES_DERIVED_1S_OHLC",
@@ -234,6 +294,13 @@ def build_audit(*, start: date, end_exclusive: date) -> LifecycleSourceAudit:
         "provenance_script_sha256": _sha256(PROVENANCE_SCRIPT),
         "source_checkpoint_path": str(SOURCE_CHECKPOINT),
         "source_checkpoint_sha256": _sha256(SOURCE_CHECKPOINT),
+        "canonical_trade_overlay_mode": "EXACT_KEY_APPEND_ONLY_SUPPLEMENT_V1",
+        "trade_supplement_acceptance_path": str(trade_supplement_acceptance_path),
+        "trade_supplement_file_sha256": trade_supplement_file_sha256,
+        "trade_supplement_acceptance_hash": trade_supplement_acceptance_hash,
+        "trade_supplement_instrument": "BTCUSDT",
+        "trade_supplement_date": "2022-03-01",
+        "legacy_stage1_partition_modified": False,
         "audits": audits,
         "forward_filled_seconds_forbidden": True,
         "historical_execution_claim": False,
@@ -308,8 +375,7 @@ def collect_contract_price_partitions(
             ]
             if not present:
                 raise ValueError(
-                    f"Contract Price formal-period partition is missing: "
-                    f"{instrument}:{current}"
+                    f"Contract Price formal-period partition is missing: {instrument}:{current}"
                 )
             source_hash = _t10_contract_source_hash(
                 reader,
@@ -361,8 +427,17 @@ def main() -> int:
     )
     parser.add_argument("--output", type=Path)
     parser.add_argument("--catalog-output", type=Path)
+    parser.add_argument("--trade-supplement-acceptance", required=True, type=Path)
     args = parser.parse_args()
-    audit = build_audit(start=args.start_date, end_exclusive=args.end_date_exclusive)
+    supplement_path = args.trade_supplement_acceptance.resolve()
+    supplement = verify_trade_supplement(supplement_path)
+    audit = build_audit(
+        start=args.start_date,
+        end_exclusive=args.end_date_exclusive,
+        trade_supplement_acceptance_path=supplement_path,
+        trade_supplement_file_sha256=sha256_file(supplement_path),
+        trade_supplement_acceptance_hash=str(supplement["acceptance_hash"]),
+    )
     encoded = json.dumps(
         audit.model_dump(mode="json"),
         ensure_ascii=False,

@@ -11,6 +11,9 @@ from era100x.research.stage_2.acceptance.canonical_json import (
     canonical_content_hash,
     sha256_file,
 )
+from era100x.research.stage_2.rerun.trade_supplement import (
+    verify_trade_supplement,
+)
 
 from .solo_inputs import (
     EXPECTED_PARTITION_COUNT,
@@ -45,6 +48,20 @@ EXPECTED_EXACT_MATCH_FIELDS: Final = [
 class ProductionInputSpec:
     entries: dict[str, tuple[Path, str]]
     rules_hash: str
+
+
+@dataclass(frozen=True, slots=True)
+class ProductionTradeSupplement:
+    acceptance_path: Path
+    file_sha256: str
+    acceptance_hash: str
+    manifest_hash: str
+    catalog_hash: str
+    instrument: str
+    owner_date: str
+    partition_byte_sha256: str
+    partition_logical_sha256: str
+    row_count: int
 
 
 def _safe_json(path: Path, *, label: str) -> dict[str, Any]:
@@ -91,19 +108,103 @@ def _load_rules(repository_root: Path) -> tuple[dict[str, Any], str]:
     rules_hash = _self_hash(rules, "rules_hash", label="production input binding rules")
     if (
         rules.get("schema_name") != "s2p19-production-input-binding-rules"
-        or rules.get("schema_version") != "1.0"
+        or rules.get("schema_version") != "1.1"
         or rules.get("stage_plan_version") != "1.9"
         or rules.get("scope_start_date") != SCOPE_START
         or rules.get("scope_end_date_exclusive") != SCOPE_END_EXCLUSIVE
         or rules.get("historical_execution_claim") is not False
         or rules.get("stage3_locked") is not True
         or rules.get("role_rules") != REQUIRED_BINDING_RULES
+        or rules.get("trade_supplement_rule")
+        != "EXACT_KEY_ACCEPTANCE_AND_SEALED_RECEIPT_EQUALITY_V1"
+        or rules.get("trade_supplement_key") != {"instrument": "BTCUSDT", "date": "2022-03-01"}
     ):
         raise ValueError("production input binding rules drift")
     paths = rules.get("paths")
     if not isinstance(paths, dict):
         raise ValueError("production input binding paths are missing")
     return rules, rules_hash
+
+
+def _validate_trade_supplement(
+    rules: dict[str, Any],
+) -> ProductionTradeSupplement:
+    paths = cast(dict[str, str], rules["paths"])
+    acceptance_path = _external_path(paths["trade_supplement_acceptance"])
+    acceptance = _safe_json(
+        acceptance_path,
+        label="Trade supplement acceptance",
+    )
+    verified = verify_trade_supplement(acceptance_path)
+    manifest_path = _external_path(str(acceptance.get("manifest_path", "")))
+    manifest = _safe_json(manifest_path, label="Trade supplement Manifest")
+    instrument = str(verified.get("instrument", ""))
+    owner_date = str(verified.get("date", ""))
+    expected_published_root = _external_path(paths["stage1_published_root"])
+    expected_partition_root = (
+        expected_published_root / instrument / f"archive={owner_date[:7]}" / f"date={owner_date}"
+    )
+    original_receipt_path = expected_partition_root / "partition.json"
+    original_receipt = _safe_json(
+        original_receipt_path,
+        label="original Stage 1 Trade receipt",
+    )
+    catalog_root = _external_path(paths["stage1_catalog_root"])
+    catalog = _safe_json(
+        catalog_root / f"{instrument}.catalog.json",
+        label="Stage 1 supplement instrument Catalog",
+    )
+    matching_entries = [
+        item
+        for item in cast(list[object], catalog.get("entries", []))
+        if isinstance(item, dict) and item.get("date") == owner_date
+    ]
+    if len(matching_entries) != 1:
+        raise ValueError("Trade supplement sealed Catalog key is not unique")
+    catalog_entry = cast(dict[str, Any], matching_entries[0])
+    acceptance_hash = str(verified.get("acceptance_hash", ""))
+    partition_byte_hash = str(verified.get("partition_byte_sha256", ""))
+    partition_logical_hash = str(verified.get("partition_logical_sha256", ""))
+    if (
+        acceptance.get("append_only") is not True
+        or acceptance.get("legacy_partition_modified") is not False
+        or instrument != "BTCUSDT"
+        or owner_date != "2022-03-01"
+        or manifest.get("change_request") != "CR-2026-043"
+        or manifest.get("decision") != "ADR-S2-020"
+        or manifest.get("source_archive_path") != paths["trade_supplement_source_archive"]
+        or manifest.get("source_checksum_path") != paths["trade_supplement_source_checksum"]
+        or manifest.get("original_partition_root") != str(expected_partition_root)
+        or manifest.get("original_receipt_path") != str(original_receipt_path)
+        or manifest.get("original_expected_byte_sha256") != partition_byte_hash
+        or catalog_entry.get("byte_sha256") != partition_byte_hash
+        or original_receipt.get("byte_sha256") != partition_byte_hash
+        or original_receipt.get("logical_sha256") != partition_logical_hash
+        or original_receipt.get("rows") != verified.get("row_count")
+        or acceptance.get("acceptance_hash") != acceptance_hash
+    ):
+        raise ValueError("Trade supplement exact-key sealed binding drift")
+    return ProductionTradeSupplement(
+        acceptance_path=acceptance_path,
+        file_sha256=sha256_file(acceptance_path),
+        acceptance_hash=acceptance_hash,
+        manifest_hash=str(verified["manifest_hash"]),
+        catalog_hash=str(verified["catalog_hash"]),
+        instrument=instrument,
+        owner_date=owner_date,
+        partition_byte_sha256=partition_byte_hash,
+        partition_logical_sha256=partition_logical_hash,
+        row_count=int(verified["row_count"]),
+    )
+
+
+def load_production_trade_supplement(
+    repository_root: Path,
+) -> ProductionTradeSupplement:
+    """Derive the only production Trade overlay from the committed rules."""
+
+    rules, _ = _load_rules(repository_root.resolve())
+    return _validate_trade_supplement(rules)
 
 
 def _validate_stage1(
@@ -119,9 +220,9 @@ def _validate_stage1(
     if (
         manifest.get("run_id") != rules["stage1_run_id"]
         or manifest.get("dataset_version") != "stage1-trades-v2"
-        or manifest.get("source")
-        != "Binance official public USD-M Futures Trades archives"
-        or set(cast(dict[str, Any], manifest.get("symbols", {}))) != {
+        or manifest.get("source") != "Binance official public USD-M Futures Trades archives"
+        or set(cast(dict[str, Any], manifest.get("symbols", {})))
+        != {
             "BTCUSDT",
             "ETHUSDT",
         }
@@ -265,8 +366,7 @@ def _validate_matching(path: Path, rules: dict[str, Any]) -> tuple[str, int]:
         or authority.get("controls_per_episode") != 5
         or authority.get("exact_match_fields") != EXPECTED_EXACT_MATCH_FIELDS
         or authority.get("relaxation_order") != ["L0", "L1", "L2", "L3", "L4", "L5"]
-        or authority.get("quintile_algorithm_id")
-        != "TIE_PRESERVING_NEAREST_CUMULATIVE_V1"
+        or authority.get("quintile_algorithm_id") != "TIE_PRESERVING_NEAREST_CUMULATIVE_V1"
         or authority.get("source_t10_binding_hash") != rules["t10_snapshot_id"]
         or len(cast(list[object], authority.get("combination_order", []))) != 30
         or ["G1-PRIMARY-V1", "T2"]
@@ -351,6 +451,7 @@ def build_production_input_spec(
     repository_root = repository_root.resolve()
     rules, rules_hash = _load_rules(repository_root)
     paths = cast(dict[str, str], rules["paths"])
+    _validate_trade_supplement(rules)
     entries = _validate_stage1(rules)
 
     checkpoint = _external_path(paths["contract_price_source_checkpoint"])
@@ -412,6 +513,19 @@ def validate_production_inputs_lock(
     )
     if inputs_lock.production_binding_rules_hash != expected.rules_hash:
         raise ValueError("inputs lock production binding rules Hash drift")
+    supplement = load_production_trade_supplement(repository_root)
+    audit = inputs_lock.source_audit
+    if (
+        audit.get("schema_version") != "1.1"
+        or audit.get("canonical_trade_overlay_mode") != "EXACT_KEY_APPEND_ONLY_SUPPLEMENT_V1"
+        or audit.get("trade_supplement_acceptance_path") != str(supplement.acceptance_path)
+        or audit.get("trade_supplement_file_sha256") != supplement.file_sha256
+        or audit.get("trade_supplement_acceptance_hash") != supplement.acceptance_hash
+        or audit.get("trade_supplement_instrument") != supplement.instrument
+        or audit.get("trade_supplement_date") != supplement.owner_date
+        or audit.get("legacy_stage1_partition_modified") is not False
+    ):
+        raise ValueError("inputs lock Trade supplement binding drift")
     for role, (path, binding_hash) in expected.entries.items():
         actual = inputs_lock.bindings[role]
         if actual.path != path or actual.binding_hash != binding_hash:

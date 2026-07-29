@@ -31,6 +31,9 @@
 检查。每个 entry 同时保存源文件 SHA-256、semantic binding Hash 和固定 rule ID；在
 Authority 创建前必须重新推导并逐项相等。Contract Price Catalog binding 必须覆盖
 `[2020-01-01, 2026-07-04)` 的 BTC/ETH 全部逐日分区；四处固定 seed 必须一致。
+CR-2026-043 的 `BTCUSDT/2022-03-01` supplement 不增加 role；其 Acceptance 路径、文件
+SHA、自 Hash、exact key 和 `legacy_partition_modified=false` 必须进入 source audit，
+并由 inputs lock 自 Hash、Authority 和 T11 共同绑定。除该 key 外不得解析到 overlay。
 
 ## Task 语义
 

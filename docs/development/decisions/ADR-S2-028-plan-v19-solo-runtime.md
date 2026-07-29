@@ -19,6 +19,10 @@ Plan v1.9 采用四个入口：`status / prepare / run / resume`。`prepare` 把
 rule ID 与 rules Hash。Authority 创建前再次从源证据重算，任一字段、源文件、
 Contract Price 分区或四处固定 seed 漂移均失败关闭。
 
+CR-2026-043 / ADR-S2-020 的唯一 Trade supplement 作为 source audit 的 exact-key
+组成部分进入 inputs lock，不增加第十三类 role。prepare、run 和 resume 必须重新验证并
+绑定同一个 Acceptance Hash；损坏的 Stage 1 文件继续保留，不得原地修复。
+
 十个 Task 不再重复产生 Catalog、Manifest、Verify 和 Receipt。每次 attempt 只保留输出、
 checkpoint 和日志；完成事实写入一个 fsync 的 `events.jsonl` Hash 链。全链完成后只生成
 一次附录 J `final-manifest.json` 和一次 `final-verify.json`。Run 目录依次从 `runs/` 原子

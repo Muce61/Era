@@ -41,7 +41,7 @@ def _hash(value: str) -> str:
 def _source_audit() -> dict[str, Any]:
     payload: dict[str, Any] = {
         "schema_name": "stage2-lifecycle-source-audit",
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "status": "PASS",
         "scope_start_date": "2020-01-01",
         "scope_end_date_exclusive": "2026-07-04",
@@ -55,6 +55,13 @@ def _source_audit() -> dict[str, Any]:
         "provenance_script_sha256": "1" * 64,
         "source_checkpoint_path": "/fixture/checkpoint.json",
         "source_checkpoint_sha256": "2" * 64,
+        "canonical_trade_overlay_mode": "EXACT_KEY_APPEND_ONLY_SUPPLEMENT_V1",
+        "trade_supplement_acceptance_path": "/fixture/supplement/acceptance.json",
+        "trade_supplement_file_sha256": "3" * 64,
+        "trade_supplement_acceptance_hash": "4" * 64,
+        "trade_supplement_instrument": "BTCUSDT",
+        "trade_supplement_date": "2022-03-01",
+        "legacy_stage1_partition_modified": False,
         "audits": [
             {
                 "instrument": instrument,
@@ -217,9 +224,24 @@ def test_production_validation_rederives_semantic_hashes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     lock = _inputs_lock(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        production_input_spec,
+        "load_production_trade_supplement",
+        lambda _root: production_input_spec.ProductionTradeSupplement(
+            acceptance_path=Path(str(lock.source_audit["trade_supplement_acceptance_path"])),
+            file_sha256=str(lock.source_audit["trade_supplement_file_sha256"]),
+            acceptance_hash=str(lock.source_audit["trade_supplement_acceptance_hash"]),
+            manifest_hash="5" * 64,
+            catalog_hash="6" * 64,
+            instrument="BTCUSDT",
+            owner_date="2022-03-01",
+            partition_byte_sha256="7" * 64,
+            partition_logical_sha256="8" * 64,
+            row_count=1,
+        ),
+    )
     entries = {
-        role: (binding.path, binding.binding_hash)
-        for role, binding in lock.bindings.items()
+        role: (binding.path, binding.binding_hash) for role, binding in lock.bindings.items()
     }
     monkeypatch.setattr(
         production_input_spec,
