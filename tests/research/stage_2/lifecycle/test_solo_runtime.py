@@ -45,7 +45,7 @@ def _hash(value: str) -> str:
 def _source_audit() -> dict[str, Any]:
     payload: dict[str, Any] = {
         "schema_name": "stage2-lifecycle-source-audit",
-        "schema_version": "1.2",
+        "schema_version": "1.3",
         "status": "PASS",
         "scope_start_date": "2020-01-01",
         "scope_end_date_exclusive": "2026-07-04",
@@ -83,6 +83,7 @@ def _source_audit() -> dict[str, Any]:
             for instrument in ("BTCUSDT", "ETHUSDT")
         ],
         "forward_filled_seconds_forbidden": True,
+        "zero_trade_contract_price_proxy_allowed": True,
         "historical_execution_claim": False,
     }
     payload["audit_hash"] = solo_inputs.canonical_content_hash(payload)
@@ -267,7 +268,7 @@ def test_real_inputs_lock_source_audit_json_round_trip() -> None:
     lock = load_inputs_lock(Path(raw_path))
     audit = validate_source_audit_payload(lock.source_audit)
 
-    assert audit.schema_version == "1.2"
+    assert audit.schema_version == "1.3"
     assert audit.status == "PASS"
     assert audit.audit_hash == lock.source_audit["audit_hash"]
     assert isinstance(audit.audits, tuple)

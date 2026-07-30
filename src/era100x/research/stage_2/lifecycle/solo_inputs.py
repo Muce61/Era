@@ -112,12 +112,13 @@ def _validate_source_audit(raw: object) -> dict[str, Any]:
     audit = cast(dict[str, Any], raw)
     if (
         audit.get("schema_name") != "stage2-lifecycle-source-audit"
-        or audit.get("schema_version") != "1.2"
+        or audit.get("schema_version") != "1.3"
         or audit.get("status") != "PASS"
         or audit.get("scope_start_date") != SCOPE_START
         or audit.get("scope_end_date_exclusive") != SCOPE_END_EXCLUSIVE
         or audit.get("source_relationship") != "DISTINCT_BINANCE_ARCHIVE_FAMILIES"
         or audit.get("forward_filled_seconds_forbidden") is not True
+        or audit.get("zero_trade_contract_price_proxy_allowed") is not True
         or audit.get("historical_execution_claim") is not False
         or audit.get("canonical_trade_overlay_mode") != "EXACT_KEY_APPEND_ONLY_SUPPLEMENT_V1"
         or audit.get("trade_supplement_instrument") != "BTCUSDT"

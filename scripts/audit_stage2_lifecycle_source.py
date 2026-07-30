@@ -349,7 +349,7 @@ def build_audit(
     )
     payload: dict[str, object] = {
         "schema_name": "stage2-lifecycle-source-audit",
-        "schema_version": "1.2",
+        "schema_version": "1.3",
         "status": ("PASS" if passed else "BLOCKED_SOURCE_NOT_INDEPENDENT_OR_INFORMATIVE"),
         "scope_start_date": start.isoformat(),
         "scope_end_date_exclusive": end_exclusive.isoformat(),
@@ -372,6 +372,7 @@ def build_audit(
         "legacy_stage1_partition_modified": False,
         "audits": tuple(audits),
         "forward_filled_seconds_forbidden": True,
+        "zero_trade_contract_price_proxy_allowed": True,
         "evidence_mode": "SEALED_INCREMENTAL_V1",
         "full_trade_row_rescan": False,
         "targeted_reverification": ("T11_EPISODE_WINDOW_GAP_SECONDS",),
@@ -410,6 +411,7 @@ def build_contract_price_catalog(
         "partition_count": len(entries),
         "partitions": entries,
         "forward_filled_seconds_forbidden": True,
+        "zero_trade_contract_price_proxy_allowed": True,
         "historical_execution_claim": False,
         "stage3_locked": True,
     }

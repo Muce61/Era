@@ -3,8 +3,8 @@
 ```text
 Current Stage: Stage 2
 Current Plan: stage_2_plan_v1.10 — SEALED INCREMENTAL RUNTIME
-Current Task: S2P110-T11 v1.0 — sealed adoption validation and prepare pending
-Status: IMPLEMENTATION AND VALIDATION PASS / PREPARE PENDING / FORMAL RUN GATED
+Current Task: S2P110-T11 v1.1 — zero-Trade Contract Price proxy repair
+Status: CR-2026-051 REPAIR VALIDATED / PREPARE PENDING / FORMAL RUN GATED
 ```
 
 Plan v1.10 supersedes unexecuted Plan v1.9 with the approved S2P110-T11–T20 sealed incremental
@@ -19,7 +19,8 @@ Plan v1.7 evidence remains immutable: BTC/ETH H2 Primary remain `PRIMARY_FAILED`
 The machine authority is `configs/governance/current_development_state.json` schema v1.3 bound to
 `configs/governance/stage2_active_policy_v9.json`. The historical v1.8 source audit is
 `configs/research/stage_2/s2p18_t11_source_audit_v1.json`; it binds distinct Binance Trades and
-aggTrades archive families and forbids zero-volume forward-filled seconds as gap recovery.
+aggTrades archive families. CR-2026-051 / ADR-S2-030 permits a bound, flat zero-Trade Contract
+Price second as a price proxy while continuing to forbid synthetic Trades or execution claims.
 
 The v1.10 entrypoint is `scripts/run_stage2_v110.py` with exactly `status / prepare / run / resume`.
 One inputs lock replaces source/input Catalogs; one Authority embeds the human approval; one

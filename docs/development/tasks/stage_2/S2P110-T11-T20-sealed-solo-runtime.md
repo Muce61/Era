@@ -2,7 +2,7 @@
 
 ## 状态
 
-- status: `APPROVED / IMPLEMENTED_VALIDATED / PREPARE_PENDING / FORMAL RUN GATED`
+- status: `APPROVED / CR-2026-051 ZERO-TRADE PROXY REPAIR VALIDATED / PREPARE PENDING / FORMAL RUN GATED`
 - task_ids: [S2P110-T11, S2P110-T12, S2P110-T13, S2P110-T14, S2P110-T15, S2P110-T16, S2P110-T17, S2P110-T18, S2P110-T19, S2P110-T20]
 - execution_limit: `S2P110-T20`
 - formal_run_executed: `false`
@@ -15,6 +15,16 @@
 | T11 | `EXECUTED_NEW` | PURE_TRADES comparator + Contract Price OHLC lifecycle |
 | T12～T18 | `SEALED_ADOPTION` | 验证并引用语义未变化的正式 H2/匹配/placebo/cluster 证据 |
 | T19～T20 | `EXECUTED_NEW` | 新 lifecycle 与历史 H2 分流综合、最终验收 |
+
+## T11 零-Trade 秒代理合同
+
+CR-2026-051 / ADR-S2-030 批准在 canonical Trades 缺口秒直接使用已绑定 Contract
+Price OHLC。`volume=0` 时 OHLC 必须平坦；该值仍按 target/stop 粗边界分类，但不得生成
+Trade、成交或秒内顺序声明。非平坦零成交量值、分区缺失、重复秒和 Hash 漂移继续失败
+关闭。`PURE_TRADES_COMPARATOR` 不受影响。
+
+历史 Run `stage2-s2p110-20260729T161703Z-4c27eb3fe79f` 与
+`stage2-s2p110-20260729T162336Z-e2d0272d8420` 均保持 `FAILED_UNPUBLISHED`。
 
 `TASK_COMPLETED` 必须记录 `execution_mode`。adoption 还必须记录 source Run、source
 receipt/Verify、source output tree 和 adoption binding Hash。adoption 不产生研究新结果，

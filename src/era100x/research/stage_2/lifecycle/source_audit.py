@@ -33,7 +33,7 @@ class LifecycleSourceAudit(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
 
     schema_name: Literal["stage2-lifecycle-source-audit"]
-    schema_version: Literal["1.0", "1.1", "1.2"]
+    schema_version: Literal["1.0", "1.1", "1.2", "1.3"]
     status: Literal["PASS", "BLOCKED_SOURCE_NOT_INDEPENDENT_OR_INFORMATIVE"]
     scope_start_date: str
     scope_end_date_exclusive: str
@@ -56,6 +56,7 @@ class LifecycleSourceAudit(BaseModel):
     legacy_stage1_partition_modified: bool | None = None
     audits: tuple[InstrumentGapAudit, ...]
     forward_filled_seconds_forbidden: bool
+    zero_trade_contract_price_proxy_allowed: bool | None = None
     historical_execution_claim: bool
     evidence_mode: Literal["SEALED_INCREMENTAL_V1"] | None = None
     full_trade_row_rescan: bool | None = None
@@ -68,7 +69,7 @@ class LifecycleSourceAudit(BaseModel):
         if self.historical_execution_claim:
             raise ValueError("source audit cannot claim historical execution")
         if not self.forward_filled_seconds_forbidden:
-            raise ValueError("zero-volume forward-filled seconds must remain forbidden")
+            raise ValueError("forward-filled Contract Price cannot become a synthetic Trade")
         if {item.instrument for item in self.audits} != {"BTCUSDT", "ETHUSDT"}:
             raise ValueError("source audit must keep BTC and ETH separate and complete")
         supplement_values = (
@@ -80,7 +81,7 @@ class LifecycleSourceAudit(BaseModel):
             self.trade_supplement_date,
             self.legacy_stage1_partition_modified,
         )
-        if self.schema_version in {"1.1", "1.2"}:
+        if self.schema_version in {"1.1", "1.2", "1.3"}:
             if (
                 any(value is None for value in supplement_values)
                 or self.canonical_trade_overlay_mode != "EXACT_KEY_APPEND_ONLY_SUPPLEMENT_V1"
@@ -91,7 +92,7 @@ class LifecycleSourceAudit(BaseModel):
                 raise ValueError("source audit Trade supplement binding drift")
         elif any(value is not None for value in supplement_values):
             raise ValueError("legacy source audit cannot carry a Trade supplement")
-        if self.schema_version == "1.2":
+        if self.schema_version in {"1.2", "1.3"}:
             if (
                 self.evidence_mode != "SEALED_INCREMENTAL_V1"
                 or self.full_trade_row_rescan is not False
@@ -105,9 +106,23 @@ class LifecycleSourceAudit(BaseModel):
                 )
             ):
                 raise ValueError("sealed incremental source audit gate failed")
+            if (
+                self.schema_version == "1.3"
+                and self.zero_trade_contract_price_proxy_allowed is not True
+            ):
+                raise ValueError("zero-Trade Contract Price proxy contract is not approved")
+            if (
+                self.schema_version == "1.2"
+                and self.zero_trade_contract_price_proxy_allowed is not None
+            ):
+                raise ValueError("legacy sealed audit cannot carry zero-Trade proxy approval")
             passed = True
         else:
-            if self.evidence_mode is not None or self.full_trade_row_rescan is not None:
+            if (
+                self.evidence_mode is not None
+                or self.full_trade_row_rescan is not None
+                or self.zero_trade_contract_price_proxy_allowed is not None
+            ):
                 raise ValueError("legacy source audit cannot claim sealed incremental evidence")
             passed = all(
                 item.trade_gap_second_count > 0

@@ -17,6 +17,8 @@ from era100x.research.stage_2.lifecycle.source_audit import (
     validate_source_audit_payload,
 )
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
+
 
 def _payload() -> dict[str, object]:
     payload: dict[str, object] = {
@@ -61,6 +63,22 @@ def test_v110_prepare_path_never_materializes_trade_price_columns() -> None:
     assert "to_pylist" not in source
     assert "_verified_trade_day" not in source
     assert "_audit_instrument" not in source
+
+
+def test_contract_trade_boundary_sample_evidence_is_hash_bound() -> None:
+    path = (
+        REPOSITORY_ROOT / "configs/research/stage_2/s2p110_contract_trade_boundary_sample_v1.json"
+    )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    claimed = payload.pop("evidence_hash")
+
+    assert canonical_hash(payload) == claimed
+    assert claimed == "b1ff97f2261af63ff161a123902593fcb9a0a8a3e372e9a082ca99f734dc199c"
+    for instrument in ("BTCUSDT", "ETHUSDT"):
+        result = payload["results"][instrument]
+        assert result["exact_low_high_matches"] == result["occupied_sample"] == 100
+        assert result["zero_volume_flat_ohlc"] == result["zero_volume_sample"] == 20
+        assert result["zero_volume_without_visible_trade"] == 20
 
 
 def test_source_audit_passes_without_requiring_a_new_extreme() -> None:
@@ -109,6 +127,54 @@ def test_source_audit_v11_binds_only_the_approved_trade_supplement() -> None:
         {key: value for key, value in payload.items() if key != "audit_hash"}
     )
     with pytest.raises(ValueError, match="supplement binding drift"):
+        LifecycleSourceAudit.model_validate(payload)
+
+
+def test_source_audit_v13_binds_zero_trade_contract_price_proxy() -> None:
+    payload = _payload()
+    payload.update(
+        {
+            "schema_version": "1.3",
+            "canonical_trade_overlay_mode": "EXACT_KEY_APPEND_ONLY_SUPPLEMENT_V1",
+            "trade_supplement_acceptance_path": "/supplement/acceptance.json",
+            "trade_supplement_file_sha256": "c" * 64,
+            "trade_supplement_acceptance_hash": "d" * 64,
+            "trade_supplement_instrument": "BTCUSDT",
+            "trade_supplement_date": "2022-03-01",
+            "legacy_stage1_partition_modified": False,
+            "evidence_mode": "SEALED_INCREMENTAL_V1",
+            "full_trade_row_rescan": False,
+            "targeted_reverification": ("T11_EPISODE_WINDOW_GAP_SECONDS",),
+            "unverified_or_drifted_sources": (),
+            "zero_trade_contract_price_proxy_allowed": True,
+            "audits": tuple(
+                {
+                    "instrument": instrument,
+                    "trade_gap_count": 1,
+                    "trade_gap_second_count": 0,
+                    "contract_price_gap_seconds_covered": 0,
+                    "contract_price_zero_volume_gap_seconds": 0,
+                    "contract_price_duplicate_seconds": 0,
+                    "contract_price_extreme_beyond_visible_trades_count": 0,
+                    "gap_second_check_status": "DEFERRED_TO_T11_EPISODE_WINDOWS",
+                    "stage1_gap_inventory_hash": "e" * 64,
+                    "contract_price_partition_count": 2376,
+                }
+                for instrument in ("BTCUSDT", "ETHUSDT")
+            ),
+        }
+    )
+    payload["audit_hash"] = canonical_hash(
+        {key: value for key, value in payload.items() if key != "audit_hash"}
+    )
+
+    assert LifecycleSourceAudit.model_validate(payload).schema_version == "1.3"
+
+    payload["zero_trade_contract_price_proxy_allowed"] = False
+    payload["audit_hash"] = canonical_hash(
+        {key: value for key, value in payload.items() if key != "audit_hash"}
+    )
+    with pytest.raises(ValueError, match="proxy contract is not approved"):
         LifecycleSourceAudit.model_validate(payload)
 
 

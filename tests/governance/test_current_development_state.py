@@ -21,8 +21,10 @@ def test_repository_current_state_is_plan_v110_prepare_gated_and_hash_valid() ->
     assert state.current_stage == "S2"
     assert state.current_plan == "stage_2_plan_v1.10"
     assert state.current_task == "S2P110-T11"
-    assert state.current_task_version == "1.0"
-    assert state.task_status == "SEALED_RUNTIME_IMPLEMENTED_VALIDATED_PREPARE_GATED"
+    assert state.current_task_version == "1.1"
+    assert (
+        state.task_status == "ZERO_TRADE_CONTRACT_PRICE_PROXY_IMPLEMENTED_VALIDATED_PREPARE_GATED"
+    )
     assert state.stage_status == "IN_PROGRESS"
     assert state.research_decision == "STAGE2_NO_GO_CURRENT_EVIDENCE"
     assert state.current_policy_path == "configs/governance/stage2_active_policy_v9.json"
@@ -112,7 +114,7 @@ def test_resealed_state_can_be_loaded_but_does_not_change_repository_authority(
     assert state.task_status == "IN_PROGRESS"
     assert (
         load_current_development_state().task_status
-        == "SEALED_RUNTIME_IMPLEMENTED_VALIDATED_PREPARE_GATED"
+        == "ZERO_TRADE_CONTRACT_PRICE_PROXY_IMPLEMENTED_VALIDATED_PREPARE_GATED"
     )
 
 

@@ -92,8 +92,8 @@ def classify_gap_bar(
 
     if target_price <= stop_price or stop_price <= 0:
         raise ValueError("static lifecycle boundaries are invalid")
-    if bar.volume == 0:
-        raise ValueError("FORWARD_FILLED_CONTRACT_PRICE_CANNOT_RECOVER_TRADE_GAP")
+    if bar.volume == 0 and not bar.open == bar.high == bar.low == bar.close:
+        raise ValueError("ZERO_TRADE_CONTRACT_PRICE_MUST_BE_FLAT")
     first, last = gap_second_bounds(gap)
     if not first <= bar.event_ts_ns <= last:
         raise ValueError("Contract Price bar is outside the source gap")

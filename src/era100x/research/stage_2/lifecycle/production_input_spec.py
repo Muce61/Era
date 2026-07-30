@@ -530,9 +530,10 @@ def validate_production_inputs_lock(
     audit = inputs_lock.source_audit
     supplement = expected.trade_supplement
     if (
-        audit.get("schema_version") != "1.2"
+        audit.get("schema_version") != "1.3"
         or audit.get("evidence_mode") != "SEALED_INCREMENTAL_V1"
         or audit.get("full_trade_row_rescan") is not False
+        or audit.get("zero_trade_contract_price_proxy_allowed") is not True
         or audit.get("canonical_trade_overlay_mode") != "EXACT_KEY_APPEND_ONLY_SUPPLEMENT_V1"
         or audit.get("trade_supplement_acceptance_path") != str(supplement.acceptance_path)
         or audit.get("trade_supplement_file_sha256") != supplement.file_sha256

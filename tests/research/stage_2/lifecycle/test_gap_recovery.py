@@ -101,7 +101,7 @@ def test_gap_path_stops_at_first_coarse_boundary() -> None:
     ]
 
 
-def test_zero_volume_forward_fill_cannot_recover_a_trade_gap() -> None:
+def test_zero_trade_second_uses_bound_contract_price_without_synthetic_execution() -> None:
     bar = ContractPriceOhlcPoint(
         event_ts_ns=10 * NS,
         available_at_ns=11 * NS,
@@ -112,7 +112,55 @@ def test_zero_volume_forward_fill_cannot_recover_a_trade_gap() -> None:
         volume=Decimal("0"),
         partition_hash="a" * 64,
     )
-    with pytest.raises(ValueError, match="FORWARD_FILLED_CONTRACT_PRICE_CANNOT_RECOVER_TRADE_GAP"):
+    decision = classify_gap_bar(
+        gap=_gap(),
+        bar=bar,
+        target_price=Decimal("101"),
+        stop_price=Decimal("99"),
+    )
+
+    assert decision.boundary_classification is BoundaryClassification.GAP_NON_DECISIVE
+    assert decision.observation is None
+    assert decision.synthetic_execution is False
+
+
+def test_zero_trade_second_can_supply_a_contract_price_boundary() -> None:
+    bar = ContractPriceOhlcPoint(
+        event_ts_ns=10 * NS,
+        available_at_ns=11 * NS,
+        open=Decimal("102"),
+        high=Decimal("102"),
+        low=Decimal("102"),
+        close=Decimal("102"),
+        volume=Decimal("0"),
+        partition_hash="a" * 64,
+    )
+    decision = classify_gap_bar(
+        gap=_gap(),
+        bar=bar,
+        target_price=Decimal("101"),
+        stop_price=Decimal("99"),
+    )
+
+    assert (
+        decision.boundary_classification is BoundaryClassification.COARSE_TARGET_BOUNDARY_CROSSING
+    )
+    assert decision.observation is not None
+    assert decision.observation.synthetic_execution is False
+
+
+def test_zero_trade_contract_price_must_be_flat() -> None:
+    bar = ContractPriceOhlcPoint(
+        event_ts_ns=10 * NS,
+        available_at_ns=11 * NS,
+        open=Decimal("100"),
+        high=Decimal("101"),
+        low=Decimal("100"),
+        close=Decimal("100"),
+        volume=Decimal("0"),
+        partition_hash="a" * 64,
+    )
+    with pytest.raises(ValueError, match="ZERO_TRADE_CONTRACT_PRICE_MUST_BE_FLAT"):
         classify_gap_bar(
             gap=_gap(),
             bar=bar,
