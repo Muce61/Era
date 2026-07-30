@@ -9,11 +9,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from audit_stage2_lifecycle_source import (
-    bound_trade_supplement,
-    build_audit,
-    collect_contract_price_partitions,
-)
+from audit_stage2_lifecycle_source import build_audit, collect_contract_price_partitions
 from era100x.research.stage_2.acceptance.canonical_json import read_canonical_json
 from era100x.research.stage_2.lifecycle.solo_governance import load_policy
 from era100x.research.stage_2.lifecycle.production_input_spec import (
@@ -39,17 +35,6 @@ DEFAULT_POLICY = ROOT / "configs/governance/stage2_active_policy_v9.json"
 DEFAULT_EVIDENCE_ROOT = Path("/Volumes/FuckingLife/era100x_stage2/formal/stage2-plan-v1.10")
 START = date(2020, 1, 1)
 END_EXCLUSIVE = date(2026, 7, 4)
-
-
-def _supplement_binding(source_audit: dict[str, Any]) -> dict[str, str]:
-    values = {
-        "acceptance_path": str(source_audit.get("trade_supplement_acceptance_path", "")),
-        "file_sha256": str(source_audit.get("trade_supplement_file_sha256", "")),
-        "acceptance_hash": str(source_audit.get("trade_supplement_acceptance_hash", "")),
-    }
-    if not all(values.values()):
-        raise ValueError("inputs lock Trade supplement binding is incomplete")
-    return values
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -160,19 +145,13 @@ def main() -> int:
             approved_inputs_lock_hash=str(args.approved_input_lock_hash),
             approved_adoption_bundle_hash=str(args.approved_adoption_bundle_hash),
         )
-        run_supplement = _supplement_binding(inputs_lock.source_audit)
-        with bound_trade_supplement(
-            acceptance_path=Path(run_supplement["acceptance_path"]),
-            acceptance_file_sha256=run_supplement["file_sha256"],
-            acceptance_hash=run_supplement["acceptance_hash"],
-        ):
-            published = execute_run(
-                policy=policy,
-                authority_path=authority_path,
-                repository_root=ROOT,
-                evidence_root=evidence_root,
-                handlers=HANDLERS,
-            )
+        published = execute_run(
+            policy=policy,
+            authority_path=authority_path,
+            repository_root=ROOT,
+            evidence_root=evidence_root,
+            handlers=HANDLERS,
+        )
         print(published)
         return 0
     if args.authority is None or args.run_root is None:
@@ -180,20 +159,14 @@ def main() -> int:
     authority = read_canonical_json(args.authority.resolve())
     inputs_lock = load_inputs_lock(Path(str(authority["inputs_lock_path"])))
     validate_production_inputs_lock(inputs_lock=inputs_lock, repository_root=ROOT)
-    resume_supplement = _supplement_binding(inputs_lock.source_audit)
-    with bound_trade_supplement(
-        acceptance_path=Path(resume_supplement["acceptance_path"]),
-        acceptance_file_sha256=resume_supplement["file_sha256"],
-        acceptance_hash=resume_supplement["acceptance_hash"],
-    ):
-        published = execute_run(
-            policy=policy,
-            authority_path=args.authority.resolve(),
-            repository_root=ROOT,
-            evidence_root=evidence_root,
-            handlers=HANDLERS,
-            resume_run_root=args.run_root.resolve(),
-        )
+    published = execute_run(
+        policy=policy,
+        authority_path=args.authority.resolve(),
+        repository_root=ROOT,
+        evidence_root=evidence_root,
+        handlers=HANDLERS,
+        resume_run_root=args.run_root.resolve(),
+    )
     print(published)
     return 0
 

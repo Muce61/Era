@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from datetime import date
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -33,6 +34,8 @@ from era100x.research.stage_2.lifecycle.solo_runtime import (
     freeze_authority,
 )
 from era100x.research.stage_2.lifecycle.source_audit import validate_source_audit_payload
+from era100x.research.stage_2.rerun import seven_day_rehearsal
+from era100x.research.stage_2.rerun.trade_supplement import partition_override
 
 COMMIT = "a" * 40
 REAL_INPUTS_LOCK_ENV = "ERA_STAGE2_V110_REAL_INPUTS_LOCK"
@@ -272,6 +275,51 @@ def test_real_inputs_lock_source_audit_json_round_trip() -> None:
     assert audit.status == "PASS"
     assert audit.audit_hash == lock.source_audit["audit_hash"]
     assert isinstance(audit.audits, tuple)
+
+
+def test_real_inputs_lock_reads_btc_2022_03_01_from_sealed_supplement(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    raw_path = os.environ.get(REAL_INPUTS_LOCK_ENV)
+    if raw_path is None:
+        pytest.skip(f"{REAL_INPUTS_LOCK_ENV} is not configured")
+
+    lock = load_inputs_lock(Path(raw_path))
+    audit = validate_source_audit_payload(lock.source_audit)
+    assert audit.trade_supplement_acceptance_path is not None
+    assert audit.trade_supplement_file_sha256 is not None
+    assert audit.trade_supplement_acceptance_hash is not None
+    acceptance_path = Path(audit.trade_supplement_acceptance_path)
+    expected = partition_override(
+        acceptance_path=acceptance_path,
+        instrument="BTCUSDT",
+        owner_date=date(2022, 3, 1),
+    )
+    assert expected is not None
+    monkeypatch.delenv("ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_PATH", raising=False)
+    monkeypatch.delenv("ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_HASH", raising=False)
+
+    with seven_day_rehearsal.bind_trade_supplement_runtime(
+        acceptance_path=acceptance_path,
+        acceptance_file_sha256=audit.trade_supplement_file_sha256,
+        acceptance_hash=audit.trade_supplement_acceptance_hash,
+    ):
+        parquet_path, receipt_path = seven_day_rehearsal._partition_paths(
+            "BTCUSDT",
+            date(2022, 3, 1),
+        )
+        verified_path, partition_hash, gap = (
+            seven_day_rehearsal._verified_trade_receipt_day(
+                "BTCUSDT",
+                date(2022, 3, 1),
+            )
+        )
+
+    assert parquet_path == expected[0]
+    assert receipt_path == expected[1]
+    assert verified_path == expected[0]
+    assert partition_hash == json.loads(receipt_path.read_bytes())["byte_sha256"]
+    assert gap is not None
 
 
 def test_production_validation_rederives_semantic_hashes(

@@ -109,10 +109,20 @@ def validate_full_period_contract_price_inputs(
 
 def _task_t11(ctx: TaskContext) -> dict[str, Any]:
     from era100x.research.stage_2.rerun.seven_day_rehearsal import (
+        bind_trade_supplement_runtime,
         produce_scoped_lifecycle_v110,
     )
 
     source_audit = validate_full_period_contract_price_inputs(ctx)
+    if (
+        source_audit.trade_supplement_acceptance_path is None
+        or source_audit.trade_supplement_file_sha256 is None
+        or source_audit.trade_supplement_acceptance_hash is None
+    ):
+        raise ValueError("T11 inputs lock Trade supplement binding is incomplete")
+    supplement_path = Path(source_audit.trade_supplement_acceptance_path)
+    supplement_file_sha256 = source_audit.trade_supplement_file_sha256
+    supplement_acceptance_hash = source_audit.trade_supplement_acceptance_hash
     ctx.progress(
         {
             "status": "IN_PROGRESS",
@@ -122,15 +132,20 @@ def _task_t11(ctx: TaskContext) -> dict[str, Any]:
             "verify_state": "PENDING",
         }
     )
-    return produce_scoped_lifecycle_v110(
-        start_date=FULL_START,
-        end_date_exclusive=FULL_END_EXCLUSIVE,
-        source_audit=source_audit,
-        source_audit_hash=source_audit.audit_hash,
-        progress_callback=ctx.progress,
-        resume_root=ctx.resume_root,
-        resume_state=ctx.resume_state,
-    )
+    with bind_trade_supplement_runtime(
+        acceptance_path=supplement_path,
+        acceptance_file_sha256=supplement_file_sha256,
+        acceptance_hash=supplement_acceptance_hash,
+    ):
+        return produce_scoped_lifecycle_v110(
+            start_date=FULL_START,
+            end_date_exclusive=FULL_END_EXCLUSIVE,
+            source_audit=source_audit,
+            source_audit_hash=source_audit.audit_hash,
+            progress_callback=ctx.progress,
+            resume_root=ctx.resume_root,
+            resume_state=ctx.resume_state,
+        )
 
 
 def _task_t12(ctx: TaskContext) -> dict[str, Any]:

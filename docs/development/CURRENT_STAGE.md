@@ -21,6 +21,14 @@ The machine authority is `configs/governance/current_development_state.json` sch
 `configs/research/stage_2/s2p18_t11_source_audit_v1.json`; it binds distinct Binance Trades and
 aggTrades archive families. CR-2026-051 / ADR-S2-030 permits a bound, flat zero-Trade Contract
 Price second as a price proxy while continuing to forbid synthetic Trades or execution claims.
+The prior successor Run
+`stage2-s2p110-20260730T021727Z-1fbf6cac3fdc` remains terminal `FAILED` after 4,224/21,942
+episodes because T11 reached the damaged immutable Stage 1 `BTCUSDT/2022-03-01` physical
+partition instead of its already sealed CR-2026-043 supplement. The minimal runtime repair binds
+that supplement directly from `inputs.lock` inside the T11 handler, removes the v1.10 entrypoint's
+ambient environment-variable dependency and requires a real supplement Parquet read-back before a
+new clean implementation commit may run `prepare`. It does not alter lifecycle, H2 or Stage 3
+semantics.
 
 The v1.10 entrypoint is `scripts/run_stage2_v110.py` with exactly `status / prepare / run / resume`.
 One inputs lock replaces source/input Catalogs; one Authority embeds the human approval; one

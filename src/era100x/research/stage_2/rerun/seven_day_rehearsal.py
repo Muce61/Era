@@ -19,7 +19,9 @@ import time
 from array import array
 from bisect import bisect_left, bisect_right
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from functools import lru_cache
 from datetime import UTC, date, datetime, timedelta
@@ -142,6 +144,20 @@ REHEARSAL_BIN_HASH = canonical_hash(
         "schema": "REHEARSAL_ONLY_NOT_FORMAL_BINS",
         "purpose": "consumer-schema-and-outcome-blind-order-check",
     }
+)
+
+
+@dataclass(frozen=True, slots=True)
+class TradeSupplementRuntimeBinding:
+    """Verified exact-key overlay bound by the current formal Task context."""
+
+    acceptance_path: Path
+    acceptance_file_sha256: str
+    acceptance_hash: str
+
+
+_TRADE_SUPPLEMENT_RUNTIME_BINDING: ContextVar[TradeSupplementRuntimeBinding | None] = (
+    ContextVar("stage2_trade_supplement_runtime_binding", default=None)
 )
 
 
@@ -477,16 +493,14 @@ def _bounded_lifecycle_source_end(*, instrument: str, start_ns: int) -> tuple[in
 
 
 def _partition_paths(instrument: str, owner_date: date) -> tuple[Path, Path]:
-    supplement_value = os.environ.get("ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_PATH")
-    supplement_hash = os.environ.get("ERA_S2P13_TRADE_SUPPLEMENT_ACCEPTANCE_HASH")
-    if supplement_value:
-        acceptance_path = Path(supplement_value)
+    binding = _TRADE_SUPPLEMENT_RUNTIME_BINDING.get()
+    if binding is not None:
+        acceptance_path = binding.acceptance_path
         if (
             not acceptance_path.is_absolute()
             or acceptance_path.is_symlink()
             or not acceptance_path.is_file()
-            or not supplement_hash
-            or _file_hash(acceptance_path) != supplement_hash
+            or _file_hash(acceptance_path) != binding.acceptance_file_sha256
         ):
             raise ValueError("Trade supplement acceptance binding drift")
         override = partition_override(
@@ -496,10 +510,57 @@ def _partition_paths(instrument: str, owner_date: date) -> tuple[Path, Path]:
         )
         if override is not None:
             parquet_path, receipt_path, acceptance_hash = override
-            if acceptance_hash != json.loads(acceptance_path.read_bytes()).get("acceptance_hash"):
+            if acceptance_hash != binding.acceptance_hash:
                 raise ValueError("Trade supplement acceptance self-hash drift")
             return parquet_path, receipt_path
     return _catalog_partition_paths(instrument, owner_date)
+
+
+def _clear_trade_partition_caches() -> None:
+    _verified_trade_receipt_day.cache_clear()
+    _verified_trade_day.cache_clear()
+    _verified_trade_range_day.cache_clear()
+    _verified_trade_gaps_day.cache_clear()
+
+
+@contextmanager
+def bind_trade_supplement_runtime(
+    *,
+    acceptance_path: Path,
+    acceptance_file_sha256: str,
+    acceptance_hash: str,
+) -> Iterator[None]:
+    """Bind the inputs-lock supplement without ambient environment variables."""
+
+    if (
+        not acceptance_path.is_absolute()
+        or acceptance_path.is_symlink()
+        or not acceptance_path.is_file()
+        or len(acceptance_file_sha256) != 64
+        or len(acceptance_hash) != 64
+        or _file_hash(acceptance_path) != acceptance_file_sha256
+    ):
+        raise ValueError("Trade supplement runtime binding drift")
+    override = partition_override(
+        acceptance_path=acceptance_path,
+        instrument="BTCUSDT",
+        owner_date=date(2022, 3, 1),
+    )
+    if override is None or override[2] != acceptance_hash:
+        raise ValueError("Trade supplement runtime acceptance drift")
+    token = _TRADE_SUPPLEMENT_RUNTIME_BINDING.set(
+        TradeSupplementRuntimeBinding(
+            acceptance_path=acceptance_path,
+            acceptance_file_sha256=acceptance_file_sha256,
+            acceptance_hash=acceptance_hash,
+        )
+    )
+    _clear_trade_partition_caches()
+    try:
+        yield
+    finally:
+        _clear_trade_partition_caches()
+        _TRADE_SUPPLEMENT_RUNTIME_BINDING.reset(token)
 
 
 def _verified_trade_window(
